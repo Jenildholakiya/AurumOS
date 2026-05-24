@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "release_date": "2026-05-24",
+  "size_mb": 0,
+  "download_url": "",
+  "changelog": [
+    "Initial release of AurumOS"
+  ],
+  "min_version": "1.0.0",
+  "notes": "Restart AurumOS after updating."
+}
