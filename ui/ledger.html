@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AurumOS | General Ledger Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sidebar.css">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
+            --border: #cbd5e1; --text-muted: #64748b;
+            --success: #059669; --error: #e11d48;
+            --card-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.03);
+            --bg-dr: #fef2f2;
+            --bg-cr: #f0fdf4;
+            --border-dr: #fecaca;
+            --border-cr: #bbf7d0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { display: block; height: 100vh; background: var(--bg-main); color: var(--primary); overflow: hidden; }
+        main { width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+        header {
+            height: 75px; background: #fff; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
+        }
+
+        .content { padding: 25px 30px; overflow-y: hidden; flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* ── 4-CARD SUMMARY RIBBON ──────────────────────────────────────────── */
+        .summary-ribbon { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; flex-shrink: 0; }
+        .sum-card {
+            background: #fff; padding: 16px 20px; border-radius: 16px;
+            border: 1px solid var(--border); box-shadow: var(--card-shadow);
+            position: relative; overflow: hidden;
+        }
+        .sum-card label { font-size: 0.62rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px; }
+        .sum-card span { font-size: 1.3rem; font-weight: 800; display: block; letter-spacing: -0.5px; }
+        .mini-stat { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; opacity: 0.8; }
+
+        /* Card accent borders — DR = red left border, CR = green left border */
+        .dr-card { border-left: 4px solid var(--error); }
+        .cr-card { border-left: 4px solid var(--success); }
+        .sum-card span.dr { color: var(--error); }
+        .sum-card span.cr { color: var(--success); }
+
+        /* ── TABLE CARD ─────────────────────────────────────────────────────── */
+        .table-card {
+            background: #fff; border-radius: 20px; border: 1px solid var(--border);
+            overflow: hidden; box-shadow: var(--card-shadow);
+            display: flex; flex-direction: column; flex-grow: 1;
+        }
+        .table-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
+        .filter-toggle { background: var(--bg-main); padding: 4px; border-radius: 10px; display: flex; gap: 4px; border: 1px solid var(--border); }
+        .tgl-btn {
+            border: none; padding: 6px 14px; border-radius: 6px;
+            font-weight: 800; font-size: 0.68rem; cursor: pointer;
+            transition: all 0.2s ease; background: transparent;
+            color: var(--text-muted); text-transform: uppercase;
+        }
+        .tgl-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(15,23,42,0.15); }
+
+        .date-input-group label { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .date-input-group input { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 0.8rem; outline: none; background: #fff; height: 38px; cursor: pointer; }
+
+        .btn-reset { background: white; border: 1px solid var(--border); padding: 0 16px; border-radius: 10px; font-weight: 800; font-size: 0.68rem; cursor: pointer; height: 38px; transition: 0.2s; text-transform: uppercase; }
+        .btn-reset:hover { border-color: var(--error); color: var(--error); background: var(--bg-dr); }
+
+        .scroll-area { flex-grow: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th {
+            background: #fafbfc; padding: 14px 24px; text-align: left;
+            font-size: 0.65rem; font-weight: 800; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1.2px;
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+        }
+        td { padding: 14px 24px; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; font-weight: 700; transition: all 0.15s ease; }
+
+        /* ── ROW COLORS: FIXED CURSOR AND POINTER EFFECTS BLOCKED PERMANENTLY ── */
+        tr.row-paid td { background-color: var(--bg-cr); border-bottom-color: var(--border-cr); }
+        tr.row-credit td { background-color: var(--bg-dr); border-bottom-color: var(--border-dr); }
+        tr:hover td { filter: brightness(0.98); cursor: default; }
+
+        /* ── STATUS BADGE ───────────────────────────────────────────────────── */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .badge-paid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .badge-credit { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .badge-jama { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+        .client-pill {
+            background: #fff; padding: 5px 10px; border-radius: 8px;
+            font-weight: 800; font-size: 0.7rem; border: 1px solid var(--border);
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--primary); text-transform: uppercase; cursor: default;
+        }
+        .num-text { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 0.9rem; }
+        .text-dr { color: var(--error) !important; }
+        .text-cr { color: var(--success) !important; }
+
+        .search-box {
+            background: #fff; border: 1px solid var(--border); border-radius: 10px;
+            padding: 10px 16px; font-weight: 600; outline: none; transition: 0.25s ease; height: 38px;
+        }
+        .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(181,148,16,0.05); }
+    </style>
+
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sidebar+main side by side */
+body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div id="sidebar-container"></div>
+
+
+
+
+
+<main>
+    <header>
+        <div style="display:flex; flex-direction:column;">
+            <h1 style="font-weight:800; font-size:1.25rem; letter-spacing:-0.5px;">Master Ledger</h1>
+            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700;">Global Transaction Register</span>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div id="real-time-clock" style="font-weight:800; font-size:0.78rem; color:var(--accent); padding-right:12px; border-right:1px solid var(--border);">-- | --</div>
+            <button class="btn-reset" style="height:34px; font-size:0.65rem;" onclick="exportToCSV()">Export CSV</button>
+        </div>
+    </header>
+
+    <div class="content">
+
+        <div class="summary-ribbon">
+            <div class="sum-card dr-card">
+                <label>Total Market Metal (DR)</label>
+                <span id="total-m-dr" class="dr">0.000 g</span>
+                <div class="mini-stat">Market Udhar</div>
+            </div>
+            <div class="sum-card dr-card">
+                <label>Total Market Cash (DR)</label>
+                <span id="total-c-dr" class="dr">₹ 0.00</span>
+                <div class="mini-stat">Pending Payments</div>
+            </div>
+            <div class="sum-card cr-card">
+                <label>Metal Collected (CR)</label>
+                <span id="total-m-cr" class="cr">0.000 g</span>
+                <div class="mini-stat">Total Jama</div>
+            </div>
+            <div class="sum-card cr-card">
+                <label>Cash Collected (CR)</label>
+                <span id="total-c-cr" class="cr">₹ 0.00</span>
+                <div class="mini-stat">Total Received</div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="font-size:1rem; font-weight:800; letter-spacing:-0.5px;">Transaction Stream</h2>
+                    <div class="filter-toggle">
+                        <button class="tgl-btn active" id="btn-all" onclick="setFilterType('all')">All</button>
+                        <button class="tgl-btn" id="btn-paid" onclick="setFilterType('paid')">Paid</button>
+                        <button class="tgl-btn" id="btn-credit" onclick="setFilterType('credit')">Credit</button>
+                        <button class="tgl-btn" id="btn-jama" onclick="setFilterType('jama')">Jama</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px; align-items:flex-end; background:var(--bg-main); padding:12px; border-radius:16px; border:1px solid var(--border);">
+                    <div class="date-input-group">
+                        <label>From Date</label>
+                        <input type="date" id="date-from" onchange="filterLedger()">
+                    </div>
+                    <div class="date-input-group">
+                        <label>To Date</label>
+                        <input type="date" id="date-to" onchange="filterLedger()">
+                    </div>
+                    <div style="flex-grow:1;">
+                        <label style="font-size:0.6rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">Keyword Search</label>
+                        <input type="text" class="search-box" style="width:100%;" id="ledger-search" placeholder="Search Client, Voucher or Note..." oninput="filterLedger()">
+                    </div>
+                    <button class="btn-reset" onclick="resetFilters()">Reset</button>
+                </div>
+            </div>
+
+            <div class="scroll-area">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="120">Date</th>
+                            <th width="175">Account / Client</th>
+                            <th>Reference &amp; Description</th>
+                            <th width="110" style="text-align:center;">Status</th>
+                            <th width="155" style="text-align:right;">Metal Impact</th>
+                            <th width="175" style="text-align:right;">Cash Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-ledger-body">
+                        <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Synchronizing Stream...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+<script>
+    let masterData = [];
+    let currentTypeFilter = 'all';
+
+    function classifyRow(e) {
+        const metalDr = parseFloat(e.metal_dr || 0);
+        const metalCr = parseFloat(e.metal_cr || 0);
+        const cashDr = parseFloat(e.cash_dr || 0);
+        const cashCr = parseFloat(e.cash_cr || 0);
+
+        if (e.description && e.description.includes("Sales Invoice Entry") && metalCr > 0) {
+            return 'paid';
+        }
+        if (cashCr > 0) return 'paid';
+        if (metalCr > 0) return 'jama';
+        if (metalDr > 0 || cashDr > 0) return 'credit';
+        return 'credit';
+    }
+
+    async function fetchMasterLedger() {
+        if (!window.pywebview?.api) return;
+        try {
+            const summary = await window.pywebview.api.get_ledger_summary();
+
+            document.getElementById('total-m-dr').innerText =
+                (summary.metal_dr || 0).toFixed(3) + " g";
+            document.getElementById('total-c-dr').innerText =
+                "₹ " + (summary.cash_dr || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById('total-m-cr').innerText =
+                (summary.metal_cr || 0).toFixed(3) + " g";
+            document.getElementById('total-c-cr').innerText =
+                "₹ " + (summary.cash_cr || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+            masterData = await window.pywebview.api.get_full_ledger_stream();
+            filterLedger();
+        } catch (e) { console.error("Ledger Load Error:", e); }
+    }
+
+    function setFilterType(type) {
+        currentTypeFilter = type;
+        document.querySelectorAll('.tgl-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${type}`).classList.add('active');
+        filterLedger();
+    }
+
+    function resetFilters() {
+        document.getElementById('ledger-search').value = '';
+        document.getElementById('date-from').value = '';
+        document.getElementById('date-to').value = '';
+        setFilterType('all');
+    }
+
+    function filterLedger() {
+        const q = document.getElementById('ledger-search').value.toLowerCase();
+        const dFrom = document.getElementById('date-from').value;
+        const dTo = document.getElementById('date-to').value;
+
+        const filtered = masterData.filter(e => {
+            const rowType = classifyRow(e);
+            const matchesText =
+                (e.client_name && e.client_name.toLowerCase().includes(q)) ||
+                (e.vch_reference && e.vch_reference.toLowerCase().includes(q)) ||
+                (e.description && e.description.toLowerCase().includes(q));
+            const matchesType =
+                (currentTypeFilter === 'all') ||
+                (currentTypeFilter === rowType);
+            let matchesDate = true;
+            if (dFrom) matchesDate = matchesDate && (e.date >= dFrom);
+            if (dTo) matchesDate = matchesDate && (e.date <= dTo);
+            return matchesText && matchesType && matchesDate;
+        });
+        renderTable(filtered);
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('master-ledger-body');
+        tbody.innerHTML = '';
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:100px; color:var(--text-muted); font-weight:700;">No transactions found.</td></tr>';
+            return;
+        }
+
+        data.forEach(e => {
+            const metalDr = parseFloat(e.metal_dr || 0);
+            const metalCr = parseFloat(e.metal_cr || 0);
+            const cashDr = parseFloat(e.cash_dr || 0);
+            const cashCr = parseFloat(e.cash_cr || 0);
+            const rowType = classifyRow(e);
+
+            const rowClass = (rowType === 'paid' || rowType === 'jama') ? 'row-paid' : 'row-credit';
+
+            let badgeHtml;
+            if (rowType === 'paid') {
+                badgeHtml = `<span class="status-badge badge-paid">✓ Paid</span>`;
+            } else if (rowType === 'jama') {
+                badgeHtml = `<span class="status-badge badge-jama">↓ Jama</span>`;
+            } else {
+                badgeHtml = `<span class="status-badge badge-credit">● Credit</span>`;
+            }
+
+            let metalHtml, metalClass;
+            if (rowType === 'paid' || rowType === 'jama') {
+                metalHtml = metalCr > 0 ? `−${metalCr.toFixed(3)} g (CR)` : (metalDr > 0 ? `+${metalDr.toFixed(3)} g (DR)` : '--');
+                metalClass = metalCr > 0 ? 'text-cr' : 'text-dr';
+            } else {
+                metalHtml = metalDr > 0 ? `+${metalDr.toFixed(3)} g (DR)` : (metalCr > 0 ? `−${metalCr.toFixed(3)} g (CR)` : '--');
+                metalClass = metalDr > 0 ? 'text-dr' : 'text-cr';
+            }
+            if(metalDr === 0 && metalCr === 0) { metalHtml = '--'; metalClass = ''; }
+
+            let cashHtml, cashClass;
+            if (rowType === 'paid' || rowType === 'jama') {
+                cashHtml = cashCr > 0 ? `₹${cashCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (CR)` : (cashDr > 0 ? `₹${cashDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (DR)` : '--');
+                cashClass = cashCr > 0 ? 'text-cr' : 'text-dr';
+            } else {
+                cashHtml = cashDr > 0 ? `₹${cashDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (DR)` : (cashCr > 0 ? `₹${cashCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (CR)` : '--');
+                cashClass = cashDr > 0 ? 'text-dr' : 'text-cr';
+            }
+            if(cashDr === 0 && cashCr === 0) { cashHtml = '--'; cashClass = ''; }
+
+            // FIXED: Removed onclick redirect execution hook block entirely
+            tbody.innerHTML += `
+                <tr class="${rowClass}">
+                    <td style="color:var(--text-muted); font-size:0.8rem;">${e.date || '--'}</td>
+                    <td><div class="client-pill">👤 ${e.client_name || 'SYSTEM'}</div></td>
+                    <td>
+                        <div style="font-weight:800; color:var(--primary);">${e.vch_reference || 'MANUAL'}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700; margin-top:2px;">${e.description || ''}</div>
+                    </td>
+                    <td style="text-align:center;">${badgeHtml}</td>
+                    <td style="text-align:right;" class="num-text ${metalClass}">${metalHtml}</td>
+                    <td style="text-align:right;" class="num-text ${cashClass}">${cashHtml}</td>
+                </tr>`;
+        });
+    }
+
+    // FIXED: Formally blanked out background tracking method callbacks
+    function navigateToClient(name) {}
+
+    function exportToCSV() {
+        if (!masterData.length) return;
+        const headers = ["Date","Account","Reference","Description","Status","Metal DR","Metal CR","Cash DR","Cash CR"];
+        const rows = masterData.map(e => [
+            e.date, e.client_name, e.vch_reference || 'MANUAL', e.description,
+            classifyRow(e).toUpperCase(),
+            e.metal_dr, e.metal_cr, e.cash_dr, e.cash_cr
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + rows.map(r => r.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", `Master_Ledger_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = () => {
+        // ✅ FIXED: waitForAPI ensures pywebview is ready before initSidebar
+        waitForAPI(async function() {
+        await initSidebar('ledger');
+                    });
+        setInterval(() => {
+            document.getElementById('real-time-clock').innerText =
+                new Date().toLocaleString('en-GB', {
+                    hour:'2-digit', minute:'2-digit', second:'2-digit',
+                    day:'2-digit', month:'short'
+                }).replace(/,/g, ' |');
+        }, 1000);
+        const check = setInterval(() => {
+            if (window.pywebview?.api) { fetchMasterLedger(); clearInterval(check); }
+        }, 100);
+    };
+</script>
+</body>
+</html>

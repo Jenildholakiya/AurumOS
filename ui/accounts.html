@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Accounts Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sidebar.css">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
+            --sidebar-bg: #ffffff; --card: #ffffff; --border: #e2e8f0;
+            --text-main: #1e293b; --text-muted: #64748b;
+            --success: #059669; --error: #e11d48;
+            --glass: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Styling resets and Layout */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { display: block; height: 100vh; width: 100vw; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        main { width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        header { height: 80px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; flex-shrink: 0; }
+        .header-biz h1 { font-size: 1.2rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+        #real-time-clock { font-size: 0.8rem; font-weight: 700; color: var(--accent); background: #fefce8; padding: 8px 18px; border-radius: 12px; border: 1px solid #fef08a; }
+
+        .content { padding: 30px 40px; overflow-y: auto; flex-grow: 1; }
+
+        /* Stats Ribbon */
+        .stats-ribbon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-mini { background: #fff; padding: 20px; border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 5px; }
+        .stat-mini label { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-mini span { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+
+        .accounts-layout { display: grid; grid-template-columns: 380px 1fr; gap: 30px; align-items: start; }
+
+        /* Form Card */
+        .form-card { background: #fff; border-radius: 28px; border: 1px solid var(--border); padding: 32px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); }
+        .form-card h3 { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 25px; color: var(--primary); display: flex; align-items: center; gap: 12px; }
+        .form-card h3 span { background: var(--primary); color: white; width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        input { width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); border-radius: 14px; font-size: 0.95rem; font-weight: 700; outline: none; transition: all 0.2s ease; background: #fafbfc; color: var(--primary); }
+        input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(181, 148, 16, 0.1); }
+
+        .btn-authorize { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; box-shadow: 0 8px 15px -5px rgba(15, 23, 42, 0.3); }
+        .btn-authorize:hover { background: var(--accent); transform: translateY(-3px); }
+
+        /* Table Area */
+        .list-container { background: #fff; border-radius: 28px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; background: #fafbfc; padding: 20px 24px; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--bg-main); letter-spacing: 1px; }
+        td { padding: 20px 24px; font-size: 0.9rem; font-weight: 600; border-bottom: 1px solid #f1f5f9; color: var(--primary); vertical-align: middle; }
+        tr.clickable-row { cursor: pointer; transition: 0.2s; }
+        tr.clickable-row:hover { background: #f8fafc; }
+
+        .client-info { display: flex; align-items: center; gap: 14px; }
+        .client-avatar { width: 38px; height: 38px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--accent); font-size: 0.8rem; border: 1px solid var(--border); }
+        .limit-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; border: 1px solid transparent; }
+        .metal-pill { background: #fffbeb; color: #b59410; border-color: #fef3c7; }
+        .cash-pill { background: #f0fdf4; color: #166534; border-color: #dcfce7; }
+        .limit-exceeded { background: #fff1f2 !important; color: var(--error) !important; border-color: #fee2e2 !important; }
+
+        .action-btns { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-action { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; border: 1px solid var(--border); background: #fff; }
+        .btn-edit { color: var(--accent); border-color: #fef3c7; background: #fffbeb; }
+        .btn-edit:hover { background: var(--accent); color: white; transform: scale(1.1); }
+        .btn-delete { color: var(--error); border-color: #fee2e2; background: #fff1f2; }
+        .btn-delete:hover { background: var(--error); color: white; transform: scale(1.1); }
+
+        /* MODAL STYLES */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content {
+            background: #fff; width: 400px; padding: 35px; border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2); border: 1px solid var(--border);
+        }
+    </style>
+
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sidebar+main side by side */
+body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div id="sidebar-container"></div>
+
+
+
+
+
+<div class="modal-overlay" id="edit-modal">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h3 style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--primary);">Update Trust Limits</h3>
+            <span onclick="closeEditModal()" style="cursor: pointer; font-weight: 900; color: var(--text-muted); font-size: 1.5rem;">×</span>
+        </div>
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+            <label>Client Name</label>
+            <input type="text" id="edit-name" readonly style="opacity: 0.7; background: #f1f5f9;">
+        </div>
+        <div class="form-group">
+            <label>Metal Limit (g)</label>
+            <input type="number" id="edit-metal" step="0.001" placeholder="0.000">
+        </div>
+        <div class="form-group">
+            <label>Cash Limit (₹)</label>
+            <input type="number" id="edit-cash" step="0.01" placeholder="0.00">
+        </div>
+        <button class="btn-authorize" onclick="updateLimits()">UPDATE ACCOUNT</button>
+    </div>
+</div>
+
+<main>
+    <header>
+        <div class="header-biz"><h1>Accounts Terminal</h1></div>
+        <div id="real-time-clock">...</div>
+    </header>
+
+    <div class="content">
+        <div class="stats-ribbon">
+            <div class="stat-mini"><label>Total Registered</label><span id="stat-total-clients">0 Clients</span></div>
+            <div class="stat-mini"><label>Global Metal Debt</label><span id="stat-global-metal">0.000 g</span></div>
+            <div class="stat-mini"><label>Global Cash Debt</label><span id="stat-global-cash">₹ 0.00</span></div>
+        </div>
+
+        <div class="accounts-layout">
+            <div class="form-card">
+                <h3><span>+</span> New Registration</h3>
+                <div class="form-group"><label>Client Full Name</label><input type="text" id="c-name" placeholder="eg. Rajesh Bhai Zaveri" data-next="c-phone"></div>
+                <div class="form-group"><label>Contact Number</label><input type="text" id="c-phone" placeholder="+91 00000 00000" data-next="c-metal"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Metal Limit</label><input type="number" id="c-metal" placeholder="0.000" data-next="c-cash"></div>
+                    <div class="form-group"><label>Cash Limit</label><input type="number" id="c-cash" placeholder="0.00" data-next="authorize-btn"></div>
+                </div>
+                <button class="btn-authorize" id="authorize-btn" onclick="saveClient()">Authorize Account</button>
+            </div>
+
+            <div class="list-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client Identity</th>
+                            <th>Contact</th>
+                            <th>Metal Live</th>
+                            <th>Cash Live</th>
+                            <th style="text-align:right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="client-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+<script>
+    let globalClientList = [];
+
+    function getInitials(name) { return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : "??"; }
+
+    async function loadClients() {
+        if (window.pywebview?.api) {
+            const clients = await window.pywebview.api.get_client_list();
+            globalClientList = clients;
+
+            const tbody = document.getElementById('client-table-body');
+            tbody.innerHTML = '';
+            let globalMetal = 0, globalCash = 0;
+
+            // Sequential ID starting from 1
+            clients.forEach(async (c, i) => {
+                const displayId = (i + 1).toString().padStart(3, '0');
+                const bal = await window.pywebview.api.get_client_balances(c.name);
+                globalMetal += bal.metal; globalCash += bal.cash;
+
+                const mLimit = parseFloat(c.metal_limit) || 0;
+                const cLimit = parseFloat(c.cash_limit) || 0;
+                const mExceeded = bal.metal > mLimit && mLimit > 0;
+                const cExceeded = bal.cash > cLimit && cLimit > 0;
+
+                const row = document.createElement('tr');
+                row.className = "clickable-row";
+                row.ondblclick = () => openClientLedger(c.name);
+
+                row.innerHTML = `
+                    <td>
+                        <div class="client-info">
+                            <div class="client-avatar">${getInitials(c.name)}</div>
+                            <div>
+                                <div style="font-weight: 800;">${c.name}</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted);">UID: CL-${displayId}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700;">${c.phone || 'N/A'}</span></td>
+                    <td><span class="limit-pill metal-pill ${mExceeded?'limit-exceeded':''}">${parseFloat(bal.metal).toFixed(3)} g</span></td>
+                    <td><span class="limit-pill cash-pill ${cExceeded?'limit-exceeded':''}">₹ ${parseFloat(bal.cash).toLocaleString('en-IN')}</span></td>
+                    <td style="text-align:right">
+                        <div class="action-btns">
+                            <button class="btn-action btn-edit" onclick="event.stopPropagation(); triggerEdit(${c.id})" title="Edit Limits">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="event.stopPropagation(); deleteClient(${c.id})" title="Delete Account">×</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+
+                // Update stats ribbon once done
+                document.getElementById('stat-global-metal').innerText = globalMetal.toFixed(3) + " g";
+                document.getElementById('stat-global-cash').innerText = "₹ " + globalCash.toLocaleString('en-IN');
+            });
+            document.getElementById('stat-total-clients').innerText = clients.length + " Clients";
+        }
+    }
+
+    function openClientLedger(name) {
+        window.location.href = `client_ledger.html?name=${encodeURIComponent(name)}`;
+    }
+
+    function triggerEdit(clientId) {
+        const client = globalClientList.find(c => c.id === clientId);
+        if (!client) return;
+
+        document.getElementById('edit-id').value = client.id;
+        document.getElementById('edit-name').value = client.name;
+        document.getElementById('edit-metal').value = client.metal_limit;
+        document.getElementById('edit-cash').value = client.cash_limit;
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
+    async function updateLimits() {
+        if (!window.pywebview?.api) return;
+
+        const btn = document.querySelector('#edit-modal .btn-authorize');
+        const originalText = btn.innerText;
+
+        btn.disabled = true;
+        btn.innerText = "SYNCHRONIZING...";
+
+        // 1. Scrub and Cast Data (Absolute Integers/Floats)
+        const payload = {
+            id: Number(document.getElementById('edit-id').value),
+            metal_limit: parseFloat(document.getElementById('edit-metal').value) || 0,
+            cash_limit: parseFloat(document.getElementById('edit-cash').value) || 0
+        };
+
+        try {
+            // 2. Call Bridge and WAIT for response
+            const res = await window.pywebview.api.update_client_limits(payload);
+
+            if (res && res.status === "success") {
+                // 3. SUCCESS: Close, then hard-refresh the client list
+                closeEditModal();
+
+                // Give the DB a 100ms breath for the commit to settle
+                setTimeout(async () => {
+                    await loadClients();
+                    console.log("UI Refreshed with new data.");
+                }, 100);
+
+            } else {
+                // 4. BACKEND ERROR: Show the specific reason
+                alert("Database Rejected Update: " + (res.message || "Unknown Error"));
+            }
+        } catch (err) {
+            // 5. BRIDGE ERROR: Usually a Python crash
+            console.error("Critical Bridge Failure:", err);
+            alert("System Error: Python Backend crashed or function missing.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+
+    async function saveClient() {
+        const name = document.getElementById('c-name').value;
+        if (!name) return alert("Enter client name.");
+        const data = {
+            name,
+            phone: document.getElementById('c-phone').value,
+            metal_limit: parseFloat(document.getElementById('c-metal').value) || 0,
+            cash_limit: parseFloat(document.getElementById('c-cash').value) || 0
+        };
+        const res = await window.pywebview.api.add_new_client(data);
+        if (res.status === "success") {
+            ['c-name', 'c-phone', 'c-metal', 'c-cash'].forEach(id => document.getElementById(id).value = '');
+            loadClients();
+        }
+    }
+
+    async function deleteClient(id) {
+        if (confirm("Remove profile?")) {
+            const res = await window.pywebview.api.delete_master_entry('client', id);
+            if (res.status === "success") loadClients();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const active = document.activeElement;
+            const nextId = active.dataset.next;
+            if (nextId) { e.preventDefault(); const nextEl = document.getElementById(nextId); if (nextEl.tagName === 'BUTTON') nextEl.click(); else nextEl.focus(); }
+        }
+    });
+
+    window.onload = () => {
+        // ✅ FIXED: waitForAPI ensures pywebview is ready before initSidebar
+        waitForAPI(async function() {
+        await initSidebar('accounts');
+                    });
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('real-time-clock').innerText = now.toLocaleString('en-GB').replace(/,/g, ' |');
+        }, 1000);
+        const check = setInterval(() => { if (window.pywebview?.api) { loadClients(); clearInterval(check); } }, 100);
+    };
+</script>
+</body>
+</html>

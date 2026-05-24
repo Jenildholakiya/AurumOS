@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Executive Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sidebar.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary:#0b0f19; --primary-slate:#111827; --primary-light:#1e293b;
+            --accent:#b59410; --accent-glow:rgba(181,148,16,0.12);
+            --bg-main:#f3f5f9; --card:#ffffff; --border:#e2e8f0;
+            --text-main:#0f172a; --text-muted:#64748b;
+            --danger:#ef4444; --danger-bg:#fef2f2; --success:#10b981;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Plus Jakarta Sans',sans-serif;}
+        body{display: block;height:100vh;background:var(--bg-main);color:var(--text-main);overflow:hidden;}
+        main{width: 100%;display:flex;flex-direction:column;overflow:hidden;}
+        header{height:80px;background:var(--card);border-bottom:1px solid rgba(226,232,240,0.6);display:flex;align-items:center;justify-content:space-between;padding:0 40px;flex-shrink:0;}
+        .header-title h1{font-size:1.1rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1.2px;}
+        #real-time-clock{font-size:0.75rem;font-weight:800;color:var(--accent);background:#fffdf5;padding:8px 18px;border-radius:100px;letter-spacing:0.5px;border:1px solid rgba(181,148,16,0.15);}
+        .user-profile-avatar{width:40px;height:40px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;color:#fff;border:1px solid var(--border);text-transform:uppercase;}
+        .content { padding:30px 40px; overflow-y:auto; height: calc(100vh - 80px); }
+        .dashboard-welcome-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:30px;padding-bottom:20px;border-bottom:1px solid rgba(226,232,240,0.7);}
+        .dashboard-welcome-row h2{font-size:2.2rem;font-weight:800;letter-spacing:-1px;color:var(--primary);}
+        .dashboard-welcome-row p{color:var(--text-muted);font-size:0.9rem;font-weight:500;margin-top:4px;}
+        .status-node-tag{font-size:0.65rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;background:#ffffff;padding:6px 14px;border-radius:6px;border:1px solid var(--border);}
+        .hero-dashboard-split{display:grid;grid-template-columns:1fr 1.8fr;gap:25px;margin-bottom:30px;}
+        .vault-summary-panel{background:#0b0f19;color:#ffffff;border-radius:20px;padding:30px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 15px 35px rgba(11,15,25,0.06);position:relative;overflow:hidden;}
+        .vault-header span{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);}
+        .vault-header h2{font-size:2.4rem;font-weight:800;letter-spacing:-1px;margin-top:8px;}
+        .vault-meta{border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+        .vault-meta-item span{font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;}
+        .vault-meta-item h4{font-size:1.1rem;font-weight:700;color:#ffffff;margin-top:4px;}
+        .mini-matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+        .premium-tile{background:var(--card);border:1px solid var(--border);padding:25px;border-radius:16px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;}
+        .premium-tile:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(15,23,42,0.03);border-color:var(--accent);}
+        .premium-tile span{font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;}
+        .premium-tile h3{font-size:1.6rem;font-weight:800;color:var(--primary);margin-top:10px;letter-spacing:-0.5px;}
+        .luxury-section-title{font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--primary);margin:10px 0 20px 0;padding-left:12px;border-left:3px solid var(--accent);display:block;}
+        .lower-analytics-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:25px;}
+        .glass-block{background:var(--card);border-radius:20px;border:1px solid var(--border);padding:30px;}
+        .glass-block.obsidian-panel{background:#0b0f19;border:1px solid #1e293b;}
+        .block-title-header{margin-bottom:25px;}
+        .block-title-header h5{font-size:0.75rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1px;}
+        .obsidian-panel .block-title-header h5{color:#ffffff;}
+        .luxury-table{width:100%;border-collapse:collapse;}
+        .luxury-table th{padding:0 0 12px 0;font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);}
+        .luxury-table td{padding:14px 0;font-size:0.85rem;font-weight:600;color:var(--text-main);border-bottom:1px solid rgba(238,241,246,0.6);}
+        .luxury-table tr:last-child td{border-bottom:none;}
+        .status-badge-dot{font-size:0.65rem;font-weight:800;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:6px;}
+        .status-badge-dot::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;}
+        .status-danger{background:var(--danger-bg);color:var(--danger);}
+        .status-danger::before{background:var(--danger);}
+        .status-warn{background:#fff9db;color:#f59f00;}
+        .status-warn::before{background:#f59f00;}
+        .stream-timeline{display:flex;flex-direction:column;gap:18px;}
+        .stream-row{display:flex;gap:15px;align-items:flex-start;}
+        .stream-time-stamp{font-size:0.7rem;font-weight:800;color:var(--accent);font-family:monospace;padding:2px 6px;border-radius:4px;}
+        .stream-text-info{font-size:0.8rem;font-weight:500;color:var(--text-main);line-height:1.4;}
+        .chart-container-frame{position:relative;height:310px;width:100%;}
+    </style>
+
+<style id="aurum-layout-fix">
+body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"></div>
+
+<main>
+    <header>
+        <div class="header-title"><h1>Executive Command Core</h1></div>
+        <div id="real-time-clock">Loading...</div>
+        <div class="user-profile" style="display:flex;align-items:center;gap:15px;">
+            <div style="text-align:right">
+                <div id="owner-header-name" style="font-size:0.8rem;font-weight:800;letter-spacing:-0.2px;">Director</div>
+                <div style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">System Director</div>
+            </div>
+            <div id="owner-avatar-initials" class="user-profile-avatar">OS</div>
+        </div>
+    </header>
+
+    <div class="content">
+        <div class="dashboard-welcome-row">
+            <div>
+                <h2 id="owner-welcome-string">Welcome, <span id="owner-welcome-name">Director</span></h2>
+                <p>Your jewelry enterprise terminal is synchronized and ready for transactions.</p>
+            </div>
+            <div><span class="status-node-tag" id="dash-sync-status">Node Status: Active</span></div>
+        </div>
+
+        <div class="hero-dashboard-split">
+            <div class="vault-summary-panel">
+                <div class="vault-header">
+                    <span>Today's Accumulated Sales</span>
+                    <h2 id="dash-sales">&#8377; 0.00</h2>
+                </div>
+                <div class="vault-meta">
+                    <div class="vault-meta-item"><span>Vault Purity Node</span><h4 id="dash-purity-node">Active</h4></div>
+                    <div class="vault-meta-item"><span>Compliance Matrix</span><h4 id="dash-compliance-matrix">100%</h4></div>
+                </div>
+            </div>
+            <div class="mini-matrix-grid">
+                <div class="premium-tile"><span>Total Tracked Stock Units</span><h3 id="dash-units">0</h3></div>
+                <div class="premium-tile"><span>Net Metallic Volume Weight</span><h3 id="dash-weight">0.000 g</h3></div>
+                <div class="premium-tile"><span>HUID Identity Registry</span><h3 id="dash-huid">100% Verified</h3></div>
+                <div class="premium-tile"><span>System Sync Node Status</span><h3 style="color:var(--success);font-size:1.15rem;" id="dash-node-status">Operational</h3></div>
+            </div>
+        </div>
+
+        <span class="luxury-section-title">Telemetry Stream &amp; Risk Mitigation</span>
+
+        <div class="lower-analytics-grid">
+            <div class="glass-block obsidian-panel">
+                <div class="block-title-header"><h5>Gross Metrics Revenue vs Net Capital Margin Performance</h5></div>
+                <div class="chart-container-frame"><canvas id="salesMarginChart"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:25px;">
+                <div class="glass-block">
+                    <div class="block-title-header"><h4>High-Risk Credit Control Monitor</h4></div>
+                    <table class="luxury-table">
+                        <thead><tr><th>Client Account</th><th style="text-align:right;">Outstanding Line</th><th style="text-align:right;">Assessment</th></tr></thead>
+                        <tbody id="credit-risk-body">
+                            </tbody>
+                    </table>
+                </div>
+                <div class="glass-block">
+                    <div class="block-title-header"><h5>Operational System Audit Log</h5></div>
+                    <div class="stream-timeline" id="audit-log-container">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        const opts = {weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
+        document.getElementById('real-time-clock').innerText = now.toLocaleString('en-GB', opts).replace(/,/g,' |');
+    }
+
+    let salesChart;
+    function initAnalyticsChart(initialLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], initialRevenue = [0,0,0,0,0,0,0], initialMargin = [0,0,0,0,0,0,0]) {
+        const ctx = document.getElementById('salesMarginChart').getContext('2d');
+        const g = ctx.createLinearGradient(0,0,0,300);
+        g.addColorStop(0,'rgba(181,148,16,0.22)');
+        g.addColorStop(0.6,'rgba(181,148,16,0.05)');
+        g.addColorStop(1,'rgba(181,148,16,0.0)');
+
+        if (salesChart) {
+            salesChart.destroy();
+        }
+
+        salesChart = new Chart(ctx, {
+            type:'line',
+            data:{
+                labels: initialLabels,
+                datasets:[
+                    {label:'Gross Revenue', data: initialRevenue,
+                     borderColor:'#b59410',backgroundColor:g,borderWidth:3,tension:0.28,fill:true,yAxisID:'y',
+                     pointRadius:4,pointBackgroundColor:'#b59410',pointBorderColor:'#0b0f19',pointBorderWidth:2},
+                    {label:'Net Margin', data: initialMargin,
+                     borderColor:'rgba(255,255,255,0.4)',borderWidth:1.5,borderDash:[5,5],tension:0.28,fill:false,yAxisID:'y1',pointRadius:0}
+                ]
+            },
+            options:{
+                responsive:true,maintainAspectRatio:false,
+                plugins:{
+                    legend:{position:'top',align:'end',labels:{boxWidth:8,usePointStyle:true,color:'#94a3b8',font:{size:10},padding:15}},
+                    tooltip:{backgroundColor:'#1e293b',padding:12,cornerRadius:8}
+                },
+                scales:{
+                    y:{type:'linear',display:true,position:'left',grid:{color:'rgba(255,255,255,0.05)'},border:{display:false},ticks:{color:'#475569',font:{size:10}}},
+                    y1:{type:'linear',display:true,position:'right',grid:{drawOnChartArea:false},border:{display:false},ticks:{color:'#475569',font:{size:10}}},
+                    x:{grid:{display:false},border:{display:false},ticks:{color:'#475569',font:{size:10}}}
+                }
+            }
+        });
+    }
+
+    // ── ✅ LOAD DYNAMIC REAL-TIME BUSINESS TELEMETRY ───────────────────
+    async function loadDashboardData() {
+        try {
+            if (window.pywebview && window.pywebview.api) {
+                // 1. Fetch dynamic, time-aware greeting preferences from session
+                const sessionContext = await window.pywebview.api.get_dynamic_greeting() || {};
+                if (sessionContext.status === "success") {
+                    const ownerName = sessionContext.owner_title;
+                    document.getElementById('owner-header-name').innerText = ownerName;
+
+                    // Apply layout greeting change safely
+                    document.getElementById('owner-welcome-string').innerHTML =
+                        `${sessionContext.greeting_prefix}, <span style="color:var(--accent); font-weight:800;">${ownerName}</span>`;
+
+                    const initials = ownerName.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+                    document.getElementById('owner-avatar-initials').innerText = initials || "OS";
+                    localStorage.setItem('aurum_owner_name', ownerName);
+                } else {
+                    const cached = localStorage.getItem('aurum_owner_name') || 'Director';
+                    document.getElementById('owner-header-name').innerText = cached;
+                    document.getElementById('owner-welcome-string').innerHTML = `Welcome, <span style="color:var(--accent);">${cached}</span>`;
+                }
+
+                // 2. Load core telemetry counters
+                const stats = await window.pywebview.api.get_live_command_metrics() || {};
+                if (stats.status === "success") {
+                    document.getElementById('dash-units').innerText  = stats.tracked_units;
+                    document.getElementById('dash-weight').innerText = stats.metallic_weight.toFixed(3) + ' g';
+                    document.getElementById('dash-sales').innerHTML  = '&#8377; ' + stats.accumulated_sales.toLocaleString('en-IN', {minimumFractionDigits:2});
+
+                    document.getElementById('dash-huid').innerText = stats.huid_status || '100% Verified';
+                    document.getElementById('dash-node-status').innerText = stats.sync_node || 'Operational';
+                    document.getElementById('dash-sync-status').innerText = `Node Status: ${stats.sync_node || 'Active'}`;
+
+                    // 3. Render Chart Lines dynamically with historical database arrays
+                    if (stats.chart) {
+                        initAnalyticsChart(stats.chart.labels, stats.chart.revenue, stats.chart.margin);
+                    }
+
+                    // 4. Generate High-Risk Debt Monitor Rows
+                    const riskBody = document.getElementById('credit-risk-body');
+                    if (stats.risk_monitor && stats.risk_monitor.length > 0) {
+                        riskBody.innerHTML = stats.risk_monitor.map(client => `
+                            <tr>
+                                <td style="font-weight:700;">${client.account_name}</td>
+                                <td style="color:var(--danger); text-align:right; font-weight:700;">&#8377; ${client.outstanding.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                                <td style="text-align:right;"><span class="status-badge-dot ${client.status_class}">${client.badge_label}</span></td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        riskBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--text-muted); font-size:0.8rem;">No high-risk credit accounts found inside active channels.</td></tr>`;
+                    }
+
+                    // 5. Update Operational System Audit Log
+                    const logContainer = document.getElementById('audit-log-container');
+                    if (stats.audit_logs && stats.audit_logs.length > 0) {
+                        logContainer.innerHTML = stats.audit_logs.map(log => `
+                            <div class="stream-row">
+                                <span class="stream-time-stamp">${log.time}</span>
+                                <p class="stream-text-info">${log.msg}</p>
+                            </div>
+                        `).join('');
+                    }
+                }
+            }
+        } catch(e) {
+            console.error('Dashboard telemetry data engine fault:', e);
+        }
+    }
+
+    function waitForAPI(callback, maxMs) {
+        maxMs = maxMs || 8000;
+        var start = Date.now();
+        var t = setInterval(function() {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(t);
+                callback();
+            } else if (Date.now() - start > maxMs) {
+                clearInterval(t);
+                callback();
+            }
+        }, 100);
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    initAnalyticsChart();
+
+    waitForAPI(async function() {
+        await initSidebar('dashboard');
+        await loadDashboardData();
+    });
+</script>
+</body>
+</html>

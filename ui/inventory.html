@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Inventory Intelligence Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="sidebar.css">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --accent-light: #fdf6b2;
+            --bg-main: #f8fafc; --card: #ffffff; --border: #e2e8f0;
+            --text-main: #1e293b; --text-muted: #64748b;
+            --success: #059669; --warning: #d97706; --error: #e11d48;
+            --shadow-lux: 0 20px 25px -5px rgba(0,0,0,0.05),0 10px 10px -5px rgba(0,0,0,0.02);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+        body { display: block; height:100vh; background:var(--bg-main); color:var(--text-main); overflow:hidden; }
+        main {
+            width: 100% !important; min-width: 0; flex:1; display:flex; flex-direction:column; overflow:hidden; }
+        header { height:80px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 40px; flex-shrink:0; z-index:100; }
+        .header-left h1 { font-size:1.4rem; font-weight:800; color:var(--primary); letter-spacing:-0.8px; display:flex; align-items:center; gap:12px; }
+        .header-left .status-dot { width:10px; height:10px; background:var(--success); border-radius:50%; box-shadow:0 0 10px var(--success); }
+        .clock-box { font-family:'JetBrains Mono',monospace; font-size:0.85rem; font-weight:700; color:var(--accent); background:#fefce8; padding:8px 16px; border-radius:12px; border:1px solid var(--accent-light); }
+        .dashboard-scroll { flex:1; overflow-y:auto; padding:30px 40px; display:flex; flex-direction:column; gap:30px; }
+        .top-action-bar { display:flex; justify-content:flex-end; gap:15px; margin-bottom:-10px; width:100%; }
+        .btn-lux { padding:12px 24px; border-radius:14px; font-weight:800; font-size:0.8rem; cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); display:flex; align-items:center; gap:10px; border:none; }
+        .btn-katti-gold { background:var(--accent); color:white; box-shadow:0 10px 15px -3px rgba(181,148,16,0.3); }
+        .btn-katti-gold:hover { transform:translateY(-3px); filter:brightness(1.1); }
+        .btn-uchak-slate { background:#334155; color:white; box-shadow:0 10px 15px -3px rgba(51,65,85,0.3); }
+        .btn-uchak-slate:hover { transform:translateY(-3px); background:#475569; }
+        .btn-add-stock { background:var(--primary); color:white; }
+        .btn-add-stock:hover { transform:translateY(-3px); background:#1e293b; }
+        .btn-report-emerald { background:#022c22; color:#34d399; border:1px solid #065f46; box-shadow:0 10px 15px -3px rgba(4,47,46,0.25); margin-right:auto; }
+        .btn-report-emerald:hover { transform:translateY(-3px); background:#042f2e; color:#6ee7b7; }
+
+        .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:22px; }
+        .metric-card { background:#fff; padding:26px 22px; border-radius:24px; border:1px solid var(--border); box-shadow:var(--shadow-lux); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; }
+        .metric-card:hover { border-color:var(--accent); transform:translateY(-5px); box-shadow:0 30px 40px -15px rgba(0,0,0,0.08); }
+        .metric-label { font-size:0.68rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:block; }
+        .metric-value { font-size:1.85rem; font-weight:800; color:var(--primary); letter-spacing:-1.2px; font-family:'JetBrains Mono',monospace; line-height:1; }
+        .metric-value span { font-size:1.15rem; font-weight:700; margin-left:6px; letter-spacing:0; }
+        .metric-sub { font-size:0.75rem; font-weight:700; margin-top:14px; display:flex; align-items:center; gap:6px; }
+        .card-gold-indicator     { border-left:4.5px solid var(--accent); }
+        .card-showroom-indicator { border-left:4.5px solid #2563eb; }
+        .card-uchak-indicator    { border-left:4.5px solid #334155; }
+        .card-untagged-indicator { border-left:4.5px solid var(--error); }
+        .card-packets-indicator  { border-left:4.5px solid #d97706; }
+
+        .intel-grid { display:grid; grid-template-columns:1.5fr 1fr; gap:24px; }
+        .intel-card { background:#fff; border-radius:24px; border:1px solid var(--border); padding:24px; box-shadow:var(--shadow-lux); display:flex; flex-direction:column; }
+        .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+        .card-title { font-size:0.9rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:10px; }
+        .heatmap-container { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; min-height:220px; }
+        .bin-box { aspect-ratio:1.1/1; border-radius:16px; background:#f8fafc; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800; border:1px solid var(--border); transition:all 0.25s ease; position:relative; overflow:hidden; cursor:pointer; }
+        .bin-box.active { background:#f0fdf4; border-color:#86efac; color:#166534; box-shadow:inset 0 0 15px rgba(34,197,94,0.05); }
+        .bin-box.active::after { content:''; position:absolute; top:5px; right:5px; width:6px; height:6px; background:var(--success); border-radius:50%; }
+        .bin-box:hover { transform:scale(1.04); z-index:10; box-shadow:0 12px 20px -8px rgba(15,23,42,0.15); border-color:var(--accent); }
+        .bin-weight { font-family:'JetBrains Mono'; font-size:0.6rem; margin-top:4px; opacity:0.7; }
+        .bin-popover-card { position:fixed; display:none; background:#fff; width:310px; border-radius:18px; border:1.5px solid var(--primary); box-shadow:0 25px 50px -12px rgba(15,23,42,0.22); padding:16px; z-index:99999; pointer-events:none; opacity:0; }
+        .bin-popover-card.visible { display:block; opacity:1; }
+        .popover-header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px dashed var(--border); padding-bottom:10px; margin-bottom:12px; }
+        .popover-title { font-size:0.8rem; font-weight:800; color:var(--primary); }
+        .popover-total { font-family:'JetBrains Mono'; font-size:0.8rem; font-weight:800; color:var(--success); }
+        .popover-items-list { display:flex; flex-direction:column; gap:8px; max-height:160px; overflow-y:auto; }
+        .popover-item-row { display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; font-weight:700; padding:6px 10px; background:#f8fafc; border-radius:10px; border:1px solid var(--border); }
+        .popover-empty { font-size:0.7rem; color:var(--text-muted); text-align:center; padding:15px 0; font-weight:600; }
+        .heat-nav,.prod-nav { display:flex; gap:8px; }
+        .btn-nav-heat,.btn-nav-prod { width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:white; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; }
+        .btn-nav-heat:hover:not(:disabled),.btn-nav-prod:hover:not(:disabled) { background:var(--accent); color:white; border-color:var(--accent); }
+        .btn-nav-heat:disabled,.btn-nav-prod:disabled { opacity:0.3; cursor:not-allowed; }
+        .product-list { display:flex; flex-direction:column; gap:12px; min-height:300px; }
+        .product-item { display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-radius:16px; background:#f8fafc; border:1px solid var(--border); transition:all 0.3s ease; }
+        .product-item:hover { border-color:var(--accent); background:#fff; transform:translateX(5px); }
+        .prod-name { font-size:0.95rem; font-weight:800; color:var(--primary); margin-bottom:2px; }
+        .prod-cat { font-size:0.75rem; color:var(--text-muted); font-weight:600; }
+        .velocity-badge { font-size:0.65rem; font-weight:800; background:var(--accent); color:white; padding:6px 12px; border-radius:8px; }
+        .scan-result-table { width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:10px; }
+        .scan-result-table th { text-align:left; padding:10px; color:var(--text-muted); border-bottom:1px solid var(--border); }
+        .scan-result-table td { padding:12px 10px; border-bottom:1px solid #f1f5f9; }
+        .table-section { background:#fff; border-radius:24px; border:1px solid var(--border); box-shadow:var(--shadow-lux); overflow:hidden; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; padding:18px 30px; background:#fdfdfd; font-size:0.6rem; text-transform:uppercase; font-weight:800; color:var(--text-muted); border-bottom:2px solid #f8fafc; }
+        td { padding:20px 30px; font-size:0.85rem; font-weight:600; border-bottom:1px solid #f8fafc; }
+        .tag-id { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--accent); background:#fffbeb; padding:4px 10px; border-radius:8px; border:1px solid #fef3c7; }
+        ::-webkit-scrollbar { width:8px; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; border:3px solid var(--bg-main); }
+
+        /* ══ STOCK ALERT SYSTEM — Redesigned ══ */
+        @keyframes shimmerSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(250%)} }
+        @keyframes pulseRing    { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.12);opacity:0.7} }
+        @keyframes floatUp      { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes glowRed      { 0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,0),0 8px 32px rgba(225,29,72,0.25)} 50%{box-shadow:0 0 0 6px rgba(225,29,72,0.12),0 8px 40px rgba(225,29,72,0.4)} }
+        @keyframes glowAmber    { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0),0 8px 32px rgba(245,158,11,0.2)}  50%{box-shadow:0 0 0 6px rgba(245,158,11,0.1),0 8px 40px rgba(245,158,11,0.35)} }
+        @keyframes dotPulse     { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.6);opacity:0.5} }
+        @keyframes barFill      { from{width:0%} to{width:100%} }
+        @keyframes badgePop     { 0%{transform:scale(0.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+
+        .stock-alerts-wrap { display:flex; flex-direction:column; gap:12px; }
+
+        .alert-card {
+            border-radius:16px; padding:0;
+            display:flex; flex-direction:column;
+            position:relative; overflow:hidden;
+            animation: floatUp 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        .alert-card::before {
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.04) 50%,transparent 60%);
+            transform:translateX(-100%);
+            animation: shimmerSlide 4s ease-in-out infinite;
+            pointer-events:none; z-index:1;
+        }
+
+        .alert-oos {
+            background:linear-gradient(135deg,#150005 0%,#1f0009 50%,#130008 100%);
+            border:1px solid rgba(225,29,72,0.5);
+            animation: floatUp 0.45s cubic-bezier(0.34,1.56,0.64,1) both, glowRed 2.8s ease-in-out infinite;
+        }
+        .alert-oos .alert-top-bar { background:linear-gradient(90deg,#e11d48,#be123c,#9f1239); }
+
+        .alert-low {
+            background:linear-gradient(135deg,#110900 0%,#1c1000 50%,#140b00 100%);
+            border:1px solid rgba(245,158,11,0.45);
+            animation: floatUp 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.08s both, glowAmber 3.2s ease-in-out infinite;
+        }
+        .alert-low .alert-top-bar { background:linear-gradient(90deg,#f59e0b,#d97706,#b45309); }
+
+        .alert-top-bar { height:3px; width:100%; flex-shrink:0; }
+
+        .alert-inner { display:flex; align-items:center; gap:18px; padding:18px 22px 18px 20px; }
+
+        .alert-icon-wrap {
+            flex-shrink:0; width:52px; height:52px; border-radius:14px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.6rem; position:relative;
+        }
+        .alert-oos .alert-icon-wrap { background:rgba(225,29,72,0.12); border:1.5px solid rgba(225,29,72,0.35); }
+        .alert-low .alert-icon-wrap { background:rgba(245,158,11,0.1);  border:1.5px solid rgba(245,158,11,0.3); }
+        .alert-icon-wrap::after {
+            content:''; position:absolute; inset:-4px; border-radius:18px;
+            animation: pulseRing 2s ease-in-out infinite;
+        }
+        .alert-oos .alert-icon-wrap::after { border:2px solid rgba(225,29,72,0.25); }
+        .alert-low .alert-icon-wrap::after { border:2px solid rgba(245,158,11,0.2); }
+
+        .alert-body { flex:1; min-width:0; }
+        .alert-header-row { display:flex; align-items:center; gap:10px; margin-bottom:3px; }
+        .alert-title { font-size:0.85rem; font-weight:900; letter-spacing:-0.2px; }
+        .alert-oos .alert-title { color:#fff; }
+        .alert-low .alert-title { color:#fef3c7; }
+
+        .alert-count-badge {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:22px; height:22px; border-radius:7px;
+            font-size:0.68rem; font-weight:900; font-family:'JetBrains Mono',monospace;
+            animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.3s both;
+        }
+        .alert-oos .alert-count-badge { background:#e11d48; color:#fff; }
+        .alert-low .alert-count-badge { background:#f59e0b; color:#000; }
+
+        .alert-subtitle { font-size:0.7rem; font-weight:600; margin-bottom:10px; letter-spacing:0.1px; }
+        .alert-oos .alert-subtitle { color:rgba(252,165,165,0.8); }
+        .alert-low .alert-subtitle { color:rgba(252,211,77,0.8); }
+
+        .alert-pills { display:flex; flex-wrap:wrap; gap:6px; }
+        .pill {
+            display:inline-flex; align-items:center; gap:6px;
+            border-radius:8px; padding:4px 10px;
+            font-size:0.68rem; font-weight:700; font-family:'JetBrains Mono',monospace;
+        }
+        .pill-oos { background:rgba(225,29,72,0.1); border:1px solid rgba(225,29,72,0.28); color:#fca5a5; }
+        .pill-low { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.28); color:#fcd34d; }
+        .pill-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; animation:dotPulse 1.2s ease-in-out infinite; }
+        .pill-dot-oos { background:#e11d48; }
+        .pill-dot-low { background:#f59e0b; animation-delay:0.4s; }
+        .pill-wt { opacity:0.55; font-size:0.62rem; }
+
+        .alert-progress-row { margin-top:10px; display:flex; flex-direction:column; gap:5px; }
+        .alert-progress-item { display:flex; align-items:center; gap:8px; }
+        .alert-progress-label { font-size:0.62rem; font-weight:700; color:rgba(252,211,77,0.7); width:54px; flex-shrink:0; font-family:'JetBrains Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .alert-progress-track { flex:1; height:4px; border-radius:99px; background:rgba(245,158,11,0.12); overflow:hidden; }
+        .alert-progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#f59e0b,#fbbf24); width:0%; transition:width 0.8s cubic-bezier(0.25,1,0.5,1); }
+        .alert-progress-val { font-size:0.62rem; font-weight:700; color:rgba(252,211,77,0.6); font-family:'JetBrains Mono',monospace; width:42px; text-align:right; flex-shrink:0; }
+
+        .alert-action {
+            flex-shrink:0; padding:10px 18px; border:none; border-radius:10px;
+            font-weight:800; font-size:0.68rem; cursor:pointer;
+            text-transform:uppercase; letter-spacing:0.9px;
+            transition:all 0.2s; white-space:nowrap; align-self:flex-start;
+        }
+        .alert-oos .alert-action { background:rgba(225,29,72,0.85); color:#fff; border:1px solid rgba(225,29,72,0.5); }
+        .alert-oos .alert-action:hover { background:#e11d48; transform:translateY(-2px); box-shadow:0 4px 14px rgba(225,29,72,0.4); }
+        .alert-low .alert-action { background:rgba(245,158,11,0.8); color:#000; border:1px solid rgba(245,158,11,0.4); }
+        .alert-low .alert-action:hover { background:#f59e0b; transform:translateY(-2px); box-shadow:0 4px 14px rgba(245,158,11,0.35); }
+
+        /* ── OPENING STOCK CARD ── */
+        .opening-stock-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+        }
+        .opening-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .opening-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .opening-card-title span:first-child {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--primary);
+        }
+        .opening-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            background: var(--accent-glow);
+            color: var(--accent);
+            border: 1px solid rgba(181,148,16,0.2);
+            padding: 3px 9px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+        .opening-card-link {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(181,148,16,0.2);
+            background: var(--accent-glow);
+            transition: all 0.2s;
+        }
+        .opening-card-link:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+        .opening-stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .opening-stat {
+            background: var(--bg-main);
+            border-radius: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+        }
+        .opening-stat-label {
+            font-size: 0.58rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .opening-stat-val {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .opening-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+        .opening-table th {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            padding: 0 12px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        .opening-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(226,232,240,0.5);
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .opening-table tr:last-child td { border-bottom: none; }
+        .opening-table tr:hover td { background: rgba(181,148,16,0.03); }
+        .op-code {
+            display: inline-flex;
+            background: var(--accent-glow);
+            border: 1px solid rgba(181,148,16,0.2);
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .op-num { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+        .op-empty {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+    </style>
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sidebar+main side by side */
+body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"></div>
+
+    <div class="bin-popover-card" id="bin-hover-popover">
+        <div class="popover-header">
+            <span class="popover-title" id="popover-bin-title">STORAGE CELL: B-001</span>
+            <span class="popover-total" id="popover-bin-total">0.000 g</span>
+        </div>
+        <div class="popover-items-list" id="popover-items-box"></div>
+    </div>
+
+    <main>
+        <header>
+            <div class="header-left">
+                <h1><div class="status-dot"></div>Inventory Intelligence</h1>
+            </div>
+            <div class="header-right">
+                <div class="clock-box" id="real-time-clock">-- --- ---- | --:--:--</div>
+            </div>
+        </header>
+
+        <div class="dashboard-scroll">
+            <div class="top-action-bar">
+                <button class="btn-lux btn-report-emerald" onclick="window.location.href='full_report.html'">SHOW FULL REPORT</button>
+                <button class="btn-lux btn-katti-gold" onclick="window.location.href='katti_entry.html'">WEIGHT BASED TERMINAL</button>
+                <button class="btn-lux btn-uchak-slate" onclick="window.location.href='uchak_stock_entry.html'">PIECE BASED ENTRY</button>
+                <button class="btn-lux btn-add-stock" onclick="window.location.href='stock_ledger.html'">📦 OPENING STOCK</button>
+            </div>
+
+            <!-- ── OPENING STOCK SUMMARY CARD ── -->
+            <div class="opening-stock-card">
+                <div class="opening-card-head">
+                    <div class="opening-card-title">
+                        <span>Opening Stock</span>
+                        <span class="opening-badge" id="op-count-badge">0 Entries</span>
+                    </div>
+                    <a href="stock_ledger.html" class="opening-card-link">📦 Manage Opening Stock →</a>
+                </div>
+                <div class="opening-stats-row">
+                    <div class="opening-stat">
+                        <div class="opening-stat-label">Total Entries</div>
+                        <div class="opening-stat-val" id="op-total-count">0</div>
+                    </div>
+                    <div class="opening-stat">
+                        <div class="opening-stat-label">Total Gross Wt</div>
+                        <div class="opening-stat-val" id="op-total-gr">0.000 g</div>
+                    </div>
+                    <div class="opening-stat">
+                        <div class="opening-stat-label">Total Net Wt</div>
+                        <div class="opening-stat-val" id="op-total-nt">0.000 g</div>
+                    </div>
+                    <div class="opening-stat">
+                        <div class="opening-stat-label">IT Codes</div>
+                        <div class="opening-stat-val" id="op-total-codes">0</div>
+                    </div>
+                </div>
+                <table class="opening-table">
+                    <thead>
+                        <tr>
+                            <th>IT Code</th>
+                            <th>Gross Wt</th>
+                            <th>Less Wt</th>
+                            <th>Net Wt</th>
+                            <th>Touch %</th>
+                            <th>Wastage %</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="op-table-body">
+                        <tr><td colspan="7" class="op-empty">Loading opening stock...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ✅ STOCK ALERT SYSTEM — OOS (red) + Low Stock (amber) -->
+            <div class="stock-alerts-wrap" id="stock-alerts-wrap">
+
+                <!-- OUT OF STOCK card -->
+                <div class="alert-card alert-oos" id="oos-banner" style="display:none;">
+                    <div class="alert-top-bar"></div>
+                    <div class="alert-inner">
+                        <div class="alert-icon-wrap">🚨</div>
+                        <div class="alert-body">
+                            <div class="alert-header-row">
+                                <div class="alert-title">Out of Stock</div>
+                                <div class="alert-count-badge" id="oos-count-badge">0</div>
+                            </div>
+                            <div class="alert-subtitle">Items fully exhausted — replenishment required immediately</div>
+                            <div class="alert-pills" id="oos-items-list"></div>
+                        </div>
+                        <button class="alert-action" onclick="window.location.href='katti_entry.html'">+ Add Stock</button>
+                    </div>
+                </div>
+
+                <!-- LOW STOCK card -->
+                <div class="alert-card alert-low" id="low-stock-banner" style="display:none;">
+                    <div class="alert-top-bar"></div>
+                    <div class="alert-inner">
+                        <div class="alert-icon-wrap">⚠️</div>
+                        <div class="alert-body">
+                            <div class="alert-header-row">
+                                <div class="alert-title">Low Stock Warning</div>
+                                <div class="alert-count-badge" id="low-count-badge">0</div>
+                            </div>
+                            <div class="alert-subtitle" id="low-stock-subtitle">Items below threshold — restock soon</div>
+                            <div class="alert-progress-row" id="low-stock-list"></div>
+                        </div>
+                        <button class="alert-action" onclick="window.location.href='katti_entry.html'">Restock Now</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="stats-row">
+                <div class="metric-card card-gold-indicator">
+                    <div><span class="metric-label">Total Net Weight</span>
+                    <div class="metric-value" id="total-net-wt">0.000<span>g</span></div></div>
+                    <div class="metric-sub" style="color:var(--success);">Active Vault Assets Valuation</div>
+                </div>
+                <div class="metric-card card-showroom-indicator">
+                    <div><span class="metric-label">Tagged Items</span>
+                    <div class="metric-value" id="total-pcs">0<span>PCS</span></div></div>
+                    <div class="metric-sub" style="color:var(--text-muted);">Verified Showroom Barcodes</div>
+                </div>
+                <div class="metric-card card-uchak-indicator">
+                    <div><span class="metric-label">Total Uchak PCS</span>
+                    <div class="metric-value" id="total-uchak-pcs" style="color:#334155;">0<span>PCS</span></div></div>
+                    <div class="metric-sub" style="color:var(--text-muted);">Wholesale Piece Stock</div>
+                </div>
+                <div class="metric-card card-untagged-indicator">
+                    <div><span class="metric-label">Untagged Products</span>
+                    <div class="metric-value" id="untagged-pcs" style="color:var(--error);">0<span>ITEM</span></div></div>
+                    <div class="metric-sub" style="color:var(--warning);">Pending Barcode Mapping</div>
+                </div>
+                <div class="metric-card card-packets-indicator">
+                    <div><span class="metric-label">Weight Based Batch Packets</span>
+                    <div class="metric-value" id="total-packets" style="color:#d97706;">0<span>PKT</span></div></div>
+                    <div class="metric-sub" id="packet-weight-sub" style="color:var(--warning);">Bulk Manufacturing Weight</div>
+                </div>
+            </div>
+
+            <div class="intel-grid">
+                <div class="intel-card">
+                    <div class="card-header">
+                        <span class="card-title">Category Distribution</span>
+                        <select id="dist-toggle" onchange="renderCategoryChart(this.value)" style="border:none;font-size:0.7rem;font-weight:800;color:var(--accent);outline:none;cursor:pointer;background:transparent;">
+                            <option value="weight">WEIGHT BASED</option>
+                            <option value="pcs">TAGGED PIECE STOCK</option>
+                            <option value="uchak">UCHAK STOCK</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;min-height:250px;"><canvas id="categoryChart"></canvas></div>
+                </div>
+                <div class="intel-card">
+                    <div class="card-header">
+                        <span class="card-title">Storage Bin Heatmap</span>
+                        <div class="heat-nav">
+                            <button class="btn-nav-heat" id="heat-prev" onclick="changeHeatPage(-1)" disabled>&lt;</button>
+                            <button class="btn-nav-heat" id="heat-next" onclick="changeHeatPage(1)">&gt;</button>
+                        </div>
+                    </div>
+                    <div class="heatmap-container" id="bin-heatmap"></div>
+                </div>
+            </div>
+
+            <div class="intel-grid" style="grid-template-columns:1fr 1.5fr;">
+                <div class="intel-card">
+                    <div class="card-header">
+                        <span class="card-title">Top Moving Designs</span>
+                        <div class="prod-nav">
+                            <button class="btn-nav-prod" id="prod-prev" onclick="changeProdPage(-1)" disabled>&lt;</button>
+                            <button class="btn-nav-prod" id="prod-next" onclick="changeProdPage(1)">&gt;</button>
+                        </div>
+                    </div>
+                    <div class="product-list" id="hot-products"></div>
+                </div>
+                <div class="intel-card">
+                    <div class="card-header"><span class="card-title">Stagnancy Scan</span></div>
+                    <div id="stagnancy-results" style="overflow-y:auto;max-height:350px;">
+                        <div style="text-align:center;padding:20px;opacity:0.6;">Initializing rotation history...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <table>
+                    <thead><tr>
+                        <th>SKU Tag</th><th>Description</th><th>Touch</th>
+                        <th>Gross Mass</th><th>Net Gold</th><th>Storage</th><th>Status</th>
+                    </tr></thead>
+                    <tbody id="master-stock-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+<script>
+
+
+    let catChartInstance = null;
+    let analyticsData = { katti_weight:[], manual_pcs:[], uchak_pcs_chart:[], bins:[], status:"empty" };
+    let rawInventoryItemsList = [];
+    let hotProductsRaw = [];
+    let heatPage = 0, prodPage = 0;
+    const BINS_PER_PAGE = 15, PRODS_PER_PAGE = 5;
+
+    // ── OPENING STOCK CARD ──────────────────────────────────────
+    async function loadOpeningStock() {
+        if (!window.pywebview || !window.pywebview.api) return;
+        try {
+            const data = await window.pywebview.api.get_opening_stock().catch(()=>[]);
+            const rows = Array.isArray(data) ? data : [];
+            const tGr  = rows.reduce((s,r)=>s+parseFloat(r.gr_wt||0),0);
+            const tNt  = rows.reduce((s,r)=>s+parseFloat(r.nt_wt||0),0);
+            const codes= new Set(rows.map(r=>r.it_code)).size;
+
+            document.getElementById('op-total-count').innerText = rows.length;
+            document.getElementById('op-total-gr').innerText    = tGr.toFixed(3)+' g';
+            document.getElementById('op-total-nt').innerText    = tNt.toFixed(3)+' g';
+            document.getElementById('op-total-codes').innerText = codes;
+            document.getElementById('op-count-badge').innerText = rows.length+' Entr'+(rows.length===1?'y':'ies');
+
+            const tbody = document.getElementById('op-table-body');
+            if(!rows.length){
+                tbody.innerHTML='<tr><td colspan="7" class="op-empty">No opening stock entries yet. <a href="stock_ledger.html" style="color:var(--accent);font-weight:700;">Add Opening Stock →</a></td></tr>';
+                return;
+            }
+            const show = rows.slice(0,8);
+            tbody.innerHTML = show.map(r=>{
+                const gr=parseFloat(r.gr_wt||0), ls=parseFloat(r.ls_wt||0);
+                const nt=parseFloat(r.nt_wt||0), tc=parseFloat(r.touch||0), ws=parseFloat(r.wastage||0);
+                return `<tr>
+                    <td><span class="op-code">${r.it_code||'—'}</span></td>
+                    <td><span class="op-num">${gr.toFixed(3)}</span></td>
+                    <td><span class="op-num" style="color:#e11d48;">${ls>0?ls.toFixed(3):'—'}</span></td>
+                    <td><span class="op-num" style="color:#059669;font-weight:800;">${nt.toFixed(3)}</span></td>
+                    <td><span class="op-num" style="color:#1d4ed8;">${tc.toFixed(0)}%</span></td>
+                    <td><span class="op-num">${ws>0?ws.toFixed(1)+'%':'—'}</span></td>
+                    <td style="color:#94a3b8;font-size:0.7rem;">${r.entry_date||'—'}</td>
+                </tr>`;
+            }).join('');
+            if(rows.length>8){
+                tbody.innerHTML+=`<tr><td colspan="7" class="op-empty" style="padding:10px;">
+                    +${rows.length-8} more — <a href="stock_ledger.html" style="color:var(--accent);font-weight:700;">View All →</a>
+                </td></tr>`;
+            }
+        } catch(e){ console.error('loadOpeningStock:',e); }
+    }
+
+    async function loadDashboard() {
+        if (!window.pywebview || !window.pywebview.api) return;
+        try {
+            const stats = await window.pywebview.api.get_inventory_stats();
+            updateMetricUI(stats);
+
+            const payload = await window.pywebview.api.get_analytics_payload();
+            if (payload) analyticsData = payload;
+
+            hotProductsRaw = await window.pywebview.api.get_velocity_products() || [];
+            renderHotProducts();
+
+            const ledger = await window.pywebview.api.get_stock_ledger();
+            rawInventoryItemsList = ledger || [];
+            renderStockTable(rawInventoryItemsList);
+
+            renderHeatmap();
+            renderCategoryChart(document.getElementById('dist-toggle').value);
+            runStagnancyScan();
+
+            // ✅ Check out-of-stock items
+            checkOutOfStock();
+
+        } catch(err) { console.error("Dashboard Load Failed:", err); }
+    }
+
+    // ✅ STOCK ALERT CHECK — OOS + Low Stock ─────────────────────
+    const LOW_STOCK_THRESHOLD = 10.0; // grams
+
+    async function checkOutOfStock() {
+        // Retry until pywebview bridge is ready
+        if (!window.pywebview || !window.pywebview.api) {
+            setTimeout(checkOutOfStock, 300);
+            return;
+        }
+        try {
+            const [oosItems, lowItems] = await Promise.all([
+                window.pywebview.api.get_out_of_stock_items().catch(() => []),
+                window.pywebview.api.get_low_stock_items(LOW_STOCK_THRESHOLD).catch(() => [])
+            ]);
+
+            // ── OUT OF STOCK (red) ──
+            const oosBanner = document.getElementById('oos-banner');
+            const oosList   = document.getElementById('oos-items-list');
+            const oosBadge  = document.getElementById('oos-count-badge');
+
+            if (oosItems && oosItems.length > 0) {
+                if (oosBadge) oosBadge.innerText = oosItems.length;
+                oosList.innerHTML = oosItems.map(it => `
+                    <div class="pill pill-oos">
+                        <div class="pill-dot pill-dot-oos"></div>
+                        ${it.it_code || it.it_name || '—'}
+                        <span class="pill-wt">was ${parseFloat(it.original_wt||0).toFixed(2)}g</span>
+                    </div>`).join('');
+                oosBanner.style.display = 'flex';
+            } else {
+                oosBanner.style.display = 'none';
+            }
+
+            // ── LOW STOCK (amber) — with progress bars ──
+            const lowBanner   = document.getElementById('low-stock-banner');
+            const lowList     = document.getElementById('low-stock-list');
+            const lowSubtitle = document.getElementById('low-stock-subtitle');
+            const lowBadge    = document.getElementById('low-count-badge');
+
+            if (lowItems && lowItems.length > 0) {
+                if (lowBadge) lowBadge.innerText = lowItems.length;
+                lowSubtitle.innerText = `${lowItems.length} item${lowItems.length>1?'s':''} below ${LOW_STOCK_THRESHOLD}g threshold`;
+
+                // Find max remaining for bar scaling
+                const maxRem = Math.max(...lowItems.map(it => parseFloat(it.remaining||0)), 0.001);
+
+                lowList.innerHTML = lowItems.map(it => {
+                    const rem = parseFloat(it.remaining || 0);
+                    const pct = Math.max(4, Math.round((rem / LOW_STOCK_THRESHOLD) * 100));
+                    const code = (it.it_code || it.it_name || '—').substring(0, 8);
+                    return `<div class="alert-progress-item">
+                        <div class="alert-progress-label" title="${it.it_code}">${code}</div>
+                        <div class="alert-progress-track">
+                            <div class="alert-progress-fill" data-pct="${pct}"></div>
+                        </div>
+                        <div class="alert-progress-val">${rem.toFixed(2)}g</div>
+                    </div>`;
+                }).join('');
+
+                lowBanner.style.display = 'flex';
+                // Animate bars after render (transition from 0 to pct)
+                requestAnimationFrame(function(){
+                    requestAnimationFrame(function(){
+                        document.querySelectorAll('.alert-progress-fill').forEach(function(el){
+                            var pct = el.getAttribute('data-pct') || '0';
+                            el.style.width = pct + '%';
+                        });
+                    });
+                });
+            } else {
+                lowBanner.style.display = 'none';
+            }
+
+        } catch(e) {
+            console.warn('Stock alert check failed:', e);
+        }
+    }
+
+    function updateMetricUI(stats) {
+        if (!stats) return;
+        document.getElementById('total-net-wt').innerHTML = parseFloat(stats.net||0).toFixed(3) + "<span>g</span>";
+        document.getElementById('total-pcs').innerHTML = (stats.pcs||0) + "<span>PCS</span>";
+        document.getElementById('total-packets').innerHTML = (stats.packets||0) + "<span>PKT</span>";
+        if (document.getElementById('total-uchak-pcs'))
+            document.getElementById('total-uchak-pcs').innerHTML = (stats.uchak_pcs||0) + "<span>PCS</span>";
+        if (document.getElementById('untagged-pcs'))
+            document.getElementById('untagged-pcs').innerHTML = (stats.untagged_items||0) + "<span>ITEM</span>";
+    }
+
+    async function runStagnancyScan() {
+        const c = document.getElementById('stagnancy-results');
+        if (!window.pywebview?.api) return;
+        try {
+            const response = await window.pywebview.api.get_stagnant_report(90);
+            if (!response || !response.length) {
+                c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--success);"><h3 style="font-size:0.9rem;">✅ Optimal Rotation</h3></div>`;
+                return;
+            }
+            c.innerHTML = `<table class="scan-result-table"><thead><tr><th>Item</th><th>Age</th><th>Weight</th></tr></thead><tbody>` +
+                response.map(i => `<tr><td><div style="font-weight:700;">${i.it_name}</div></td><td style="color:var(--accent);font-weight:800;">${i.days_old} Days</td><td>${parseFloat(i.gr_wt).toFixed(3)}g</td></tr>`).join('') +
+                `</tbody></table>`;
+        } catch(e) { c.innerHTML = `<div style="text-align:center;padding:20px;opacity:0.5;">No rotation issues detected</div>`; }
+    }
+
+    function renderCategoryChart(mode) {
+        const canvasEl = document.getElementById('categoryChart');
+        if (!canvasEl) return;
+        const ctx = canvasEl.getContext('2d');
+        const sourceMap = {
+            weight: { data: analyticsData.katti_weight,    key:'total_weight', label:'Weight Based Mass (g)',        color:'#b59410', glow:'rgba(181,148,16,0.2)' },
+            pcs:    { data: analyticsData.manual_pcs,      key:'total_pcs',    label:'Tagged Piece Stock (pcs)',      color:'#0f172a', glow:'rgba(15,23,42,0.15)' },
+            uchak:  { data: analyticsData.uchak_pcs_chart, key:'total_pcs',    label:'Voucher Inward Count (pcs)',    color:'#334155', glow:'rgba(51,65,85,0.2)' }
+        };
+        const { data: sourceData, key, label, color: primaryColor, glow: glowColor } = sourceMap[mode];
+        if (catChartInstance) catChartInstance.destroy();
+        if (!sourceData || !sourceData.length) {
+            ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
+            ctx.font="13px Plus Jakarta Sans"; ctx.fillStyle="#64748b"; ctx.textAlign="center";
+            ctx.fillText("No data loaded for this mode", canvasEl.width/2, canvasEl.height/2);
+            return;
+        }
+        const grad = ctx.createLinearGradient(0,0,0,canvasEl.height||250);
+        grad.addColorStop(0, glowColor); grad.addColorStop(1,'rgba(255,255,255,0)');
+        catChartInstance = new Chart(ctx, {
+            type:'line',
+            data:{ labels:sourceData.map(d=>d.cat_group||"UNKNOWN"), datasets:[{ label, data:sourceData.map(d=>parseFloat(d[key]||0)), borderColor:primaryColor, borderWidth:3.5, pointBackgroundColor:primaryColor, pointBorderColor:'#fff', pointBorderWidth:2, pointRadius:5, pointHoverRadius:7, tension:0.38, fill:true, backgroundColor:grad }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#0f172a',titleFont:{family:'Plus Jakarta Sans',weight:'700',size:12},bodyFont:{family:'JetBrains Mono',size:12},padding:12,borderRadius:12,displayColors:false} }, scales:{ y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)',drawBorder:false},ticks:{font:{family:'JetBrains Mono',size:10,weight:'500'}}}, x:{grid:{display:false},ticks:{font:{family:'Plus Jakarta Sans',size:10,weight:'700'},color:'#1e293b'}} } }
+        });
+    }
+
+    function renderHeatmap() {
+        const container = document.getElementById('bin-heatmap');
+        if (!container) return;
+        container.innerHTML = '';
+        const binMap = {};
+        if (analyticsData && analyticsData.bins) {
+            analyticsData.bins.forEach(b => {
+                if (b.bin_id) {
+                    const clean = b.bin_id.toString().replace(/[^0-9]/g,'');
+                    if (clean) binMap["B"+parseInt(clean,10).toString().padStart(3,'0')] = b;
+                }
+            });
+        }
+        const start = heatPage * BINS_PER_PAGE + 1;
+        for (let i = start; i <= start + BINS_PER_PAGE - 1; i++) {
+            const key = "B"+i.toString().padStart(3,'0');
+            const disp = "B-"+i.toString().padStart(3,'0');
+            const bin = binMap[key];
+            const weight = bin ? parseFloat(bin.weight||0) : 0;
+            const el = document.createElement('div');
+            el.className = `bin-box ${weight>0?'active':''}`;
+            el.innerHTML = `<span class="bin-name">${disp}</span><span class="bin-weight">${weight.toFixed(2)}g</span>`;
+            if (weight > 0) {
+                el.addEventListener('mouseenter', e => showBinPopoverDetails(disp, weight, bin, e));
+                el.addEventListener('mousemove', e => updatePopoverCoordinates(e));
+                el.addEventListener('mouseleave', () => hideBinPopoverDetails());
+            }
+            container.appendChild(el);
+        }
+        document.getElementById('heat-prev').disabled = heatPage === 0;
+    }
+
+    function showBinPopoverDetails(binLabel, totalWeight, binDataObject, event) {
+        document.getElementById('popover-bin-title').innerText = "STORAGE CELL: " + binLabel;
+        document.getElementById('popover-bin-total').innerText = totalWeight.toFixed(3) + " g";
+        let items = binDataObject?.items || [];
+        const box = document.getElementById('popover-items-box');
+        box.innerHTML = items.length === 0
+            ? `<div class="popover-empty">No items registered here.</div>`
+            : items.slice(0,3).map(item => `<div class="popover-item-row"><span style="font-weight:800;overflow:hidden;white-space:nowrap;max-width:170px;">${item.it_name||'Item'}</span><span style="font-family:'JetBrains Mono';color:var(--accent);font-weight:700;">${parseFloat(item.nt_wt||0).toFixed(3)}g</span></div>`).join('');
+        document.getElementById('bin-hover-popover').classList.add('visible');
+        updatePopoverCoordinates(event);
+    }
+    function updatePopoverCoordinates(e) {
+        const p = document.getElementById('bin-hover-popover');
+        p.style.left=(e.clientX+20)+'px'; p.style.top=(e.clientY-40)+'px';
+    }
+    function hideBinPopoverDetails() { document.getElementById('bin-hover-popover').classList.remove('visible'); }
+    function changeHeatPage(dir) { heatPage=Math.max(0,heatPage+dir); renderHeatmap(); }
+
+    function renderHotProducts() {
+        const c = document.getElementById('hot-products');
+        if (!c) return;
+        const items = hotProductsRaw.slice(prodPage*PRODS_PER_PAGE,(prodPage+1)*PRODS_PER_PAGE);
+        c.innerHTML = !hotProductsRaw.length
+            ? '<div style="text-align:center;padding:40px;opacity:0.5;">No movement recorded</div>'
+            : items.map(p=>`<div class="product-item"><div><div class="prod-name">${p.it_name||'Unnamed'}</div><div class="prod-cat">${p.qty||0} Units Sold</div></div><span class="velocity-badge">HOT</span></div>`).join('');
+        document.getElementById('prod-prev').disabled = prodPage===0;
+        document.getElementById('prod-next').disabled = (prodPage+1)*PRODS_PER_PAGE>=hotProductsRaw.length;
+    }
+    function changeProdPage(dir) { prodPage+=dir; renderHotProducts(); }
+
+    function renderStockTable(data) {
+        const tbody = document.getElementById('master-stock-body');
+        if (!tbody) return;
+        if (!data || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;opacity:0.5;">No active inventory found</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(item => `
+            <tr>
+                <td><span class="tag-id">${item.tag_id||'---'}</span></td>
+                <td style="font-weight:700;">${item.it_name||'---'}</td>
+                <td>${item.touch||'--'}%</td>
+                <td>${parseFloat(item.gr_wt||0).toFixed(3)}g</td>
+                <td style="color:var(--success);font-weight:700;">${parseFloat(item.nt_wt||0).toFixed(3)}g</td>
+                <td style="color:var(--accent);font-weight:800;">${item.huid||'-'}</td>
+                <td><span style="color:var(--success);font-size:0.7rem;font-weight:800;">● IN-STOCK</span></td>
+            </tr>`).join('');
+    }
+
+    // ✅ Refresh when user returns to this tab/page (e.g. after deleting a bill)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            const dirty = localStorage.getItem('aurum_stock_dirty');
+            if (dirty === '1' && window.pywebview && window.pywebview.api) {
+                localStorage.removeItem('aurum_stock_dirty');
+                loadDashboard();
+            }
+        }
+    });
+
+    window.onload = () => {
+        setInterval(() => {
+            document.getElementById('real-time-clock').innerText =
+                new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() +
+                " | " + new Date().toLocaleTimeString();
+        }, 1000);
+        const check = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(check);
+                initSidebar('inventory');
+                // ✅ Always reload fresh — clears dirty flag set by history delete
+                localStorage.removeItem('aurum_stock_dirty');
+                loadOpeningStock();
+                loadDashboard();
+            }
+        }, 150);
+    };
+</script>
+</body>
+</html>

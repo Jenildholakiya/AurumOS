@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Bill Print</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+@page { size: A4 portrait; margin: 0; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans Gujarati',Arial,sans-serif; background:#d1d5db; display:flex; flex-direction:column; align-items:center; padding:14px; gap:10px; min-height:100vh; }
+.toolbar { width:490px; background:#0f172a; border-radius:10px; padding:9px 14px; display:flex; align-items:center; gap:8px; }
+.toolbar-title { flex:1; font-family:'JetBrains Mono',monospace; font-size:0.7rem; font-weight:700; color:#b59410; letter-spacing:1.5px; text-transform:uppercase; }
+.btn-p { background:#b59410; color:#000; border:none; padding:7px 20px; border-radius:6px; font-weight:800; font-size:0.8rem; cursor:pointer; }
+.btn-p:hover { background:#d4ac15; }
+.btn-c { background:transparent; color:#64748b; border:1px solid #334155; padding:7px 12px; border-radius:6px; font-weight:700; font-size:0.78rem; cursor:pointer; }
+.btn-c:hover { color:#e11d48; border-color:#e11d48; }
+.slip-wrap { width:490px; background:#fff; box-shadow:0 2px 14px rgba(0,0,0,0.15); border-radius:4px; overflow:hidden; }
+.copy-div { background:#f1f5f9; text-align:center; font-size:0.62rem; font-weight:800; color:#94a3b8; letter-spacing:2px; text-transform:uppercase; padding:4px; border-top:2px dashed #cbd5e1; }
+.slip { padding:6px 8px; background:#fff; }
+.meta-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; padding:0 2px; white-space:nowrap; overflow:hidden; font-family:'JetBrains Mono',monospace; font-size:7.5pt; }
+.m-cust { font-weight:900; font-size:8.5pt; color:#000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; font-family:'Noto Sans Gujarati',Arial,sans-serif; margin-right:10px; }
+.m-vch  { font-weight:700; font-size:7pt; color:#000; background:#f1f5f9; padding:1px 5px; }
+.m-sep  { flex:1; }
+.m-time { font-weight:600; color:#334155; }
+.m-date { font-weight:700; color:#000; }
+.bt { width:100%; border-collapse:collapse; table-layout:fixed; border:1.5px solid #000; }
+.bt thead th { height:24px; border-bottom:1.5px solid #000; border-right:1px solid #000; font-size:7.5pt; font-weight:900; color:#000; text-align:center; background:#f8fafc; vertical-align:middle; white-space:nowrap; overflow:hidden; }
+.bt thead th:last-child { border-right:none; }
+.bt td { height:22px; padding:0 4px; font-size:8pt; font-weight:700; color:#000; border-bottom:1px solid #000; border-right:1px solid #000; vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:clip; line-height:1; text-align:center !important; }
+.bt td:last-child { border-right:none; }
+.cn { font-family:'JetBrains Mono',monospace; text-align:center !important; font-weight:500 !important; }
+.cc { text-align:center !important; }
+.cb { font-weight:800 !important; }
+.rt td { border-top:1.5px solid #000 !important; border-bottom:1.5px solid #000 !important; font-weight:800 !important; background:#fff; }
+.rr td { font-weight:600; background:#fff; }
+.rd td { font-weight:700; background:#fffbeb; border-top:1px dashed #d97706 !important; border-bottom:1px dashed #d97706 !important; color:#92400e; }
+.rb td { height:12px; border-bottom:1px solid #000; }
+.rf td { height:24px; border-top:1.5px solid #000 !important; border-bottom:none !important; font-weight:800; font-size:7.5pt; background:#fff; }
+#mount { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
+#status { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:#475569; padding:10px; text-align:center; }
+@media print {
+    body { background:white; padding:0; margin:0; display:block; }
+    .toolbar, .copy-div, #status { display:none !important; }
+    #mount { display:block !important; width:100% !important; }
+    .slip-wrap { width:490px !important; box-shadow:none !important; border-radius:0 !important; position:relative !important; margin:10mm auto 0 auto !important; page-break-after:always !important; }
+    .slip { padding:0; }
+    .bt thead th { height:20px; font-size:7pt; }
+    .bt td { height:19px; font-size:7.5pt; }
+    .rf td { height:20px; }
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+    <span class="toolbar-title">🖨 AurumOS Bill Print</span>
+    <span id="lbl-copies" style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;color:#94a3b8;"></span>
+    <button class="btn-p" onclick="window.print()">Print</button>
+    <button class="btn-c" onclick="window.close()">Close</button>
+</div>
+<div id="status">Loading bill data...</div>
+<div id="mount"></div>
+
+<script>
+'use strict';
+
+// ── VCH_ID is resolved inside the wait loop ──
+// Python injects window.__VCH_ID__ via <script> before <head>
+// We must NOT read it at parse time — the inject runs later
+// So we poll for it alongside the pywebview bridge
+
+window.onload = function() {
+    showStatus('Waiting for bridge and bill data...');
+
+    var attempts = 0;
+    var waitBridge = setInterval(function() {
+        attempts++;
+
+        // Resolve VCH_ID on every tick until found
+        // (window.__VCH_ID__ set by Python-injected <script>)
+        var vchId  = (window.__VCH_ID__ || '').toString().trim();
+        var copies = parseInt(window.__COPIES__ || 1);
+
+        if (!vchId || !window.pywebview || !window.pywebview.api) {
+            if (attempts >= 100) { // 10 seconds max
+                clearInterval(waitBridge);
+                showStatus('ERROR: Bridge or VCH_ID not ready after 10s.'
+                    + ' __VCH_ID__=' + (window.__VCH_ID__ || 'undefined')
+                    + ' pywebview=' + (typeof window.pywebview));
+            }
+            return; // keep waiting
+        }
+
+        // Both ready — fetch bill
+        clearInterval(waitBridge);
+        showStatus('Fetching: ' + vchId + ' (' + copies + ' cop' + (copies===1?'y':'ies') + ')');
+
+        window.pywebview.api.get_live_invoice_print_payload(vchId)
+            .then(function(res) {
+                if (res && res.status === 'success') {
+                    showStatus('');
+                    doRender(res.bill, copies);
+                } else {
+                    showStatus('DB ERROR: ' + (res ? res.message : 'null response'));
+                }
+            })
+            .catch(function(e) {
+                showStatus('API ERROR: ' + String(e));
+            });
+
+    }, 100);
+};
+
+function showStatus(msg) {
+    var el = document.getElementById('status');
+    if (el) el.innerText = msg;
+    if (msg) console.log('[BILL_PRINT]', msg);
+}
+
+// ── Render all copies ──
+function doRender(BILL, COPIES) {
+    var mount = document.getElementById('mount');
+    mount.innerHTML = '';
+    var names = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
+
+    document.getElementById('lbl-copies').innerText =
+        COPIES === 1 ? '1 Copy' :
+        COPIES === 2 ? '2 Copies' : COPIES + ' Copies';
+
+    for (var c = 0; c < COPIES; c++) {
+        if (c > 0) {
+            var dv = document.createElement('div');
+            dv.className = 'copy-div';
+            dv.innerText = '\u2014 ' + (names[c] || 'COPY '+(c+1)) + ' \u2014';
+            mount.appendChild(dv);
+        }
+        var w = document.createElement('div');
+        w.className = 'slip-wrap';
+        w.innerHTML = buildSlip(BILL, COPIES > 1 ? names[c] : '');
+        mount.appendChild(w);
+    }
+
+    setTimeout(function() { window.print(); }, 600);
+}
+
+// ── Build one slip ──
+function buildSlip(D, copyLabel) {
+    var isU   = D.is_uchak  || false;
+    var vch   = D.vch_id    || '---';
+    var cust  = D.customer  || '---';
+    var rate  = parseFloat(D.goldRate) || 0;
+    var items = D.items || [];
+
+    var now = new Date();
+    var T   = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+    var Dt  = '(' + now.toISOString().split('T')[0] + ')';
+
+    var discType  = D.discountType   || 'none';
+    var discTouch = parseFloat(D.discountTouch)  || 0;
+    var discFine  = parseFloat(D.discountFine)   || 0;
+    var discAmt   = parseFloat(D.discountAmount) || 0;
+
+    // Totals
+    var tG=0, tL=0, tP=0, tN=0, tF=0, tPcs=0, tAmt=0;
+    for (var i=0; i<items.length; i++) {
+        var it = items[i];
+        if (isU) {
+            var pcs = parseInt(it.pcs || it.weight || 1);
+            var pr  = parseFloat(it.price || it.rate || it.touch || 0);
+            tPcs += pcs; tAmt += pcs * pr;
+        } else {
+            var g  = parseFloat(it.weight || it.gr_wt || 0);
+            var p  = parseFloat(it.para   || it.para_stone_wt || 0);
+            var l  = parseFloat(it.less   || it.ls_wt || 0);
+            var fn = parseFloat(it.fine   || 0);
+            tG += g; tL += l; tP += p; tN += (g-p-l); tF += fn;
+        }
+    }
+
+    var colFn  = parseFloat(D.collectedFine) || 0;
+    var f995   = parseFloat(D.fine995)       || 0;
+    var fDhal  = parseFloat(D.fineDhal)      || 0;
+    var totAmt = parseFloat(D.totalAmount)   || (isU ? tAmt : (tF*rate/10));
+
+    var copyBadge = copyLabel
+        ? '&nbsp;<span style="background:#000;color:#fff;padding:0 3px;font-size:6.5pt;font-weight:800;font-family:\'JetBrains Mono\',monospace;">' + h(copyLabel) + '</span>'
+        : '';
+
+    var meta = '<div class="meta-row">'
+        + '<span class="m-cust">' + h(cust) + '</span>'
+        + '<span class="m-vch">'  + h(vch)  + '</span>'
+        + '<span class="m-sep"></span>'
+        + '<span class="m-time">' + T  + '</span>&nbsp;'
+        + '<span class="m-date">' + Dt + '</span>'
+        + copyBadge + '</div>';
+
+    // ══ UCHAK BILL — Fixed table, no row lines, single footer ══
+    if (isU) {
+        var tNang = 0;
+        var uRows = '';
+        for (var i=0; i<items.length; i++) {
+            var it  = items[i];
+            var nng = parseInt(it.pcs || it.weight || 1);
+            var pr  = parseFloat(it.price || it.rate || it.touch || 0);
+            var amt = nng * pr;
+            tNang  += nng;
+            uRows  += '<tr>'
+                + '<td style="width:44%;height:32px;padding:0 8px;font-size:8.5pt;font-weight:700;'
+                    + 'vertical-align:middle;border:none;text-align:left !important;border-right:1px solid #000;">'
+                    + h((it.it_code || it.name || '\u2014').replace(/\s+/g,'')) + '</td>'
+                + '<td style="width:14%;height:32px;padding:0 4px;font-size:8.5pt;font-weight:500;'
+                    + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;border:none;'
+                    + 'text-align:center !important;border-right:1px solid #000;">' + nng + '</td>'
+                + '<td style="width:20%;height:32px;padding:0 4px;font-size:8.5pt;font-weight:500;'
+                    + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;border:none;'
+                    + 'text-align:center !important;border-right:1px solid #000;">' + pr.toFixed(2) + '</td>'
+                + '<td style="width:22%;height:32px;padding:0 8px;font-size:8.5pt;font-weight:700;'
+                    + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;border:none;'
+                    + 'text-align:right !important;">' + amt.toFixed(2) + '</td>'
+                + '</tr>';
+        }
+
+        // Discount row
+        var uDisc = (discType === 'amount' && discAmt > 0)
+            ? '<tr>'
+              + '<td colspan="3" style="height:22px;padding:0 6px;font-size:7.5pt;font-weight:700;'
+                  + 'vertical-align:middle;background:#fffbeb;color:#92400e;border-top:1px dashed #d97706;'
+                  + 'border-bottom:1px dashed #d97706;border-right:1px solid #000;text-align:left !important;">'
+                  + 'Discount (Amount)</td>'
+              + '<td style="height:22px;padding:0 6px;font-size:8pt;font-weight:800;'
+                  + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;background:#fffbeb;'
+                  + 'color:#92400e;border-top:1px dashed #d97706;border-bottom:1px dashed #d97706;'
+                  + 'text-align:right !important;">-\u20B9' + Math.round(discAmt).toLocaleString('en-IN') + '</td>'
+              + '</tr>'
+            : '';
+
+        var uFinalAmt = totAmt; // DB total_amount already has discount applied
+
+        return '<div class="slip">' + meta
+            // Fixed-size table — no row dividers between items
+            + '<table style="width:100%;border-collapse:collapse;table-layout:fixed;border:1.5px solid #000;">'
+            + '<colgroup>'
+            + '<col style="width:44%;">'
+            + '<col style="width:14%;">'
+            + '<col style="width:20%;">'
+            + '<col style="width:22%;">'
+            + '</colgroup>'
+
+            // Header
+            + '<thead>'
+            + '<tr style="background:#f8fafc;border-bottom:1.5px solid #000;">'
+            + '<th style="height:24px;font-size:7.5pt;font-weight:900;text-align:left !important;'
+                + 'padding:0 6px;border-right:1px solid #000;">'
+                + '\u0AB5\u0ABF\u0A97\u0AA4</th>'
+            + '<th style="height:24px;font-size:7.5pt;font-weight:900;text-align:center !important;'
+                + 'border-right:1px solid #000;">'
+                + '\u0AA8\u0A82\u0A97</th>'
+            + '<th style="height:24px;font-size:7.5pt;font-weight:900;text-align:center !important;'
+                + 'border-right:1px solid #000;">'
+                + '\u0AAD\u0ABE\u0AB5</th>'
+            + '<th style="height:24px;font-size:7.5pt;font-weight:900;text-align:right !important;'
+                + 'padding:0 6px;">'
+                + '\u0AB0\u0A95\u0AAE</th>'
+            + '</tr>'
+            + '</thead>'
+
+            + '<tbody>'
+            + uRows
+            + uDisc
+
+            // Spacer between last item and footer
+            + '<tr><td colspan="4" style="height:14px;border:none;border-top:1px solid #e2e8f0;"></td></tr>'
+
+            // Single footer — Total + નંગ + Qty
+            + '<tr style="border-top:1.5px solid #000;background:#fff;">'
+            + '<td style="height:24px;padding:0 6px;font-size:8pt;font-weight:800;'
+                + 'vertical-align:middle;border-right:1px solid #000;text-align:left !important;">'
+                + 'Total</td>'
+            + '<td style="height:24px;padding:0 4px;font-size:8pt;font-weight:800;'
+                + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;'
+                + 'border-right:1px solid #000;text-align:center !important;">' + tNang + '</td>'
+            + '<td style="height:24px;padding:0 4px;font-size:7.5pt;font-weight:700;'
+                + 'vertical-align:middle;border-right:1px solid #000;text-align:center !important;">'
+                + 'Qty ' + items.length + '</td>'
+            + '<td style="height:24px;padding:0 6px;font-size:8.5pt;font-weight:800;'
+                + 'font-family:\'JetBrains Mono\',monospace;vertical-align:middle;'
+                + 'text-align:right !important;">\u20B9' + Math.round(uFinalAmt).toLocaleString('en-IN') + '</td>'
+            + '</tr>'
+
+            + '</tbody></table></div>';
+    }
+
+
+    // ══ WEIGHT BILL ══
+    var wRows  = '';
+    var tPkg   = 0;  // total packet weight
+    for (var i=0; i<items.length; i++) {
+        var it  = items[i];
+        var g   = parseFloat(it.weight || it.gr_wt || 0);
+        var p   = parseFloat(it.para   || it.para_stone_wt || 0);
+        var l   = parseFloat(it.less   || it.ls_wt || 0);
+        var pkg = parseFloat(it.pkg_wt || it.pkg || 0); // packet weight field
+        var n   = g - p - l;
+        var tc  = parseFloat(it.touch   || 0);
+        var ws  = parseFloat(it.wastage || 0);
+        var fn  = parseFloat(it.fine    || ((n*(tc+ws)/100)));
+        tPkg += pkg;
+        // vibhag: "68+8" or just "76"
+        var vib = (ws > 0) ? (tc + '+' + ws) : String(tc);
+        wRows += '<tr>'
+            + '<td class="cc">' + h(vib) + '</td>'
+            + '<td class="cn">' + g.toFixed(3) + '</td>'
+            + '<td class="cn">' + (l>0?l.toFixed(3):'0') + '</td>'
+            + '<td class="cn">' + (p>0?p.toFixed(3):'0') + '</td>'
+            + '<td class="cn cb">' + n.toFixed(3) + '</td>'
+            + '<td class="cn">' + (tc+ws).toFixed(0) + '</td>'
+            + '<td class="cn cb">' + fn.toFixed(3) + '</td>'
+            + '<td></td></tr>';
+    }
+
+    var deduct = '';
+    if (colFn>0) deduct += '<tr class="rr"><td class="cc">Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cn">-' + colFn.toFixed(3) + '</td><td></td></tr>';
+    if (f995>0)  deduct += '<tr class="rr"><td class="cc">995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cn">-' + f995.toFixed(3) + '</td><td></td></tr>';
+    if (fDhal>0) deduct += '<tr class="rr"><td class="cc">Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cn">-' + fDhal.toFixed(3) + '</td><td></td></tr>';
+
+    var discRow = '';
+    if (discType==='touch' && discFine>0) {
+        discRow = '<tr class="rd"><td class="cc" colspan="5">Discount (' + discTouch + '% Touch)</td><td></td><td class="cn cb">-' + discFine.toFixed(3) + '</td><td></td></tr>';
+    } else if (discType==='amount' && discAmt>0) {
+        discRow = '<tr class="rd"><td class="cc" colspan="6">Discount (Amount)</td><td></td><td class="cn cb">-&#x20B9;' + Math.round(discAmt).toLocaleString('en-IN') + '</td></tr>';
+    }
+
+    // ratDiff: fine - net = wastage portion (show 0 if negative)
+    var ratDiff = tF - tN;
+
+    // P.Wt = packet weight if entered, else item count
+    var pktWt = (tPkg > 0) ? tPkg.toFixed(3) : items.length;
+
+    // Discount on fine
+    var discFineFinal = (discType==='touch') ? discFine : 0;
+
+    // ── remainingFine from DB = totalFine - collectedFine - 995 - dhal - discFine ──
+    // This is the exact net fine after all deductions (can be negative = overpaid)
+    var remFn    = parseFloat(D.remainingFine);  // keep sign — do NOT default to 0
+    var isCredit = D.is_credit || false;
+
+    // Final Total fine cell shows:
+    // - remainingFine if any settlement happened (cv/995/dhal > 0)
+    // - gross fine minus discount if no settlement at all
+    var hasSettlement = (colFn > 0 || f995 > 0 || fDhal > 0);
+    var netFine = hasSettlement ? remFn : (tF - discFineFinal);
+
+    // bakiVal in footer: only for credit bills with positive outstanding fine
+    var bakiVal = (isCredit && remFn > 0) ? remFn.toFixed(3) : '0.000';
+
+    return '<div class="slip">' + meta
+        + '<table class="bt"><thead><tr>'
+        + '<th style="width:10%;">વિગત</th>'
+        + '<th style="width:11%;">ગ્રોસ</th>'
+        + '<th style="width:11%;">લેસ</th>'
+        + '<th style="width:11%;">પારા</th>'
+        + '<th style="width:12%;">વજન</th>'
+        + '<th style="width:11%;">ટચ</th>'
+        + '<th style="width:11%;">ફાઇન</th>'
+        + '<th style="width:12%;">ભાવ</th>'
+        + '</tr></thead><tbody>'
+        + wRows
+
+        // Total 1 — sum of item rows, blank for zero less/para
+        + '<tr class="rt"><td class="cc">Total</td>'
+        + '<td class="cn">' + tG.toFixed(3) + '</td>'
+        + '<td class="cn">' + (tL>0 ? tL.toFixed(3) : '0') + '</td>'
+        + '<td class="cn">' + (tP>0 ? tP.toFixed(3) : '0') + '</td>'
+        + '<td class="cn cb">' + tN.toFixed(3) + '</td>'
+        + '<td class="cc"></td>'
+        + '<td class="cn cb">' + tF.toFixed(3) + '</td>'
+        + '<td></td></tr>'
+
+        // Rat+ — fine diff in fine col, rate in ભાવ col, rest blank
+        + '<tr class="rr"><td class="cc">Rat+</td>'
+        + '<td class="cn"></td><td class="cn"></td><td class="cn"></td><td class="cn"></td><td class="cn"></td>'
+        + '<td class="cn">' + (ratDiff > 0 ? ratDiff.toFixed(3) : '') + '</td>'
+        + '<td class="cn cb">' + (rate>0 ? rate.toFixed(0) : '') + '</td></tr>'
+
+        // Deductions
+        + deduct
+
+        // Discount row — above final Total, shows if any discount
+        + discRow
+
+        // Final Total — remaining fine (can be negative if overpaid) + amount
+        + '<tr class="rt"><td class="cc">Total</td>'
+        + '<td class="cn"></td><td class="cn"></td><td class="cn"></td><td class="cn"></td>'
+        + '<td class="cc"></td>'
+        + '<td class="cn cb">' + netFine.toFixed(3) + '</td>'
+        + '<td class="cn cb" style="font-size:8.5pt;">&#x20B9;' + Math.round(totAmt).toLocaleString('en-IN') + '</td></tr>'
+
+        // Spacer
+        + '<tr class="rb"><td colspan="8"></td></tr>'
+
+        // Footer
+        + '<tr class="rf">'
+        + '<td class="cc" style="border-right:1px solid #000;font-size:7pt;">P. Wt.</td>'
+        + '<td class="cn" style="border-right:1px solid #000;">' + pktWt + '</td>'
+        + '<td class="cc" style="border-right:1px solid #000;font-size:7pt;">Qty</td>'
+        + '<td class="cc" style="border-right:1px solid #000;">' + items.length + '</td>'
+        + '<td class="cc" style="border-right:1px solid #000;font-size:7pt;">બાકી</td>'
+        + '<td class="cn" colspan="2" style="border-right:1px solid #000;">' + bakiVal + '</td>'
+        + '<td></td></tr>'
+        + '</tbody></table></div>';
+}
+
+
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

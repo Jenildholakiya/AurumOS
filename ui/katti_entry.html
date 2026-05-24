@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Katti Batch Terminal Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --accent-dark: #8a7b0d;
+            --bg-main: #f1f5f9; --card: #ffffff; --border: #cbd5e1;
+            --text-main: #1e293b; --text-muted: #64748b;
+            --success: #059669; --error: #e11d48; --input-focus: #fffef0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { display: block; height: 100vh; width: 100vw; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        main { width: 100%; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .blur-active { filter: blur(12px) grayscale(0.5); pointer-events: none; transform: scale(0.98); }
+
+        /* ── MODAL ── */
+        .modal-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; z-index: 10000; padding: 20px; }
+        .modal-container.active { display: flex; }
+        .modal-overlay { position: absolute; width: 100%; height: 100%; background: rgba(15,23,42,0.4); backdrop-filter: blur(4px); }
+        .modal-box { position: relative; background: white; width: 100%; max-width: 440px; border-radius: 30px; padding: 40px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalBounce 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes modalBounce { from { opacity:0; transform:translateY(30px) scale(0.9); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .m-icon { width: 70px; height: 70px; border-radius: 24px; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+        .m-success { background: #f0fdf4; color: #166534; }
+        .m-warn    { background: #fffbeb; color: #92400e; }
+        .m-danger  { background: #fef2f2; color: #991b1b; }
+        .m-title { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
+        .m-text  { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; font-weight: 500; }
+        .m-btns  { display: flex; gap: 12px; }
+        .m-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
+        .m-btn-primary { background: var(--primary); color: white; }
+        .m-btn-primary:hover { background: var(--accent); transform: translateY(-2px); }
+        .m-btn-ghost { background: var(--bg-main); color: var(--text-muted); }
+        .m-btn-ghost:hover { background: #e2e8f0; }
+
+        /* ── HEADER ── */
+        .voucher-header { background: var(--primary); color: white; padding: 15px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid var(--accent); z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .header-left { display: flex; align-items: center; gap: 50px; }
+        .vch-meta-box { display: flex; flex-direction: column; gap: 4px; }
+        .vch-meta-box label { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); }
+        .header-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 12px; color: white; font-weight: 700; font-size: 1rem; outline: none; transition: 0.3s; text-align: center; }
+        .header-input:focus { background: rgba(255,255,255,0.12); border-color: var(--accent); }
+        .static-date-box { font-size: 1rem; font-weight: 800; color: #fff; padding: 6px 0; }
+        .btn-exit { background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.75rem; cursor: pointer; transition: 0.3s; }
+        .btn-exit:hover { background: var(--error); border-color: var(--error); }
+
+        /* ── HISTORY BANNER ── */
+        #history-banner { display: none; background: #92400e; color: white; padding: 10px 40px; font-size: 0.78rem; font-weight: 800; text-align: center; letter-spacing: 0.5px; border-bottom: 2px solid #fbbf24; }
+        #history-banner.visible { display: block; }
+
+        /* ── ENTRY STRIP ── */
+        .action-strip { background: #fff; padding: 18px 40px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); flex-shrink: 0; transition: opacity 0.2s; flex-wrap: wrap; }
+        .action-strip.locked { opacity: 0.4; pointer-events: none; user-select: none; }
+        .entry-group { display: flex; align-items: flex-end; gap: 10px; padding: 0 12px; }
+        .entry-group:not(:last-child) { border-right: 2px solid #f1f5f9; }
+        .fld-box { display: flex; flex-direction: column; gap: 5px; position: relative; }
+        .fld-box label { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .fld-box input { height: 42px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--border); font-weight: 700; font-size: 0.9rem; outline: none; transition: 0.2s; background: #fafbfc; color: var(--primary); }
+        .fld-box input:focus { border-color: var(--accent); background: var(--input-focus); }
+
+        /* ── IT CODE SEARCHABLE DROPDOWN ── */
+        .it-code-wrap { position: relative; }
+        .it-code-input { width: 170px !important; }
+        .it-dropdown {
+            position: absolute; top: calc(100% + 4px); left: 0; width: 280px;
+            background: white; border: 1.5px solid var(--accent); border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12); z-index: 9999;
+            max-height: 220px; overflow-y: auto; display: none;
+        }
+        .it-dropdown.open { display: block; }
+        .it-option {
+            padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+        .it-option:last-child { border-bottom: none; }
+        .it-option:hover, .it-option.highlighted { background: var(--input-focus); }
+        .it-option-code { font-size: 0.8rem; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+        .it-option-name { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+        .it-option-touch { font-size: 0.7rem; font-weight: 700; color: var(--success); }
+        .it-no-results { padding: 12px 14px; font-size: 0.8rem; color: var(--text-muted); text-align: center; font-weight: 600; }
+
+        .w-note    { width: 220px; }
+        .w-weight  { width: 110px; font-family: 'JetBrains Mono', monospace; color: var(--accent) !important; }
+        .w-packets { width: 90px; text-align: center; }
+        .w-touch   { width: 75px; text-align: center; }
+        .w-box     { width: 90px; color: var(--success) !important; text-transform: uppercase; }
+        .btn-add-row { height: 42px; padding: 0 22px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .btn-add-row:hover { background: var(--accent); transform: translateY(-2px); }
+
+        /* ── TABLE ── */
+        .table-viewport { flex: 1; padding: 24px 40px; overflow-y: auto; background: var(--bg-main); }
+        .data-card { background: #fff; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 14px 20px; background: #f8fafc; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 13px 20px; font-size: 0.85rem; font-weight: 600; border-bottom: 1px solid #f1f5f9; }
+        .td-weight { font-weight: 800; color: var(--success); font-family: 'JetBrains Mono', monospace; }
+        .td-box    { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--accent); }
+        .td-touch  { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary); }
+        .td-code   { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #7c3aed; font-size: 0.78rem; }
+
+        /* ── FOOTER ── */
+        footer { height: 86px; background: #fff; border-top: 1px solid var(--border); padding: 0 45px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .summary-stats { display: flex; gap: 50px; }
+        .stat-pillar { display: flex; flex-direction: column; gap: 2px; }
+        .stat-pillar span { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .stat-pillar b { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+        .btn-finalize { background: var(--primary); color: white; padding: 14px 44px; border-radius: 14px; border: none; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: 0.4s; }
+        .btn-finalize:hover:not(:disabled) { transform: translateY(-3px); background: var(--success); }
+        .btn-finalize:disabled { background: #64748b; cursor: not-allowed; opacity: 0.7; }
+        .btn-new-voucher { background: var(--accent); color: white; padding: 14px 26px; border-radius: 14px; border: none; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: 0.3s; display: none; }
+        .btn-new-voucher:hover { transform: translateY(-2px); background: var(--accent-dark); }
+        .btn-new-voucher.visible { display: block; }
+    </style>
+
+    <link rel="stylesheet" href="sidebar.css">
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
+body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { display: none !important; }
+body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div id="sidebar-container"></div>
+
+
+
+<div class="modal-container" id="modalContainer">
+    <div class="modal-overlay"></div>
+    <div class="modal-box">
+        <div class="m-icon"  id="modalIcon"></div>
+        <div class="m-title" id="modalTitle"></div>
+        <div class="m-text"  id="modalText"></div>
+        <div class="m-btns"  id="modalButtons"></div>
+    </div>
+</div>
+
+<main id="mainContent">
+    <div class="voucher-header">
+        <div class="header-left">
+            <div class="vch-meta-box">
+                <label>Voucher ID</label>
+                <input type="text" id="vch-id" class="header-input" value="LOADING"
+                       onkeydown="if(event.key==='Enter'){ lookUpVoucher(this.value); event.preventDefault(); }">
+            </div>
+            <div class="vch-meta-box">
+                <label>Station Date</label>
+                <div class="static-date-box" id="current-date">-- --- ----</div>
+            </div>
+            <div class="vch-meta-box">
+                <label>Batch Session Note</label>
+                <input type="text" id="vch-note" class="header-input" style="width:340px;" placeholder="Overall session details...">
+            </div>
+        </div>
+        <button class="btn-exit" onclick="window.location.href='inventory.html'">EXIT TERMINAL</button>
+    </div>
+
+    <div id="history-banner">
+        📋 VIEWING HISTORICAL RECORD — Read-only. Type latest voucher ID or click "New Voucher".
+    </div>
+
+    <!-- ── ENTRY STRIP WITH IT CODE ── -->
+    <div class="action-strip" id="entry-strip">
+
+        <!-- Group 1: IT Code + Name -->
+        <div class="entry-group">
+            <div class="fld-box it-code-wrap">
+                <label>IT Code ⚡</label>
+                <input type="text" id="in-itcode" class="it-code-input nav-input"
+                       placeholder="Search code..." autocomplete="off"
+                       oninput="onITCodeInput(this.value)"
+                       onkeydown="onITCodeKeydown(event)"
+
+                       onblur="scheduleCloseDropdown()">
+                <div class="it-dropdown" id="it-dropdown"></div>
+            </div>
+            <div class="fld-box">
+                <label>Item Name / Description</label>
+                <input type="text" id="in-note" class="w-note" placeholder="e.g. RG-76 Ring">
+            </div>
+        </div>
+
+        <!-- Group 2: Weight + Packets -->
+        <div class="entry-group">
+            <div class="fld-box">
+                <label>Weight (g)</label>
+                <input type="number" id="in-weight" class="w-weight nav-input" step="0.001" placeholder="0.000">
+            </div>
+            <div class="fld-box">
+                <label>Packets</label>
+                <input type="number" id="in-packets" class="w-packets nav-input" placeholder="Qty">
+            </div>
+        </div>
+
+        <!-- Group 3: Touch + Box -->
+        <div class="entry-group">
+            <div class="fld-box">
+                <label>Touch (%)</label>
+                <input type="number" id="in-touch" class="w-touch nav-input" placeholder="00">
+            </div>
+            <div class="fld-box">
+                <label>Box No.</label>
+                <input type="text" id="in-box" class="w-box nav-input" value="B-001">
+            </div>
+            <button class="btn-add-row" onclick="commitEntry()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+                Add Entry
+            </button>
+        </div>
+
+    </div>
+
+    <div class="table-viewport">
+        <div class="data-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:55px;text-align:center;">SR#</th>
+                        <th>IT Code</th>
+                        <th>Description</th>
+                        <th>Weight</th>
+                        <th>Packets</th>
+                        <th>Touch</th>
+                        <th>Box</th>
+                        <th style="width:70px;text-align:center;">Del</th>
+                    </tr>
+                </thead>
+                <tbody id="terminal-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer>
+        <div class="summary-stats">
+            <div class="stat-pillar">
+                <span>Total Packets</span>
+                <b id="stat-packets">0</b>
+            </div>
+            <div class="stat-pillar">
+                <span>Total Weight</span>
+                <b id="stat-weight" style="color:var(--success);">0.000 g</b>
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+            <button class="btn-new-voucher" id="btn-new" onclick="initializeVoucher()">+ New Voucher</button>
+            <button class="btn-finalize"   id="btn-final" onclick="saveVoucherToDB()">COMMIT VOUCHER</button>
+        </div>
+    </footer>
+</main>
+
+<script>
+    // ── STATE ──────────────────────────────────────────────────────
+    let kattiLedger            = [];
+    let currentBoxIdx          = 1;
+    let isViewingHistoryMode   = false;
+    let latestNextVoucherIdRaw = "0001";
+    let allProducts            = [];   // [{code, name, touch, wastage}]
+    let dropdownHighlight      = -1;
+    let closeTimer             = null;
+
+    // ── LOAD PRODUCTS (IT Codes) FROM DB ───────────────────────────
+    async function loadProducts() {
+        try {
+            if (window.pywebview && window.pywebview.api) {
+                const items = await window.pywebview.api.get_products();
+                allProducts = items || [];
+                console.log(`✅ Loaded ${allProducts.length} IT codes`);
+            }
+        } catch (e) {
+            console.warn('Could not load products:', e);
+        }
+    }
+
+    // ── IT CODE DROPDOWN LOGIC ─────────────────────────────────────
+    function onITCodeInput(val) {
+        if (!val.trim()) { document.getElementById("it-dropdown").classList.remove("open"); return; }
+        dropdownHighlight = -1;
+        const query = val.trim().toUpperCase();
+        // Only show dropdown when user types something
+        if (!query) {
+            document.getElementById('it-dropdown').classList.remove('open');
+            return;
+        }
+        renderDropdown(query);
+    }
+
+    function renderDropdown(query) {
+        const dd = document.getElementById('it-dropdown');
+        if (!query) { dd.classList.remove('open'); return; }
+
+        const filtered = allProducts.filter(p =>
+            p.code.toUpperCase().includes(query) ||
+            (p.name || '').toUpperCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+            dd.innerHTML = `<div class="it-no-results">No matching IT codes found</div>`;
+        } else {
+            dd.innerHTML = filtered.map((p, i) => `
+                <div class="it-option" data-index="${i}"
+                     onmousedown="selectProduct(${allProducts.indexOf(p)})">
+                    <div class="it-option-code">${p.code}</div>
+                    <div class="it-option-name">${p.name || ''}</div>
+                    <div class="it-option-touch">${p.touch ? 'Touch: ' + p.touch : ''} ${p.wastage ? '| Wastage: ' + p.wastage + '%' : ''}</div>
+                </div>
+            `).join('');
+        }
+        dd.classList.add('open');
+    }
+
+    function openDropdown() {
+        // Do NOT open on focus — only open when typing
+        return;
+    }
+
+    function scheduleCloseDropdown() {
+        closeTimer = setTimeout(() => {
+            document.getElementById('it-dropdown').classList.remove('open');
+            dropdownHighlight = -1;
+        }, 200);
+    }
+
+    function onITCodeKeydown(e) {
+        const dd = document.getElementById('it-dropdown');
+        const opts = dd.querySelectorAll('.it-option');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            dropdownHighlight = Math.min(dropdownHighlight + 1, opts.length - 1);
+            highlightOption(opts);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            dropdownHighlight = Math.max(dropdownHighlight - 1, 0);
+            highlightOption(opts);
+        } else if (e.key === 'Enter' && dropdownHighlight >= 0) {
+            e.preventDefault();
+            const idx = parseInt(opts[dropdownHighlight].dataset.index);
+            const query = document.getElementById('in-itcode').value.trim().toUpperCase();
+            const filtered = query
+                ? allProducts.filter(p => p.code.toUpperCase().includes(query) || (p.name||'').toUpperCase().includes(query))
+                : allProducts.slice(0, 20);
+            if (filtered[dropdownHighlight]) {
+                selectProduct(allProducts.indexOf(filtered[dropdownHighlight]));
+            }
+        } else if (e.key === 'Escape') {
+            dd.classList.remove('open');
+        }
+    }
+
+    function highlightOption(opts) {
+        opts.forEach((o, i) => {
+            o.classList.toggle('highlighted', i === dropdownHighlight);
+            if (i === dropdownHighlight) o.scrollIntoView({block:'nearest'});
+        });
+    }
+
+    function selectProduct(idx) {
+        if (closeTimer) clearTimeout(closeTimer);
+        const p = allProducts[idx];
+        if (!p) return;
+        document.getElementById('in-itcode').value = p.code;
+        document.getElementById('in-note').value   = p.name || '';
+        if (p.touch) document.getElementById('in-touch').value = p.touch;
+        document.getElementById('it-dropdown').classList.remove('open');
+        document.getElementById('in-weight').focus();
+        document.getElementById('in-weight').select();
+    }
+
+    // ── POPUP ──────────────────────────────────────────────────────
+    function triggerPopup(type, title, text, onConfirm = null) {
+        const container = document.getElementById('modalContainer');
+        const main      = document.getElementById('mainContent');
+        const icon      = document.getElementById('modalIcon');
+        const btns      = document.getElementById('modalButtons');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalText').innerText  = text;
+        icon.className = 'm-icon ' + (type==='success'?'m-success':type==='danger'?'m-danger':'m-warn');
+        icon.innerHTML = type==='success'?'✓':type==='danger'?'🗑':'!';
+        btns.innerHTML = '';
+        if (onConfirm) {
+            const y = document.createElement('button');
+            y.className='m-btn m-btn-primary'; y.innerText='Yes, Proceed';
+            y.onclick=()=>{closePopup();onConfirm();};
+            const n = document.createElement('button');
+            n.className='m-btn m-btn-ghost'; n.innerText='Cancel';
+            n.onclick=closePopup;
+            btns.appendChild(y); btns.appendChild(n);
+        } else {
+            const ok = document.createElement('button');
+            ok.className='m-btn m-btn-primary'; ok.innerText='Understood';
+            ok.onclick=closePopup;
+            btns.appendChild(ok);
+        }
+        main.classList.add('blur-active');
+        container.classList.add('active');
+    }
+
+    function closePopup() {
+        document.getElementById('modalContainer').classList.remove('active');
+        document.getElementById('mainContent').classList.remove('blur-active');
+    }
+
+    // ── LOCK / UNLOCK ──────────────────────────────────────────────
+    function setHistoryMode(on) {
+        isViewingHistoryMode = on;
+        const strip  = document.getElementById('entry-strip');
+        const banner = document.getElementById('history-banner');
+        const btnFin = document.getElementById('btn-final');
+        const btnNew = document.getElementById('btn-new');
+        const noteInp = document.getElementById('vch-note');
+        if (on) {
+            strip.classList.add('locked');
+            banner.classList.add('visible');
+            btnFin.disabled=true; btnFin.innerText='🔒 HISTORICAL RECORD';
+            btnNew.classList.add('visible');
+            noteInp.readOnly=true; noteInp.style.opacity='0.5';
+        } else {
+            strip.classList.remove('locked');
+            banner.classList.remove('visible');
+            btnFin.disabled=false; btnFin.innerText='COMMIT VOUCHER';
+            btnNew.classList.remove('visible');
+            noteInp.readOnly=false; noteInp.style.opacity='1';
+        }
+    }
+
+    // ── INITIALIZE ─────────────────────────────────────────────────
+    async function initializeVoucher() {
+        if (!window.pywebview?.api) { setTimeout(initializeVoucher, 150); return; }
+        try {
+            const nextId = await window.pywebview.api.get_katti_vch_id();
+            latestNextVoucherIdRaw = String(nextId).padStart(4, '0');
+            document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+            resetTerminalState();
+            setHistoryMode(false);
+            document.getElementById('in-itcode').focus();
+        } catch (e) {
+            document.getElementById('vch-id').value = "0001";
+        }
+    }
+
+    function resetTerminalState() {
+        kattiLedger=[]; currentBoxIdx=1;
+        document.getElementById('vch-note').value='';
+        document.getElementById('in-box').value='B-001';
+        renderTerminal();
+    }
+
+    // ── HISTORY LOOKUP ─────────────────────────────────────────────
+    async function lookUpVoucher(val) {
+        if (!val || val==="LOADING") return;
+        const typed = String(val).trim().padStart(4,'0');
+        if (typed === latestNextVoucherIdRaw) {
+            document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+            resetTerminalState(); setHistoryMode(false); return;
+        }
+        if (!window.pywebview?.api) return;
+        try {
+            const response = await window.pywebview.api.get_voucher_history(typed);
+            if (response && response.status==="success" && response.voucher) {
+                kattiLedger = (response.items||[]).map(i => ({
+                    it_code: i.it_code || '',
+                    name:    i.it_name || i.name || '',
+                    weight:  parseFloat(i.nt_wt || i.weight || 0).toFixed(3),
+                    packets: parseInt(i.pcs || i.packets || 1),
+                    touch:   parseFloat(i.touch || 0),
+                    box:     i.huid || i.box || 'B-001'
+                }));
+                document.getElementById('vch-note').value = (response.voucher||{}).note||'';
+                document.getElementById('vch-id').value   = typed;
+                renderTerminal(); setHistoryMode(true);
+            } else {
+                triggerPopup('warn','Not Found',`Voucher "${typed}" does not exist.`);
+                document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+                resetTerminalState(); setHistoryMode(false);
+            }
+        } catch(err) { console.error("Lookup Error:", err); }
+    }
+
+    // ── SAVE ───────────────────────────────────────────────────────
+    async function saveVoucherToDB() {
+        if (isViewingHistoryMode) return;
+        if (kattiLedger.length===0) { triggerPopup('warn','Empty Batch',"Cannot save an empty batch."); return; }
+        const vchId  = document.getElementById('vch-id').value.trim();
+        const note   = document.getElementById('vch-note').value;
+        const totalW = kattiLedger.reduce((s,i)=>s+parseFloat(i.weight),0);
+        const totalP = kattiLedger.reduce((s,i)=>s+parseInt(i.packets),0);
+        const btn    = document.getElementById('btn-final');
+        if (!window.pywebview?.api) return;
+        btn.innerText="SAVING..."; btn.disabled=true;
+
+        // ✅ Include it_code in saved items
+        const itemObjects = kattiLedger.map(item => ({
+            it_code: item.it_code || '',
+            name:    item.name,
+            weight:  parseFloat(item.weight) || 0,
+            packets: parseInt(item.packets)  || 1,
+            touch:   parseFloat(item.touch)  || 0,
+            box:     item.box || "B-001"
+        }));
+
+        try {
+            const res = await window.pywebview.api.save_katti_voucher(vchId, totalW, totalP, note, itemObjects);
+            if (res.status==="success") {
+                triggerPopup('success','Terminal Synced!',`Saved ${itemObjects.length} item(s) to voucher ${vchId}.`);
+                await initializeVoucher();
+            } else {
+                triggerPopup('danger','System Failure!', res.message||"Unknown error.");
+                btn.innerText="COMMIT VOUCHER"; btn.disabled=false;
+            }
+        } catch(e) {
+            triggerPopup('danger','Critical Error', String(e));
+            btn.innerText="COMMIT VOUCHER"; btn.disabled=false;
+        }
+    }
+
+    // ── ENTRY ──────────────────────────────────────────────────────
+    function commitEntry() {
+        if (isViewingHistoryMode) return;
+        const itcode = document.getElementById('in-itcode').value.trim();
+        const name   = document.getElementById('in-note').value.trim();
+        const weight = parseFloat(document.getElementById('in-weight').value);
+
+        if (!name || isNaN(weight) || weight <= 0) {
+            triggerPopup('warn','Input Error',"Please enter description and weight.");
+            return;
+        }
+
+        kattiLedger.push({
+            it_code: itcode,
+            name,
+            weight:  weight.toFixed(3),
+            packets: parseInt(document.getElementById('in-packets').value)||1,
+            touch:   parseFloat(document.getElementById('in-touch').value)||0,
+            box:     document.getElementById('in-box').value.trim()||"B-001"
+        });
+
+        renderTerminal();
+        if (kattiLedger.length % 4 === 0) {
+            currentBoxIdx++;
+            document.getElementById('in-box').value = "B-"+currentBoxIdx.toString().padStart(3,'0');
+        }
+        clearForm();
+    }
+
+    // ── RENDER ─────────────────────────────────────────────────────
+    function renderTerminal() {
+        const tbody = document.getElementById('terminal-body');
+        if (!tbody) return;
+        if (kattiLedger.length===0) {
+            tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);font-weight:600;">
+                ${isViewingHistoryMode?'No items archived.':'No entries yet — add items above.'}</td></tr>`;
+        } else {
+            tbody.innerHTML = kattiLedger.slice().reverse().map((item,idx)=>`
+                <tr>
+                    <td style="text-align:center;">${kattiLedger.length-idx}</td>
+                    <td class="td-code">${item.it_code||'—'}</td>
+                    <td style="font-weight:700;">${item.name}</td>
+                    <td class="td-weight">${item.weight} g</td>
+                    <td>${item.packets}</td>
+                    <td class="td-touch">${item.touch}%</td>
+                    <td class="td-box">${item.box}</td>
+                    <td style="text-align:center;">
+                        ${isViewingHistoryMode
+                            ? '<span style="color:var(--text-muted);font-size:0.75rem;">—</span>'
+                            : `<button onclick="removeRow(${kattiLedger.length-1-idx})"
+                                style="border:none;background:none;color:var(--error);cursor:pointer;font-weight:800;font-size:1rem;">×</button>`
+                        }
+                    </td>
+                </tr>`).join('');
+        }
+        updateStats();
+    }
+
+    function updateStats() {
+        const totalW = kattiLedger.reduce((s,i)=>s+parseFloat(i.weight||0),0);
+        const totalP = kattiLedger.reduce((s,i)=>s+parseInt(i.packets||0),0);
+        document.getElementById('stat-weight').innerText  = totalW.toFixed(3)+" g";
+        document.getElementById('stat-packets').innerText = totalP;
+    }
+
+    function removeRow(idx) {
+        if (isViewingHistoryMode) return;
+        kattiLedger.splice(idx,1);
+        renderTerminal();
+    }
+
+    function clearForm() {
+        ['in-itcode','in-note','in-weight','in-packets','in-touch'].forEach(id=>{
+            document.getElementById(id).value='';
+        });
+        document.getElementById('it-dropdown').classList.remove('open');
+        document.getElementById('in-itcode').focus();
+    }
+
+    // ── KEYBOARD NAV ───────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const el = document.activeElement;
+        if (!el.classList.contains('nav-input')) return;
+        if (isViewingHistoryMode) { e.preventDefault(); return; }
+        if (el.id === 'in-itcode') return; // handled by dropdown keydown
+        const inputs = Array.from(document.querySelectorAll('.nav-input'));
+        const idx    = inputs.indexOf(el);
+        if (el.id === 'in-box') {
+            e.preventDefault(); commitEntry();
+        } else if (idx < inputs.length-1) {
+            e.preventDefault(); inputs[idx+1].focus();
+        }
+    });
+
+    // ── BOOT ───────────────────────────────────────────────────────
+    window.onload = () => {
+        document.getElementById('current-date').innerText =
+            new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+        // Wait for pywebview then init
+        function waitAndInit(retries) {
+            if (window.pywebview && window.pywebview.api) {
+                loadProducts().then(() => initializeVoucher());
+            } else if (retries > 0) {
+                setTimeout(() => waitAndInit(retries-1), 200);
+            } else {
+                initializeVoucher();
+            }
+        }
+        waitAndInit(30);
+    };
+</script>
+</body>
+</html>

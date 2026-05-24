@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AurumOS | Secure Gateway</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #b59410;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --input-bg: #f1f5f9;
+            --error: #e11d48;
+            --success: #059669;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(181, 148, 16, 0.05) 0px, transparent 50%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(30px); filter: blur(5px); }
+            to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 50px;
+            border-radius: 32px;
+            width: 440px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
+            border: 1px solid rgba(0,0,0,0.05);
+            text-align: center;
+            animation: slideUpFade 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .brand-logo { font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 5px; letter-spacing: -1.5px; }
+        .brand-logo span { color: var(--accent); }
+        h2 { color: var(--text-main); font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+        p  { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 35px; }
+
+        .input-group {
+            text-align: left; margin-bottom: 22px;
+            opacity: 0;
+            animation: slideUpFade 0.7s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .input-group label {
+            display: block; font-size: 0.7rem; font-weight: 800;
+            color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 1.2px; margin-bottom: 8px; margin-left: 4px;
+        }
+        input {
+            width: 100%; padding: 16px 20px;
+            background: var(--input-bg); border: 2px solid transparent;
+            border-radius: 16px; font-size: 1rem; outline: none;
+            color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        input:focus {
+            border-color: var(--accent); background: white;
+            box-shadow: 0 10px 15px -3px rgba(181, 148, 16, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-login {
+            width: 100%; padding: 18px;
+            background: var(--primary); color: white;
+            border: none; border-radius: 16px;
+            font-size: 1rem; font-weight: 700; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 10px; opacity: 0;
+            animation: slideUpFade 0.7s 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .btn-login:hover {
+            background: #1e293b; transform: translateY(-3px);
+            box-shadow: 0 15px 25px -5px rgba(15, 23, 42, 0.2);
+        }
+
+        #error-msg { font-size: 0.85rem; font-weight: 600; margin-top: 20px; min-height: 20px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25%       { transform: translateX(-6px); }
+            75%       { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="brand-logo">Aurum<span>OS</span></div>
+        <h2>Enterprise Login</h2>
+        <p>Accessing Secure Wholesale Terminal</p>
+
+        <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="user" class="toggle-input" placeholder="Enter username" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="pass" class="toggle-input" placeholder="••••••••">
+        </div>
+
+        <button class="btn-login" id="login-btn" onclick="handleLogin()">Verify Credentials</button>
+        <div id="error-msg"></div>
+    </div>
+
+    <script>
+        // SMART ENTER KEY
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const inputs = Array.from(document.querySelectorAll('.toggle-input'));
+                const index  = inputs.indexOf(document.activeElement);
+                if (index > -1 && index < inputs.length - 1) {
+                    e.preventDefault();
+                    inputs[index + 1].focus();
+                } else {
+                    handleLogin();
+                }
+            }
+        });
+
+        async function handleLogin() {
+            const user  = document.getElementById('user').value.trim();
+            const pass  = document.getElementById('pass').value.trim();
+            const btn   = document.getElementById('login-btn');
+            const error = document.getElementById('error-msg');
+
+            if (!user || !pass) {
+                error.style.color = "var(--error)";
+                error.innerText   = "Entry fields cannot be empty.";
+                return;
+            }
+
+            btn.disabled  = true;
+            btn.innerText = "Securing Session...";
+            error.innerText = "";
+
+            if (window.pywebview && window.pywebview.api) {
+                try {
+                    const res = await window.pywebview.api.verify_login(user, pass);
+
+                    if (res.status === "success") {
+                        error.style.color = "var(--success)";
+                        error.innerText   = "Authorized. Redirecting...";
+
+                        // ✅ Save to localStorage as backup (may not persist on fresh machines)
+                        localStorage.setItem('aurum_user_role',    res.role);
+                        localStorage.setItem('aurum_active_user',  res.username || user);
+
+                        // ✅ Route based on role
+                        if (res.role === 'staff') {
+                            window.location.href = "billing.html";
+                        } else {
+                            window.location.href = "dashboard.html";
+                        }
+
+                    } else {
+                        error.style.color = "var(--error)";
+                        error.innerText   = res.message || "Invalid Credentials.";
+                        btn.disabled  = false;
+                        btn.innerText = "Verify Credentials";
+
+                        const card = document.querySelector('.login-card');
+                        card.style.animation = 'none';
+                        card.offsetHeight;
+                        card.style.animation = 'shake 0.4s ease';
+                    }
+                } catch (err) {
+                    console.log("Login error:", err);
+                    btn.disabled  = false;
+                    btn.innerText = "Verify Credentials";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

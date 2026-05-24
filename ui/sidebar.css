@@ -1,0 +1,192 @@
+/* sidebar.css - Light Premium Theme (Fluid Responsive Collapse Matrix) */
+#sidebar-container {
+    width: 240px;
+    height: 100vh;
+    background: #ffffff;
+    flex-shrink: 0;
+    z-index: 1000;
+    border-right: 1px solid #e2e8f0;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sidebar {
+    width: 100%;
+    height: 100vh;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Floating Action Controller Layout styling */
+.sidebar-toggle {
+    position: absolute;
+    top: 36px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    z-index: 1001;
+    transition: transform 0.3s, color 0.2s, background 0.2s;
+}
+.sidebar-toggle:hover {
+    color: #b59410;
+    background: #f8fafc;
+}
+
+.sidebar-brand {
+    padding: 35px 25px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -1px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.sidebar-brand span { color: #b59410; }
+.sidebar-brand .brand-icon { display: none; }
+
+.staff-mode-tag {
+    font-size: 0.6rem;
+    display: block;
+    color: #b59410;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 0 12px;
+    flex-grow: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    color: #64748b;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.nav-label {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Interactivity engines */
+.nav-item:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    transform: translateX(4px);
+}
+.nav-item:hover .nav-icon svg { stroke: #b59410; }
+
+.nav-item.active {
+    background: #b59410;
+    color: #ffffff;
+    box-shadow: 0 8px 15px -5px rgba(181, 148, 16, 0.3);
+}
+.nav-item.active .nav-icon svg { stroke: #ffffff; }
+
+.sidebar-footer {
+    padding: 15px;
+    border-top: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    color: #e11d48;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.logout-btn:hover {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.nav-icon svg {
+    width: 18px;
+    height: 18px;
+    transition: stroke 0.2s;
+}
+
+/* ─── HARDWARE-ACCELERATED COLLAPSE MATRIX ENGINE ─── */
+body.sidebar-collapsed #sidebar-container {
+    width: 70px;
+}
+
+body.sidebar-collapsed .sidebar-toggle {
+    transform: rotate(180deg);
+}
+
+body.sidebar-collapsed .sidebar-brand .brand-text,
+body.sidebar-collapsed .sidebar-brand .staff-mode-tag,
+body.sidebar-collapsed .nav-label {
+    opacity: 0;
+    display: none;
+}
+
+body.sidebar-collapsed .sidebar-brand {
+    padding: 35px 0;
+    display: flex;
+    justify-content: center;
+}
+
+body.sidebar-collapsed .sidebar-brand .brand-icon {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+body.sidebar-collapsed .sidebar-brand .brand-icon span { color: #b59410; }
+
+body.sidebar-collapsed .nav-menu {
+    padding: 0 10px;
+}
+
+body.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding: 12px 0;
+    gap: 0;
+}
+
+body.sidebar-collapsed .nav-item:hover {
+    transform: scale(1.05);
+}
+
+body.sidebar-collapsed .logout-btn {
+    justify-content: center;
+    padding: 12px 0;
+    gap: 0;
+}

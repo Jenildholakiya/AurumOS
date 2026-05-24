@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Create Bill</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sidebar.css">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
+            --card: #ffffff; --border: #e2e8f0; --text-main: #1e293b;
+            --text-muted: #64748b; --success: #059669; --error: #e11d48;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-lux: 0 25px 50px -12px rgba(15,23,42,0.08);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+        body { display:block; height:100vh; width:100vw; background:var(--bg-main); color:var(--text-main); overflow:hidden; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        input[type=number] { -moz-appearance:textfield; }
+        main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+        header { height:80px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 40px; flex-shrink:0; z-index:100; }
+        .header-biz h1 { font-size:1.2rem; font-weight:800; color:var(--primary); letter-spacing:-0.5px; }
+        #real-time-clock { font-size:0.8rem; font-weight:700; color:var(--accent); background:#fefce8; padding:8px 18px; border-radius:12px; border:1px solid #fef08a; }
+        .content { padding:30px 40px; overflow-y:auto; flex-grow:1; }
+        .billing-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:20px; align-items:start; max-width:1600px; }
+        .card { background:var(--card); border-radius:20px; border:1px solid var(--border); padding:24px; box-shadow:var(--shadow-sm); position:relative; margin-bottom:20px; }
+        h3 { font-size:0.75rem; font-weight:800; margin-bottom:20px; display:flex; align-items:center; gap:10px; color:var(--primary); text-transform:uppercase; letter-spacing:1.2px; }
+        h3 span { background:var(--primary); color:white; border-radius:8px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
+        .form-group { margin-bottom:16px; }
+        label { display:block; font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.8px; }
+        input { width:100%; padding:14px 16px; background:#fff; border:1.5px solid var(--border); border-radius:12px; font-size:0.95rem; font-weight:700; outline:none; transition:all 0.2s; color:var(--primary); }
+        input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(181,148,16,0.08); background:#fff; }
+        input[readonly] { background:#f8fafc; color:var(--text-muted); border-style:dashed; cursor:not-allowed; }
+        .table-area { border:1.5px solid var(--border); border-radius:14px; background:#fff; overflow:hidden; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; font-size:0.65rem; text-transform:uppercase; color:var(--text-muted); padding:14px 20px; border-bottom:2px solid var(--bg-main); background:#fafbfc; font-weight:800; }
+        td { padding:16px 20px; font-size:0.9rem; border-bottom:1px solid #f1f5f9; font-weight:700; color:var(--primary); }
+        tfoot td { background:#fafbfc; border-top:2px solid var(--border); color:var(--primary); font-weight:800; font-size:1rem; }
+        .entry-row { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr auto; gap:14px; align-items:flex-end; background:#f8fafc; padding:22px; border-radius:16px; border:1.5px solid var(--border); }
+        .summary-row { padding:10px 0; font-size:0.9rem; display:flex; justify-content:space-between; font-weight:700; border-bottom:1px solid #f1f5f9; }
+        .amount-row { padding:24px; background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); border-radius:20px; margin-top:20px; color:white; display:flex; flex-direction:column; gap:15px; box-shadow:0 10px 25px -5px rgba(15,23,42,0.3); border:1px solid rgba(181,148,16,0.2); position:relative; overflow:hidden; }
+        .fine-display { display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); }
+        .fine-display .label { font-size:0.65rem; font-weight:800; text-transform:uppercase; color:#94a3b8; letter-spacing:1px; }
+        .fine-display .val { font-size:1.1rem; font-weight:800; color:var(--accent); font-family:'JetBrains Mono',monospace; }
+        .amount-value { font-size:1.8rem; font-weight:800; color:#fff; display:flex; align-items:baseline; gap:8px; font-family:'JetBrains Mono',monospace; }
+        .amount-value span { color:var(--accent); font-size:1rem; }
+        .amount-label { font-size:0.65rem; color:#94a3b8; font-weight:800; text-transform:uppercase; }
+        .btn-add { width:100%; padding:18px; background:var(--primary); color:white; border:none; border-radius:14px; font-weight:800; cursor:pointer; transition:0.3s; text-transform:uppercase; letter-spacing:1.5px; margin-top:25px; }
+        .btn-add:hover { transform:translateY(-3px); box-shadow:0 12px 20px rgba(0,0,0,0.15); background:#1e293b; }
+        .btn-plus { height:50px; width:50px; background:var(--primary); color:white; border:none; border-radius:12px; font-size:1.6rem; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; }
+        .remove-icon { color:var(--error); cursor:pointer; font-weight:800; font-size:1.4rem; transition:0.2s; }
+        .switch { position:relative; display:inline-block; width:44px; height:22px; }
+        .switch input { opacity:0; width:0; height:0; }
+        .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#e2e8f0; transition:.4s; border-radius:34px; }
+        .slider:before { position:absolute; content:""; height:16px; width:16px; left:3px; bottom:3px; background-color:white; transition:.4s; border-radius:50%; }
+        input:checked + .slider { background-color:var(--accent); }
+        input:checked + .slider:before { transform:translateX(22px); }
+        .search-container { position:relative; width:100%; }
+        .luxury-dropdown { position:absolute; top:calc(100% + 8px); left:0; width:100%; background:#1e293b; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.3); z-index:9999; max-height:250px; overflow-y:auto; display:none; border:1px solid rgba(181,148,16,0.2); animation:dropSlide 0.2s ease-out; }
+        @keyframes dropSlide { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        .dropdown-item { padding:14px 20px; color:#f8fafc; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .dropdown-item:last-child { border-bottom:none; }
+        .dropdown-item:hover, .dropdown-item.selected { background:var(--accent); color:#fff; padding-left:25px; }
+        .it-code-wrapper { position:relative; width:100%; }
+        .it-dropdown { position:absolute; bottom:calc(100% + 8px); left:0; width:340px; background:#1e293b; border:1.5px solid var(--accent); border-radius:14px; box-shadow:0 -20px 40px rgba(0,0,0,0.25); z-index:99999; max-height:260px; overflow-y:auto; display:none; animation:dropSlideUp 0.15s ease-out; }
+        @keyframes dropSlideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .it-dropdown.open { display:block; }
+        .it-option { padding:12px 16px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.06); transition:all 0.15s; display:flex; flex-direction:column; gap:3px; }
+        .it-option:last-child { border-bottom:none; }
+        .it-option:hover, .it-option.highlighted { background:var(--accent); padding-left:22px; }
+        .it-option-row { display:flex; justify-content:space-between; align-items:center; }
+        .it-option-code { font-size:0.85rem; font-weight:800; color:#f8fafc; font-family:'JetBrains Mono',monospace; }
+        .it-option:hover .it-option-code, .it-option.highlighted .it-option-code { color:white; }
+        .it-option-touch { font-size:0.75rem; font-weight:700; color:#fbbf24; font-family:'JetBrains Mono',monospace; }
+        .it-option-name { font-size:0.75rem; color:#94a3b8; font-weight:500; }
+        .it-option:hover .it-option-name, .it-option.highlighted .it-option-name { color:rgba(255,255,255,0.8); }
+        .it-option-stock { font-size:0.68rem; color:#10b981; font-weight:700; font-family:'JetBrains Mono',monospace; }
+        .it-option:hover .it-option-stock, .it-option.highlighted .it-option-stock { color:#d1fae5; }
+        .it-no-results { padding:16px; font-size:0.8rem; color:#94a3b8; text-align:center; font-weight:600; }
+
+        /* ── ERROR MODAL ── */
+        .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.4); backdrop-filter:blur(12px); display:none; align-items:center; justify-content:center; z-index:10000; }
+        .modal-content { background:#fff; width:440px; border-radius:24px; padding:36px; box-shadow:var(--shadow-lux); text-align:center; border:1px solid var(--border); animation:modalPop 0.35s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes modalPop { from{transform:scale(0.95) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+        .modal-icon { width:56px; height:56px; background:#fff5f5; color:#ef4444; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.3rem; margin:0 auto 20px; font-weight:600; }
+        .modal-title { font-size:1.25rem; font-weight:700; color:var(--primary); margin-bottom:8px; letter-spacing:-0.3px; }
+        .modal-msg { font-size:0.9rem; color:var(--text-muted); font-weight:500; line-height:1.5; margin-bottom:28px; }
+        .modal-btn { width:100%; padding:14px; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:600; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.5px; cursor:pointer; transition:all 0.2s; }
+        .modal-btn:hover { background:var(--accent); }
+
+        /* ── PRINT COPIES SELECTOR MODAL ── */
+        .print-modal-content { background:#ffffff; width:420px; border-radius:24px; padding:32px; box-shadow:var(--shadow-lux); text-align:center; border:1px solid var(--border); animation:modalPop 0.3s cubic-bezier(0.16,1,0.3,1); }
+        .print-options-list { display:flex; flex-direction:column; gap:12px; margin:24px 0; }
+        .print-card { border:1.5px solid var(--border); border-radius:12px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all 0.2s; background:#f8fafc; }
+        .print-card:hover { border-color:var(--accent); background:#fffdf5; }
+        .print-card.selected { border-color:var(--primary); background:#f1f5f9; }
+        .print-details { text-align:left; }
+        .print-title { font-size:0.9rem; font-weight:700; color:var(--primary); }
+        .print-desc { font-size:0.75rem; color:#64748b; font-weight:500; margin-top:2px; }
+        .radio-dot { width:16px; height:16px; border:2px solid var(--border); border-radius:50%; position:relative; }
+        .print-card.selected .radio-dot { border-color:var(--primary); }
+        .print-card.selected .radio-dot::before { content:''; position:absolute; top:3px; left:3px; width:6px; height:6px; background:var(--primary); border-radius:50%; }
+        .print-actions { display:grid; grid-template-columns:1fr 1.5fr; gap:12px; }
+        .btn-action-modal { height:44px; border:none; border-radius:10px; font-size:0.88rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .btn-action-cancel { background:#f1f5f9; color:#475569; }
+        .btn-action-cancel:hover { background:#e2e8f0; }
+        .btn-action-confirm { background:var(--primary); color:white; text-transform:uppercase; letter-spacing:0.5px; }
+        .btn-action-confirm:hover { background:#1e293b; }
+    </style>
+
+    <style id="aurum-layout-fix">
+        body { display:flex !important; height:100vh !important; overflow:hidden !important; width:100vw !important; }
+        #sidebar-container { flex-shrink:0 !important; width:240px !important; }
+        body > main { flex:1 !important; min-width:0 !important; overflow:hidden !important; display:flex !important; flex-direction:column !important; }
+        body.sidebar-collapsed #sidebar-container { width:70px !important; }
+    </style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"></div>
+
+<!-- ERROR MODAL -->
+<div class="modal-overlay" id="error-modal">
+    <div class="modal-content">
+        <div class="modal-icon">✕</div>
+        <div class="modal-title" id="modal-title">Error</div>
+        <div class="modal-msg" id="modal-error-text">Message goes here.</div>
+        <button class="modal-btn" onclick="closeModal()">Dismiss</button>
+    </div>
+</div>
+
+<!-- PRINT COPIES SELECTOR MODAL -->
+<div class="modal-overlay" id="print-selector-modal">
+    <div class="print-modal-content">
+        <div class="modal-title" style="text-align:center;">Select Invoice Copies</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Choose how many copies to print</p>
+        <div class="print-options-list">
+            <div class="print-card selected" id="opt-copy-1" onclick="selectPrintCopyCount(1)">
+                <div class="print-details"><div class="print-title">1 Copy (Original)</div><div class="print-desc">Standard single client slip</div></div>
+                <div class="radio-dot"></div>
+            </div>
+            <div class="print-card" id="opt-copy-2" onclick="selectPrintCopyCount(2)">
+                <div class="print-details"><div class="print-title">2 Copies (Duplicate)</div><div class="print-desc">Customer + internal store reference</div></div>
+                <div class="radio-dot"></div>
+            </div>
+            <div class="print-card" id="opt-copy-3" onclick="selectPrintCopyCount(3)">
+                <div class="print-details"><div class="print-title">3 Copies (Triplicate)</div><div class="print-desc">Customer + Vault + Counter log</div></div>
+                <div class="radio-dot"></div>
+            </div>
+        </div>
+        <div class="print-actions">
+            <button class="btn-action-modal btn-action-cancel" onclick="closePrintSelectorModal()">Cancel</button>
+            <button class="btn-action-modal btn-action-confirm" onclick="commitBillingTransactionPipeline()">Authorize &amp; Print</button>
+        </div>
+    </div>
+</div>
+
+<main>
+    <header>
+        <div class="header-biz"><h1 id="header-title-display">Create New Invoice</h1></div>
+        <div id="real-time-clock">Syncing...</div>
+        <div class="avatar" id="session-avatar-badge" style="width:45px;height:45px;background:var(--primary);border-radius:14px;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid var(--accent);">JD</div>
+    </header>
+
+    <div class="content">
+        <div class="billing-grid">
+            <div class="billing-left-col">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h3><span>1</span> Voucher & Customer</h3>
+                        <div style="display:flex;align-items:center;gap:24px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span id="uchak-toggle-label" style="font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">WEIGHT BILL</span>
+                                <label class="switch"><input type="checkbox" id="uchak-toggle" onchange="toggleUchakMode()"><span class="slider"></span></label>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <label style="margin:0;font-size:0.65rem;font-weight:800;color:var(--text-muted);">CREDIT BILL</label>
+                                <label class="switch"><input type="checkbox" id="credit-toggle" onchange="toggleCreditMode()"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="credit-info-bar" style="display:none;background:#0f172a;color:white;padding:15px 22px;border-radius:16px;margin-bottom:20px;justify-content:space-between;align-items:center;border:1px solid rgba(181,148,16,0.2);box-shadow:0 10px 20px rgba(0,0,0,0.15);">
+                        <div style="font-size:0.65rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Live Outstanding Profile</div>
+                        <div style="display:flex;gap:25px;">
+                            <div style="display:flex;flex-direction:column;text-align:right;">
+                                <small style="font-size:0.55rem;color:#94a3b8;font-weight:800;margin-bottom:2px;">METAL (FINE)</small>
+                                <span style="font-size:1.15rem;font-weight:700;color:#f59e0b;font-family:'JetBrains Mono',monospace;" id="live-metal-bal">0.000 g</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;text-align:right;">
+                                <small style="font-size:0.55rem;color:#94a3b8;font-weight:800;margin-bottom:2px;">CASH (INR)</small>
+                                <span style="font-size:1.15rem;font-weight:700;color:#b59410;font-family:'JetBrains Mono',monospace;" id="live-cash-bal">₹ 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
+                        <div class="form-group"><label>Voucher ID</label><input type="text" id="v-id" placeholder="VCH-001"></div>
+                        <div class="form-group"><label>Date</label><input type="text" id="v-date" readonly></div>
+                        <div class="form-group"><label>Time</label><input type="text" id="v-time" readonly></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:15px">
+                        <div class="form-group" style="position:relative;">
+                            <label>Customer Name</label>
+                            <div class="search-container">
+                                <input type="text" id="cust-name" placeholder="Search or Type Name" autocomplete="off" class="nav-input" data-next="v-overall-touch">
+                                <div id="custom-dropdown" class="luxury-dropdown"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="step1-overall-touch-block"><label>Overall Touch</label><input type="number" id="v-overall-touch" placeholder="0.000" class="nav-input decimal-lock" data-next="v-overall-wastage"></div>
+                        <div class="form-group" id="step1-overall-wastage-block"><label>Wastage</label><input type="number" id="v-overall-wastage" placeholder="0.000" class="nav-input decimal-lock" data-next="v-tag"></div>
+                        <div class="form-group" id="step1-tag-block"><label>Tag ID</label><input type="text" id="v-tag" placeholder="Scan Tag..." class="nav-input" data-next="it-code"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><span>2</span> Ledger Overview</h3>
+                    <div class="table-area">
+                        <table>
+                            <thead id="table-dynamic-header-mount">
+                                <tr>
+                                    <th>NO</th><th>IT Code</th><th>Weight</th>
+                                    <th style="color:var(--accent);">Para</th>
+                                    <th style="color:var(--error);">Less</th>
+                                    <th>Touch</th><th>Fine</th>
+                                    <th style="text-align:right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="item-list"></tbody>
+                            <tfoot id="table-dynamic-footer-mount">
+                                <tr>
+                                    <td colspan="2">TOTAL LEDGER</td>
+                                    <td id="total-wt-cell">0.000</td>
+                                    <td id="total-para-cell" style="color:var(--accent);">0.000</td>
+                                    <td id="total-less-cell" style="color:var(--error);">0.000</td>
+                                    <td>-</td>
+                                    <td id="total-fine-cell">0.000</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><span>3</span> Item Entry</h3>
+                    <div class="entry-row" id="entry-row-inputs-wrapper">
+                        <div class="form-group it-code-wrapper" style="margin:0">
+                            <label id="entry-fld-1-label">IT Code <span style="color:var(--success);font-size:0.6rem;" id="stock-count-badge"></span></label>
+                            <input type="text" id="it-code" placeholder="Type to search stock..." autocomplete="off"
+                                   oninput="onITCodeInput(this.value)"
+                                   onkeydown="onITCodeKeydown(event)"
+                                   onblur="scheduleCloseITDropdown()">
+                            <div class="it-dropdown" id="it-dropdown"></div>
+                        </div>
+                        <div class="form-group" style="margin:0"><label id="entry-fld-2-label">Weight</label><input type="number" id="it-weight" oninput="calcFine()" class="nav-input decimal-lock" data-next="it-wastage" placeholder="0.000"></div>
+                        <div class="form-group" style="margin:0"><label id="entry-fld-3-label">Wastage</label><input type="number" id="it-wastage" oninput="calcFine()" class="nav-input decimal-lock" data-enter="true" placeholder="0.000"></div>
+                        <div class="form-group" style="margin:0"><label id="entry-fld-4-label">Fine</label><input type="number" id="it-fine" readonly placeholder="0.000"></div>
+                        <button class="btn-plus" onclick="enterItem()">＋</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="billing-right-col">
+                <div class="card">
+                    <h3><span>4</span> Settlement</h3>
+                    <div class="summary-box">
+                        <div class="summary-row"><span id="summary-total-left-label">Total Gross Fine</span><span id="sum-fine" style="color:var(--accent);font-family:'JetBrains Mono',monospace;">0.000</span></div>
+                        <hr style="border:0;border-top:1.5px solid #f1f5f9;margin:15px 0;">
+                        <div class="form-group"><label id="collect-fine-label">Collect Fine</label><input type="number" id="collect-fine" oninput="calcFinalSettlement()" class="nav-input decimal-lock" data-next="settle-995-wt" placeholder="0.000"></div>
+                        <div id="purity-settlement-matrix-block">
+                            <div style="display:grid;grid-template-columns:1.2fr 1.2fr 1.2fr;gap:12px;margin-bottom:14px;">
+                                <div class="form-group"><label>995 Wt</label><input type="number" id="settle-995-wt" oninput="calcSpecialFines()" placeholder="0.000" class="decimal-lock" data-next="settle-995-touch"></div>
+                                <div class="form-group"><label>Touch</label><input type="number" id="settle-995-touch" oninput="calcSpecialFines()" value="99.50" class="decimal-lock" data-next="settle-dhal-wt"></div>
+                                <div class="form-group"><label>995 Fine</label><input type="number" id="settle-995-fine" readonly placeholder="0.000"></div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1.2fr 1.2fr 1.2fr;gap:12px;margin-bottom:14px;">
+                                <div class="form-group"><label>Dhal Wt</label><input type="number" id="settle-dhal-wt" oninput="calcSpecialFines()" placeholder="0.000" class="decimal-lock" data-next="settle-dhal-touch"></div>
+                                <div class="form-group"><label>Touch</label><input type="number" id="settle-dhal-touch" oninput="calcSpecialFines()" placeholder="0.00" class="decimal-lock" data-next="gold-rate-input"></div>
+                                <div class="form-group"><label>Dhal Fine</label><input type="number" id="settle-dhal-fine" readonly placeholder="0.000"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="gold-rate-input-field-block"><label>Gold Rate (10g)</label><input type="number" id="gold-rate-input" onchange="saveGoldRatePersistent(this.value)" oninput="calcFinalSettlement()" class="nav-input" placeholder="₹ 00,000"></div>
+
+                        <!-- ── DISCOUNT BLOCK ── -->
+                        <div id="discount-block" style="background:#fafafa;border:1.5px solid #e2e8f0;border-radius:14px;padding:16px;margin-bottom:0;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                                <span style="font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Discount</span>
+                                <div style="display:flex;gap:6px;">
+                                    <button id="disc-type-touch" onclick="setDiscountType('touch')"
+                                        style="padding:4px 12px;border-radius:8px;font-size:0.7rem;font-weight:800;border:1.5px solid var(--primary);background:var(--primary);color:white;cursor:pointer;transition:0.2s;letter-spacing:0.5px;">
+                                        Touch
+                                    </button>
+                                    <button id="disc-type-amount" onclick="setDiscountType('amount')"
+                                        style="padding:4px 12px;border-radius:8px;font-size:0.7rem;font-weight:800;border:1.5px solid var(--border);background:#fff;color:var(--text-muted);cursor:pointer;transition:0.2s;letter-spacing:0.5px;">
+                                        Amount
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Touch discount -->
+                            <div id="disc-touch-block">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Touch Discount (%)</label>
+                                        <input type="number" id="disc-touch-val" step="0.5" min="0" placeholder="e.g. 0.5" oninput="calcFinalSettlement()"
+                                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:0.9rem;font-weight:700;outline:none;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>Fine Saved</label>
+                                        <input type="number" id="disc-touch-fine" readonly placeholder="0.000"
+                                            style="width:100%;padding:10px 14px;border:1.5px dashed #e2e8f0;border-radius:10px;font-size:0.9rem;font-weight:700;outline:none;background:#f8fafc;color:var(--text-muted);">
+                                    </div>
+                                </div>
+                                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:6px;font-weight:600;">
+                                    Reduces touch% on each item — e.g. 76% becomes 75.5% with 0.5 discount
+                                </div>
+                            </div>
+                            <!-- Amount discount (hidden by default) -->
+                            <div id="disc-amount-block" style="display:none;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>Amount Discount (₹)</label>
+                                    <input type="number" id="disc-amount-val" step="1" min="0" placeholder="e.g. 500" oninput="calcFinalSettlement()"
+                                        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:0.9rem;font-weight:700;outline:none;">
+                                </div>
+                                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:6px;font-weight:600;">
+                                    Flat ₹ deduction from final cash amount after rate calculation
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="amount-row">
+                            <div class="fine-display" id="remaining-fine-display-row">
+                                <span class="label" id="summary-remaining-fine-title-label">Remaining Fine</span>
+                                <span id="rem-fine-val" class="val">0.000</span>
+                            </div>
+                            <div class="amount-display">
+                                <span class="amount-label" id="net-balance-label-hint">Net Balance to Settle</span>
+                                <div class="amount-value"><span>₹</span><div id="total-amount">0.00</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-add" id="bill-btn" onclick="handleBilling()">Authorize &amp; Record</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    let currentItems=[], registeredClients=[], selectedIndex=-1;
+    let currentClientLimits={metal:0,cash:0};
+    let latestSalesVoucherTrackCode="VCH-001", latestUchakVoucherTrackCode="UCHK-001";
+    let weightStockItems=[], allProducts=[];
+    let itDropdownHighlight=-1, itCloseTimer=null;
+    let printCopiesConfigTarget=1;
+    let activeDiscountType='touch'; // 'touch' or 'amount'
+
+    // ══════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════
+    // GUJARATI BILL PRINTER — uses Python trigger_print_window
+    // Opens bill_print.html as native PyWebView window with
+    // full js_api access so it can fetch from DB directly
+    // ══════════════════════════════════════════════════
+    async function printGujBill(data, copies) {
+        const vchId   = data.vch_id;
+        const billType = data.is_uchak ? 'UCHAK (4-col)' : 'WEIGHT (8-col)';
+        console.log('[PRINT] Bill type:', billType, '| vch_id:', vchId, '| copies:', copies);
+
+        if (window.pywebview && window.pywebview.api) {
+            try {
+                await window.pywebview.api.trigger_print_window(vchId, copies);
+                console.log('[PRINT] trigger_print_window called — bill_print.html will auto-select', billType);
+            } catch(e) {
+                console.error('[PRINT] trigger_print_window failed:', e);
+            }
+        } else {
+            console.error('[PRINT] PyWebView API not available');
+        }
+    }
+
+    // ══════════════════════════════════════════════════
+    // STOCK & PRODUCTS
+    // ══════════════════════════════════════════════════
+
+    async function loadWeightStockCodes(){
+        try{
+            if(window.pywebview&&window.pywebview.api){
+                weightStockItems=await window.pywebview.api.get_weight_stock_it_codes()||[];
+                allProducts=await window.pywebview.api.get_products()||[];
+                const badge=document.getElementById('stock-count-badge');
+                if(badge)badge.innerText=weightStockItems.length>0?`(${weightStockItems.length} in stock)`:'';
+            }
+        }catch(e){console.warn(e);}
+    }
+
+    function onITCodeInput(val){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const dd=document.getElementById('it-dropdown');
+        if(isUchak||!val.trim()){dd.classList.remove('open');return;}
+        itDropdownHighlight=-1;
+        const query=val.trim().toUpperCase();
+        const filtered=weightStockItems.filter(s=>s.it_code.toUpperCase().includes(query)||(s.it_name||'').toUpperCase().includes(query)||String(s.touch||'').includes(query));
+        if(filtered.length===0){dd.innerHTML=`<div class="it-no-results">No active stock found for "${val}"</div>`;}
+        else{dd.innerHTML=filtered.map((s,i)=>`<div class="it-option" data-index="${i}" onmousedown="selectStockItem(${i},${JSON.stringify(filtered).replace(/"/g,'&quot;')})"><div class="it-option-row"><span class="it-option-code">${s.it_code}</span><span class="it-option-touch">T: ${s.touch||'—'}%</span></div><div class="it-option-name">${s.it_name||''}</div><div class="it-option-stock">Stock: ${parseFloat(s.gr_wt||0).toFixed(3)}g available</div></div>`).join('');}
+        dd.classList.add('open');
+    }
+
+    async function selectStockItem(filteredIdx,filteredArr){
+        if(itCloseTimer)clearTimeout(itCloseTimer);
+        const dd=document.getElementById('it-dropdown');
+        let s=filteredArr&&filteredArr[filteredIdx]?filteredArr[filteredIdx]:weightStockItems.find(x=>x.it_code.toUpperCase()===document.getElementById('it-code').value.trim().toUpperCase());
+        if(!s)return;
+        document.getElementById('it-code').value=s.it_code;
+        if(window.pywebview&&window.pywebview.api&&s.touch){
+            try{const groups=await window.pywebview.api.get_touch_groups();const match=groups.find(g=>parseFloat(g.value)===parseFloat(s.touch));document.getElementById('it-wastage').value=match?(match.wastage||0):0;}
+            catch(e){document.getElementById('it-wastage').value=0;}
+        }else{document.getElementById('it-wastage').value=0;}
+        dd.classList.remove('open');itDropdownHighlight=-1;calcFine();document.getElementById('it-weight').focus();
+    }
+
+    function scheduleCloseITDropdown(){itCloseTimer=setTimeout(()=>{document.getElementById('it-dropdown').classList.remove('open');itDropdownHighlight=-1;},220);}
+
+    function onITCodeKeydown(e){
+        const dd=document.getElementById('it-dropdown');
+        if(!dd.classList.contains('open'))return;
+        const opts=dd.querySelectorAll('.it-option');
+        if(e.key==='ArrowDown'){e.preventDefault();itDropdownHighlight=Math.min(itDropdownHighlight+1,opts.length-1);highlightITOption(opts);}
+        else if(e.key==='ArrowUp'){e.preventDefault();itDropdownHighlight=Math.max(itDropdownHighlight-1,0);highlightITOption(opts);}
+        else if(e.key==='Enter'){if(itDropdownHighlight>=0&&opts[itDropdownHighlight]){e.preventDefault();opts[itDropdownHighlight].onmousedown();}else{dd.classList.remove('open');}}
+        else if(e.key==='Escape'){dd.classList.remove('open');}
+    }
+
+    function highlightITOption(opts){opts.forEach((o,i)=>{o.classList.toggle('highlighted',i===itDropdownHighlight);if(i===itDropdownHighlight)o.scrollIntoView({block:'nearest'});});}
+
+    // ══════════════════════════════════════════════════
+    // MODALS
+    // ══════════════════════════════════════════════════
+    function showError(msg,title="Error"){document.getElementById('modal-title').innerText=title;document.getElementById('modal-error-text').innerText=msg;document.getElementById('error-modal').style.display='flex';}
+    function closeModal(){document.getElementById('error-modal').style.display='none';document.getElementById('it-code').focus();}
+    function openPrintSelectorModal(){document.getElementById('print-selector-modal').style.display='flex';}
+    function closePrintSelectorModal(){document.getElementById('print-selector-modal').style.display='none';}
+    function selectPrintCopyCount(count){
+        printCopiesConfigTarget=count;
+        document.querySelectorAll('.print-card').forEach(c=>c.classList.remove('selected'));
+        document.getElementById(`opt-copy-${count}`).classList.add('selected');
+    }
+
+    // ══════════════════════════════════════════════════
+    // TOGGLE MODES
+    // ══════════════════════════════════════════════════
+    function toggleUchakMode(){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const label=document.getElementById('uchak-toggle-label');
+        const rateBlock=document.getElementById('gold-rate-input-field-block');
+        const touchBlock=document.getElementById('step1-overall-touch-block');
+        const wastageBlock=document.getElementById('step1-overall-wastage-block');
+        const tagBlock=document.getElementById('step1-tag-block');
+        currentItems=[];document.getElementById('it-dropdown').classList.remove('open');
+        // Reset discounts on mode switch
+        const dtv = document.getElementById('disc-touch-val');
+        const dav = document.getElementById('disc-amount-val');
+        const dtf = document.getElementById('disc-touch-fine');
+        if(dtv) dtv.value='';
+        if(dav) dav.value='';
+        if(dtf) dtf.value='';
+        if(isUchak){
+            localStorage.setItem('aurum_active_billing_mode','uchak');
+            // Uchak: only amount discount — hide Touch button, force Amount
+            const btnTouch = document.getElementById('disc-type-touch');
+            if(btnTouch) btnTouch.style.display = 'none';
+            setDiscountType('amount');
+            label.innerText='UCHAK BILL';label.style.color='var(--accent)';
+            rateBlock.style.display='none';
+            document.getElementById('summary-total-left-label').innerText='Total Bill Amount';
+            document.getElementById('summary-remaining-fine-title-label').innerText='Remaining Amount';
+            if(touchBlock)touchBlock.style.display='none';
+            if(wastageBlock)wastageBlock.style.display='none';
+            if(tagBlock)tagBlock.style.display='none';
+            document.getElementById('table-dynamic-header-mount').innerHTML=`<tr><th style="width:70px;text-align:center;">#</th><th>IT Code</th><th>Rate</th><th>Pcs / Qty</th><th style="text-align:right">Amount</th><th style="width:80px;text-align:center;">Action</th></tr>`;
+            document.getElementById('table-dynamic-footer-mount').innerHTML=`<tr><td colspan="3">TOTAL UCHAK SUMMARY</td><td id="total-pcs-cell">0</td><td id="total-amt-cell" style="text-align:right;font-weight:800;color:var(--accent);">₹ 0.00</td><td></td></tr>`;
+            document.getElementById('entry-fld-1-label').innerHTML='IT Code';
+            document.getElementById('it-code').placeholder='Description/Code';
+            document.getElementById('entry-fld-2-label').innerText='Rate';
+            document.getElementById('it-weight').placeholder='0.00';
+            document.getElementById('entry-fld-3-label').innerText='Pcs';
+            document.getElementById('it-wastage').placeholder='0';
+            document.getElementById('entry-fld-4-label').innerText='Amount';
+        }else{
+            localStorage.setItem('aurum_active_billing_mode','weight');
+            // Weight: restore Touch button
+            const btnTouch = document.getElementById('disc-type-touch');
+            if(btnTouch) btnTouch.style.display = '';
+            setDiscountType('touch');
+            label.innerText='WEIGHT BILL';label.style.color='var(--text-muted)';
+            rateBlock.style.display='block';
+            document.getElementById('summary-total-left-label').innerText='Total Gross Fine';
+            document.getElementById('summary-remaining-fine-title-label').innerText='Remaining Fine';
+            if(touchBlock)touchBlock.style.display='block';
+            if(wastageBlock)wastageBlock.style.display='block';
+            if(tagBlock)tagBlock.style.display='block';
+            document.getElementById('table-dynamic-header-mount').innerHTML=`<tr><th>NO</th><th>IT Code</th><th>Weight</th><th style="color:var(--accent);">Para</th><th style="color:var(--error);">Less</th><th>Touch</th><th>Fine</th><th style="text-align:right">Action</th></tr>`;
+            document.getElementById('table-dynamic-footer-mount').innerHTML=`<tr><td colspan="2">TOTAL LEDGER</td><td id="total-wt-cell">0.000</td><td id="total-para-cell" style="color:var(--accent);">0.000</td><td id="total-less-cell" style="color:var(--error);">0.000</td><td>-</td><td id="total-fine-cell">0.000</td><td></td></tr>`;
+            const badge=weightStockItems.length>0?`<span style="color:var(--success);font-size:0.6rem;">(${weightStockItems.length} in stock)</span>`:'';
+            document.getElementById('entry-fld-1-label').innerHTML=`IT Code ${badge}`;
+            document.getElementById('it-code').placeholder='Type to search stock...';
+            document.getElementById('entry-fld-2-label').innerText='Weight';
+            document.getElementById('it-weight').placeholder='0.000';
+            document.getElementById('entry-fld-3-label').innerText='Wastage';
+            document.getElementById('it-wastage').placeholder='0.000';
+            document.getElementById('entry-fld-4-label').innerText='Fine';
+        }
+        syncLiveVoucher();renderTable();
+    }
+
+    async function toggleCreditMode(){
+        const isCredit=document.getElementById('credit-toggle').checked;
+        const infoBar=document.getElementById('credit-info-bar');
+        if(isCredit){
+            infoBar.style.display='flex';
+            if(window.pywebview?.api)registeredClients=await window.pywebview.api.get_client_list();
+            document.getElementById('cust-name').placeholder='Search Registered Client...';
+        }else{
+            infoBar.style.display='none';
+            document.getElementById('cust-name').placeholder='Full Name';
+            document.getElementById('live-metal-bal').innerText='0.000 g';
+            document.getElementById('live-cash-bal').innerText='₹ 0.00';
+            currentClientLimits={metal:0,cash:0};
+            closeDropdown();calcFinalSettlement();
+        }
+    }
+
+    document.getElementById('cust-name').addEventListener('input',function(){
+        if(!document.getElementById('credit-toggle').checked)return;
+        const val=this.value.toLowerCase();
+        const dd=document.getElementById('custom-dropdown');
+        const filtered=registeredClients.filter(c=>c.name.toLowerCase().includes(val));
+        if(filtered.length>0&&val){dd.innerHTML=filtered.map(c=>`<div class="dropdown-item" onclick="selectClient('${c.name}')">${c.name}</div>`).join('');dd.style.display='block';selectedIndex=-1;}
+        else{dd.style.display='none';}
+    });
+
+    async function selectClient(name){
+        document.getElementById('cust-name').value=name;closeDropdown();
+        if(window.pywebview?.api){
+            const res=await window.pywebview.api.get_client_live_outstanding(name);
+            if(res&&res.status==="success"){
+                const mBal=parseFloat(res.metal_outstanding||0),cBal=parseFloat(res.cash_outstanding||0);
+                document.getElementById('live-metal-bal').innerText=mBal.toFixed(3)+" g";
+                document.getElementById('live-cash-bal').innerText="₹ "+cBal.toLocaleString('en-IN',{minimumFractionDigits:2});
+                document.getElementById('live-metal-bal').style.color=mBal>0?"#ef4444":(mBal<0?"#10b981":"#f59e0b");
+                document.getElementById('live-cash-bal').style.color=cBal>0?"#ef4444":(cBal<0?"#10b981":"#b59410");
+            }
+            const meta=registeredClients.find(c=>c.name===name);
+            if(meta){currentClientLimits.metal=parseFloat(meta.metal_limit);currentClientLimits.cash=parseFloat(meta.cash_limit);}
+            calcFinalSettlement();
+        }
+        document.getElementById('v-overall-touch').focus();
+    }
+
+    function closeDropdown(){document.getElementById('custom-dropdown').style.display='none';selectedIndex=-1;}
+    document.addEventListener('click',(e)=>{if(!e.target.closest('.search-container'))closeDropdown();});
+    function updateSelection(items){items.forEach((item,i)=>{item.classList.toggle('selected',i===selectedIndex);if(i===selectedIndex)item.scrollIntoView({block:'nearest'});});}
+    document.addEventListener('wheel',(e)=>{if(document.activeElement.type==='number')document.activeElement.blur();});
+    function saveGoldRatePersistent(value){const r=parseFloat(value)||0;if(r>0)localStorage.setItem('aurum_gold_rate',r);}
+
+    document.addEventListener('keydown',async(e)=>{
+        if(document.getElementById('error-modal').style.display==='flex'){if(e.key==='Enter'){e.preventDefault();closeModal();}return;}
+        const active=document.activeElement;
+        if(active.id==='cust-name'){
+            const dd=document.getElementById('custom-dropdown');const items=dd.querySelectorAll('.dropdown-item');
+            if(dd.style.display==='block'){
+                if(e.key==='ArrowDown'){e.preventDefault();selectedIndex=(selectedIndex+1)%items.length;updateSelection(items);return;}
+                if(e.key==='ArrowUp'){e.preventDefault();selectedIndex=(selectedIndex-1+items.length)%items.length;updateSelection(items);return;}
+            }
+        }
+        if(e.key==='Enter'){
+            if(active.id==='cust-name'){
+                const dd=document.getElementById('custom-dropdown');const items=dd.querySelectorAll('.dropdown-item');
+                if(dd.style.display==='block'&&selectedIndex>-1){e.preventDefault();items[selectedIndex].click();return;}
+                if(document.getElementById('credit-toggle').checked){const name=active.value.trim();if(!registeredClients.some(c=>c.name===name)){e.preventDefault();showError(`"${name||'Client'}" is not registered.`,"Registry Required");active.value='';return;}}
+            }
+            if(active.id==='v-id'){
+                e.preventDefault();const id=active.value.trim();if(!id)return;
+                if(window.pywebview&&window.pywebview.api){
+                    const res=await window.pywebview.api.get_bill_details(id);
+                    if(res&&res.status==="success"){document.getElementById('cust-name').value=res.voucher.customer;document.getElementById('collect-fine').value=res.voucher.collected_fine;document.getElementById('settle-995-fine').value=res.voucher.fine_995;document.getElementById('settle-dhal-fine').value=res.voucher.fine_dhal;document.getElementById('gold-rate-input').value=res.voucher.gold_rate;currentItems=res.items;renderTable();document.getElementById('bill-btn').innerText="Update Record";document.getElementById('bill-btn').style.background="var(--success)";}
+                    else{showError(res.message||"Voucher not found.","Lookup Failed");}
+                    document.getElementById('cust-name').focus();
+                }
+                return;
+            }
+            if(active.id==='v-tag'){const tagId=active.value.trim();if(tagId){e.preventDefault();await handleTagScan(tagId);active.value='';active.focus();}return;}
+            if(active.id==='it-code'){
+                const dd=document.getElementById('it-dropdown');
+                if(dd.classList.contains('open'))return;
+                const isUchak=document.getElementById('uchak-toggle').checked;
+                if(isUchak){e.preventDefault();document.getElementById('it-weight').focus();return;}
+                e.preventDefault();const val=active.value.trim();if(!val)return;
+                const exactStock=weightStockItems.find(s=>s.it_code.toUpperCase()===val.toUpperCase());
+                if(exactStock){
+                    document.getElementById('it-code').value=exactStock.it_code;
+                    if(window.pywebview&&window.pywebview.api&&exactStock.touch){try{const groups=await window.pywebview.api.get_touch_groups();const match=groups.find(g=>parseFloat(g.value)===parseFloat(exactStock.touch));document.getElementById('it-wastage').value=match?(match.wastage||0):0;}catch(e){document.getElementById('it-wastage').value=0;}}
+                    calcFine();document.getElementById('it-weight').focus();return;
+                }
+                if(window.pywebview&&window.pywebview.api){
+                    try{const validation=await window.pywebview.api.validate_touch_value(val);if(validation.valid){const groups=await window.pywebview.api.get_touch_groups();const match=groups.find(g=>parseFloat(g.value)===parseFloat(val)||g.name.toLowerCase()===val.toLowerCase());document.getElementById('it-wastage').value=match?(match.wastage||0):0;calcFine();document.getElementById('it-weight').focus();}
+                    else{showError(validation.message||`"${val}" not found.`,"Not Found");active.value='';document.getElementById('it-wastage').value='';}}catch(err){console.error(err);}
+                }
+                return;
+            }
+            if(active.dataset.enter==="true"){e.preventDefault();enterItem();return;}
+            const nextId=active.dataset.next;
+            if(nextId){e.preventDefault();document.getElementById(nextId)?.focus();}
+        }
+    });
+
+    function startVchSync(){const check=setInterval(async()=>{if(window.pywebview&&window.pywebview.api){await syncLiveVoucher();clearInterval(check);}},100);}
+
+    async function syncLiveVoucher(){
+        const now=new Date();
+        document.getElementById('v-date').value=now.toLocaleDateString('en-GB');
+        document.getElementById('v-time').value=now.toLocaleTimeString();
+        const savedRate=localStorage.getItem('aurum_gold_rate');
+        if(savedRate&&parseFloat(savedRate)>0)document.getElementById('gold-rate-input').value=savedRate;
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        if(window.pywebview&&window.pywebview.api){
+            try{
+                if(isUchak){latestUchakVoucherTrackCode=await window.pywebview.api.get_next_uchak_vch_id()||"UCHK-001";document.getElementById('v-id').value=latestUchakVoucherTrackCode;}
+                else{latestSalesVoucherTrackCode=await window.pywebview.api.get_sales_vch_id()||"VCH-001";document.getElementById('v-id').value=latestSalesVoucherTrackCode;}
+            }catch(e){document.getElementById('v-id').value=isUchak?latestUchakVoucherTrackCode:latestSalesVoucherTrackCode;}
+        }
+        calcFinalSettlement();
+    }
+
+    async function handleTagScan(tagId){
+        if(document.getElementById('uchak-toggle').checked)return;
+        if(!window.pywebview?.api)return;
+        try{
+            const item=await window.pywebview.api.get_product_by_tag(tagId);
+            if(item){
+                if(item.is_tagged===0||item.is_tagged===false){showError(`Tag ID ${tagId} (${item.it_name||item.it_code}) is not registered yet.`,'Tag Registration Error');return;}
+                const mT=parseFloat(document.getElementById('v-overall-touch').value);
+                const mW=parseFloat(document.getElementById('v-overall-wastage').value);
+                const dbW=parseFloat(item.gr_wt||0),dbP=parseFloat(item.para_stone_wt||0),dbL=parseFloat(item.ls_wt||0);
+                const fT=!isNaN(mT)?mT:parseFloat(item.touch||0),fW=!isNaN(mW)?mW:parseFloat(item.wastage||0);
+                const fine=((dbW-dbP-dbL)*(fT+fW)/100).toFixed(3);
+                const dbPkg=parseFloat(item.pkg_wt||0);
+                currentItems.push({tag_id:item.tag_id||'',it_code:item.it_code||'',code:item.it_code||'TAG',weight:dbW,para:dbP,less:dbL,pkg_wt:dbPkg,touch:fT,wastage:fW,fine:parseFloat(fine)});
+                renderTable();
+                document.getElementById('v-overall-touch').value='';document.getElementById('v-overall-wastage').value='';
+            }else showError("ID "+tagId+" not found.","Tag Missing");
+        }catch(err){console.error(err);}
+    }
+
+    function calcFine(){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const w=parseFloat(document.getElementById('it-weight').value)||0;
+        const wast=parseFloat(document.getElementById('it-wastage').value)||0;
+        if(isUchak){document.getElementById('it-fine').value=(w*wast).toFixed(2);return;}
+        const inputCode=document.getElementById('it-code').value.trim();
+        const stockMatch=weightStockItems.find(s=>s.it_code.toUpperCase()===inputCode.toUpperCase());
+        const prodMatch=allProducts.find(p=>p.code.toUpperCase()===inputCode.toUpperCase());
+        const t=stockMatch?parseFloat(stockMatch.touch||0):(prodMatch?parseFloat(prodMatch.touch||0):(parseFloat(inputCode)||0));
+        document.getElementById('it-fine').value=(w*(t+wast)/100).toFixed(3);
+    }
+
+    function calcSpecialFines(){
+        const w9=parseFloat(document.getElementById('settle-995-wt').value)||0,t9=parseFloat(document.getElementById('settle-995-touch').value)||0;
+        document.getElementById('settle-995-fine').value=(w9*t9/100).toFixed(3);
+        const wd=parseFloat(document.getElementById('settle-dhal-wt').value)||0,td=parseFloat(document.getElementById('settle-dhal-touch').value)||0;
+        document.getElementById('settle-dhal-fine').value=(wd*td/100).toFixed(3);
+        calcFinalSettlement();
+    }
+
+    function enterItem(){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const code=document.getElementById('it-code').value.trim();
+        const weight=parseFloat(document.getElementById('it-weight').value)||0;
+        const wastage=parseFloat(document.getElementById('it-wastage').value)||0;
+        const fine=parseFloat(document.getElementById('it-fine').value)||0;
+        if(!code||weight<=0)return;
+        if(isUchak){
+            currentItems.push({name:code,it_code:code,rate:weight,pcs:parseInt(wastage)||1,amount:fine});
+        }else{
+            const stockMatch=weightStockItems.find(s=>s.it_code.toUpperCase()===code.toUpperCase());
+            if(stockMatch){
+                const available=parseFloat(stockMatch.gr_wt||0);
+                const alreadyAdded=currentItems.filter(i=>(i.it_code||'').toUpperCase()===code.toUpperCase()).reduce((sum,i)=>sum+parseFloat(i.weight||0),0);
+                if(weight>available-alreadyAdded){showError(`${weight.toFixed(3)}g exceeds available stock of ${(available-alreadyAdded).toFixed(3)}g for '${code}'.`,'Insufficient Vault Balance');document.getElementById('it-weight').focus();document.getElementById('it-weight').select();return;}
+            }
+            const prodMatch=allProducts.find(p=>p.code.toUpperCase()===code.toUpperCase());
+            const touchVal=stockMatch?parseFloat(stockMatch.touch||0):(prodMatch?parseFloat(prodMatch.touch||0):parseFloat(code)||0);
+            currentItems.push({tag_id:'',it_code:code,code,weight,para:0,less:0,pkg_wt:0,touch:touchVal,wastage,fine});
+        }
+        renderTable();
+        ['it-code','it-weight','it-wastage','it-fine'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('it-dropdown').classList.remove('open');
+        document.getElementById('it-code').focus();
+    }
+
+    function renderTable(){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const tbody=document.getElementById('item-list');tbody.innerHTML='';
+        if(isUchak){
+            let tp=0,ta=0;
+            currentItems.forEach((item,i)=>{tp+=item.pcs;ta+=item.amount;tbody.innerHTML+=`<tr><td style="text-align:center;">${i+1}</td><td style="font-weight:700;">${item.name}</td><td>₹ ${item.rate.toFixed(2)}</td><td>${item.pcs}</td><td style="text-align:right;color:var(--success);">₹ ${item.amount.toFixed(2)}</td><td style="text-align:center;"><span class="remove-icon" onclick="removeItem(${i})">×</span></td></tr>`;});
+            if(document.getElementById('total-pcs-cell'))document.getElementById('total-pcs-cell').innerText=tp;
+            if(document.getElementById('total-amt-cell'))document.getElementById('total-amt-cell').innerText="₹ "+ta.toFixed(2);
+            document.getElementById('sum-fine').innerText=ta.toFixed(2);
+        }else{
+            let tw=0,tp=0,tl=0,tf=0;
+            currentItems.forEach((item,i)=>{tw+=item.weight;tp+=(item.para||0);tl+=(item.less||0);tf+=item.fine;tbody.innerHTML+=`<tr><td>${i+1}</td><td>${item.code}</td><td>${item.weight.toFixed(3)}</td><td>${(item.para||0).toFixed(3)}</td><td>${(item.ls_wt||item.less||0).toFixed(3)}</td><td>${(item.touch+item.wastage).toFixed(3)}</td><td>${item.fine.toFixed(3)}</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem(${i})">×</span></td></tr>`;});
+            if(document.getElementById('total-wt-cell'))document.getElementById('total-wt-cell').innerText=tw.toFixed(3);
+            if(document.getElementById('total-para-cell'))document.getElementById('total-para-cell').innerText=tp.toFixed(3);
+            if(document.getElementById('total-less-cell'))document.getElementById('total-less-cell').innerText=tl.toFixed(3);
+            if(document.getElementById('total-fine-cell'))document.getElementById('total-fine-cell').innerText=tf.toFixed(3);
+            document.getElementById('sum-fine').innerText=tf.toFixed(3);
+        }
+        calcFinalSettlement();
+    }
+
+    function removeItem(i){currentItems.splice(i,1);renderTable();}
+
+    // ══════════════════════════════════════════════════
+    // DISCOUNT LOGIC
+    // ══════════════════════════════════════════════════
+    function setDiscountType(type) {
+        activeDiscountType = type;
+        // Toggle button styles
+        const btnTouch  = document.getElementById('disc-type-touch');
+        const btnAmount = document.getElementById('disc-type-amount');
+        const touchBlk  = document.getElementById('disc-touch-block');
+        const amtBlk    = document.getElementById('disc-amount-block');
+
+        if (type === 'touch') {
+            btnTouch.style.background  = 'var(--primary)';
+            btnTouch.style.color       = 'white';
+            btnTouch.style.borderColor = 'var(--primary)';
+            btnAmount.style.background  = '#fff';
+            btnAmount.style.color       = 'var(--text-muted)';
+            btnAmount.style.borderColor = 'var(--border)';
+            touchBlk.style.display = 'block';
+            amtBlk.style.display   = 'none';
+            // Clear amount discount
+            document.getElementById('disc-amount-val').value = '';
+        } else {
+            btnAmount.style.background  = 'var(--primary)';
+            btnAmount.style.color       = 'white';
+            btnAmount.style.borderColor = 'var(--primary)';
+            btnTouch.style.background   = '#fff';
+            btnTouch.style.color        = 'var(--text-muted)';
+            btnTouch.style.borderColor  = 'var(--border)';
+            amtBlk.style.display   = 'block';
+            touchBlk.style.display = 'none';
+            // Clear touch discount
+            document.getElementById('disc-touch-val').value  = '';
+            document.getElementById('disc-touch-fine').value = '';
+        }
+        calcFinalSettlement();
+    }
+
+    function getDiscountValues(totalFine, totalNetWt) {
+        // Returns { touchDisc, fineSaved, amountDisc }
+        const touchDisc  = parseFloat(document.getElementById('disc-touch-val').value)  || 0;
+        const amountDisc = parseFloat(document.getElementById('disc-amount-val').value) || 0;
+
+        let fineSaved = 0;
+        if (activeDiscountType === 'touch' && touchDisc > 0 && totalNetWt > 0) {
+            // fine saved = net_wt × discount_touch% / 100
+            fineSaved = (totalNetWt * touchDisc) / 100;
+        }
+
+        // Show fine saved
+        const fineEl = document.getElementById('disc-touch-fine');
+        if (fineEl) fineEl.value = fineSaved > 0 ? fineSaved.toFixed(3) : '';
+
+        return {
+            touchDisc,
+            fineSaved,
+            amountDisc: activeDiscountType === 'amount' ? amountDisc : 0
+        };
+    }
+
+    function calcFinalSettlement(){
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        const tf=parseFloat(document.getElementById('sum-fine').innerText)||0;
+        const cv=parseFloat(document.getElementById('collect-fine').value)||0;
+        const f9=parseFloat(document.getElementById('settle-995-fine').value)||0;
+        const fd=parseFloat(document.getElementById('settle-dhal-fine').value)||0;
+        const r=parseFloat(document.getElementById('gold-rate-input').value)||0;
+
+        // ── Get total net weight for touch discount calculation ──
+        let totalNetWt = 0;
+        if (!isUchak) {
+            currentItems.forEach(it => {
+                const g = parseFloat(it.weight||0);
+                const p = parseFloat(it.para||0);
+                const l = parseFloat(it.less||0);
+                totalNetWt += (g - p - l);
+            });
+        }
+
+        // ── Discount ──
+        const disc = getDiscountValues(tf, totalNetWt);
+
+        let fine=0, cash=0;
+        if (isUchak) {
+            cash = tf - cv - f9 - fd - disc.amountDisc;
+            fine = 0;
+        } else {
+            fine = tf - cv - f9 - fd - disc.fineSaved;
+            cash = (fine * r) / 10;
+            cash = cash - disc.amountDisc;
+        }
+
+        document.getElementById('rem-fine-val').innerText = isUchak ? "0.000" : fine.toFixed(3);
+        document.getElementById('total-amount').innerText = cash.toLocaleString('en-IN',{minimumFractionDigits:2});
+        const isCredit=document.getElementById('credit-toggle').checked;
+        const btn=document.getElementById('bill-btn');
+        if(isCredit&&currentClientLimits.metal>0){
+            const mEl=document.getElementById('live-metal-bal'),cEl=document.getElementById('live-cash-bal');
+            const em=parseFloat(mEl.innerText)||0,ec=parseFloat(cEl.innerText.replace(/[₹,]/g,''))||0;
+            if(em+fine>currentClientLimits.metal||ec+cash>currentClientLimits.cash){btn.disabled=true;btn.innerText="LIMIT EXCEEDED - BLOCKED";btn.style.background="var(--error)";document.getElementById('credit-info-bar').style.background="#450a0a";}
+            else{btn.disabled=false;btn.innerText="Authorize & Record";btn.style.background="var(--primary)";document.getElementById('credit-info-bar').style.background="#0f172a";}
+        }else{btn.disabled=false;btn.innerText="Authorize & Record";btn.style.background="var(--primary)";}
+    }
+
+    // ══════════════════════════════════════════════════
+    // BILLING FLOW
+    // ══════════════════════════════════════════════════
+    function handleBilling(){
+        if(currentItems.length===0){showError("Add at least one item to generate an invoice.","Empty Invoice");return;}
+        const rate=parseFloat(document.getElementById('gold-rate-input').value)||0;
+        const isCredit=document.getElementById('credit-toggle').checked;
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        if(!isCredit&&rate===0&&!isUchak){showError("Gold Rate required for Cash Bills.","Missing Rate");return;}
+        openPrintSelectorModal();
+    }
+
+    async function commitBillingTransactionPipeline(){
+        closePrintSelectorModal();
+        const btn=document.getElementById('bill-btn');
+        btn.disabled=true;btn.innerText="SYNCHRONIZING...";btn.style.opacity="0.7";
+        const rate=parseFloat(document.getElementById('gold-rate-input').value)||0;
+        const isCredit=document.getElementById('credit-toggle').checked;
+        const isUchak=document.getElementById('uchak-toggle').checked;
+        // Gather discount values for bill record
+        let totalNetWtForDisc = 0;
+        if (!isUchak) {
+            currentItems.forEach(it => {
+                totalNetWtForDisc += (parseFloat(it.weight||0) - parseFloat(it.para||0) - parseFloat(it.less||0));
+            });
+        }
+        const discData = getDiscountValues(
+            parseFloat(document.getElementById('sum-fine').innerText)||0,
+            totalNetWtForDisc
+        );
+
+        const data={
+            vch_id:document.getElementById('v-id').value,
+            customer:document.getElementById('cust-name').value||'Walking Customer',
+            status:isCredit?'CREDIT':'PAID',is_credit:isCredit,is_uchak:isUchak,
+            totalLedgerFine:isUchak?0:parseFloat(document.getElementById('sum-fine').innerText),
+            remainingFine:isUchak?0:parseFloat(document.getElementById('rem-fine-val').innerText),
+            collectedFine:isUchak?0:(parseFloat(document.getElementById('collect-fine').value)||0),
+            fine995:parseFloat(document.getElementById('settle-995-fine').value)||0,
+            fineDhal:parseFloat(document.getElementById('settle-dhal-fine').value)||0,
+            goldRate:isUchak?0:rate,
+            totalAmount:parseFloat(document.getElementById('total-amount').innerText.replace(/,/g,'')),
+            // Discount fields
+            discountType:  activeDiscountType,
+            discountTouch: discData.touchDisc,
+            discountFine:  discData.fineSaved,
+            discountAmount:discData.amountDisc,
+            items:currentItems
+        };
+        console.log('=== COMMIT BILLING ===');
+        console.log('[DATA] vch_id:', data.vch_id);
+        console.log('[DATA] customer:', data.customer);
+        console.log('[DATA] is_uchak:', data.is_uchak);
+        console.log('[DATA] goldRate:', data.goldRate);
+        console.log('[DATA] totalAmount:', data.totalAmount);
+        console.log('[DATA] currentItems:', JSON.stringify(currentItems));
+        console.log('[DATA] items in data:', JSON.stringify(data.items));
+        try{
+            if(window.pywebview?.api){
+                const res=await window.pywebview.api.generate_bill(data);
+                if(res.status==="success"){
+                    // ✅ Open Gujarati bill in popup — exact traditional format
+                    printGujBill(data, printCopiesConfigTarget);
+                    // Set dirty flag so inventory refreshes
+                    try{localStorage.setItem('aurum_stock_dirty','1');}catch(e){}
+                    if(isUchak){latestUchakVoucherTrackCode=await window.pywebview.api.get_next_uchak_vch_id();}
+                    else{latestSalesVoucherTrackCode=await window.pywebview.api.get_sales_vch_id();}
+                    setTimeout(()=>{window.location.reload();},600);
+                }else{showError(res.message||"Database rejected the entry.","Recording Failed");}
+            }else{showError("System Bridge not found.","Technical Error");}
+        }catch(err){console.error(err);showError("A critical error occurred.","System Crash");}
+        finally{btn.disabled=false;btn.style.opacity="1";calcFinalSettlement();}
+    }
+
+    window.onload=()=>{
+        const role=localStorage.getItem('aurum_user_role')||'admin';
+        const userName=localStorage.getItem('aurum_active_user')||'Admin';
+        const mode=localStorage.getItem('aurum_active_billing_mode')||'weight';
+        document.getElementById('uchak-toggle').checked=mode==='uchak';
+        document.getElementById('header-title-display').innerText=role==='staff'?"Wholesale Billing Terminal":"Create New Invoice";
+        const vInput=document.getElementById('v-id');
+        if(role==='staff'){vInput.readOnly=true;vInput.tabIndex=-1;}
+        else{vInput.readOnly=false;vInput.removeAttribute('tabIndex');vInput.placeholder="Type VCH-001 & press Enter...";}
+        document.getElementById('session-avatar-badge').innerText=userName.substring(0,2).toUpperCase();
+        waitForAPI(async function(){
+            await initSidebar('billing');
+            await loadWeightStockCodes();
+            toggleUchakMode();
+        });
+        startVchSync();
+        setInterval(()=>{
+            document.getElementById('real-time-clock').innerText=new Date().toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
+        },1000);
+    };
+</script>
+</body>
+</html>

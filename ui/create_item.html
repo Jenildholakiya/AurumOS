@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Master Item Creation Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #b59410;
+            --bg-main: #f1f5f9;
+            --border: #cbd5e1;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+            --table-line: #e2e8f0;
+            --error: #e11d48;
+            --success: #059669;
+            --modal-bg: rgba(15, 23, 42, 0.6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-main); height: 100vh; overflow: hidden; display: block; flex-direction: column; }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        header { height: 70px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; flex-shrink: 0; z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 25px; }
+        .btn-exit { background: #fff; border: 1.5px solid var(--border); padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none; color: inherit; }
+        .btn-exit:hover { background: #fff1f2; color: #e11d48; border-color: #fecaca; }
+
+        .tab-nav { background: #fff; border-bottom: 1px solid var(--border); display: flex; padding: 0 30px; gap: 30px; flex-shrink: 0; }
+        .tab-btn { padding: 18px 0; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .tab-btn span { width: 22px; height: 22px; background: var(--bg-main); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--accent); }
+        .tab-btn.active span { background: var(--primary); color: #fff; }
+
+        .content-wrapper { display: flex; flex-grow: 1; overflow: hidden; }
+        .data-panel { width: 55%; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 20px 25px; border-bottom: 1px solid var(--table-line); background: #fafbfc; display: flex; justify-content: space-between; align-items: center; }
+        .panel-header h2 { font-size: 0.9rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .panel-header h2::before { content: ""; width: 4px; height: 16px; background: var(--accent); border-radius: 10px; }
+
+        .table-container { flex-grow: 1; overflow: auto; padding: 0; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { position: sticky; top: 0; background: #f8fafc; text-align: left; font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted); font-weight: 800; padding: 12px 20px; border-bottom: 2px solid var(--table-line); z-index: 5; letter-spacing: 0.5px; }
+        td { padding: 14px 20px; font-size: 0.82rem; font-weight: 600; border-bottom: 1px solid var(--table-line); color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        tr:hover td { background: #fcfcfc; }
+
+        .form-panel { width: 45%; background: var(--bg-main); padding: 30px; overflow-y: auto; }
+        .setup-card { background: #fff; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-md); padding: 30px; position: sticky; top: 0; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .col-span-2 { grid-column: span 2; }
+        .form-group label { display: block; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+
+        input, select { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid var(--border); font-weight: 600; font-size: 0.9rem; outline: none; transition: 0.2s; background: #fcfcfc; }
+        input:focus, select:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(181, 148, 16, 0.08); }
+        input[readonly] { background: #f1f5f9; color: var(--text-muted); cursor: not-allowed; border-style: dashed; }
+
+        .btn-save { background: var(--primary); color: #fff; border: none; padding: 14px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 20px; width: 100%; font-size: 0.9rem; letter-spacing: 0.5px; }
+        .btn-save:hover { background: #1e293b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+        .btn-save.success { background: var(--success); }
+
+        .btn-del { color: var(--text-muted); background: none; border: none; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
+        .btn-del:hover { color: var(--error); transform: scale(1.2); }
+
+        .tab-content { display: none; height: 100%; width: 100%; }
+        .tab-content.active { display: flex; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-bg); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-card { background: #fff; width: 400px; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid var(--border); animation: modalIn 0.3s ease-out; }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .modal-icon { width: 60px; height: 60px; background: #fff1f2; color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 1.5rem; }
+        .modal-card h3 { font-size: 1.2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+        .modal-card p { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; line-height: 1.5; margin-bottom: 25px; }
+
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn-modal { padding: 12px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: 0.2s; border: none; }
+        .btn-cancel { background: var(--bg-main); color: var(--text-main); }
+        .btn-confirm { background: var(--error); color: #fff; }
+        .btn-cancel:hover { background: var(--border); }
+        .btn-confirm:hover { background: #be123c; transform: translateY(-2px); }
+
+    </style>
+
+    <link rel="stylesheet" href="sidebar.css">
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
+body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { display: none !important; }
+body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div id="sidebar-container"></div>
+
+
+
+<header>
+    <div class="header-left">
+        <a href="stock_ledger.html" class="btn-exit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back to Ledger
+        </a>
+        <h1 style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">Product Master Management</h1>
+    </div>
+    <div id="real-time-clock" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">---</div>
+</header>
+
+<nav class="tab-nav">
+    <div class="tab-btn active" id="btn-tab-1" onclick="switchTab(event, 'category-tab')"><span>1</span> Product Category</div>
+    <div class="tab-btn" id="btn-tab-2" onclick="switchTab(event, 'touch-tab')"><span>2</span> Touch Group</div>
+    <div class="tab-btn" id="btn-tab-3" onclick="switchTab(event, 'product-tab')"><span>3</span> Product Creation</div>
+</nav>
+
+<div class="content-wrapper">
+    <div id="category-tab" class="tab-content active">
+        <div class="data-panel">
+            <div class="panel-header"><h2>Saved Categories</h2></div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th style="width: 30%">Code</th><th>Category Name</th><th style="width: 60px"></th></tr></thead>
+                    <tbody id="category-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-panel">
+            <div class="setup-card">
+                <div class="form-grid">
+                    <div class="form-group col-span-2"><label>Category Name</label><input type="text" id="cat-name" placeholder="e.g. Bangles"></div>
+                    <div class="form-group col-span-2"><label>Category Code</label><input type="text" id="cat-code" placeholder="e.g. BNGL"></div>
+                </div>
+                <button class="btn-save" id="btn-save-cat" onclick="saveCategory()">Save Category</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="touch-tab" class="tab-content">
+        <div class="data-panel">
+            <div class="panel-header"><h2>Saved Touch Groups</h2></div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th style="width: 35%">Group Name</th><th style="width: 25%">Touch (%)</th><th style="width: 25%">Wastage (%)</th><th style="width: 60px"></th></tr>
+                    </thead>
+                    <tbody id="touch-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-panel">
+            <div class="setup-card">
+                <div class="form-grid">
+                    <div class="form-group col-span-2"><label>Touch Group Name</label><input type="text" id="touch-name" placeholder="e.g. 22K"></div>
+                    <div class="form-group"><label>Touch Percentage (%)</label><input type="number" id="touch-value" step="0.01" placeholder="91.60"></div>
+                    <div class="form-group"><label>Wastage (%)</label><input type="number" id="touch-wastage" step="0.01" placeholder="0.00"></div>
+                </div>
+                <button class="btn-save" id="btn-save-touch" onclick="saveTouchGroup()">Save Touch Group</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="product-tab" class="tab-content">
+        <div class="data-panel">
+            <div class="panel-header"><h2>Master Product List</h2></div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th style="width: 25%">IT Code</th><th>Item Name</th><th style="width: 30%">Category</th><th style="width: 60px"></th></tr>
+                    </thead>
+                    <tbody id="product-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-panel">
+            <div class="setup-card">
+                <div class="form-grid">
+                    <div class="form-group col-span-2"><label>Select Category</label><select id="prod-category-select" onchange="autoGenerateFields()"><option value="">-- Select Category --</option></select></div>
+                    <div class="form-group"><label>Default Touch Group</label><select id="prod-touch-select" onchange="autoGenerateFields()"><option value="">-- Select Touch --</option></select></div>
+                    <div class="form-group"><label>IT Code</label><input type="text" id="prod-code" placeholder="Auto-Generated" readonly></div>
+                    <div class="form-group col-span-2"><label>Item Name</label><input type="text" id="prod-name" placeholder="e.g. Gold Kada"></div>
+                    <div class="form-group col-span-2"><label>Wastage (%)</label><input type="number" id="prod-wst" placeholder="00" oninput="if(this.value.length > 2) this.value = this.value.slice(0,2);"></div>
+                </div>
+                <button class="btn-save" id="btn-save-prod" onclick="saveProduct()">Create Final Product</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-card">
+        <div class="modal-icon">🗑</div>
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this record? This action will permanently remove it from the master database.</p>
+        <div class="modal-actions">
+            <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-modal btn-confirm" id="btn-modal-confirm">Delete Permanently</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let categories = [];
+    let touchGroups = [];
+    let products = [];
+    let pendingDelete = { type: '', id: '' };
+
+    document.addEventListener('wheel', function(e) {
+        if (document.activeElement.type === 'number') document.activeElement.blur();
+    });
+
+    async function init() {
+        updateClock();
+        setInterval(updateClock, 1000);
+        setupEnterNavigation();
+        let attempts = 0;
+        const checkBridge = setInterval(async () => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(checkBridge);
+                await refreshAllData();
+            } else if (++attempts >= 20) clearInterval(checkBridge);
+        }, 150);
+    }
+    window.onload = init;
+
+    async function refreshAllData() {
+        if (window.pywebview?.api) {
+            categories = await window.pywebview.api.get_categories() || [];
+            touchGroups = await window.pywebview.api.get_touch_groups() || [];
+            products = await window.pywebview.api.get_products() || [];
+            renderCategories();
+            renderTouchGroups();
+            renderProducts();
+        }
+    }
+
+    function renderCategories() {
+        document.getElementById('category-table-body').innerHTML = categories.map(c =>
+            `<tr><td>${c.code}</td><td>${c.name}</td><td><button class="btn-del" onclick="triggerDelete('category', '${c.id}')">×</button></td></tr>`
+        ).join('');
+        document.getElementById('prod-category-select').innerHTML = '<option value="">-- Select Category --</option>' + categories.map(c => `<option value="${c.name}" data-code="${c.code}">${c.name}</option>`).join('');
+    }
+
+    function renderTouchGroups() {
+        document.getElementById('touch-table-body').innerHTML = touchGroups.map(t =>
+            `<tr><td>${t.name}</td><td>${t.value}%</td><td>${t.wastage}%</td><td><button class="btn-del" onclick="triggerDelete('touch', '${t.id}')">×</button></td></tr>`
+        ).join('');
+        document.getElementById('prod-touch-select').innerHTML = '<option value="">-- Select Touch --</option>' + touchGroups.map(t => `<option value="${t.name}">${t.name} (${t.value}%)</option>`).join('');
+    }
+
+    function renderProducts() {
+        document.getElementById('product-table-body').innerHTML = products.map(p =>
+            `<tr><td>${p.code}</td><td>${p.name}</td><td>${p.category}</td><td><button class="btn-del" onclick="triggerDelete('product', '${p.code}')">×</button></td></tr>`
+        ).join('');
+    }
+
+    function autoGenerateFields() {
+        const catS = document.getElementById('prod-category-select');
+        const touchS = document.getElementById('prod-touch-select');
+        const selectedOption = catS.options[catS.selectedIndex];
+        const catCode = selectedOption ? selectedOption.getAttribute('data-code') : "";
+        const touchName = touchS.value;
+
+        if(catCode && touchName) {
+            document.getElementById('prod-code').value = (catCode + "-" + touchName.split(' ')[0]).toUpperCase();
+        }
+    }
+
+    async function saveCategory() {
+        const n = document.getElementById('cat-name').value.trim();
+        const c = document.getElementById('cat-code').value.trim();
+        if(!n || !c) return;
+        const res = await window.pywebview.api.add_category(c, n);
+        if(res.status === "success") {
+            document.getElementById('cat-name').value = ''; document.getElementById('cat-code').value = '';
+            showSuccess('btn-save-cat'); await refreshAllData();
+        }
+    }
+
+    async function saveTouchGroup() {
+        const n = document.getElementById('touch-name').value.trim();
+        const v = document.getElementById('touch-value').value;
+        const w = document.getElementById('touch-wastage').value || "0.00";
+        if(!n || !v) return;
+        const res = await window.pywebview.api.add_touch_group(n, v, w);
+        if(res.status === "success") {
+            document.getElementById('touch-name').value = ''; document.getElementById('touch-value').value = ''; document.getElementById('touch-wastage').value = '';
+            showSuccess('btn-save-touch'); await refreshAllData();
+        }
+    }
+
+    async function saveProduct() {
+        const code = document.getElementById('prod-code').value;
+        const name = document.getElementById('prod-name').value.trim();
+        const cat = document.getElementById('prod-category-select').value;
+        const touch = document.getElementById('prod-touch-select').value;
+        const wst = document.getElementById('prod-wst').value || "0";
+        if(!name || !cat || !touch || !code) return;
+
+        // Removed tag parameter to match updated API
+        const res = await window.pywebview.api.add_product_master(code, name, cat, touch, wst);
+        if(res.status === "success") {
+            document.getElementById('prod-name').value = '';
+            document.getElementById('prod-wst').value = '';
+            document.getElementById('prod-code').value = '';
+            showSuccess('btn-save-prod'); await refreshAllData();
+        }
+    }
+
+    function triggerDelete(type, id) {
+        pendingDelete = { type, id };
+        document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('btn-modal-confirm').onclick = executeDelete;
+    }
+
+    function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; }
+
+    async function executeDelete() {
+        if (window.pywebview?.api) {
+            const res = await window.pywebview.api.delete_master_entry(pendingDelete.type, pendingDelete.id);
+            if(res.status === "success") {
+                closeDeleteModal();
+                await refreshAllData();
+            }
+        }
+    }
+
+    function showSuccess(id) {
+        const btn = document.getElementById(id);
+        const old = btn.innerText; btn.innerText = "✓ SUCCESS"; btn.classList.add('success');
+        setTimeout(() => { btn.innerText = old; btn.classList.remove('success'); }, 1500);
+    }
+
+    function setupEnterNavigation() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const activeTab = document.querySelector('.tab-content.active');
+                const inputs = Array.from(activeTab.querySelectorAll('input:not([readonly]), select'));
+                const idx = inputs.indexOf(document.activeElement);
+                if (idx > -1) {
+                    e.preventDefault();
+                    if (idx < inputs.length - 1) inputs[idx + 1].focus();
+                    else {
+                        if(activeTab.id === 'category-tab') saveCategory();
+                        else if(activeTab.id === 'touch-tab') saveTouchGroup();
+                        else if(activeTab.id === 'product-tab') saveProduct();
+                    }
+                }
+            }
+        });
+    }
+
+    function switchTab(evt, id) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        evt.currentTarget.classList.add('active');
+        document.getElementById(id).classList.add('active');
+    }
+
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('real-time-clock').innerText = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' | ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+</script>
+</body>
+</html>

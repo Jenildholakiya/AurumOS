@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Systems Initialization</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #090d16;
+            --primary-light: #1e293b;
+            --accent: #b59410; /* Aurum Premium Gold */
+            --accent-light: #fbf7e6;
+            --bg-body: #f4f6f9;
+            --card: #ffffff;
+            --border: #e4e8f0;
+            --text-main: #0f172a;
+            --text-muted: #7e8e9f;
+            --success: #0ca678;
+            --error: #df2c2c;
+            --shadow-premium: 0 30px 60px -15px rgba(9, 13, 22, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 1px 1px, #e4e8f0 1.5px, transparent 0);
+            background-size: 32px 32px;
+        }
+
+        /* Widened Symmetrical Luxury Workspace Card Container */
+        .glass-card {
+            width: 760px;
+            background: var(--card);
+            padding: 55px 65px;
+            border-radius: 24px;
+            box-shadow: var(--shadow-premium);
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        /* --- LOGO ENGINE ARCHITECTURE --- */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+        .brand-header h1 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .brand-header h1 span { color: var(--accent); }
+
+        /* --- TOASTER SYSTEM FEEDBACK PANELS --- */
+        .toaster {
+            position: fixed;
+            top: 35px;
+            right: 35px;
+            background: white;
+            border-left: 4px solid var(--error);
+            padding: 18px 28px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(9, 13, 22, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10000;
+            transform: translateX(160%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toaster.show { transform: translateX(0); }
+        .toaster.success-toast { border-left-color: var(--success); }
+
+        /* --- STYLED INTERACTIVE PROGRESS TIMELINE TRACKS --- */
+        .progress-container {
+            margin-bottom: 40px;
+        }
+        .progress-track {
+            height: 5px;
+            background: #f1f3f7;
+            border-radius: 100px;
+            width: 100%;
+            overflow: hidden;
+        }
+        #progress-fill {
+            height: 100%;
+            width: 33.33%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 100px;
+            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* --- SMOOTH TRANSITION ANIMATIONS LAYERS --- */
+        .step { display: none; }
+        .step.active { display: block; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOutLeft {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(-20px); }
+        }
+
+        h2 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+            padding-left: 14px;
+            border-left: 3px solid var(--accent);
+        }
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-bottom: 35px;
+            line-height: 1.6;
+            font-weight: 500;
+            padding-left: 14px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
+        .full-width { grid-column: span 2; }
+
+        .input-box { margin-bottom: 5px; }
+        .input-box label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.25s ease;
+            background: #ffffff;
+            color: var(--primary);
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-light);
+        }
+        input::placeholder { color: #b1bdcb; font-weight: 500; }
+
+        .btn-group { display: flex; gap: 15px; margin-top: 35px; }
+        button {
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            box-shadow: 0 10px 20px -5px rgba(9, 13, 22, 0.1);
+        }
+        .btn-primary:hover {
+            background: #151f32;
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(9, 13, 22, 0.15);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-ghost {
+            background: #f4f6f9;
+            color: var(--text-main);
+            width: 140px;
+            font-weight: 700;
+        }
+        .btn-ghost:hover {
+            background: #e9ecf2;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="glass-card">
+    <div class="brand-header">
+        <h1>Aurum<span>OS</span></h1>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-track">
+            <div id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="step1" class="step active">
+        <h2>License Security</h2>
+        <p class="subtitle">Enter your unique AurumOS activation key to bind this device to your enterprise license.</p>
+        <div class="input-box">
+            <label>Activation Key</label>
+            <input type="text" id="key" placeholder="AURUM-XXXX-2026" autocomplete="off">
+        </div>
+        <button id="btn-next-1" class="btn-primary" style="margin-top: 25px;" onclick="animateTo(2)">Verify & Initialize</button>
+    </div>
+
+    <div id="step2" class="step">
+        <h2>Business Profile</h2>
+        <p class="subtitle">This information will be used for automated invoicing, GST reporting, and firm branding.</p>
+        <div class="grid-2">
+            <div class="input-box">
+                <label>Business Name</label>
+                <input type="text" id="biz_name" placeholder="e.g. Royal Wholesale Jewellery">
+            </div>
+            <div class="input-box">
+                <label>Owner Name</label>
+                <input type="text" id="owner_name" placeholder="e.g. Jenil Dholakiya">
+            </div>
+            <div class="input-box">
+                <label>Phone Number</label>
+                <input type="text" id="phone" placeholder="+91 XXXXX XXXXX">
+            </div>
+            <div class="input-box">
+                <label>GSTIN (Optional)</label>
+                <input type="text" id="gst" placeholder="24AAAAA0000A1Z5">
+            </div>
+            <div class="input-box full-width">
+                <label>Address</label>
+                <input type="text" id="address" placeholder="Building, City, State">
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn-ghost" onclick="animateTo(1)">Back</button>
+            <button id="btn-next-2" class="btn-primary" onclick="animateTo(3)">Continue to Security</button>
+        </div>
+    </div>
+
+    <div id="step3" class="step">
+        <h2>Administrator Lock</h2>
+        <p class="subtitle">Create master credentials. These are used to unlock the terminal and encrypt the local database.</p>
+        <div class="grid-2">
+            <div class="input-box full-width">
+                <label>Master Username</label>
+                <input type="text" id="admin_user" placeholder="e.g. aurum_admin">
+            </div>
+            <div class="input-box full-width">
+                <label>Master Password</label>
+                <input type="password" id="pass" placeholder="••••••••">
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn-ghost" onclick="animateTo(2)">Back</button>
+            <button id="btn-finish" class="btn-primary" onclick="finishSetup()">Finalize Initialization</button>
+        </div>
+    </div>
+</div>
+
+<div id="toaster" class="toaster">
+    <div id="toaster-msg" style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;"></div>
+</div>
+
+<script>
+    // --- KEYBOARD NAVIGATION LAYOUT RUNTIME CONTROLLERS ---
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const activeStep = document.querySelector('.step.active');
+            const inputs = Array.from(activeStep.querySelectorAll('input'));
+            const activeInput = document.activeElement;
+            const index = inputs.indexOf(activeInput);
+
+            if (index > -1) {
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                } else {
+                    if (activeStep.id === 'step1') animateTo(2);
+                    else if (activeStep.id === 'step2') animateTo(3);
+                    else if (activeStep.id === 'step3') finishSetup();
+                }
+            }
+        }
+    });
+
+    function showToaster(message, type = "error") {
+        const toaster = document.getElementById('toaster');
+        const msgSpan = document.getElementById('toaster-msg');
+        toaster.className = 'toaster' + (type === "success" ? ' success-toast' : '');
+        msgSpan.innerText = message;
+        toaster.classList.add('show');
+        setTimeout(() => { toaster.classList.remove('show'); }, 4000);
+    }
+
+    async function animateTo(targetStep) {
+        if (targetStep === 2) {
+            const keyInput = document.getElementById('key').value;
+            if (!keyInput || keyInput.trim().length < 5) {
+                showToaster("Please enter a valid activation key.");
+                return;
+            }
+
+            if (window.pywebview && window.pywebview.api) {
+                const res = await window.pywebview.api.verify_key(keyInput);
+                if (res.status !== "success") {
+                    showToaster(res.message || "Invalid activation key.");
+                    return;
+                }
+            }
+        }
+
+        const currentStep = document.querySelector('.step.active');
+        const nextStep = document.getElementById('step' + targetStep);
+        const progress = document.getElementById('progress-fill');
+
+        currentStep.style.animation = 'fadeOutLeft 0.25s ease forwards';
+
+        setTimeout(() => {
+            currentStep.classList.remove('active');
+            currentStep.style.animation = '';
+            nextStep.classList.add('active');
+
+            const percent = (targetStep / 3) * 100;
+            progress.style.width = percent + '%';
+
+            const firstInput = nextStep.querySelector('input');
+            if(firstInput) firstInput.focus();
+        }, 250);
+    }
+
+    async function finishSetup() {
+        const data = {
+            key: document.getElementById('key').value,
+            businessName: document.getElementById('biz_name').value,
+            ownerName: document.getElementById('owner_name').value,
+            phone: document.getElementById('phone').value,
+            gst: document.getElementById('gst').value,
+            address: document.getElementById('address').value,
+            adminUser: document.getElementById('admin_user').value,
+            adminPass: document.getElementById('pass').value
+        };
+
+        if (!data.businessName || !data.ownerName || !data.adminUser || !data.adminPass) {
+            showToaster("Required fields missing.");
+            return;
+        }
+
+        if (window.pywebview && window.pywebview.api) {
+            const res = await window.pywebview.api.save_setup(data);
+            if (res.status === "success") {
+                showToaster("System Initialized! Redirecting...", "success");
+            } else {
+                showToaster(res.message);
+            }
+        } else {
+            console.log("Setup complete (Preview Mode):", data);
+            showToaster("Setup complete!", "success");
+        }
+    }
+</script>
+</body>
+</html>

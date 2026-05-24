@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AurumOS | Client Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
+            --border: #e2e8f0; --text-muted: #64748b;
+            --success: #059669; --error: #e11d48;
+            --card-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04);
+            --bg-jama: #f0fdf4; --bg-sale: #fff1f2;
+        }
+
+        /* RESET & NUMBER FIELD ARROW REMOVAL */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        body { background: var(--bg-main); color: var(--primary); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+        header {
+            height: 80px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border); display: flex; align-items: center;
+            padding: 0 50px; justify-content: space-between; position: sticky; top: 0; z-index: 100;
+        }
+
+        .back-btn {
+            display: flex; align-items: center; gap: 10px; color: var(--text-muted);
+            text-decoration: none; font-weight: 700; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 1px; transition: 0.3s;
+        }
+        .back-btn:hover { color: var(--primary); transform: translateX(-5px); }
+
+        .btn-export {
+            background: #fff; border: 1.5px solid var(--border); border-radius: 12px;
+            padding: 10px 20px; display: flex; align-items: center; gap: 10px;
+            font-weight: 800; font-size: 0.75rem; text-transform: uppercase;
+            color: var(--primary); cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .btn-export:hover { border-color: var(--accent); color: var(--accent); background: #fffbeb; transform: translateY(-1px); }
+
+        .content { padding: 40px 50px; max-width: 1600px; margin: 0 auto; }
+
+        .info-ribbon {
+            background: #fff; border-radius: 30px; padding: 30px 45px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid var(--border); box-shadow: var(--card-shadow); margin-bottom: 25px;
+        }
+
+        .client-meta { display: flex; align-items: center; gap: 20px; }
+        .avatar {
+            width: 55px; height: 55px; background: var(--primary); color: var(--accent);
+            border-radius: 18px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; font-weight: 800; border: 2.5px solid var(--accent);
+        }
+
+        .c-title h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.8px; color: var(--primary); }
+        .c-title span { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+
+        .bal-group { text-align: right; width: 220px; display: flex; flex-direction: column; gap: 4px; }
+        .bal-label { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; display: block; }
+        .bal-val { font-size: 1.8rem; font-weight: 800; display: block; letter-spacing: -1px; font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+        .bal-limit { font-size: 0.65rem; font-weight: 800; color: var(--accent); display: block; margin-top: 2px; }
+        .breach-alert { color: var(--error) !important; text-shadow: 0 0 10px rgba(225, 29, 72, 0.1); }
+
+        /* ─── NEW LUXURY PROGRESS BAR ARCHITECTURE STYLES ─── */
+        .limit-progress-bar {
+            width: 100%; height: 6px; background: #e2e8f0; border-radius: 10px;
+            overflow: hidden; margin-top: 4px; position: relative;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, #d97706 100%);
+            border-radius: 10px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .progress-fill.breached {
+            background: linear-gradient(90deg, var(--error) 0%, #be123c 100%) !important;
+        }
+
+        .action-bar {
+            background: #fff; border-radius: 24px; padding: 25px 40px;
+            display: grid; grid-template-columns: 200px 1.2fr 1.8fr 140px; gap: 30px;
+            align-items: center; margin-bottom: 25px; border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+        }
+
+        .input-wrap label { font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; display: block; letter-spacing: 1.2px; }
+
+        .custom-select-container { position: relative; width: 100%; user-select: none; }
+        .select-trigger {
+            background: #fff; border: 1.5px solid var(--border); border-radius: 14px;
+            padding: 14px 18px; font-size: 0.9rem; font-weight: 800; color: var(--primary);
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .custom-select-container.open .select-trigger { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(181, 148, 16, 0.05); }
+        .select-trigger i { border: solid var(--primary); border-width: 0 2.5px 2.5px 0; display: inline-block; padding: 3px; transform: rotate(45deg); transition: 0.3s; margin-left: 10px; }
+        .custom-select-container.open .select-trigger i { transform: rotate(-135deg); margin-top: 5px; }
+
+        .select-options {
+            position: absolute; top: calc(100% + 8px); left: 0; width: 100%;
+            background: #fff; border: 1px solid var(--border); border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.1); z-index: 1000;
+            overflow: hidden; visibility: hidden; opacity: 0; transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .custom-select-container.open .select-options { visibility: visible; opacity: 1; transform: translateY(0); }
+        .option { padding: 14px 20px; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .option:hover { background: var(--bg-main); color: var(--accent); padding-left: 25px; }
+        .option.selected { background: #fffbeb; color: var(--accent); }
+
+        .action-bar input {
+            background: var(--bg-main); border: 1.5px solid transparent;
+            border-radius: 14px; color: var(--primary); padding: 14px 18px;
+            font-size: 0.9rem; font-weight: 800; outline: none; width: 100%;
+            transition: 0.2s;
+        }
+        .action-bar input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(181, 148, 16, 0.05); }
+
+        .btn-post {
+            background: var(--primary); color: #fff; border: none; padding: 15px;
+            border-radius: 14px; font-weight: 800; font-size: 0.7rem;
+            text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer;
+            transition: 0.3s; margin-top: 20px;
+        }
+        .btn-post:hover { background: var(--accent); transform: translateY(-2px); }
+
+        .table-card { background: #fff; border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--card-shadow); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #fafbfc; padding: 22px 30px; text-align: left; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); letter-spacing: 1.5px; }
+        td { padding: 22px 30px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; font-weight: 600; vertical-align: middle; transition: 0.2s; }
+
+        .badge { padding: 6px 12px; border-radius: 10px; font-size: 0.6rem; font-weight: 900; display: inline-block; letter-spacing: 0.8px; text-transform: uppercase; }
+        .jama { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .sale { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        tr.row-jama td { background: var(--bg-jama); }
+        tr.row-sale td { background: var(--bg-sale); }
+
+        .num-text { font-variant-numeric: tabular-nums; font-weight: 800; letter-spacing: -0.5px; }
+        .running-bal {
+            font-size: 0.65rem; color: var(--text-muted); display: inline-block;
+            margin-top: 4px; font-weight: 800; background: #fff; padding: 2px 8px;
+            border-radius: 6px; border: 1px solid var(--border);
+        }
+
+        .type-dr { color: var(--error); }
+        .type-cr { color: var(--success); }
+
+        .btn-delete {
+            width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border);
+            background: #fff; color: var(--error); cursor: pointer; display: flex;
+            align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;
+            transition: 0.2s;
+        }
+        .btn-delete:hover { background: var(--error); color: #fff; border-color: var(--error); transform: scale(1.1); }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(12px); z-index: 10000;
+            align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content {
+            background: #fff; width: 400px; padding: 40px; border-radius: 35px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.25); border: 1px solid var(--border);
+            text-align: center; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-icon {
+            width: 65px; height: 65px; background: #fff1f2; color: var(--error);
+            border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; margin: 0 auto 25px auto; border: 1px solid #fee2e2;
+        }
+        .modal-title { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
+        .modal-msg { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; line-height: 1.6; margin-bottom: 30px; }
+        .modal-actions { display: flex; gap: 12px; }
+        .m-btn { flex: 1; padding: 16px; border-radius: 14px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border: none; transition: 0.2s; }
+        .btn-cancel { background: var(--bg-main); color: var(--primary); border: 1.5px solid var(--border); }
+        .btn-cancel:hover { background: #fff; border-color: var(--primary); }
+        .btn-confirm { background: var(--error); color: #fff; }
+        .btn-confirm:hover { background: #be123c; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2); }
+
+        @media print {
+            header, .action-bar, .btn-export, .back-btn, #sidebar-container, .action-col, .modal-overlay, .limit-progress-bar { display: none !important; }
+            body { background: white !important; padding: 0; color: black !important; }
+            .content { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+            .table-card { border: 1px solid #000 !important; box-shadow: none !important; border-radius: 0 !important; }
+            .info-ribbon { border: 1px solid #000 !important; box-shadow: none !important; border-radius: 0 !important; margin-bottom: 30px !important; }
+            th { background: #f8fafc !important; color: #000 !important; border-bottom: 1px solid #000 !important; }
+            td { border-bottom: 1px solid #eee !important; color: black !important; background: transparent !important; }
+            .badge { border: 1px solid #000 !important; background: transparent !important; color: black !important; }
+            .num-text { color: black !important; }
+            .running-bal { color: #555 !important; border-color: #555 !important; }
+        }
+    </style>
+
+    <link rel="stylesheet" href="sidebar.css">
+<style id="aurum-layout-fix">
+/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
+body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { display: none !important; }
+body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<div id="sidebar-container"></div>
+
+
+
+<header>
+    <a href="accounts.html" class="back-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Accounts
+    </a>
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <button class="btn-export" onclick="exportStatement()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export Statement
+        </button>
+        <div style="font-weight: 900; font-size: 1.1rem; letter-spacing: 2px;">AURUM<span style="color:var(--accent)">OS</span></div>
+    </div>
+</header>
+
+<div class="modal-overlay" id="delete-modal">
+    <div class="modal-content">
+        <div class="modal-icon">✕</div>
+        <div class="modal-title">Delete Entry?</div>
+        <div class="modal-msg">Are you sure you want to permanently remove this ledger record? This action cannot be undone.</div>
+        <div class="modal-actions">
+            <button class="m-btn btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="m-btn btn-confirm" id="confirm-delete-btn">Remove Permanently</button>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="info-ribbon">
+        <div class="client-meta">
+            <div id="avatar" class="avatar">??</div>
+            <div class="c-title">
+                <h1 id="c-name">--</h1>
+                <span id="c-uid">UID: CL-000</span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 60px;">
+            <div class="bal-group">
+                <span class="bal-label">Metal Outstanding</span>
+                <span id="m-val" class="bal-val">0.000 g</span>
+                <div class="limit-progress-bar">
+                    <div class="progress-fill" id="m-progress-fill"></div>
+                </div>
+                <span id="m-limit" class="bal-limit">Limit: 0.000 g</span>
+            </div>
+
+            <div class="bal-group">
+                <span class="bal-label">Cash Outstanding</span>
+                <span id="c-val" class="bal-val">₹ 0.00</span>
+                <div class="limit-progress-bar">
+                    <div class="progress-fill" id="c-progress-fill"></div>
+                </div>
+                <span id="c-limit" class="bal-limit">Limit: ₹ 0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="input-wrap">
+            <label>Entry Type</label>
+            <div class="custom-select-container" id="customSelect">
+                <div class="select-trigger" onclick="toggleDropdown()">
+                    <span id="selectedText">Metal Jama</span>
+                    <i></i>
+                </div>
+                <div class="select-options">
+                    <div class="option selected" onclick="selectOption('metal', 'Metal Jama')">Metal Jama</div>
+                    <div class="option" onclick="selectOption('cash', 'Cash Jama')">Cash Jama</div>
+                </div>
+            </div>
+        </div>
+        <div class="input-wrap">
+            <label id="input-label">Metal Weight (g)</label>
+            <input type="number" id="j-val" placeholder="0.000" class="num-text" data-next="j-desc">
+        </div>
+        <div class="input-wrap">
+            <label>Description / Note</label>
+            <input type="text" id="j-desc" placeholder="eg. Old gold received" data-next="btn-post">
+        </div>
+        <button class="btn-post" id="btn-post" onclick="postEntry()">Record</button>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr>
+                    <th width="140">Date</th>
+                    <th width="100">Type</th>
+                    <th>Reference & Description</th>
+                    <th style="text-align: right;" width="200">Metal (Dr/Cr)</th>
+                    <th style="text-align: right;" width="220">Cash (Dr/Cr)</th>
+                    <th width="80" class="action-col" style="text-align: center;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="ledger-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const clientName = params.get('name');
+    let activeType = 'metal';
+    let pendingDeleteId = null;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const active = document.activeElement;
+            const nextId = active.dataset.next;
+            if (nextId) {
+                e.preventDefault();
+                const nextEl = document.getElementById(nextId);
+                if (nextEl) {
+                    if (nextEl.tagName === 'BUTTON') nextEl.click();
+                    else nextEl.focus();
+                }
+            }
+        }
+    });
+
+    document.addEventListener('wheel', (e) => { if (document.activeElement.type === 'number') document.activeElement.blur(); });
+
+    function toggleDropdown() { document.getElementById('customSelect').classList.toggle('open'); }
+
+    function selectOption(val, text) {
+        activeType = val;
+        document.getElementById('selectedText').innerText = text;
+        document.getElementById('customSelect').classList.remove('open');
+        const isMetal = val === 'metal';
+        document.getElementById('input-label').innerText = isMetal ? 'Metal Weight (g)' : 'Cash Amount (₹)';
+        document.getElementById('j-val').placeholder = isMetal ? '0.000' : '0.00';
+        document.getElementById('j-val').focus();
+    }
+
+    window.addEventListener('click', (e) => { if (!document.getElementById('customSelect').contains(e.target)) document.getElementById('customSelect').classList.remove('open'); });
+
+    function getInitials(name) { return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : "??"; }
+
+    function exportStatement() {
+        const originalTitle = document.title;
+        const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+        const safeName = clientName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        document.title = `Statement_${safeName}_${dateStr}`;
+        window.print();
+        document.title = originalTitle;
+    }
+
+    async function loadData() {
+        if (!window.pywebview?.api || !clientName) return;
+
+        const allClients = await window.pywebview.api.get_client_list();
+        const clientIndex = allClients.findIndex(c => c.name === clientName);
+        const displayId = (clientIndex + 1).toString().padStart(3, '0');
+        const client = allClients[clientIndex];
+
+        const bal = await window.pywebview.api.get_client_balances(clientName);
+        const history = await window.pywebview.api.get_ledger_statement(clientName);
+
+        document.getElementById('c-name').innerText = clientName;
+        document.getElementById('c-uid').innerText = `UID: CL-${displayId}`;
+        document.getElementById('avatar').innerText = getInitials(clientName);
+
+        const mLimit = parseFloat(client.metal_limit) || 0;
+        const cLimit = parseFloat(client.cash_limit) || 0;
+
+        document.getElementById('m-limit').innerText = `Limit: ${mLimit.toFixed(3)} g`;
+        document.getElementById('c-limit').innerText = `Limit: ₹ ${cLimit.toLocaleString('en-IN')}`;
+
+        document.getElementById('m-val').innerText = bal.metal.toFixed(3) + " g";
+
+        // ─── CALCULATE & RENDER METAL LIMITS RATIO ───
+        const mProgressFill = document.getElementById('m-progress-fill');
+        if (mLimit > 0) {
+            const mPercentage = Math.min(100, Math.max(0, (bal.metal / mLimit) * 100));
+            mProgressFill.style.width = mPercentage + "%";
+            if (bal.metal > mLimit) {
+                document.getElementById('m-val').className = "bal-val breach-alert";
+                mProgressFill.classList.add('breached');
+            } else {
+                document.getElementById('m-val').className = "bal-val";
+                mProgressFill.classList.remove('breached');
+            }
+        } else {
+            mProgressFill.style.width = "0%";
+            document.getElementById('m-val').className = "bal-val";
+        }
+
+        document.getElementById('c-val').innerText = "₹ " + bal.cash.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+        // ─── CALCULATE & RENDER CASH LIMITS RATIO ───
+        const cProgressFill = document.getElementById('c-progress-fill');
+        if (cLimit > 0) {
+            const cPercentage = Math.min(100, Math.max(0, (bal.cash / cLimit) * 100));
+            cProgressFill.style.width = cPercentage + "%";
+            if (bal.cash > cLimit) {
+                document.getElementById('c-val').className = "bal-val breach-alert";
+                cProgressFill.classList.add('breached');
+            } else {
+                document.getElementById('c-val').className = "bal-val";
+                cProgressFill.classList.remove('breached');
+            }
+        } else {
+            cProgressFill.style.width = "0%";
+            document.getElementById('c-val').className = "bal-val";
+        }
+
+        const tbody = document.getElementById('ledger-body');
+        tbody.innerHTML = '';
+        let runningMetal = 0; let runningCash = 0;
+
+        history.forEach(e => {
+            runningMetal += (parseFloat(e.metal_dr || 0) - parseFloat(e.metal_cr || 0));
+            runningCash += (parseFloat(e.cash_dr || 0) - parseFloat(e.cash_cr || 0));
+            e.currentMetalBal = runningMetal; e.currentCashBal = runningCash;
+        });
+
+        const displayHistory = [...history].reverse();
+
+        displayHistory.forEach(e => {
+            const isJama = e.metal_cr > 0 || e.cash_cr > 0;
+            const metalVal = e.metal_dr > 0 ? `+${e.metal_dr.toFixed(3)} (DR)` : (e.metal_cr > 0 ? `-${e.metal_cr.toFixed(3)} (CR)` : '0.000');
+            const cashVal = e.cash_dr > 0 ? `₹${e.cash_dr.toLocaleString('en-IN')} (DR)` : (e.cash_cr > 0 ? `₹${e.cash_cr.toLocaleString('en-IN')} (CR)` : '₹0.00');
+
+            tbody.innerHTML += `
+                <tr class="${isJama ? 'row-jama' : 'row-sale'}">
+                    <td class="num-text" style="color: var(--text-muted); font-size: 0.8rem;">${e.date}</td>
+                    <td><div class="badge ${isJama?'jama':'sale'}">${isJama?'JAMA':'SALE'}</div></td>
+                    <td>
+                        <div style="font-weight:800; color:var(--primary)">${e.vch_reference || 'MANUAL'}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">${e.description}</div>
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="num-text ${e.metal_dr>0?'type-dr':'type-cr'}">${metalVal}</div>
+                        <span class="running-bal">Bal: ${e.currentMetalBal.toFixed(3)}g</span>
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="num-text ${e.cash_dr>0?'type-dr':'type-cr'}">${cashVal}</div>
+                        <span class="running-bal">Bal: ₹${e.currentCashBal.toLocaleString('en-IN')}</span>
+                    </td>
+                    <td class="action-col" style="text-align: center;">
+                        <button class="btn-delete" onclick="openDeleteModal(${e.id})">×</button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    async function postEntry() {
+        const val = parseFloat(document.getElementById('j-val').value) || 0;
+        const desc = document.getElementById('j-desc').value || "Manual Update";
+        if (val <= 0) return;
+        const res = await window.pywebview.api.post_to_ledger({
+            client_name: clientName, desc: desc,
+            metal_cr: activeType === 'metal' ? val : 0,
+            cash_cr: activeType === 'cash' ? val : 0
+        });
+        if (res.status === "success") {
+            document.getElementById('j-val').value = '';
+            document.getElementById('j-desc').value = '';
+            loadData();
+            document.getElementById('j-val').focus();
+        }
+    }
+
+    function openDeleteModal(id) {
+        pendingDeleteId = id;
+        document.getElementById('delete-modal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.remove('active');
+        pendingDeleteId = null;
+    }
+
+    document.getElementById('confirm-delete-btn').onclick = async function() {
+        if (!pendingDeleteId || !window.pywebview?.api) return;
+
+        try {
+            const res = await window.pywebview.api.delete_master_entry('client_ledger', pendingDeleteId);
+            if (res.status === "success") {
+                closeDeleteModal();
+                loadData();
+            }
+        } catch (err) { console.error(err); }
+    };
+
+    window.onload = () => {
+        const check = setInterval(() => { if (window.pywebview?.api) { loadData(); clearInterval(check); } }, 100);
+    };
+</script>
+</body>
+</html>
