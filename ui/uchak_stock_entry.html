@@ -1,491 +1,543 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AurumOS | Piece Based Entry Terminal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0f172a;
-            --accent: #334155; /* Slate terminal primary color anchor */
-            --accent-gold: #b59410;
-            --bg-main: #f8fafc;
-            --card: #ffffff;
-            --border: #e2e8f0;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --success: #059669;
-            --error: #e11d48;
-            --shadow-lux: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Uchak Inward Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
 
-        /* Styling resets and Layout */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: var(--bg-main); color: var(--text-main); min-height: 100vh; width: 100vw; overflow-x: hidden; }
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.07);
+    --red:#b91c1c;--red-bg:#fef2f2;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+    --sh2:0 4px 16px rgba(14,12,9,0.08);
+}
 
-        main { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);display:block;height:100vh;overflow:hidden;width:100vw;}
+main{width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
-        header {
-            height: 80px; background: #fff; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 40px; flex-shrink: 0; z-index: 100;
-        }
-        .header-biz h1 { font-size: 1.2rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+/* ── HEADER ── */
+header{
+    height:60px;background:var(--white);
+    border-bottom:1px solid var(--rule);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;flex-shrink:0;position:relative;z-index:100;
+}
+header::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);
+}
+.h-left{display:flex;align-items:center;gap:14px;}
+.h-sep{width:1px;height:28px;background:var(--rule);flex-shrink:0;}
+.h-title{font-family:var(--serif);font-size:1rem;color:var(--ink);letter-spacing:-0.2px;}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-right{display:flex;align-items:center;gap:12px;}
+.h-clock{font-family:var(--mono);font-size:0.64rem;color:var(--muted2);background:var(--cream2);padding:5px 11px;border-radius:4px;border:1px solid var(--rule);}
 
-        .header-actions-wrapper { display: flex; align-items: center; gap: 20px; }
+.btn-back{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 13px;border-radius:6px;
+    border:1px solid var(--rule);background:var(--cream);
+    font-size:0.72rem;font-weight:600;color:var(--ink3);
+    cursor:pointer;font-family:var(--sans);transition:all 0.14s;
+}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-        /* ─── FIXED CRITICAL DESIGN: LUXURY EDITORIAL SPECIFICATION BACK BUTTON ─── */
-        .btn-header-back {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 22px;
-            background: #ffffff;
-            border: 2px solid #0f172a;
-            border-radius: 14px;
-            font-size: 0.85rem;
-            font-weight: 800;
-            color: #0f172a;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-        }
-        .btn-header-back:hover {
-            background: #0f172a;
-            color: #ffffff;
-            transform: translateX(-4px);
-            box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.25);
-        }
+/* ── CONTENT ── */
+.content{
+    flex:1;overflow-y:auto;
+    padding:22px 28px 28px;
+    scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;
+}
+.content::-webkit-scrollbar{width:3px;}
+.content::-webkit-scrollbar-thumb{background:var(--cream3);}
 
-        #real-time-clock { font-size: 0.8rem; font-weight: 700; color: var(--accent-gold); background: #fefce8; padding: 8px 18px; border-radius: 12px; border: 1px solid #fef08a; font-family: 'JetBrains Mono', monospace; }
+/* ── GRID ── */
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start;max-width:1400px;margin:0 auto;}
 
-        .content { padding: 40px; width: 100%; }
-        .terminal-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; align-items: start; max-width: 1600px; margin: 0 auto; }
+/* ── CARD ── */
+.card{
+    background:var(--white);border:1px solid var(--rule);
+    border-radius:10px;overflow:hidden;box-shadow:var(--sh);
+}
+.card-head{
+    display:flex;align-items:center;gap:10px;
+    padding:13px 18px;border-bottom:1px solid var(--rule);
+    background:var(--cream);
+}
+.card-num{
+    width:22px;height:22px;border-radius:5px;
+    background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.62rem;font-weight:700;flex-shrink:0;
+}
+.card-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);}
+.card-body{padding:16px 18px;}
 
-        .card { background: var(--card); border-radius: 24px; border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-lux); position: relative; }
-        h3 { font-size: 0.75rem; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; color: var(--primary); text-transform: uppercase; letter-spacing: 1.2px; }
-        h3 span { background: var(--accent); color: white; border-radius: 8px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
+/* ── FORM ── */
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;}
+.fg:last-child{margin-bottom:0;}
+.fg label{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+.inp{
+    width:100%;height:38px;padding:0 11px;
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:6px;font-family:var(--mono);font-size:0.82rem;
+    color:var(--ink);outline:none;transition:all 0.14s;
+}
+.inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);background:var(--white);}
+.inp[readonly]{background:var(--cream2);color:var(--muted2);cursor:default;}
+.inp::placeholder{color:var(--muted2);font-family:var(--sans);}
+.grid-3{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;}
+.grid-2r{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:flex-end;}
 
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.8px; }
+/* ── TABLE ── */
+.tbl-wrap{border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-top:0;}
+table{width:100%;border-collapse:collapse;}
+thead th{
+    font-size:0.56rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:0.7px;color:var(--muted2);
+    padding:9px 14px;border-bottom:1px solid var(--rule);
+    background:var(--cream);text-align:left;
+}
+td{
+    padding:10px 14px;font-size:0.78rem;font-weight:500;
+    color:var(--ink);border-bottom:1px solid var(--rule2);
+}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(168,125,30,0.02);}
 
-        input {
-            width: 100%; padding: 14px 16px; background: #fff;
-            border: 1.5px solid var(--border); border-radius: 12px;
-            font-size: 0.95rem; font-weight: 700; outline: none;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--primary);
-        }
-        input:focus { border-color: var(--accent-gold); box-shadow: 0 0 0 4px rgba(181, 148, 16, 0.08); }
-        input[readonly] { background: #f8fafc; color: var(--text-muted); border-style: dashed; cursor: not-allowed; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+.sku{
+    font-family:var(--mono);font-size:0.7rem;
+    color:var(--gold3);background:var(--gold-bg);
+    border:1px solid var(--gold-ln);
+    padding:2px 8px;border-radius:4px;display:inline-block;
+}
+.del-x{
+    color:var(--muted2);cursor:pointer;font-size:1rem;
+    transition:all 0.13s;display:inline-flex;align-items:center;
+    justify-content:center;width:22px;height:22px;border-radius:4px;
+}
+.del-x:hover{color:var(--red);background:var(--red-bg);}
 
-        .entry-row-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 16px; }
+/* ── SUMMARY BOX ── */
+.summary-box{
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:8px;padding:14px 16px;margin-bottom:16px;
+}
+.sum-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 0;border-bottom:1px solid var(--rule2);
+    font-size:0.78rem;
+}
+.sum-row:last-child{
+    border-bottom:none;padding-bottom:0;
+    border-top:1px dashed var(--rule);margin-top:4px;padding-top:12px;
+}
+.sum-lbl{color:var(--muted);}
+.sum-val{font-weight:600;color:var(--ink);font-family:var(--mono);}
+.sum-val.big{font-size:1rem;color:var(--green);}
 
-        .table-area { border: 1.5px solid var(--border); border-radius: 16px; background: #fff; overflow: hidden; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted); padding: 16px 24px; border-bottom: 2px solid var(--bg-main); background: #fafbfc; font-weight: 800; }
-        td { padding: 18px 24px; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: var(--primary); }
+/* ── BUTTONS ── */
+.btn-add{
+    width:100%;height:38px;border:none;border-radius:6px;
+    background:var(--gold-bg);color:var(--gold3);
+    border:1px solid var(--gold-ln);
+    font-family:var(--sans);font-size:0.76rem;font-weight:600;
+    cursor:pointer;transition:all 0.15s;
+}
+.btn-add:hover{background:rgba(168,125,30,0.14);}
 
-        .sku-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent-gold); background: #fffbeb; padding: 4px 10px; border-radius: 8px; border: 1px solid #fef3c7; }
+.btn-commit{
+    width:100%;height:44px;background:var(--ink);color:#fff;
+    border:none;border-radius:8px;
+    font-family:var(--sans);font-size:0.82rem;font-weight:600;
+    cursor:pointer;transition:all 0.15s;
+    display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-commit:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,12,9,0.15);}
+.btn-commit:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
 
-        .btn-action-commit {
-            width: 100%; padding: 18px; background: var(--primary); color: white;
-            border: none; border-radius: 16px; font-weight: 800; cursor: pointer;
-            transition: 0.3s; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 15px;
-            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);
-        }
-        .btn-action-commit:hover { transform: translateY(-2px); background: #1e293b; }
+.empty-row td{text-align:center;padding:22px;color:var(--muted2);font-size:0.76rem;}
 
-        .btn-plus-trigger {
-            width: 100%; padding: 16px; background: var(--accent); color: white;
-            border: none; border-radius: 12px; font-weight: 800; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; transition: 0.2s;
-        }
-        .btn-plus-trigger:hover { background: #475569; }
+/* ── TOAST ── */
+.toast{
+    position:fixed;top:20px;right:20px;
+    background:var(--ink);color:#fff;
+    padding:12px 18px;border-radius:8px;
+    display:flex;align-items:center;gap:12px;
+    box-shadow:var(--sh2);z-index:9999;
+    border:1px solid rgba(168,125,30,0.2);
+    transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+.toast.show{transform:translateX(0);}
+.toast-icon{width:24px;height:24px;border-radius:50%;background:var(--green-bg);border:1px solid rgba(21,128,61,0.3);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:0.8rem;font-weight:700;}
+.toast-title{font-size:0.78rem;font-weight:600;color:#fff;}
+.toast-sub{font-size:0.65rem;color:var(--muted2);}
 
-        .remove-icon-cross { color: var(--error); cursor: pointer; font-weight: 800; font-size: 1.2rem; transition: 0.2s; }
-        .remove-icon-cross:hover { transform: scale(1.1); }
+.left-col{display:flex;flex-direction:column;gap:16px;}
+</style>
 
-        .summary-row-box { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; font-weight: 700; }
-        .summary-row-box:last-of-type { border-bottom: none; padding-bottom: 0; }
-
-        .toast-notification-wrapper {
-            position: fixed; top: 30px; right: 30px; background: #0f172a; color: #fff;
-            padding: 16px 28px; border-radius: 16px; display: flex; align-items: center; gap: 14px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(181, 148, 16, 0.2);
-            z-index: 10000; transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .toast-notification-wrapper.visible { transform: translateX(0); }
-        .toast-icon-circle { width: 28px; height: 28px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success); font-weight: 800; font-size: 0.95rem; border: 1px solid #059669; }
-        .toast-message-body h4 { font-size: 0.85rem; font-weight: 800; color: #fff; margin-bottom: 2px; letter-spacing: 0.3px; }
-        .toast-message-body p { font-size: 0.75rem; font-weight: 600; color: #94a3b8; }
-    </style>
-
-    <link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="sidebar.css">
 <style id="aurum-layout-fix">
-/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
-body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { display: none !important; }
-body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+body{display:block !important;height:100vh !important;overflow:hidden !important;width:100vw !important;}
+#sidebar-container{display:none !important;}
+body>main,main{width:100% !important;height:100vh !important;display:flex !important;flex-direction:column !important;overflow:hidden !important;}
 </style>
 </head>
 <body>
 <script src="sidebar.js"></script>
-
 <div id="sidebar-container"></div>
 
+<!-- Toast -->
+<div class="toast" id="toast">
+    <div class="toast-icon">✓</div>
+    <div>
+        <div class="toast-title" id="toast-title">Stock Loaded</div>
+        <div class="toast-sub"  id="toast-sub">Batch saved successfully.</div>
+    </div>
+</div>
 
+<main>
+<header>
+    <div class="h-left">
+        <button class="btn-back" onclick="window.location.href='inventory.html'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            Inventory
+        </button>
+        <div class="h-sep"></div>
+        <div class="h-title">Uchak <em>Inward Terminal</em></div>
+    </div>
+    <div class="h-right">
+        <div class="h-clock" id="h-clock">—</div>
+    </div>
+</header>
 
-    <div class="toast-notification-wrapper" id="status-toaster-card">
-        <div class="toast-icon-circle">✓</div>
-        <div class="toast-message-body">
-            <h4 id="toast-title-text">Stock Loaded</h4>
-            <p id="toast-sub-text">Showroom repository synced successfully.</p>
+<div class="content">
+<div class="grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+        <!-- Card 1: Voucher Context -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-num">1</div>
+                <div class="card-title">Voucher &amp; Inward Context</div>
+            </div>
+            <div class="card-body">
+                <div class="grid-3">
+                    <div class="fg">
+                        <label>Voucher ID</label>
+                        <input type="text" id="v-id" class="inp nav-input" placeholder="UCHK-IN-001" data-next="uchak-code">
+                    </div>
+                    <div class="fg">
+                        <label>Date</label>
+                        <input type="text" id="v-date" class="inp" readonly>
+                    </div>
+                    <div class="fg">
+                        <label>Time</label>
+                        <input type="text" id="v-time" class="inp" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Batch Queue -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-num">2</div>
+                <div class="card-title">Active Batch Queue</div>
+                <span style="margin-left:auto;font-family:var(--mono);font-size:0.58rem;color:var(--muted2);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 8px;border-radius:99px;" id="q-count">0 items</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="tbl-wrap" style="border:none;border-radius:0;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>IT Code</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th style="text-align:right;">—</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queue-body">
+                            <tr class="empty-row"><td colspan="6">No items in queue yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Item Entry -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-num">3</div>
+                <div class="card-title">Batch Item Specifications</div>
+            </div>
+            <div class="card-body">
+                <div class="grid-3">
+                    <div class="fg">
+                        <label>IT Code / SKU <span style="color:var(--red);">*</span></label>
+                        <input type="text" id="uchak-code" class="inp nav-input" placeholder="e.g. RING-001" data-next="uchak-name" autocomplete="off">
+                    </div>
+                    <div class="fg">
+                        <label>Item Name <span style="color:var(--red);">*</span></label>
+                        <input type="text" id="uchak-name" class="inp nav-input" placeholder="Gents Gold Ring" data-next="uchak-pcs">
+                    </div>
+                    <div class="fg">
+                        <label>Qty (Pcs) <span style="color:var(--red);">*</span></label>
+                        <input type="number" id="uchak-pcs" class="inp nav-input" placeholder="0" data-next="uchak-price">
+                    </div>
+                </div>
+                <div class="grid-2r" style="margin-top:2px;">
+                    <div class="fg" style="margin-bottom:0;">
+                        <label>Wholesale Price (₹)</label>
+                        <input type="number" id="uchak-price" class="inp nav-input" placeholder="0.00" data-enter="true">
+                    </div>
+                    <button class="btn-add" onclick="pushToQueue()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Item
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /left-col -->
+
+    <!-- RIGHT COLUMN: Summary & Commit -->
+    <div class="card" style="position:sticky;top:0;">
+        <div class="card-head">
+            <div class="card-num">4</div>
+            <div class="card-title">Verification &amp; Commit</div>
+        </div>
+        <div class="card-body">
+            <div class="summary-box">
+                <div class="sum-row">
+                    <span class="sum-lbl">Unique Lines</span>
+                    <span class="sum-val" id="sum-lines">0 Lines</span>
+                </div>
+                <div class="sum-row">
+                    <span class="sum-lbl">Total Pieces</span>
+                    <span class="sum-val" id="sum-pcs">0 Pcs</span>
+                </div>
+                <div class="sum-row">
+                    <span class="sum-lbl">Wholesale Value</span>
+                    <span class="sum-val big" id="sum-val">₹ 0.00</span>
+                </div>
+            </div>
+            <button class="btn-commit" id="commit-btn" onclick="commitBatch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                Authorize &amp; Load Stock
+            </button>
         </div>
     </div>
 
-    <main>
-        <header>
-            <div class="header-biz"><h1>Piece Based Entry Terminal</h1></div>
-            <div class="header-actions-wrapper">
-                <button class="btn-header-back" onclick="window.location.href='inventory.html'">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: -1px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    Back To Inventory
-                </button>
-                <div id="real-time-clock">-- --- ---- | --:--:--</div>
-            </div>
-        </header>
+</div><!-- /grid -->
+</div><!-- /content -->
+</main>
 
-        <div class="content">
-            <div class="terminal-grid">
+<script>
+'use strict';
+var batchQueue = [];
+var latestVchId = 'UCHK-IN-001';
 
-                <div style="display: flex; flex-direction: column; gap: 24px;">
+// Clock
+setInterval(function(){
+    var n = new Date();
+    var el = document.getElementById('h-clock');
+    if(el) el.innerText = n.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+' | '+n.toLocaleTimeString();
+    document.getElementById('v-time').value = n.toLocaleTimeString();
+}, 1000);
 
-                    <div class="card">
-                        <h3><span>1</span> Voucher & Inward Context</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                            <div class="form-group">
-                                <label>Voucher ID (Inward)</label>
-                                <input type="text" id="v-id" placeholder="UCHK-IN-001" class="nav-input" data-next="uchak-code">
-                            </div>
-                            <div class="form-group">
-                                <label>Inward Date</label>
-                                <input type="text" id="v-date" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>Inward Time</label>
-                                <input type="text" id="v-time" readonly>
-                            </div>
-                        </div>
-                    </div>
+// Enter key nav
+document.addEventListener('keydown', async function(e) {
+    var active = document.activeElement;
+    if (!active || e.key !== 'Enter') return;
 
-                    <div class="card">
-                        <h3><span>2</span> Active Batch Queue Monitor</h3>
-                        <div class="table-area">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>IT Code</th>
-                                        <th>Description</th>
-                                        <th>Price Base</th>
-                                        <th>Qty (Pcs)</th>
-                                        <th style="text-align:right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="batch-queue-body">
-                                    <tr>
-                                        <td colspan="6" style="text-align:center; padding: 30px; opacity: 0.5;">No active batch items in queue.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+    if (active.id === 'v-id') {
+        e.preventDefault();
+        var id = active.value.trim();
+        if (id) await lookupVoucher(id);
+        return;
+    }
+    if (!active.classList.contains('nav-input')) return;
+    e.preventDefault();
+    if (active.dataset.enter === 'true') {
+        pushToQueue();
+    } else {
+        var next = document.getElementById(active.dataset.next);
+        if (next) { next.focus(); if(next.type==='number') next.select(); }
+    }
+});
 
-                    <div class="card">
-                        <h3><span>3</span> Batch Item Specifications</h3>
+// Prevent scroll on number inputs
+document.addEventListener('wheel', function() {
+    if (document.activeElement && document.activeElement.type === 'number')
+        document.activeElement.blur();
+});
 
-                        <div class="entry-row-grid">
-                            <div class="form-group">
-                                <label>IT Code / SKU</label>
-                                <input type="text" id="uchak-code" placeholder="e.g. RING-001" autocomplete="off" class="nav-input" data-next="uchak-name">
-                            </div>
-                            <div class="form-group">
-                                <label>Item Name / Desc</label>
-                                <input type="text" id="uchak-name" placeholder="e.g. Gents Gold Ring Fancy" class="nav-input" data-next="uchak-pcs">
-                            </div>
-                            <div class="form-group">
-                                <label>Quantity (Pcs)</label>
-                                <input type="number" id="uchak-pcs" placeholder="0" class="nav-input" data-next="uchak-price">
-                            </div>
-                        </div>
+function pushToQueue() {
+    var code  = document.getElementById('uchak-code').value.trim().toUpperCase();
+    var name  = document.getElementById('uchak-name').value.trim();
+    var pcs   = parseInt(document.getElementById('uchak-pcs').value) || 0;
+    var price = parseFloat(document.getElementById('uchak-price').value) || 0;
 
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: flex-end;">
-                            <div class="form-group" style="margin: 0;">
-                                <label>Fixed Wholesale Price (₹)</label>
-                                <input type="number" id="uchak-price" placeholder="0.00" class="nav-input" data-enter="true">
-                            </div>
-                            <button class="btn-plus-trigger" onclick="pushToBatchQueue()">Add Item</button>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="card">
-                    <h3><span>4</span> Batch Verification & Commit</h3>
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px;">
-                        <div class="summary-row-box">
-                            <span style="color: var(--text-muted);">Total Unique Lines</span>
-                            <span id="sum-unique-lines">0 Lines</span>
-                        </div>
-                        <div class="summary-row-box">
-                            <span style="color: var(--text-muted);">Cumulative Pieces Count</span>
-                            <span id="sum-total-pcs" style="color: var(--primary); font-weight: 800;">0 Pcs</span>
-                        </div>
-                        <div class="summary-row-box" style="border-top: 2px dashed var(--border); margin-top: 10px; padding-top: 16px; font-size: 1.05rem;">
-                            <span>Total Wholesale Valuation</span>
-                            <span id="sum-valuation-total" style="color: var(--success); font-weight: 800; font-family: 'JetBrains Mono', monospace;">₹ 0.00</span>
-                        </div>
-                    </div>
-
-                    <button class="btn-add-stock btn-action-commit" id="commit-btn" onclick="commitBatchToInventory()">Authorize & Load Stock</button>
-                </div>
-
-            </div>
-        </div>
-    </main>
-
-    <script>
-        let batchQueue = [];
-        let latestUchakInwardTrackCode = "UCHK-IN-001";
-
-        document.addEventListener('keydown', async (e) => {
-            const active = document.activeElement;
-            if (!active) return;
-
-            if (e.key === 'Enter') {
-                if (active.id === 'v-id') {
-                    e.preventDefault();
-                    const targetId = active.value.trim();
-                    if (!targetId) return;
-                    await lookupHistoricalInwardVoucher(targetId);
-                    return;
-                }
-
-                if (!active.classList.contains('nav-input')) return;
-
-                if (active.dataset.enter === "true") {
-                    e.preventDefault();
-                    pushToBatchQueue();
-                } else {
-                    const nextId = active.dataset.next;
-                    if (nextId) {
-                        e.preventDefault();
-                        document.getElementById(nextId)?.focus();
-                    }
-                }
-            }
-        });
-
-        document.addEventListener('wheel', (e) => {
-            if (document.activeElement.type === 'number') {
-                document.activeElement.blur();
-            }
-        });
-
-        function triggerPremiumToasterNotification(title, message) {
-            const toasterCard = document.getElementById('status-toaster-card');
-            document.getElementById('toast-title-text').innerText = title;
-            document.getElementById('toast-sub-text').innerText = message;
-
-            toasterCard.classList.add('visible');
-            setTimeout(() => {
-                toasterCard.classList.remove('visible');
-            }, 3000);
-        }
-
-        function pushToBatchQueue() {
-            const code = document.getElementById('uchak-code').value.trim();
-            const name = document.getElementById('uchak-name').value.trim();
-            const pcs = parseInt(document.getElementById('uchak-pcs').value) || 0;
-            const price = parseFloat(document.getElementById('uchak-price').value) || 0;
-
-            if (!code || !name || pcs <= 0) {
-                alert("Please fill all item specifications accurately before pushing!");
-                return;
-            }
-
-            batchQueue.push({ it_code: code, it_name: name, pcs: pcs, price: price.toFixed(2) });
-
-            document.getElementById('uchak-code').value = '';
-            document.getElementById('uchak-name').value = '';
-            document.getElementById('uchak-pcs').value = '';
-            document.getElementById('uchak-price').value = '';
-            document.getElementById('uchak-code').focus();
-
-            renderQueueTable();
-        }
-
-        function renderQueueTable() {
-            const tbody = document.getElementById('batch-queue-body');
-            if (batchQueue.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 30px; opacity: 0.5;">No active batch items in queue.</td></tr>`;
-                updateSummaryBox(0, 0, 0);
-                return;
-            }
-
-            let html = '';
-            let totalPcs = 0;
-            let totalValue = 0;
-
-            batchQueue.forEach((item, i) => {
-                const subTotal = item.pcs * parseFloat(item.price);
-                totalPcs += item.pcs;
-                totalValue += subTotal;
-
-                html += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><span class="sku-badge">${item.it_code}</span></td>
-                        <td style="font-weight:700;">${item.it_name}</td>
-                        <td>₹ ${parseFloat(item.price).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-                        <td>${item.pcs} Pcs</td>
-                        <td style="text-align:right;"><span class="remove-icon-cross" onclick="removeFromQueue(${i})">×</span></td>
-                    </tr>
-                `;
+    if (!code || !name || pcs <= 0) {
+        document.getElementById('uchak-code').style.borderColor = !code ? 'var(--red)' : '';
+        document.getElementById('uchak-name').style.borderColor = !name ? 'var(--red)' : '';
+        document.getElementById('uchak-pcs').style.borderColor  = pcs<=0 ? 'var(--red)' : '';
+        setTimeout(function(){
+            ['uchak-code','uchak-name','uchak-pcs'].forEach(function(id){
+                document.getElementById(id).style.borderColor='';
             });
+        }, 1400);
+        return;
+    }
 
-            tbody.innerHTML = html;
-            updateSummaryBox(batchQueue.length, totalPcs, totalValue);
+    batchQueue.push({ it_code:code, it_name:name, pcs:pcs, price:price.toFixed(2) });
+    document.getElementById('uchak-code').value  = '';
+    document.getElementById('uchak-name').value  = '';
+    document.getElementById('uchak-pcs').value   = '';
+    document.getElementById('uchak-price').value = '';
+    document.getElementById('uchak-code').focus();
+    renderQueue();
+}
+
+function removeFromQueue(i) {
+    batchQueue.splice(i, 1);
+    renderQueue();
+}
+
+function renderQueue() {
+    var tbody = document.getElementById('queue-body');
+    document.getElementById('q-count').innerText = batchQueue.length + ' item' + (batchQueue.length===1?'':'s');
+
+    if (!batchQueue.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No items in queue yet.</td></tr>';
+        updateSummary(0,0,0); return;
+    }
+
+    var totalPcs=0, totalVal=0;
+    tbody.innerHTML = batchQueue.map(function(item,i) {
+        var sub = item.pcs * parseFloat(item.price);
+        totalPcs += item.pcs; totalVal += sub;
+        return '<tr>'
+            +'<td style="color:var(--muted2);font-family:var(--mono);font-size:0.7rem;">'+(i+1)+'</td>'
+            +'<td><span class="sku">'+h(item.it_code)+'</span></td>'
+            +'<td style="font-weight:600;">'+h(item.it_name)+'</td>'
+            +'<td style="font-family:var(--mono);">₹'+parseFloat(item.price).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
+            +'<td style="font-family:var(--mono);font-weight:600;">'+item.pcs+' pcs</td>'
+            +'<td style="text-align:right;"><span class="del-x" onclick="removeFromQueue('+i+')">✕</span></td>'
+            +'</tr>';
+    }).join('');
+    updateSummary(batchQueue.length, totalPcs, totalVal);
+}
+
+function updateSummary(lines, pcs, val) {
+    document.getElementById('sum-lines').innerText = lines + ' Lines';
+    document.getElementById('sum-pcs').innerText   = pcs   + ' Pcs';
+    document.getElementById('sum-val').innerText   = '₹ ' + val.toLocaleString('en-IN',{minimumFractionDigits:2});
+}
+
+async function lookupVoucher(vchId) {
+    if (!window.pywebview || !window.pywebview.api) return;
+    try {
+        var res = await window.pywebview.api.get_uchak_inward_voucher_details(vchId);
+        if (res && res.status === 'success') {
+            batchQueue = (res.items||[]).map(function(i) {
+                return { it_code:i.it_code, it_name:i.it_name, pcs:i.pcs, price:parseFloat(i.design||0).toFixed(2) };
+            });
+            renderQueue();
+            var btn = document.getElementById('commit-btn');
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Update Inward Record';
+            btn.style.background = 'var(--green)';
         }
+    } catch(e) { console.error(e); }
+}
 
-        function removeFromQueue(i) {
-            batchQueue.splice(i, 1);
-            renderQueueTable();
+async function commitBatch() {
+    if (!batchQueue.length) return;
+    var btn = document.getElementById('commit-btn');
+    var vchId = document.getElementById('v-id').value || latestVchId;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>⋯</span> Saving…';
+
+    if (!window.pywebview || !window.pywebview.api) {
+        btn.disabled = false; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Authorize &amp; Load Stock';
+        return;
+    }
+    try {
+        var res = await window.pywebview.api.save_uchak_inward_batch({
+            vch_id: vchId,
+            items: batchQueue.map(function(item) {
+                return { it_code:item.it_code, it_name:item.it_name, pcs:parseInt(item.pcs), price:parseFloat(item.price).toFixed(2) };
+            })
+        });
+        if (res && res.status === 'success') {
+            showToast('Stock Loaded ✓', 'Batch saved: ' + vchId);
+            batchQueue = [];
+            renderQueue();
+            setTimeout(function() { window.location.href='inventory.html'; }, 1800);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Authorize &amp; Load Stock';
         }
+    } catch(e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Authorize &amp; Load Stock';
+    }
+}
 
-        function updateSummaryBox(lines, pcs, value) {
-            document.getElementById('sum-unique-lines').innerText = lines + " Lines";
-            document.getElementById('sum-total-pcs').innerText = pcs + " Pcs";
-            document.getElementById('sum-valuation-total').innerText = "₹ " + value.toLocaleString('en-IN', {minimumFractionDigits: 2});
+function showToast(title, sub) {
+    document.getElementById('toast-title').innerText = title;
+    document.getElementById('toast-sub').innerText   = sub;
+    var t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function h(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+window.onload = function() {
+    // Date
+    var now = new Date();
+    document.getElementById('v-date').value = now.toLocaleDateString('en-GB');
+
+    // Staff role lockout
+    var role = localStorage.getItem('aurum_user_role') || 'staff';
+    if (role === 'staff') {
+        var inp = document.getElementById('v-id');
+        if (inp) { inp.readOnly = true; inp.tabIndex = -1; }
+    }
+
+    // Bridge
+    var t = setInterval(function() {
+        if (window.pywebview && window.pywebview.api) {
+            clearInterval(t);
+            window.pywebview.api.get_next_uchak_inward_vch_id()
+                .then(function(v) {
+                    if (v) { latestVchId = v; document.getElementById('v-id').value = v; }
+                }).catch(function(){});
         }
-
-        async function lookupHistoricalInwardVoucher(vchId) {
-            if (window.pywebview && window.pywebview.api) {
-                try {
-                    const res = await window.pywebview.api.get_uchak_inward_voucher_details(vchId);
-                    if (res && res.status === "success") {
-                        batchQueue = res.items.map(i => ({
-                            it_code: i.it_code,
-                            it_name: i.it_name,
-                            pcs: i.pcs,
-                            price: parseFloat(i.design || 0).toFixed(2)
-                        }));
-                        renderQueueTable();
-                        document.getElementById('commit-btn').innerText = "Update Inward Record";
-                        document.getElementById('commit-btn').style.background = "var(--success)";
-                    } else {
-                        alert("Voucher link target sequence not found inside active records.");
-                    }
-                } catch(err) { console.error(err); }
-            }
-        }
-
-        async function syncInwardVoucherCounter() {
-            const now = new Date();
-            document.getElementById('v-date').value = now.toLocaleDateString('en-GB');
-            document.getElementById('v-time').value = now.toLocaleTimeString();
-
-            if (window.pywebview && window.pywebview.api) {
-                try {
-                    const vchId = await window.pywebview.api.get_next_uchak_inward_vch_id();
-                    latestUchakInwardTrackCode = vchId || "UCHK-IN-001";
-                    document.getElementById('v-id').value = latestUchakInwardTrackCode;
-                } catch(e) {
-                    document.getElementById('v-id').value = latestUchakInwardTrackCode;
-                }
-            }
-        }
-
-        async function commitBatchToInventory() {
-            if (batchQueue.length === 0) {
-                alert("Queue tracker array matrix is empty. Add at least one item before authorization commit.");
-                return;
-            }
-
-            const currentVchId = document.getElementById('v-id').value;
-            const btn = document.getElementById('commit-btn');
-
-            btn.disabled = true;
-            btn.innerText = "SYNCHRONIZING REPOSITORY...";
-            btn.style.opacity = "0.6";
-
-            if (window.pywebview && window.pywebview.api) {
-                try {
-                    const normalizedItems = batchQueue.map(item => ({
-                        it_code: item.it_code,
-                        it_name: item.it_name,
-                        pcs: parseInt(item.pcs),
-                        price: parseFloat(item.price).toFixed(2)
-                    }));
-
-                    const payload = {
-                        vch_id: currentVchId,
-                        items: normalizedItems
-                    };
-
-                    const res = await window.pywebview.api.save_uchak_inward_batch(payload);
-
-                    if (res.status === "success") {
-                        triggerPremiumToasterNotification("Stock Loaded ✓", `Batch items appended to tracking sequence: ${currentVchId}`);
-
-                        batchQueue = [];
-                        renderQueueTable();
-
-                        setTimeout(() => {
-                            window.location.href = "inventory.html";
-                        }, 1800);
-                    } else {
-                        alert("Database configuration rejected entry loop processing.");
-                        btn.disabled = false;
-                        btn.innerText = "Authorize & Load Stock";
-                        btn.style.opacity = "1";
-                    }
-                } catch (err) {
-                    console.error("Critical Ingestion Failure:", err);
-                    btn.disabled = false;
-                    btn.innerText = "Authorize & Load Stock";
-                    btn.style.opacity = "1";
-                }
-            }
-        }
-
-        window.onload = () => {
-            const currentSessionRole = localStorage.getItem('aurum_user_role') || 'staff';
-            if (currentSessionRole === 'staff') {
-                const inputField = document.getElementById('v-id');
-                if (inputField) {
-                    inputField.readOnly = true;
-                    inputField.tabIndex = -1;
-                }
-            }
-
-            setInterval(() => {
-                const now = new Date();
-                document.getElementById('real-time-clock').innerText = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() + " | " + now.toLocaleTimeString();
-            }, 1000);
-
-            const bridgeCheck = setInterval(() => {
-                if (window.pywebview && window.pywebview.api) {
-                    clearInterval(bridgeCheck);
-                    syncInwardVoucherCounter();
-                }
-            }, 150);
-        };
-    </script>
+    }, 150);
+};
+</script>
 </body>
 </html>

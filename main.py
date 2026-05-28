@@ -1,4 +1,5 @@
 import threading
+import time
 import webview
 import os
 import sys
@@ -7,6 +8,13 @@ import random
 from datetime import datetime
 from pathlib import Path
 from database.db_manager import DBManager
+
+try:
+    from updater import check_for_update, download_and_install, CURRENT_VERSION
+except ImportError:
+    CURRENT_VERSION = '1.0.0'
+    def check_for_update(**kw): return None
+    def download_and_install(*a, **kw): pass
 from core.tag_engine import TagFactory
 
 HOT_RELOAD = False
@@ -14,10 +22,193 @@ webview.settings['OPEN_DEVTOOLS_IN_DEBUG'] = False
 webview.settings['ALLOW_DOWNLOADS'] = True
 
 
+# ── PERSISTENT LOG FILE ──────────────────────────────────────
+import logging as _logging
+_log_path = None
+def _init_log():
+    global _log_path
+    base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+    log_dir = os.path.join(base,'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    _log_path = os.path.join(log_dir,'aurumos.log')
+    if os.path.exists(_log_path) and os.path.getsize(_log_path) > 500_000:
+        open(_log_path,'w').close()
+    _logging.basicConfig(
+        filename=_log_path, level=_logging.DEBUG,
+        format='%(asctime)s %(levelname)s %(message)s',
+        encoding='utf-8', errors='replace'
+    )
+    _logging.getLogger().addHandler(_logging.StreamHandler(sys.stdout))
+    _logging.info('=== AurumOS Started ===')
+_init_log()
+def LOG(msg): _logging.info(msg)
+def ERR(msg): _logging.error(msg)
+
 def get_asset_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
+    """
+    Returns correct path for both dev (.py) and compiled (.exe) modes.
+    In PyInstaller:
+      - sys._MEIPASS = temp folder with bundled assets (read-only)
+      - sys.executable parent = folder where .exe lives (writable, has database/)
+    UI files are bundled in _MEIPASS; database lives next to the .exe.
+    """
+    if getattr(sys, 'frozen', False):
+        # Compiled .exe — UI files are in the bundle
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
+
+
+# ── LICENSE KEY ENCRYPTION ────────────────────────────────────
+def _get_machine_key():
+    """Derive a machine-specific encryption key from hardware ID."""
+    import uuid, hashlib
+    machine_id = str(uuid.getnode()).encode()
+    return hashlib.sha256(machine_id).digest()   # 32 bytes
+
+def _xor_cipher(data: bytes, key: bytes) -> bytes:
+    """Simple XOR cipher — symmetric, no deps needed."""
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+def encrypt_license_key(key_str: str) -> bytes:
+    """Encrypt license key string to bytes using machine-specific key."""
+    raw  = key_str.encode('utf-8')
+    enc  = _xor_cipher(raw, _get_machine_key())
+    # Prefix with magic bytes so we can detect corrupt/wrong-machine reads
+    return b'\xAA\x01' + enc   # magic: 0xAA = 170, 0x01 = 1
+
+def decrypt_license_key(data: bytes) -> str:
+    """Decrypt bytes back to license key string. Returns '' on failure."""
+    try:
+        if not data.startswith(b'\xAA\x01'):
+            return ''
+        enc = data[3:]
+        raw = _xor_cipher(enc, _get_machine_key())
+        return raw.decode('utf-8')
+    except Exception:
+        return ''
+
+
+# ── SCALE READER ─────────────────────────────────────────────────────────────
+import re as _re
+
+class ScaleReader:
+    """
+    Reads live weight from RS232C jewellery scale via USB-Serial adapter.
+    Runs in a background thread, pushes weight to JS via evaluate_js.
+    """
+    # Format: "-0000.02 G S" (S=Stable, U=Unstable)
+    # Also handles: "ST,GS,+12.345", "12.345g", plain decimals
+    WEIGHT_PATTERNS = [
+        _re.compile(r'[+-]?\s*(\d+\.\d+)\s+G\s+[SU]'),  # -0000.02 G S  (this scale)
+        _re.compile(r'ST[,\s]+GS[,\s]+[+-]?\s*(\d+\.\d+)'),  # ST,GS,+ 12.345
+        _re.compile(r'GS[,\s]+[+-]?\s*(\d+\.\d+)'),            # GS 12.345
+        _re.compile(r'[+-]?\s*(\d+\.\d+)\s*g', _re.I),         # 12.345g
+        _re.compile(r'[+-]?\s*(\d+\.\d{2,3})\s*$'),             # trailing decimal
+        _re.compile(r'(\d+\.\d+)'),                                # any decimal fallback
+    ]
+    STABLE_MARKERS = ['ST,', 'ST ', 'STABLE', 'S,+', 'S,-']
+
+    def __init__(self):
+        self._port    = None
+        self._baud    = 9600
+        self._running = False
+        self._thread  = None
+        self._serial  = None
+        self._window  = None
+        self._last_wt = None
+
+    def configure(self, port, baud=9600):
+        self._port = port
+        self._baud = int(baud)
+
+    def set_window(self, window):
+        self._window = window
+
+    def parse(self, raw):
+        try:
+            text = raw.decode('ascii', errors='ignore').strip()
+        except:
+            text = ''
+        if not text:
+            return None, False
+        for pat in self.WEIGHT_PATTERNS:
+            m = pat.search(text)
+            if m:
+                try:
+                    val = float(m.group(1))
+                    # Detect stable:
+                    # 1. "G S" at end = stable, "G U" = unstable (this scale format)
+                    # 2. Classic ST, markers
+                    t = text.upper()
+                    if _re.search(r'G\s+S\b', t):
+                        stable = True
+                    elif _re.search(r'G\s+U\b', t):
+                        stable = False
+                    else:
+                        stable = any(mk in t for mk in self.STABLE_MARKERS)
+                    return round(val, 3), stable
+                except:
+                    pass
+        return None, False
+
+    def start(self, port=None, baud=None):
+        if port:  self._port = port
+        if baud:  self._baud = int(baud)
+        if not self._port:
+            return {"status": "error", "message": "No port configured"}
+        if self._running:
+            self.stop()
+        self._running = True
+        self._thread  = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+        return {"status": "success", "port": self._port, "baud": self._baud}
+
+    def stop(self):
+        self._running = False
+        if self._serial:
+            try: self._serial.close()
+            except: pass
+        self._serial = None
+
+    def _loop(self):
+        try:
+            import serial as _serial
+            self._serial = _serial.Serial(
+                self._port, self._baud,
+                bytesize=8, parity='N', stopbits=1,
+                timeout=1, xonxoff=False, rtscts=False
+            )
+            print(f"[SCALE] Connected: {self._port} @ {self._baud}")
+            while self._running:
+                try:
+                    raw = self._serial.readline() or self._serial.read(32)
+                    wt, stable = self.parse(raw)
+                    if wt is not None:
+                        self._last_wt = wt
+                        if self._window:
+                            payload = f'{{"weight":{wt},"stable":{str(stable).lower()}}}'
+                            try:
+                                self._window.evaluate_js(
+                                    f'window.__onScale && window.__onScale({payload})'
+                                )
+                            except: pass
+                except Exception as e:
+                    if self._running:
+                        print(f"[SCALE] Read error: {e}")
+                    time.sleep(0.5)
+        except Exception as e:
+            print(f"[SCALE] Connection error: {e}")
+            if self._window:
+                try:
+                    self._window.evaluate_js(
+                        f'window.__onScale && window.__onScale({{"error":"{e}","weight":null,"stable":false}})'
+                    )
+                except: pass
+
+    def get_last(self):
+        return self._last_wt
+
+_scale = ScaleReader()
 
 
 class AurumAPI:
@@ -25,20 +216,32 @@ class AurumAPI:
         self.db = DBManager()
         self._window = None
         self.TEMP_KEY = "aurum-dev-2026"
-        self.tag_factory = TagFactory(dpi=203)
-        self._session_role = None
+        self.tag_factory = TagFactory()
+        self._session_role     = None
         self._session_username = None
+        self._login_attempts   = 0
+        self._lockout_until    = None
+        self._MAX_ATTEMPTS     = 3
+        self._LOCKOUT_SECONDS  = 15 * 60
+        self._load_lockout_state()  # restore lockout if app was restarted mid-lockout
 
     def set_window(self, window):
         self._window = window
 
     # ─── NAVIGATION ───────────────────────────────────────────────
     def navigate(self, html_file):
-        ui_dir = get_asset_path("ui")
-        target_path = os.path.join(ui_dir, html_file)
-        url = Path(target_path).as_uri()
-        if self._window:
-            self._window.load_url(url)
+        try:
+            ui_dir = get_asset_path("ui")
+            target_path = os.path.join(ui_dir, html_file)
+            url = Path(target_path).as_uri()
+            if self._window:
+                # Use evaluate_js to change location — avoids pywebview callback error
+                safe_url = url.replace("'", "\'")
+                self._window.evaluate_js(f"window.location.href='{safe_url}';")
+            return None
+        except Exception as e:
+            print(f"[NAV] Error: {e}")
+            return None
 
     # ─── SESSION API ──────────────────────────────────────────────
     def get_session(self):
@@ -62,7 +265,7 @@ class AurumAPI:
             owner_name = profile.get("owner_name") or self._session_username or "Strategic Director"
             return {"status": "success", "greeting_prefix": greeting, "owner_title": owner_name}
         except Exception as e:
-            print(f"❌ Greeting system bridge error: {e}")
+            print(f"[ERR] Greeting system bridge error: {e}")
             return {"status": "error", "greeting_prefix": "Welcome", "owner_title": "Director"}
 
     def get_live_command_metrics(self):
@@ -136,11 +339,6 @@ class AurumAPI:
                     "GROUP BY it_code ORDER BY total_wt DESC LIMIT 8"
                 ).fetchall()
 
-            chart_fine = [fine_by_date.get(r['date'], 0.0)
-                          for r in reversed(list(conn.execute(
-                              "SELECT date FROM sales_history GROUP BY date ORDER BY date DESC LIMIT 7"
-                          ).fetchall()))] if False else []
-            # Simpler: rebuild fine aligned to weekly_rows order
             with self.db._get_connection() as conn:
                 wfine = conn.execute(
                     "SELECT date, COALESCE(SUM(collected_fine),0.0) as fc "
@@ -151,7 +349,7 @@ class AurumAPI:
                 chart_fine = [0.0] * len(chart_labels)
 
             inv_labels  = [r['it_code'] for r in inv_rows]
-            inv_weights  = [round(float(r['total_wt']), 3) for r in inv_rows]
+            inv_weights = [round(float(r['total_wt']), 3) for r in inv_rows]
 
             return {
                 "status": "success",
@@ -175,7 +373,7 @@ class AurumAPI:
                 "audit_logs": live_audit_logs
             }
         except Exception as e:
-            print(f"❌ Dashboard telemetry compilation fault: {e}")
+            print(f"[ERR] Dashboard telemetry compilation fault: {e}")
             return {"status": "error", "accumulated_sales": 0.0, "tracked_units": 0, "metallic_weight": 0.000}
 
     def _extract_tag_id(self, data):
@@ -200,7 +398,7 @@ class AurumAPI:
     def print_tag(self, item_data):
         try:
             is_ok, msg = self.tag_factory.check_printer_status()
-            print(f"🖨️ [PRINTER LOG]: {msg}")
+            print(f"[PRINTER LOG]: {msg}")
             if not is_ok:
                 return {"status": "error", "message": msg}
             item_id = item_data.get('id')
@@ -211,7 +409,7 @@ class AurumAPI:
                 self.db.mark_as_tagged(item_id)
             return {"status": "success", "message": "Tag sent to printer."}
         except Exception as e:
-            print(f"❌ [PRINT CRASH LOG]: {str(e)}")
+            print(f"[PRINT ERR] CRASH LOG]: {str(e)}")
             return {"status": "error", "message": str(e)}
 
     def get_tag_preview(self, item_data):
@@ -224,35 +422,288 @@ class AurumAPI:
 
     # ─── LICENSE & LOGIN ──────────────────────────────────────────
     def verify_key(self, key):
-        if key.lower() == self.TEMP_KEY:
-            return {"status": "success"}
-        return {"status": "error", "message": "Invalid license key."}
+        """
+        Validates license key against AurumOS admin server.
+        Falls back to offline check if no internet.
+        """
+        import urllib.request, json as _json, uuid as _uuid
+        key = str(key).strip().upper()
 
-    def verify_login(self, username, password):
+        # Dev key bypass (remove in production)
+        if key.lower() == self.TEMP_KEY:
+            return {"status": "success", "business": "Dev Mode", "owner": "Developer"}
+
+        if not key.startswith("AU-") or len(key) != 22:
+            return {"status": "error", "message": "Invalid key format. Expected AU-XXXX-XXXX-XXXX-XXXX"}
+
+        # Get machine ID
         try:
-            auth_res = self.db.authenticate_user(username, password)
-            if auth_res["authenticated"]:
-                self._session_role = auth_res["role"]
-                self._session_username = username
-                return {"status": "success", "role": auth_res["role"], "username": username}
-            return {"status": "error", "message": "Invalid Credentials."}
+            machine_id = str(_uuid.getnode())
+        except Exception:
+            machine_id = "unknown"
+
+        # Check online
+        CHECK_URL = "https://aurum-os-admin.vercel.app/api/check"
+        print(f"[LICENSE] Checking key={key} machine={machine_id[:8]} url={CHECK_URL}")
+
+        try:
+            payload = _json.dumps({"key": key, "machine_id": machine_id}).encode()
+            req = urllib.request.Request(
+                CHECK_URL,
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent":   f"AurumOS/{CURRENT_VERSION}"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = resp.read().decode()
+                print(f"[LICENSE] Server response: {raw}")
+                data = _json.loads(raw)
+
+            if data.get("valid"):
+                # Save key locally for offline fallback (encrypted)
+                try:
+                    if getattr(sys, 'frozen', False):
+                        base = os.path.dirname(sys.executable)
+                    else:
+                        base = os.path.abspath(".")
+                    key_path = os.path.join(base, "database", ".license_key")
+                    enc = encrypt_license_key(key)
+                    open(key_path, "wb").write(enc)
+                    print(f"[LICENSE] Key cached (encrypted)")
+                except Exception as e:
+                    print(f"[LICENSE] Cache write error: {e}")
+                return {
+                    "status":   "success",
+                    "business": data.get("business", ""),
+                    "owner":    data.get("owner", ""),
+                }
+            else:
+                reason = data.get("status", "invalid")
+                print(f"[LICENSE] Server rejected: reason={reason}")
+                msgs = {
+                    "not_found":   "License key not found. Please check your key and try again.",
+                    "revoked":     "This license has been revoked. Please contact support.",
+                    "bad_request": "Invalid key format.",
+                    "server_error":"Server error — please try again in a moment.",
+                }
+                return {
+                    "status":  "error",
+                    "message": msgs.get(reason, f"License check failed ({reason}). Contact support.")
+                }
+
+        except urllib.error.HTTPError as e:
+            body = ""
+            try: body = e.read().decode()
+            except: pass
+            print(f"[LICENSE] HTTP error {e.code}: {body}")
+            return {"status": "error", "message": f"Server error ({e.code}). Please try again."}
+
+        except urllib.error.URLError as e:
+            print(f"[LICENSE] Network error: {e.reason}")
+            # Offline — check encrypted local cache
+            try:
+                if getattr(sys, 'frozen', False):
+                    base = os.path.dirname(sys.executable)
+                else:
+                    base = os.path.abspath(".")
+                key_path = os.path.join(base, "database", ".license_key")
+                if os.path.exists(key_path):
+                    enc   = open(key_path, "rb").read()
+                    saved = decrypt_license_key(enc).strip().upper()
+                    if saved == key:
+                        print(f"[LICENSE] Offline cache match OK")
+                        return {"status": "success", "business": "", "owner": "", "offline": True}
+                    else:
+                        print(f"[LICENSE] Cache mismatch — may be wrong machine")
+            except Exception as e:
+                print(f"[LICENSE] Cache read error: {e}")
+            return {
+                "status":  "error",
+                "message": "No internet connection. Connect to internet to activate your license."
+            }
+
         except Exception as e:
-            print(f"❌ [API VERIFY LOGIN EXCEPTION] {e}")
-            return {"status": "error", "message": str(e)}
+            print(f"[LICENSE] Unexpected error: {e}")
+            return {"status": "error", "message": f"Verification error: {str(e)}"}
+
+    def _get_lockout_file(self):
+        """Path to lockout state file — next to DB, survives restarts."""
+        if getattr(sys, 'frozen', False):
+            base = os.path.dirname(sys.executable)
+        else:
+            base = os.path.abspath('.')
+        return os.path.join(base, 'database', '.lockout_state')
+
+    def _save_lockout_state(self):
+        """Persist lockout until-time to file."""
+        try:
+            import json as _j
+            data = {
+                'attempts': self._login_attempts,
+                'until':    self._lockout_until.isoformat() if self._lockout_until else None
+            }
+            open(self._get_lockout_file(), 'w').write(_j.dumps(data))
+        except Exception:
+            pass
+
+    def _load_lockout_state(self):
+        """Restore lockout state from file on startup."""
+        try:
+            import json as _j
+            from datetime import datetime as _dt
+            path = self._get_lockout_file()
+            if not os.path.exists(path):
+                return
+            data = _j.loads(open(path).read())
+            self._login_attempts = data.get('attempts', 0)
+            until_str = data.get('until')
+            if until_str:
+                until = _dt.fromisoformat(until_str)
+                if until > _dt.now():
+                    self._lockout_until = until
+                    print(f"[LOGIN] Lockout restored — {int((until - _dt.now()).total_seconds())}s remaining")
+                else:
+                    # Expired — clear it
+                    self._login_attempts = 0
+                    self._lockout_until  = None
+                    os.remove(path)
+        except Exception:
+            pass
+
+    def verify_login(self, password):
+        """
+        Login handler — three-layer return for maximum exe compatibility.
+
+        Layer 1: return result dict  → works when pywebview resolves Promises
+        Layer 2: evaluate_js push    → works when Promise resolution fails in exe
+        Layer 3: JS timeout fallback → shows error if both above fail
+
+        Rule: NEVER call evaluate_js from the same thread synchronously.
+        We spawn a daemon thread for the push so the API thread returns first.
+        """
+        import json as _json
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            LOG(f"[LOGIN] verify_login called, password len={len(password)}")
+            result = self._do_login_check(password, _dt.now(), _dt, _td)
+            LOG(f"[LOGIN] Result: {result}")
+
+            # Layer 2: push via evaluate_js in background thread
+            # (Layer 1 = return value below)
+            def _push():
+                import time as _t
+                _t.sleep(0.05)  # tiny delay so return fires first
+                try:
+                    payload = _json.dumps(result)
+                    if self._window:
+                        self._window.evaluate_js(
+                            f"window.__loginResult && window.__loginResult({payload})"
+                        )
+                except Exception as ep:
+                    print(f"[LOGIN] push error: {ep}")
+
+            threading.Thread(target=_push, daemon=True).start()
+
+            return result  # Layer 1
+
+        except Exception as e:
+            ERR(f"[LOGIN] EXCEPTION: {e}")
+            err = {"status": "error", "message": str(e)}
+            try:
+                payload = _json.dumps(err)
+                def _push_err():
+                    import time as _t; _t.sleep(0.05)
+                    try:
+                        if self._window:
+                            self._window.evaluate_js(
+                                f"window.__loginResult && window.__loginResult({payload})"
+                            )
+                    except Exception: pass
+                threading.Thread(target=_push_err, daemon=True).start()
+            except Exception: pass
+            return err
+
+    def _do_login_check(self, password, now, _dt, _td):
+        """Core login logic — separated for clarity."""
+        # Check lockout
+        if self._lockout_until and now < self._lockout_until:
+            remaining = int((self._lockout_until - now).total_seconds())
+            return {"status": "locked", "remaining": remaining,
+                    "message": f"Locked. Try in {remaining//60}m {remaining%60:02d}s."}
+        elif self._lockout_until and now >= self._lockout_until:
+            self._lockout_until  = None
+            self._login_attempts = 0
+
+        # Authenticate
+        print(f"[LOGIN] Checking password...")
+        auth = self.db.authenticate_user("owner", password)
+        if not auth["authenticated"]:
+            auth = self.db.authenticate_user_by_password(password)
+        print(f"[LOGIN] Auth result: authenticated={auth['authenticated']}")
+
+        if auth["authenticated"]:
+            self._login_attempts = 0
+            self._lockout_until  = None
+            self._session_role     = auth["role"]
+            self._session_username = "owner"
+            try:
+                lf = self._get_lockout_file()
+                if os.path.exists(lf): os.remove(lf)
+            except Exception: pass
+            role    = auth["role"]
+            landing = "billing.html" if role == "staff" else "dashboard.html"
+            print(f"[LOGIN OK] Success role={role} landing={landing}")
+            return {"status": "success", "role": role, "landing": landing}
+
+        # Failed
+        self._login_attempts += 1
+        left = self._MAX_ATTEMPTS - self._login_attempts
+        print(f"[LOGIN WARN] Fail {self._login_attempts}/{self._MAX_ATTEMPTS}")
+
+        if self._login_attempts >= self._MAX_ATTEMPTS:
+            self._lockout_until = now + _td(seconds=self._LOCKOUT_SECONDS)
+            self._save_lockout_state()
+            print(f"[LOGIN LOCK] LOCKED {self._LOCKOUT_SECONDS}s")
+            return {"status": "locked", "remaining": self._LOCKOUT_SECONDS,
+                    "attempts": self._login_attempts,
+                    "message": "Too many attempts. Locked for 15 minutes."}
+
+        word = "attempt" if left == 1 else "attempts"
+        return {"status": "error", "attempts": self._login_attempts,
+                "left": left,
+                "message": f"Wrong password. {left} {word} remaining."}
+
+    def get_lockout_status(self):
+        from datetime import datetime as _dt
+        try:
+            if self._lockout_until and _dt.now() < self._lockout_until:
+                remaining = int((self._lockout_until - _dt.now()).total_seconds())
+                return {"locked": True, "remaining": remaining, "attempts": self._login_attempts}
+            return {"locked": False, "attempts": self._login_attempts, "max": self._MAX_ATTEMPTS}
+        except Exception:
+            return {"locked": False, "attempts": 0, "max": 3}
 
     def logout(self):
-        self._session_role = None
+        self._session_role     = None
         self._session_username = None
+        self._login_attempts   = 0
+        self._lockout_until    = None
+        self._MAX_ATTEMPTS     = 3
+        self._LOCKOUT_SECONDS  = 15 * 60
+        self._load_lockout_state()  # restore lockout if app was restarted mid-lockout
         return {"status": "ok"}
 
     # ─── SETUP ────────────────────────────────────────────────────
     def save_setup(self, setup_data):
         try:
-            biz_name = setup_data.get('businessName')
+            biz_name   = setup_data.get('businessName')
             owner_name = setup_data.get('ownerName')
-            username = setup_data.get('adminUser')
-            password = setup_data.get('adminPass')
-            success = self.db.complete_initial_setup(biz_name, username, password, owner_name)
+            password   = setup_data.get('adminPass')
+            username   = "owner"   # fixed internal username — no username field needed
+            success    = self.db.complete_initial_setup(biz_name, username, password, owner_name)
             if success:
                 threading.Timer(1.5, lambda: self.navigate("login.html")).start()
                 return {"status": "success"}
@@ -265,7 +716,7 @@ class AurumAPI:
         try:
             return self.db.get_all_staff()
         except Exception as e:
-            print(f"❌ Staff Retrieval Failure: {e}")
+            print(f"[ERR] Staff Retrieval Failure: {e}")
             return []
 
     def add_staff(self, username, password):
@@ -354,11 +805,11 @@ class AurumAPI:
                     return {
                         "status": "success",
                         "metal_outstanding": round(res['metal_bal'] or 0.0, 3),
-                        "cash_outstanding": round(res['cash_bal'] or 0.0, 2)
+                        "cash_outstanding":  round(res['cash_bal']  or 0.0, 2)
                     }
                 return {"status": "success", "metal_outstanding": 0.000, "cash_outstanding": 0.00}
         except Exception as e:
-            print(f"❌ [API FETCH LIVE OUTSTANDING EXCEPTION] {e}")
+            print(f"[API ERR] FETCH LIVE OUTSTANDING EXCEPTION] {e}")
             return {"status": "error", "message": str(e)}
 
     # ─── LEDGER ───────────────────────────────────────────────────
@@ -390,11 +841,11 @@ class AurumAPI:
         try:
             entry_data = {
                 "client_name": data.get('account_type', 'MARKET'),
-                "vch_id": "JRNL-" + datetime.now().strftime('%M%S'),
-                "desc": data.get('description', 'Journal Entry'),
-                "metal_dr": float(data.get('m_dr', 0)), "metal_cr": float(data.get('m_cr', 0)),
-                "cash_dr": float(data.get('c_dr', 0)),  "cash_cr": float(data.get('c_cr', 0)),
-                "gold_rate": 0
+                "vch_id":      "JRNL-" + datetime.now().strftime('%M%S'),
+                "desc":        data.get('description', 'Journal Entry'),
+                "metal_dr":    float(data.get('m_dr', 0)), "metal_cr": float(data.get('m_cr', 0)),
+                "cash_dr":     float(data.get('c_dr', 0)), "cash_cr":  float(data.get('c_cr', 0)),
+                "gold_rate":   0
             }
             res = self.db.post_ledger_entry(**entry_data)
             return {"status": "success"} if res else {"status": "error"}
@@ -428,16 +879,28 @@ class AurumAPI:
     # ─── STOCK LEDGER ─────────────────────────────────────────────
     def add_stock_entry(self, data):
         try:
-            print(f"📦 [STOCK ENTRY] Received: {data}")
+            import time as _time
+            print(f"[STOCK ENTRY] Received: {data}")
+
+            # Ensure tag_id has correct prefix so report columns don't overlap:
+            # - Katti entries: tag_id = 'KATTI-xxx'  → Inward (via katti_voucher_items)
+            # - Opening entries: tag_id = 'OPENING-xxx' → Opening column only
+            # - If no tag_id given, assign OPENING- prefix (stock ledger weight entry)
+            tag = str(data.get('tag_id') or '').strip()
+            if not tag or tag in ('N/A', '', '---', '-'):
+                # Auto-generate OPENING- tag so it goes to Opening column in report
+                data['tag_id'] = 'OPENING-' + str(int(_time.time() * 1000))[-8:]
+                print(f"[STOCK ENTRY] Auto-tagged as: {data['tag_id']}")
+
             success = self.db.add_stock_entry(**data)
             if success:
-                print(f"✅ [STOCK ENTRY] Saved: {data.get('it_code')} gr_wt={data.get('gr_wt')}")
+                print(f"[STOCK OK] ENTRY] Saved: {data.get('it_code')} gr_wt={data.get('gr_wt')}")
                 return {"status": "success"}
             else:
-                print(f"❌ [STOCK ENTRY] DB returned False for: {data}")
+                print(f"[STOCK ERR] ENTRY] DB returned False for: {data}")
                 return {"status": "error", "message": "DB save returned False"}
         except Exception as e:
-            print(f"❌ [STOCK ENTRY] Exception: {e} | data={data}")
+            print(f"[STOCK ERR] ENTRY] Exception: {e} | data={data}")
             return {"status": "error", "message": str(e)}
 
     def add_uchak_stock_entry(self, data):
@@ -453,8 +916,8 @@ class AurumAPI:
 
     def update_stock_entry(self, entry_id, data):
         try:
-            cols   = ", ".join([f"{k} = ?" for k in data.keys()])
-            values = list(data.values()) + [entry_id]
+            cols    = ", ".join([f"{k} = ?" for k in data.keys()])
+            values  = list(data.values()) + [entry_id]
             success = self.db.execute_query(f"UPDATE stock_inventory SET {cols} WHERE id = ?", tuple(values))
             return {"status": "success"} if success else {"status": "error"}
         except Exception as e:
@@ -536,8 +999,8 @@ class AurumAPI:
 
     def save_uchak_inward_batch(self, payload):
         try:
-            vch_id = str(payload.get('vch_id', 'UCHK-IN-001')).strip()
-            items  = payload.get('items', [])
+            vch_id      = str(payload.get('vch_id', 'UCHK-IN-001')).strip()
+            items       = payload.get('items', [])
             if not items:
                 return {"status": "error", "message": "Batch array queue is empty."}
             total_lines = len(items)
@@ -546,7 +1009,7 @@ class AurumAPI:
             success = self.db.save_uchak_inward_transaction(vch_id, total_lines, total_pcs, total_value, items)
             return {"status": "success"} if success else {"status": "error", "message": "Database transaction failed."}
         except Exception as e:
-            print(f"❌ [API BATCH INGESTION EXCEPTION] {e}")
+            print(f"[API ERR] BATCH INGESTION EXCEPTION] {e}")
             return {"status": "error", "message": str(e)}
 
     # ─── BILLING ──────────────────────────────────────────────────
@@ -573,18 +1036,14 @@ class AurumAPI:
             return "UCHK-001"
 
     def get_live_invoice_print_payload(self, voucher_id):
-        """
-        ✅ Fetches bill from DB for bill_print.html
-        Called directly by bill_print.html via js_api
-        """
         try:
-            print(f"📄 [PRINT] get_live_invoice_print_payload called for: {voucher_id}")
+            print(f"[PRINT]] get_live_invoice_print_payload called for: {voucher_id}")
             sh_row = self.db.fetch_one(
                 "SELECT * FROM sales_history WHERE vch_id = ?",
                 (str(voucher_id).strip(),)
             )
             if not sh_row:
-                print(f"❌ [PRINT] Voucher {voucher_id} not found in DB")
+                print(f"[PRINT ERR]] Voucher {voucher_id} not found in DB")
                 return {"status": "error", "message": f"Voucher {voucher_id} not found."}
 
             try:
@@ -592,8 +1051,7 @@ class AurumAPI:
             except:
                 items_array = []
 
-            print(f"✅ [PRINT] Found bill: customer={sh_row.get('customer')}, items={len(items_array)}, total={sh_row.get('total_amount')}")
-            print(f"✅ [PRINT] Raw items JSON: {sh_row.get('items', '')[:200]}")
+            print(f"[PRINT OK]] Found bill: customer={sh_row.get('customer')}, items={len(items_array)}, total={sh_row.get('total_amount')}")
 
             bill = {
                 "vch_id":          sh_row.get('vch_id', '---'),
@@ -614,81 +1072,46 @@ class AurumAPI:
                 "discountAmount":  float(sh_row.get('discount_amount') or 0.0),
                 "items":           items_array
             }
-            print(f"✅ [PRINT] Payload built — goldRate={bill['goldRate']}, items={len(bill['items'])}")
             return {"status": "success", "bill": bill}
         except Exception as e:
-            print(f"❌ [PRINT API CRASH] {e}")
+            print(f"[PRINT ERR] API CRASH] {e}")
             return {"status": "error", "message": str(e)}
 
     def trigger_print_window(self, voucher_id, copies=1):
-        """
-        ✅ Opens bill_print.html as native PyWebView window.
-        Uses html= parameter to inject content directly — avoids file:// URI issues
-        on Windows secondary windows.
-        bill_print.html calls get_live_invoice_print_payload(vch_id) via js_api.
-        """
         try:
-            copies = int(copies) if copies else 1
-            print(f"🖨️  [PRINT] trigger_print_window: vch_id={voucher_id}, copies={copies}")
-
+            copies     = int(copies) if copies else 1
             ui_dir     = get_asset_path("ui")
             print_path = os.path.join(ui_dir, "bill_print.html")
 
-            print(f"🖨️  [PRINT] bill_print.html path: {print_path}")
-            print(f"🖨️  [PRINT] File exists: {os.path.exists(print_path)}")
-
             if not os.path.exists(print_path):
-                print(f"❌ [PRINT] bill_print.html NOT FOUND at: {print_path}")
-                return {"status": "error", "message": f"bill_print.html not found at {print_path}"}
+                return {"status": "error", "message": f"bill_print.html not found"}
 
-            # Read the HTML file content
             with open(print_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 
-            # Inject vch_id and copies into the HTML via script tag
-            # This replaces the URL param approach — works in all PyWebView modes
-            # Inject BEFORE <html> so it runs first, no race condition
             inject_script = (
-                '<script>'
-                f'window.__VCH_ID__=\'{voucher_id}\';'
-                f'window.__COPIES__={copies};'
-                '</script>'
+                f'<script>window.__VCH_ID__=\'{voucher_id}\';'
+                f'window.__COPIES__={copies};</script>'
             )
-            # Try multiple injection points in order of preference
             if '<!DOCTYPE html>' in html_content:
-                html_content = html_content.replace(
-                    '<!DOCTYPE html>',
-                    '<!DOCTYPE html>' + inject_script,
-                    1
-                )
-            elif '<html' in html_content:
-                idx = html_content.find('<html')
-                html_content = html_content[:idx] + inject_script + html_content[idx:]
+                html_content = html_content.replace('<!DOCTYPE html>', '<!DOCTYPE html>' + inject_script, 1)
             else:
                 html_content = inject_script + html_content
 
-            print(f"✅ [PRINT] Injected: window.__VCH_ID__='{voucher_id}' window.__COPIES__={copies}")
-
-            print(f"✅ [PRINT] HTML loaded ({len(html_content)} bytes), creating window...")
-
             def open_window():
                 try:
-                    win = webview.create_window(
+                    webview.create_window(
                         f"Bill — {voucher_id}",
-                        html=html_content,          # ✅ Pass HTML directly — no file:// URI needed
-                        js_api=self,                # ✅ Full API access in popup
-                        width=600,
-                        height=820,
-                        resizable=True
+                        html=html_content,
+                        js_api=self,
+                        width=600, height=820, resizable=True
                     )
-                    print(f"✅ [PRINT] Window created successfully: {win}")
                 except Exception as e:
-                    print(f"❌ [PRINT] create_window failed: {e}")
+                    print(f"[PRINT ERR]] create_window failed: {e}")
 
             threading.Thread(target=open_window, daemon=True).start()
             return {"status": "success"}
         except Exception as e:
-            print(f"❌ [PRINT] trigger_print_window error: {e}")
             return {"status": "error", "message": str(e)}
 
     def get_bill_details(self, vch_id):
@@ -720,7 +1143,6 @@ class AurumAPI:
                 }
             return {"status": "error", "message": "Sales record not found."}
         except Exception as e:
-            print(f"❌ [API BILL LOOKUP EXCEPTION] {e}")
             return {"status": "error", "message": str(e)}
 
     def fetch_history(self):
@@ -746,16 +1168,10 @@ class AurumAPI:
             clean_cash_amt = float(raw_cash_amt.replace('₹', '').replace(',', '').strip())
             items_json     = json.dumps(bill_data.get('items', []))
 
-            # Discount fields
             disc_type   = str(bill_data.get('discountType')   or 'none')
             disc_touch  = float(bill_data.get('discountTouch')  or 0.0)
             disc_fine   = float(bill_data.get('discountFine')   or 0.0)
             disc_amount = float(bill_data.get('discountAmount') or 0.0)
-
-            print(f"📋 [GENERATE_BILL] vch_id={vch_id} | customer={customer} | is_uchak={is_uchak}")
-            print(f"📋 [GENERATE_BILL] goldRate={rate} | total={clean_cash_amt}")
-            print(f"📋 [GENERATE_BILL] discount: type={disc_type} touch={disc_touch} fine={disc_fine} amount={disc_amount}")
-            print(f"📋 [GENERATE_BILL] items_json={items_json[:300]}")
 
             resolved_status = (
                 'UCHAK_UNPAID' if (status == 'CREDIT' and is_uchak) else
@@ -765,51 +1181,36 @@ class AurumAPI:
             self.db.record_sale(vch_id, customer, resolved_status,
                                 l_fine, coll, f995, dhal, rem, rate, clean_cash_amt, items_json,
                                 disc_type, disc_touch, disc_fine, disc_amount)
-            print(f"✅ [GENERATE_BILL] Discount saved: type={disc_type} fine={disc_fine} amount={disc_amount}")
             self.db.deduct_stock_after_sale(items_json)
-
-            print(f"✅ [GENERATE_BILL] Saved to DB successfully: {vch_id}")
 
             is_cash_settled = (status in ('PAID', 'CASH', 'UCHAK_PAID', 'UCHAK_MAINTAINED'))
 
             if is_uchak:
                 if is_cash_settled:
-                    # Uchak PAID — client paid cash
-                    metal_debit  = 0.0;           metal_credit = 0.0
-                    cash_debit   = 0.0;            cash_credit  = clean_cash_amt
-                    ledger_desc  = "Uchak Cash Invoice Paid"
+                    metal_debit = 0.0; metal_credit = 0.0
+                    cash_debit  = 0.0; cash_credit  = clean_cash_amt
+                    ledger_desc = "Uchak Cash Invoice Paid"
                 else:
-                    # Uchak CREDIT — client owes cash
-                    metal_debit  = 0.0;            metal_credit = 0.0
-                    cash_debit   = clean_cash_amt; cash_credit  = 0.0
-                    ledger_desc  = "Uchak Credit Udhar"
+                    metal_debit = 0.0; metal_credit = 0.0
+                    cash_debit  = clean_cash_amt; cash_credit = 0.0
+                    ledger_desc = "Uchak Credit Udhar"
             else:
                 if is_cash_settled:
-                    # Cash bill — client paid ₹ amount
-                    # If they also gave collected fine, credit that metal too
                     metal_debit  = 0.0
-                    metal_credit = float(coll or 0)   # gold fine received (if any)
+                    metal_credit = float(coll or 0)
                     cash_debit   = 0.0
-                    cash_credit  = clean_cash_amt      # cash received
-                    if coll > 0:
-                        ledger_desc = f"Sales Paid — Cash ₹{clean_cash_amt:.0f} + Fine {coll:.3f}g"
-                    else:
-                        ledger_desc = f"Sales Invoice Paid — ₹{clean_cash_amt:.0f}"
+                    cash_credit  = clean_cash_amt
+                    ledger_desc  = f"Sales Invoice Paid — ₹{clean_cash_amt:.0f}"
                 else:
-                    # Credit bill
                     if rate > 0:
-                        # Rate given → cash credit bill
-                        metal_debit  = 0.0;            metal_credit = 0.0
-                        cash_debit   = clean_cash_amt; cash_credit  = 0.0
-                        ledger_desc  = "Sales Credit — Cash Due"
+                        metal_debit = 0.0; metal_credit = 0.0
+                        cash_debit  = clean_cash_amt; cash_credit = 0.0
+                        ledger_desc = "Sales Credit — Cash Due"
                     else:
-                        # No rate → fine credit bill
-                        metal_debit  = float(rem or 0); metal_credit = 0.0
-                        cash_debit   = 0.0;             cash_credit  = 0.0
-                        ledger_desc  = f"Sales Credit — Fine Due {rem:.3f}g"
+                        metal_debit = float(rem or 0); metal_credit = 0.0
+                        cash_debit  = 0.0; cash_credit = 0.0
+                        ledger_desc = f"Sales Credit — Fine Due {rem:.3f}g"
 
-            # ✅ ALWAYS post ledger entry for every bill
-            print(f"📒 [LEDGER] Posting: {ledger_desc} | metal_dr={metal_debit} metal_cr={metal_credit} cash_dr={cash_debit} cash_cr={cash_credit}")
             self.post_to_ledger({
                 "client_name": customer, "vch_id": vch_id, "gold_rate": rate,
                 "desc": ledger_desc, "metal_dr": metal_debit, "metal_cr": metal_credit,
@@ -818,7 +1219,7 @@ class AurumAPI:
 
             return {"status": "success"}
         except Exception as e:
-            print(f"❌ Invoicing Engine Failure: {e}")
+            print(f"[ERR] Invoicing Engine Failure: {e}")
             return {"status": "error", "message": str(e)}
 
     def delete_bill(self, vch_id):
@@ -875,22 +1276,60 @@ class AurumAPI:
             return {"status": "error", "message": str(e)}
 
     def get_low_stock_items(self, threshold=10.0):
-        """Returns items with stock below threshold grams."""
         try:
             result = self.db.get_low_stock_items(float(threshold))
-            print(f"📊 [LOW STOCK] threshold={threshold}g → {len(result)} items: {[r['it_code'] for r in result]}")
+            print(f"[LOW STOCK] threshold={threshold}g → {len(result)} items: {[r['it_code'] for r in result]}")
             return result
         except Exception as e:
-            print(f"❌ [LOW STOCK API] {e}"); return []
+            print(f"[LOW STOCK ERR] API] {e}"); return []
 
     def get_out_of_stock_items(self):
-        """Returns items with zero remaining stock."""
         try:
             result = self.db.get_out_of_stock_items()
-            print(f"🚨 [OUT OF STOCK] → {len(result)} items: {[r['it_code'] for r in result]}")
+            print(f"[OOS] → {len(result)} items: {[r['it_code'] for r in result]}")
             return result
         except Exception as e:
-            print(f"❌ [OOS API] {e}"); return []
+            print(f"[OOS ERR] API] {e}"); return []
+
+    # ---- UPDATE API ------------------------------------------------
+    def check_for_update(self):
+        result = check_for_update(timeout=8)
+        if result is None:
+            return {"available": False, "error": "no_network"}
+        return result
+
+    def start_update(self, download_url):
+        import webview as _wv
+        def on_progress(pct, status):
+            safe = status.replace("'", "\\'")
+            for w in _wv.windows:
+                try:
+                    w.evaluate_js(
+                        "window.dispatchEvent(new CustomEvent('aurum-update-progress',"
+                        "{detail:{pct:" + str(pct) + ",status:'" + safe + "'}}))"
+                    )
+                except: pass
+        def on_done(success, message):
+            safe = message.replace("'", "\\'")
+            val  = "true" if success else "false"
+            for w in _wv.windows:
+                try:
+                    w.evaluate_js(
+                        "window.dispatchEvent(new CustomEvent('aurum-update-done',"
+                        "{detail:{success:" + val + ",message:'" + safe + "'}}))"
+                    )
+                except: pass
+        download_and_install(download_url, on_progress, on_done)
+        return {"status": "started"}
+
+    def get_current_version(self):
+        return CURRENT_VERSION
+
+    def restart_app(self):
+        import subprocess
+        print("[UPDATE] Restarting AurumOS...")
+        subprocess.Popen([sys.executable] + sys.argv[:])
+        sys.exit(0)
 
     def get_stagnant_report(self, threshold):
         try:
@@ -898,6 +1337,30 @@ class AurumAPI:
             return {"status": "success", "data": data}
         except Exception as e:
             return {"status": "error", "message": str(e)}
+
+    # ── SCALE API ──────────────────────────────────────────────────────────────
+    def scale_connect(self, port, baud=1200):
+        """Connect to scale. Default: COM4 @ 1200 baud (detected from test)."""
+        _scale.set_window(self._window)
+        return _scale.start(port, int(baud))
+
+    def scale_disconnect(self):
+        _scale.stop()
+        return {"status": "ok"}
+
+    def scale_get_ports(self):
+        """List available COM ports for scale selection."""
+        try:
+            import serial.tools.list_ports as _lp
+            return [{"port": p.device, "desc": p.description}
+                    for p in _lp.comports()]
+        except Exception as e:
+            return []
+
+    def scale_get_last(self):
+        """Get last stable weight reading."""
+        w = _scale.get_last()
+        return {"weight": w, "stable": True} if w else {"weight": None, "stable": False}
 
     def get_weight_stock_it_codes(self):
         return self.db.get_weight_stock_it_codes()
@@ -908,9 +1371,38 @@ class AurumAPI:
     def mark_as_tagged(self, entry_id):
         return self.db.mark_as_tagged(entry_id)
 
+    def get_machine_id(self):
+        try:
+            import uuid
+            return str(uuid.getnode())
+        except Exception as e:
+            return 'unknown'
+
+
+def _show_update_window(update_data, api):
+    try:
+        import json as _json
+        ui_dir    = get_asset_path("ui")
+        html_path = os.path.join(ui_dir, "update_notify.html")
+        if not os.path.exists(html_path):
+            print(f"[UPDATE] update_notify.html not found")
+            return
+        html    = open(html_path, encoding="utf-8").read()
+        data_js = _json.dumps(update_data)
+        inject  = f"<script>window.__UPDATE_DATA__={data_js};</script>"
+        html    = html.replace("<!DOCTYPE html>", "<!DOCTYPE html>" + inject, 1)
+        webview.create_window(
+            f"AurumOS Update v{update_data.get('version','')}",
+            html=html, js_api=api,
+            width=580, height=640, resizable=False
+        )
+        print(f"[OK] [UPDATE] Window opened for v{update_data.get('version')}")
+    except Exception as e:
+        print(f"[ERR] [UPDATE] Window error: {e}")
+
 
 def run_aur_os():
-    api = AurumAPI()
+    api          = AurumAPI()
     is_ready     = api.db.is_setup_complete()
     initial_file = "login.html" if is_ready else "setup.html"
     ui_dir       = get_asset_path("ui")
@@ -922,7 +1414,24 @@ def run_aur_os():
         width=1350, height=950, background_color='#ffffff'
     )
     api.set_window(window)
-    webview.start(lambda w: w.maximize(), window, gui='edgechromium', debug=False)
+
+    def _on_start(w):
+        w.maximize()
+        import time
+        def _bg_check():
+            time.sleep(6)
+            try:
+                r = check_for_update(timeout=8)
+                if r and r.get("available"):
+                    print(f"[UPDATE] New version available: {r['version']}")
+                    _show_update_window(r, api)
+                else:
+                    print(f"[UPDATE] Up to date ({CURRENT_VERSION})")
+            except Exception as e:
+                print(f"[UPDATE] Check error: {e}")
+        threading.Thread(target=_bg_check, daemon=True).start()
+
+    webview.start(_on_start, window, gui='edgechromium', debug=False)
 
 
 if __name__ == '__main__':

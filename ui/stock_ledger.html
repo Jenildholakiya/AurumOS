@@ -1,767 +1,794 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AurumOS | Master Stock Ledger Pro</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Master Stock Ledger</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.07);
+    --red:#b91c1c;--red-bg:#fef2f2;
+    --blue:#1d4ed8;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+    --sh2:0 8px 24px rgba(0,0,0,0.09);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);display:block;height:100vh;overflow:hidden;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
 
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@700;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+/* ── HEADER ── */
+header{
+    height:58px;background:var(--white);border-bottom:1px solid var(--rule);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;flex-shrink:0;position:relative;z-index:100;
+}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-left{display:flex;align-items:center;gap:14px;}
+.btn-back{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 13px;border-radius:6px;
+    border:1px solid var(--rule);background:var(--cream);
+    font-size:0.72rem;font-weight:600;color:var(--ink3);
+    cursor:pointer;text-decoration:none;transition:all 0.14s;font-family:var(--sans);
+}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.h-title{font-family:var(--serif);font-size:1rem;color:var(--ink);letter-spacing:-0.2px;}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-right{display:flex;align-items:center;gap:12px;}
+.h-clock{font-family:var(--mono);font-size:0.64rem;color:var(--muted2);background:var(--cream2);padding:5px 11px;border-radius:4px;border:1px solid var(--rule);}
 
-        <style>
-            :root {
-                --primary: #0f172a;
-                --accent: #b59410;
-                --accent-dark: #8a7b0d;
-                --bg-main: #f1f5f9;
-                --border: #cbd5e1;
-                --text-main: #1e293b;
-                --text-muted: #64748b;
-                --shadow-up: 0 -10px 40px rgba(0,0,0,0.15);
-                --table-line: #e2e8f0;
-                --success: #059669;
-                --error: #e11d48;
-                --cb-checked: #007bff;
-            }
+/* ── CONTENT ── */
+.content{padding:14px 18px;display:flex;flex-direction:column;height:calc(100vh - 58px);gap:0;}
 
-            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-            body { display: block; height: 100vh; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+/* ── TABLE CARD ── */
+.table-card{background:var(--white);border-radius:10px 10px 0 0;border:1px solid var(--rule);border-bottom:none;display:flex;flex-direction:column;height:100%;overflow:hidden;box-shadow:var(--sh);}
 
-            input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-            input[type=number] { -moz-appearance: textfield; }
+/* ── TOOLBAR ── */
+.toolbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 16px;border-bottom:1px solid var(--rule);
+    background:var(--cream);flex-shrink:0;gap:12px;
+}
+.toolbar-title{
+    font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+    color:var(--ink3);display:flex;align-items:center;gap:8px;
+}
+.toolbar-title::before{content:'';width:3px;height:14px;background:var(--gold2);border-radius:99px;}
+.toolbar-right{display:flex;align-items:center;gap:8px;}
 
-            main { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; width: 100vw; position: relative; z-index: 1; }
+/* Date nav */
+.date-cluster{display:flex;align-items:center;gap:5px;padding-right:12px;border-right:1px solid var(--rule);}
+.date-pill{
+    font-family:var(--mono);font-size:0.67rem;font-weight:500;color:var(--gold3);
+    background:var(--gold-bg);border:1px solid var(--gold-ln);
+    padding:5px 12px;border-radius:5px;min-width:140px;text-align:center;
+    cursor:pointer;user-select:none;position:relative;
+}
+.date-pill input[type=date]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.nav-btn{
+    width:28px;height:28px;border-radius:5px;border:1px solid var(--rule);
+    background:var(--white);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--ink3);transition:all 0.13s;font-size:0.8rem;
+}
+.nav-btn:hover{background:var(--cream2);color:var(--ink);}
+.nav-btn:disabled{opacity:0.35;cursor:not-allowed;}
 
-            header {
-                height: 60px; background: #fff; border-bottom: 1px solid var(--border);
-                display: flex; align-items: center; justify-content: space-between;
-                padding: 0 25px; flex-shrink: 0; z-index: 100;
-            }
+/* Icon buttons */
+.icon-btn{
+    width:30px;height:30px;border-radius:6px;border:1px solid var(--rule);
+    background:var(--white);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--ink3);transition:all 0.13s;
+}
+.icon-btn:hover{background:var(--cream2);border-color:var(--gold-ln);color:var(--gold3);}
+.icon-btn.del:hover{background:var(--red-bg);border-color:rgba(185,28,28,0.2);color:var(--red);}
+.icon-btn:disabled{opacity:0.3;cursor:not-allowed;}
 
-            .header-left { display: flex; align-items: center; gap: 20px; }
-            .btn-back {
-                display: flex; align-items: center; gap: 10px; padding: 8px 15px; border-radius: 8px; border: 1.5px solid #e2e8f0;
-                background: #fff; color: var(--primary); font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
-            }
-            .btn-back:hover { background: var(--bg-main); border-color: var(--border); transform: translateX(-2px); }
+/* Print tools */
+#print-tools{display:none;align-items:center;gap:6px;padding-right:10px;border-right:1px solid var(--rule);}
+.btn-print{
+    background:var(--gold);color:#fff;border:none;
+    padding:0 12px;height:28px;border-radius:5px;
+    font-family:var(--sans);font-weight:600;font-size:0.68rem;
+    cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.14s;
+}
+.btn-print:hover{background:var(--gold3);}
+.print-select{
+    padding:0 9px;height:28px;border-radius:5px;border:1px solid var(--gold-ln);
+    font-family:var(--sans);font-weight:500;font-size:0.68rem;
+    color:var(--gold3);background:var(--gold-bg);cursor:pointer;outline:none;
+}
 
-            header h1 { font-size: 1.15rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; position: relative; padding-top: 4px; }
-            header h1::before { content: ""; position: absolute; top: -2px; left: 0; width: 20px; height: 3px; background: var(--accent); border-radius: 10px; }
+/* Add button */
+.btn-add{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:0 14px;height:30px;border-radius:6px;
+    background:var(--ink);color:#fff;border:none;
+    font-family:var(--sans);font-size:0.72rem;font-weight:600;
+    cursor:pointer;transition:all 0.14s;
+}
+.btn-add:hover{background:var(--ink2);}
 
-            .header-right { display: flex; align-items: center; gap: 20px; }
-            #real-time-clock { font-size: 0.8rem; font-weight: 800; color: var(--accent); letter-spacing: 0.5px; }
-            .avatar { width: 38px; height: 38px; background: var(--primary); color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; border: 2px solid #fff; }
+/* ── TABLE ── */
+.table-container{flex-grow:1;overflow:auto;}
+table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;}
+thead{position:sticky;top:0;z-index:10;}
+th{
+    background:var(--cream);padding:8px 12px;text-align:left;
+    font-size:0.57rem;text-transform:uppercase;color:var(--muted2);
+    font-weight:600;border-bottom:1px solid var(--rule);
+    border-right:1px solid var(--rule2);letter-spacing:0.7px;
+    font-family:var(--sans);white-space:nowrap;
+}
+th .resizer{position:absolute;right:0;top:0;height:100%;width:4px;cursor:col-resize;user-select:none;z-index:1;}
+tr{cursor:pointer;transition:background 0.1s;}
+tr:hover td{background:rgba(168,125,30,0.025) !important;}
+tr.selected-row td{background:rgba(29,78,216,0.04) !important;}
+tr.color-tagged td{background:rgba(21,128,61,0.03) !important;}
+tr.color-pending td{background:rgba(168,125,30,0.03) !important;}
+td{
+    padding:8px 12px;font-size:0.76rem;font-weight:500;
+    border-bottom:1px solid var(--rule2);border-right:1px solid var(--rule2);
+    color:var(--ink);white-space:nowrap;font-family:var(--sans);
+    transition:background 0.1s;
+}
 
-            .content { padding: 10px 15px; display: flex; flex-direction: column; height: 100%; gap: 0px; }
-            .table-card { background: white; border-radius: 12px 12px 0 0; border: 1px solid var(--border); border-bottom: none; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+/* Status badge */
+.badge-tagged{font-size:0.58rem;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--green-bg);color:var(--green);border:1px solid rgba(21,128,61,0.18);}
+.badge-pending{font-size:0.58rem;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);}
 
-            .table-header-tool { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; border-bottom: 1px solid var(--border); background: #fafbfc; }
-            .table-title { font-size: 0.9rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-            .table-title::before { content: ""; width: 4px; height: 16px; background: var(--accent); border-radius: 10px; }
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(14,12,9,0.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;}
+.modal-card{background:var(--white);border-radius:12px;overflow:hidden;box-shadow:var(--sh2);transform:translateY(8px) scale(0.98);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1);}
+.modal-overlay.open .modal-card{transform:translateY(0) scale(1);}
+.modal-head{
+    padding:14px 20px;border-bottom:1px solid var(--rule);
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--cream);
+}
+.modal-head-title{font-family:var(--serif);font-size:1rem;color:var(--ink);}
+.modal-head-title em{color:var(--gold3);font-style:italic;}
+.modal-close{
+    width:26px;height:26px;border-radius:5px;border:1px solid var(--rule);
+    background:var(--white);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:0.85rem;color:var(--muted);transition:all 0.13s;
+}
+.modal-close:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
 
-            .header-action-group { display: flex; align-items: center; gap: 8px; }
+/* Item modal */
+.item-modal{width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;}
+.item-modal .modal-body{flex:1;overflow-y:auto;}
+.item-table{width:100%;border-collapse:collapse;}
+.item-table th{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);padding:8px 16px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.item-table td{padding:9px 16px;font-size:0.76rem;font-weight:500;color:var(--ink);border-bottom:1px solid var(--rule2);}
+.item-table tr:hover td{background:var(--gold-bg);cursor:pointer;}
+.modal-footer{padding:12px 16px;border-top:1px solid var(--rule);background:var(--cream);display:flex;gap:10px;}
 
-            .date-nav-cluster { display: flex; align-items: center; gap: 5px; padding-right: 15px; border-right: 1.5px solid var(--table-line); }
-            .date-calendar-wrapper { position: relative; cursor: pointer; transition: transform 0.1s; }
-            .date-calendar-wrapper:active { transform: scale(0.98); }
-            .date-calendar-wrapper:hover .date-indicator { background: #fef3c7; border-color: var(--accent); }
-            .date-indicator {
-                font-family: 'JetBrains Mono'; font-weight: 800; font-size: 0.75rem; color: var(--accent);
-                background: #fffbeb; padding: 6px 12px; border-radius: 6px; border: 1px solid #fef3c7;
-                min-width: 160px; text-align: center; user-select: none; display: flex; align-items: center; justify-content: center; gap: 8px;
-            }
-            #rojmelDatePicker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; pointer-events: none; }
+/* Entry modal */
+.entry-modal{width:680px;max-width:95vw;}
+.entry-form{padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);}
+.fg input{
+    height:38px;padding:0 11px;
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:6px;font-family:var(--mono);font-size:0.8rem;
+    color:var(--ink);outline:none;width:100%;
+    transition:border-color 0.13s,box-shadow 0.13s,background 0.13s;
+}
+.fg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);background:var(--white);}
+.fg input[readonly]{background:var(--cream2);color:var(--gold3);cursor:default;font-weight:500;}
+.fg input.calc-out{background:rgba(21,128,61,0.05);border-color:rgba(21,128,61,0.2);color:var(--green);font-weight:600;}
+.btn-save{
+    width:100%;height:42px;background:var(--ink);color:#fff;border:none;
+    border-radius:7px;font-family:var(--sans);font-size:0.8rem;font-weight:600;
+    cursor:pointer;transition:all 0.15s;margin-top:2px;
+}
+.btn-save:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);}
+.btn-save:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 
-            #print-tools { display: none; align-items: center; gap: 6px; padding-right: 8px; border-right: 2px solid var(--table-line); animation: slideIn 0.3s ease; }
-            .btn-print { background: var(--accent); color: white; border: none; padding: 0 12px; height: 32px; border-radius: 6px; font-weight: 800; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
-            .btn-icon { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid var(--border); background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; color: var(--primary); }
-            .btn-icon.danger:not(:disabled):hover { border-color: var(--error); color: var(--error); background: #fff1f2; }
+/* Delete confirm */
+.del-modal{width:400px;max-width:95vw;}
+.del-inner{padding:26px 24px 22px;text-align:center;}
+.del-icon{width:52px;height:52px;border-radius:12px;background:var(--red-bg);border:1.5px solid rgba(185,28,28,0.15);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 14px;position:relative;}
+.del-icon::after{content:'';position:absolute;inset:-5px;border-radius:16px;border:2px solid rgba(185,28,28,0.07);animation:dp 2s ease-in-out infinite;}
+@keyframes dp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.del-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:6px;}
+.del-sub{font-size:0.76rem;color:var(--muted);line-height:1.5;margin-bottom:18px;}
+.del-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-dc{padding:10px;border:1px solid var(--rule);border-radius:6px;background:var(--white);font-family:var(--sans);font-size:0.76rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.13s;}
+.btn-dc:hover{background:var(--cream2);}
+.btn-dd{padding:10px;border:none;border-radius:6px;background:linear-gradient(135deg,#ef4444,#dc2626);font-family:var(--sans);font-size:0.76rem;font-weight:700;color:#fff;cursor:pointer;transition:all 0.15s;box-shadow:0 3px 10px rgba(239,68,68,0.28);}
+.btn-dd:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(239,68,68,0.35);}
 
-            .table-container { flex-grow: 1; overflow: auto; background: white; }
-            table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; }
-            thead { position: sticky; top: 0; z-index: 10; }
-            th {
-                background: #f8fafc; padding: 10px 15px; text-align: left; font-size: 0.65rem; text-transform: uppercase;
-                color: var(--text-muted); font-weight: 800; border-bottom: 2px solid var(--table-line);
-                border-right: 1px solid var(--table-line); letter-spacing: 0.5px; position: relative;
-            }
-            th .resizer { position: absolute; right: 0; top: 0; height: 100%; width: 4px; cursor: col-resize; user-select: none; z-index: 1; }
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:10px 18px;border-radius:7px;font-size:0.76rem;font-weight:600;box-shadow:var(--sh2);z-index:9999;display:none;animation:tIn 0.3s ease;}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-            tr { cursor: pointer; transition: background 0.2s; }
-            tr:hover td { background: #f1f5f9 !important; }
-            tr.selected-row td { background: #e0f2fe !important; border-bottom-color: #bae6fd; }
-
-            /* ─── HIGHLIGHT COLOUR IDENTIFICATION STATE DEFAULTS ─── */
-            tr.color-tagged td { background: #f0fdf4 !important; } /* Soft Green background */
-            tr.color-pending td { background: #fff1e6 !important; } /* Soft Amber background */
-
-            td { padding: 8px 15px; font-size: 0.8rem; font-weight: 600; border-bottom: 1px solid var(--table-line); border-right: 1px solid var(--table-line); color: var(--text-main); white-space: nowrap; transition: 0.1s; }
-
-            .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 9999; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
-            .modal-card { background: white; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; pointer-events: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-            .preview-modal-card { width: 700px; padding: 25px; border: 2.5px solid var(--primary); }
-            .item-modal-card { width: 750px; height: 65vh; border: 2.5px solid var(--primary); }
-            .entry-modal-card { width: 750px; border: 2.5px solid var(--primary); }
-
-            .modal-header { padding: 12px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; }
-            .modal-header h2 { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-
-            .entry-form-master { padding: 25px; background: #fff; display: flex; flex-direction: column; gap: 15px; }
-            .row-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: end; }
-            .form-group { display: flex; flex-direction: column; gap: 6px; }
-            .form-group label { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-            .form-group input { padding: 12px 14px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.95rem; font-weight: 700; color: var(--text-main); outline: none; transition: 0.2s; background: #fcfcfc; width: 100%; }
-            .form-group input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(181, 148, 16, 0.1); }
-            .form-group input[readonly] { background: #f8fafc; color: var(--accent-dark); border-style: dashed; cursor: not-allowed; border-color: var(--border); }
-
-            .btn-save-final { background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.9rem; height: 50px; width: 100%; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-            .btn-save-final:hover:not(:disabled) { background: #1e293b; transform: translateY(-2px); }
-
-            .save-popup-overlay { position: fixed; bottom: 30px; right: 30px; display: none; z-index: 10000; animation: popupIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-            .save-popup-card { background: var(--primary); color: white; padding: 15px 25px; border-radius: 12px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1.5px solid var(--accent); }
-
-            .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; border: 1px solid transparent; display: inline-block; }
-
-            @media print { body { display: none !important; } }
-        </style>
-
-        <link rel="stylesheet" href="sidebar.css">
-    <style id="aurum-layout-fix">
-/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
-body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { display: none !important; }
-body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+/* Search input */
+.srch-inp{
+    flex:1;height:36px;padding:0 12px;
+    background:var(--white);border:1px solid var(--rule);
+    border-radius:6px;font-family:var(--sans);font-size:0.78rem;
+    color:var(--ink);outline:none;
+}
+.srch-inp:focus{border-color:var(--gold2);}
+.btn-create-item{
+    display:inline-flex;align-items:center;gap:5px;
+    height:36px;padding:0 13px;border-radius:6px;
+    border:1px solid var(--rule);background:var(--white);
+    font-family:var(--sans);font-size:0.72rem;font-weight:500;
+    color:var(--ink3);cursor:pointer;white-space:nowrap;transition:all 0.13s;
+}
+.btn-create-item:hover{background:var(--cream2);color:var(--ink);}
 </style>
-    </head>
-    <body>
-    <script src="sidebar.js"></script>
-
-    <div id="sidebar-container"></div>
+</head>
+<body>
 
 
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
 
-    <main>
-        <header>
-            <div class="header-left">
-                <button class="btn-back" onclick="location.href='inventory.html'">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                    Inventory
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){
+      clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
+<main>
+<header>
+    <div class="h-left">
+        <button class="btn-back" onclick="history.back()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            Inventory
+        </button>
+        <div class="h-title">Master <em>Stock Ledger</em></div>
+    </div>
+    <div class="h-right">
+        <div class="h-clock" id="h-clock">—</div>
+    </div>
+</header>
+
+<div class="content">
+<div class="table-card">
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-title">Inventory Activity Log</div>
+        <div class="toolbar-right">
+
+            <!-- Date navigation -->
+            <div class="date-cluster">
+                <button class="nav-btn" id="navPrevBtn" onclick="navigateDate(-1)" title="Previous day">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
-                <h1>Master Stock Ledger</h1>
-            </div>
-            <div class="header-right">
-                <div id="real-time-clock">--/--/---- | --:--:-- --</div>
-                <div class="avatar">JD</div>
-            </div>
-        </header>
-
-        <div class="content">
-            <div class="table-card">
-                <div class="table-header-tool">
-                    <div class="table-title">Inventory Activity Log</div>
-                    <div class="header-action-group">
-
-                        <div class="date-nav-cluster">
-                            <button id="navPrevBtn" class="btn-icon" onclick="navigateDate(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m15 18-6-6 6-6"/></svg></button>
-                            <div class="date-calendar-wrapper" onclick="document.getElementById('rojmelDatePicker').showPicker()">
-                                <div class="date-indicator" id="currentSheetDate">LOADING...</div>
-                                <input type="date" id="rojmelDatePicker" onchange="handleManualDateChange(this.value)" style="position: absolute; opacity: 0; pointer-events: none;">
-                            </div>
-                            <button id="navNextBtn" class="btn-icon" onclick="navigateDate(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 18 6-6-6-6"/></svg></button>
-                        </div>
-
-                        <div id="print-tools">
-                            <button class="btn-icon" title="View Preview" onclick="showTagPreview()" style="border-color: var(--accent); color: var(--accent);">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            </button>
-                            <select id="printVariation" style="padding: 5px 10px; border-radius: 6px; border: 1.5px solid var(--accent); font-weight: 700; font-size: 0.75rem; height: 32px; outline: none; background: #fff; cursor: pointer;">
-                                <option value="ring_butterfly">Ring Butterfly Tag</option>
-                                <option value="katti_tag">Katti / Wastage Tag</option>
-                                <option value="para_stone">Para / Stone Tag</option>
-                                <option value="standard_linear">Standard Linear Tag</option>
-                            </select>
-                            <button class="btn-print" onclick="executeSilentPrint()">Print Tag</button>
-                        </div>
-
-                        <button id="deleteBtn" class="btn-icon danger" onclick="openDeleteConfirm()" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                        <button class="btn-icon" title="Save Table Data" onclick="triggerSaveTable()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg></button>
-                        <button id="addReceiptBtn" class="btn-back" style="background:var(--primary); color:white; padding: 0 15px; border:none; height: 32px;" onclick="openModal('itemModal')">+ Receipt</button>
-                    </div>
+                <div class="date-pill" id="currentSheetDate">
+                    LOADING…
+                    <input type="date" id="rojmelDatePicker" onchange="handleManualDateChange(this.value)">
                 </div>
-                <div class="table-container">
-                    <table id="ledgerTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 45px; text-align: center;"><input type="checkbox" id="masterCheckbox" onclick="toggleSelectAll(this)"></th>
-                                <th style="width: 110px;">IT CODE<div class="resizer"></div></th>
-                                <th style="width: 180px;">IT Name<div class="resizer"></div></th>
-                                <th style="width: 70px;">PCS<div class="resizer"></div></th>
-                                <th style="width: 70px;">Touch<div class="resizer"></div></th>
-                                <th style="width: 90px;">Size<div class="resizer"></div></th>
-                                <th style="width: 150px;">Design<div class="resizer"></div></th>
-                                <th style="width: 100px;">GR WT<div class="resizer"></div></th>
-                                <th style="width: 100px; color: var(--accent);">PARA WT<div class="resizer"></div></th>
-                                <th style="width: 90px;">LESS<div class="resizer"></div></th>
-                                <th style="width: 100px; color: var(--success);">NT WT<div class="resizer"></div></th>
-                                <th style="width: 100px;">Ghat WT<div class="resizer"></div></th>
-                                <th style="width: 120px;">HU ID<div class="resizer"></div></th>
-                                <th style="width: 110px;">STATUS<div class="resizer"></div></th>
-                            </tr>
-                        </thead>
-                        <tbody id="ledger-body"></tbody>
-                    </table>
-                </div>
+                <button class="nav-btn" id="navNextBtn" onclick="navigateDate(1)" title="Next day">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
             </div>
-        </div>
-    </main>
 
-    <div class="modal-overlay" id="itemModal">
-        <div class="modal-card item-modal-card">
-            <div class="modal-header">
-                <h2>Select Item Master</h2>
-                <button onclick="closeModal('itemModal')" style="background:none; border:none; color:white; cursor:pointer; font-size:1.5rem;">×</button>
+            <!-- Print tools (shown when rows selected) -->
+            <div id="print-tools">
+                <button class="icon-btn" title="Preview" onclick="showTagPreview()" style="border-color:var(--gold-ln);color:var(--gold3);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <select id="printVariation" class="print-select">
+                    <option value="ring_butterfly">Ring Butterfly</option>
+                    <option value="katti_tag">Katti / Wastage</option>
+                    <option value="para_stone">Para / Stone</option>
+                    <option value="standard_linear">Standard Linear</option>
+                </select>
+                <button class="btn-print" onclick="executeSilentPrint()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Print Tag
+                </button>
             </div>
-            <div class="modal-body-scroll" style="flex-grow: 1; overflow-y: auto;">
-                <table style="width:100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">IT Code</th>
-                            <th>Item Name</th>
-                            <th style="width: 25%;">Category</th>
-                        </tr>
-                    </thead>
-                    <tbody id="modal-item-list"></tbody>
-                </table>
-            </div>
-            <div class="modal-footer" style="padding: 15px 25px; background: #f8fafc; border-top: 1.5px solid var(--border); display: flex; gap: 15px; align-items: center;">
-                <input type="text" id="modalSearchInput" placeholder="Quick Search by Name or Code..."
-                       oninput="handleModalSearch(this.value)" style="flex-grow: 1; height: 40px; padding: 0 15px; border-radius: 8px; border: 1.5px solid var(--border); outline: none;">
-                <button class="btn-back" onclick="location.href='create_item.html'" style="background: white; border: 1.5px solid var(--primary); height: 40px; white-space: nowrap;">+ Create Item</button>
-            </div>
+
+            <button class="icon-btn del" id="deleteBtn" onclick="openDeleteConfirm()" disabled title="Delete selected">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+            <button class="icon-btn" onclick="triggerSaveTable()" title="Save">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            </button>
+            <button class="btn-add" id="addReceiptBtn" onclick="openModal('itemModal')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Receipt
+            </button>
         </div>
     </div>
 
-    <div class="modal-overlay" id="entryModal">
-        <div class="modal-card entry-modal-card">
-            <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 5px; height: 15px; background: var(--accent); border-radius: 2px;"></div>
-                    <h2>Receipt Entry: <span id="display-it-name" style="color: var(--accent); text-decoration: underline;">---</span></h2>
-                </div>
-                <button onclick="closeModal('entryModal')" style="background:none; border:none; color:white; cursor:pointer; font-size:1.5rem;">×</button>
+    <!-- Table -->
+    <div class="table-container">
+        <table id="ledgerTable">
+            <thead>
+                <tr>
+                    <th style="width:40px;text-align:center;"><input type="checkbox" id="masterCheckbox" onclick="toggleSelectAll(this)" style="accent-color:var(--gold3);"></th>
+                    <th style="width:100px;">IT Code</th>
+                    <th style="width:160px;">IT Name</th>
+                    <th style="width:55px;">PCS</th>
+                    <th style="width:65px;">Touch</th>
+                    <th style="width:70px;">Size</th>
+                    <th style="width:130px;">Design</th>
+                    <th style="width:85px;">GR WT</th>
+                    <th style="width:85px;color:var(--gold3);">Para WT</th>
+                    <th style="width:75px;color:var(--red);">Less</th>
+                    <th style="width:85px;color:var(--green);">NT WT</th>
+                    <th style="width:85px;">Ghat WT</th>
+                    <th style="width:110px;">HU ID</th>
+                    <th style="width:95px;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="ledger-body">
+                <tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">Loading entries…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+</main>
+
+<!-- ── ITEM MODAL ── -->
+<div class="modal-overlay" id="itemModal">
+    <div class="modal-card item-modal">
+        <div class="modal-head">
+            <div class="modal-head-title">Select <em>Item Master</em></div>
+            <div class="modal-close" onclick="closeModal('itemModal')">✕</div>
+        </div>
+        <div class="modal-body" style="flex:1;overflow-y:auto;">
+            <table class="item-table">
+                <thead><tr><th>IT Code</th><th>Item Name</th><th>Category</th></tr></thead>
+                <tbody id="modal-item-list"></tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <input type="text" class="srch-inp" id="modalSearchInput" placeholder="Search by name or code…" oninput="handleModalSearch(this.value)">
+            <button class="btn-create-item" onclick="location.href='create_item.html'">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create Item
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── ENTRY MODAL ── -->
+<div class="modal-overlay" id="entryModal">
+    <div class="modal-card entry-modal">
+        <div class="modal-head">
+            <div class="modal-head-title">Receipt Entry — <em id="display-it-name">—</em></div>
+            <div class="modal-close" onclick="closeModal('entryModal')">✕</div>
+        </div>
+        <div class="entry-form">
+            <div class="form-grid">
+                <div class="fg"><label>IT Name</label><input type="text" id="entry-it-name" readonly></div>
+                <div class="fg"><label>IT Code</label><input type="text" id="entry-it-code" readonly></div>
+                <div class="fg"><label>Tag ID</label><input type="text" id="entry-tag-id" placeholder="Auto-generated" style="background:var(--gold-bg);border-color:var(--gold-ln);color:var(--gold3);"></div>
+                <div class="fg"><label>PCS <span style="color:var(--red);">*</span></label><input type="number" id="entry-pcs" class="entry-input nav-target" oninput="validateFormSecurity()" placeholder="0"></div>
             </div>
-            <div class="entry-form-master" id="entryForm">
-                <div class="row-grid">
-                    <div class="form-group"><label>IT Name</label><input type="text" id="entry-it-name" readonly tabindex="-1"></div>
-                    <div class="form-group"><label>IT Code</label><input type="text" id="entry-it-code" readonly tabindex="-1"></div>
-                    <div class="form-group"><label>Tag ID</label><input type="text" id="entry-tag-id" placeholder="Generating..." style="background: #fffef0; color: #000; font-weight: 800; border-color: var(--accent);"></div>
-                    <div class="form-group"><label>PCS *</label><input type="number" id="entry-pcs" class="entry-input nav-target" oninput="validateFormSecurity()" placeholder="0"></div>
+            <div class="form-grid">
+                <div class="fg" style="grid-column:span 2;"><label>Size</label><input type="text" id="entry-size" class="entry-input nav-target" placeholder="e.g. 17"></div>
+                <div class="fg" style="grid-column:span 2;"><label>Design Name</label><input type="text" id="entry-ds" class="entry-input nav-target" placeholder="Design info"></div>
+            </div>
+            <div class="form-grid">
+                <div class="fg"><label>GR WT <span style="color:var(--red);">*</span></label><input type="number" id="gr-wt" class="entry-input calc-trigger nav-target" step="0.001" oninput="validateFormSecurity()" placeholder="0.000"></div>
+                <div class="fg"><label>Para / Stone WT</label><input type="number" id="para-stone-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+                <div class="fg"><label>Less WT</label><input type="number" id="ls-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+                <div class="fg"><label>Package WT</label><input type="number" id="pkg-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+            </div>
+            <div class="form-grid">
+                <div class="fg"><label>Ghat WT</label><input type="number" id="entry-ghat" class="entry-input nav-target" step="0.001" placeholder="0.000"></div>
+                <div class="fg"><label>HU ID</label><input type="text" id="entry-huid" class="entry-input nav-target" placeholder="HUID"></div>
+                <div class="fg"><label>NT WT (Auto)</label><input type="text" id="nt-wt" readonly class="calc-out" placeholder="0.000"></div>
+                <div class="fg"><label>Touch (%)</label><input type="text" id="entry-touch" readonly placeholder="—"></div>
+            </div>
+            <div class="form-grid">
+                <div class="fg"><label>Wastage (%)</label><input type="number" id="entry-wastage" class="entry-input nav-target calc-trigger" placeholder="0"></div>
+                <div class="fg" style="grid-column:span 3;"><label>Fine Gold (Auto)</label>
+                    <input type="text" id="entry-fine-wt" readonly placeholder="0.000" style="background:var(--green-bg);border-color:rgba(21,128,61,0.2);color:var(--green);font-weight:700;font-size:1rem;">
                 </div>
-                <div class="row-grid">
-                    <div class="form-group" style="grid-column: span 2;"><label>Size</label><input type="text" id="entry-size" class="entry-input nav-target" placeholder="e.g. 17"></div>
-                    <div class="form-group" style="grid-column: span 2;"><label>Design Name</label><input type="text" id="entry-ds" class="entry-input nav-target" placeholder="Design Info"></div>
-                </div>
-                <div class="row-grid">
-                    <div class="form-group"><label>GR WT *</label><input type="number" id="gr-wt" class="entry-input calc-trigger nav-target" step="0.001" oninput="validateFormSecurity()" placeholder="0.000"></div>
-                    <div class="form-group"><label>PARA / STONE WT</label><input type="number" id="para-stone-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-                    <div class="form-group"><label>Less WT</label><input type="number" id="ls-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-                    <div class="form-group"><label>Package WT</label><input type="number" id="pkg-wt" class="entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-                </div>
-                <div class="row-grid">
-                    <div class="form-group"><label>Ghat WT</label><input type="number" id="entry-ghat" class="entry-input nav-target" step="0.001" placeholder="0.000"></div>
-                    <div class="form-group"><label>HU ID</label><input type="text" id="entry-huid" class="entry-input nav-target" placeholder="HUID"></div>
-                    <div class="form-group"><label>NT WT (Auto-Calc)</label><input type="text" id="nt-wt" readonly tabindex="-1" style="background: #f8fafc; border: 1.5px solid var(--border); font-weight: 800;" placeholder="0.000"></div>
-                </div>
+            </div>
+            <button class="btn-save" id="saveFinalBtn" onclick="saveStockEntry()" disabled>Save Entry</button>
+        </div>
+    </div>
+</div>
 
-                <div class="row-grid">
-                    <div class="form-group"><label>Touch (%)</label><input type="text" id="entry-touch" readonly tabindex="-1" placeholder="00"></div>
-                    <div class="form-group"><label>Wastage (%)</label><input type="number" id="entry-wastage" class="entry-input nav-target calc-trigger" placeholder="0"></div>
-                    <div class="form-group" style="grid-column: span 2;">
-                        <label>Fine Gold (Auto-Calc)</label>
-                        <input type="text" id="entry-fine-wt" readonly tabindex="-1"
-                               style="background: #f0fdf4; border: 2px solid var(--success); font-size: 1.1rem; color: var(--success); font-weight: 800;"
-                               placeholder="0.000">
-                    </div>
-                </div>
-
-                <div style="margin-top: 10px;"><button class="btn-save-final" id="saveFinalBtn" onclick="saveStockEntry()" disabled>SAVE ENTRY</button></div>
+<!-- ── DELETE MODAL ── -->
+<div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal-card del-modal">
+        <div class="del-inner">
+            <div class="del-icon">🗑️</div>
+            <div class="del-title">Delete Records?</div>
+            <div class="del-sub">Permanently remove <span id="delete-count-display" style="font-weight:700;color:var(--red);">0</span> record(s) from the ledger. This cannot be undone.</div>
+            <div class="del-btns">
+                <button class="btn-dc" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+                <button class="btn-dd" id="confirmDeleteBtn" onclick="executeDelete()">Delete Records</button>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="modal-overlay" id="deleteConfirmModal">
-        <div class="modal-card" style="width: 420px; border: 2.5px solid var(--error); padding: 30px; text-align: center; border-radius: 16px;">
-            <div style="background: #fff1f2; color: var(--error); width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; transform: rotate(-5deg);">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+<!-- ── PREVIEW MODAL ── -->
+<div class="modal-overlay" id="previewModal">
+    <div class="modal-card" style="width:600px;max-width:95vw;padding:24px;">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Tag Print Preview</span>
+                <div class="modal-close" onclick="closeModal('previewModal')">✕</div>
             </div>
-            <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 8px; letter-spacing: -0.5px;">Confirm Deletion</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600; line-height: 1.5; margin-bottom: 25px; padding: 0 10px;">
-                You are about to permanently remove <span id="delete-count-display" style="color: var(--error); font-weight: 800; background: #fff1f2; padding: 2px 6px; border-radius: 4px;">0</span> records from the journal. This action cannot be undone.
-            </p>
-            <div style="display: flex; gap: 12px;">
-                <button class="btn-back" onclick="closeModal('deleteConfirmModal')" style="flex: 1; height: 48px; justify-content: center; font-weight: 800;">CANCEL</button>
-                <button class="btn-save-final" id="confirmDeleteBtn" onclick="executeDelete()" style="flex: 1; height: 48px; background: var(--error); font-weight: 800; color: white; border: none; border-radius: 8px; cursor: pointer;">DELETE RECORDS</button>
+            <div style="background:var(--cream);padding:20px;border-radius:8px;border:1px dashed var(--rule);display:flex;justify-content:center;">
+                <img id="tagPreviewImg" src="" style="max-width:100%;border:1px solid var(--rule);background:white;">
             </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="previewModal">
-        <div class="modal-card preview-modal-card">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-                <h2 style="font-weight: 800; font-size: 0.9rem; color: var(--primary); align-self: flex-start; text-transform: uppercase;">Tag Print Preview</h2>
-                <div style="background: #f1f5f9; padding: 25px; border-radius: 12px; border: 1.5px dashed var(--border); width: 100%; display: flex; justify-content: center;">
-                    <img id="tagPreviewImg" src="" style="width: 100%; max-width: 600px; border: 1px solid #000; background: white;">
-                </div>
-                <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-                    <button class="btn-back" onclick="closeModal('previewModal')" style="flex: 1; height: 45px; justify-content: center;">CLOSE</button>
-                    <button class="btn-save-final" onclick="executeSilentPrint(); closeModal('previewModal');" style="flex: 1; height: 45px;">CONFIRM & PRINT</button>
-                </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <button class="btn-dc" onclick="closeModal('previewModal')">Close</button>
+                <button class="btn-save" onclick="executeSilentPrint();closeModal('previewModal');" style="margin-top:0;height:38px;">Confirm &amp; Print</button>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="save-popup-overlay" id="saveSuccessPopup"><div class="save-popup-card"><b>Database Synchronized Successfully</b></div></div>
+<!-- Toast -->
+<div class="toast" id="toast">✓ Database synchronized</div>
 
-    <script>
-        let masterProducts = [];
-        let ledgerData = [];
-        let availableDates = [];
-        let currentDateIdx = -1;
-        let viewDate = "";
-        let editingEntryId = null;
-        let rowsToDelete = [];
-        window.isPrinting = false;
+<script>
+var masterProducts=[],ledgerData=[],availableDates=[],currentDateIdx=-1,viewDate='',editingEntryId=null,rowsToDelete=[];
+window.isPrinting=false;
 
-        function generateUniqueTagID() {
-            return Math.floor(1000000000 + Math.random() * 9000000000).toString();
-        }
+// Clock
+setInterval(function(){
+    var n=new Date();
+    var el=document.getElementById('h-clock');
+    if(el) el.innerText=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();
+},1000);
 
-        function getSelectedItemsBatch() {
-            const checkedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
-            if (checkedRows.length === 0) return [];
+function generateUniqueTagID(){ return Math.floor(1000000000+Math.random()*9000000000).toString(); }
 
-            const variation = document.getElementById('printVariation')?.value || "ring_butterfly";
+function getSelectedItemsBatch(){
+    var checked=Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    if(!checked.length) return [];
+    var variation=document.getElementById('printVariation')?.value||'ring_butterfly';
+    return checked.map(function(cb){
+        var row=cb.closest('tr');
+        var item=ledgerData.find(function(d){return d.id==row.dataset.id;});
+        if(!item) return null;
+        var tagId=(item.tag_id||'').trim();
+        if(!tagId||tagId==='-'||tagId==='---') tagId=row.querySelector('.tag-id-hidden')?.innerText.trim()||'N/A';
+        var net=parseFloat(item.nt_wt||0),tch=parseFloat(item.touch||0),wst=parseFloat(item.wastage||0);
+        return {...item,tag_id:tagId||'N/A',gross_wt:parseFloat(item.gr_wt||0).toFixed(3),
+            less_wt:(parseFloat(item.ls_wt||0)+parseFloat(item.pkg_wt||0)).toFixed(3),
+            net_wt:net.toFixed(3),pure_wt:((net*(tch+wst))/100).toFixed(3),
+            wastage:item.wastage||'0',variation:variation};
+    }).filter(Boolean);
+}
 
-            return checkedRows.map(cb => {
-                const row = cb.closest('tr');
-                const item = ledgerData.find(d => d.id == row.dataset.id);
-                if (!item) return null;
+function openEditById(id){
+    var item=ledgerData.find(function(d){return d.id==id;});
+    if(!item) return;
+    editingEntryId=item.id;
+    document.getElementById('display-it-name').innerText=item.it_name||'—';
+    document.getElementById('entry-it-name').value=item.it_name||'';
+    document.getElementById('entry-it-code').value=item.it_code||'';
+    var rawId=(item.tag_id||'').toString().trim();
+    if(!rawId||rawId==='undefined'||rawId==='---'||rawId==='-') rawId=generateUniqueTagID();
+    document.getElementById('entry-tag-id').value=rawId;
+    document.getElementById('entry-pcs').value=item.pcs||1;
+    document.getElementById('entry-size').value=(item.size&&item.size!=='undefined'&&item.size!=='-')?item.size:'';
+    document.getElementById('entry-ds').value=(item.design&&item.design!=='undefined'&&item.design!=='-')?item.design:'';
+    document.getElementById('gr-wt').value=item.gr_wt||0;
+    document.getElementById('para-stone-wt').value=item.para_stone_wt||0;
+    document.getElementById('ls-wt').value=item.ls_wt||0;
+    document.getElementById('pkg-wt').value=item.pkg_wt||0;
+    document.getElementById('entry-ghat').value=item.ghat_wt||0;
+    document.getElementById('entry-huid').value=(item.huid&&item.huid!=='undefined'&&item.huid!=='-')?item.huid:'';
+    document.getElementById('entry-touch').value=item.touch||0;
+    document.getElementById('entry-wastage').value=item.wastage||0;
+    calculateNetWeight();
+    document.getElementById('saveFinalBtn').innerText='Update Entry';
+    openModal('entryModal');
+    validateFormSecurity();
+    setTimeout(function(){var el=document.getElementById('entry-pcs');el.focus();el.select();},200);
+}
 
-                let finalTagId = (item.tag_id || "").trim();
-                if (!finalTagId || finalTagId === "-" || finalTagId === "---") {
-                    finalTagId = row.querySelector('.tag-id-hidden')?.innerText.trim();
-                }
-
-                const net = parseFloat(item.nt_wt || 0);
-                const tch = parseFloat(item.touch || 0);
-                const wst = parseFloat(item.wastage || 0);
-                const pure = (net * (tch + wst)) / 100;
-
-                return {
-                    ...item,
-                    tag_id: (finalTagId && finalTagId !== "-") ? finalTagId : "N/A",
-                    gross_wt: parseFloat(item.gr_wt || 0).toFixed(3),
-                    less_wt: (parseFloat(item.ls_wt || 0) + parseFloat(item.pkg_wt || 0)).toFixed(3),
-                    net_wt: net.toFixed(3),
-                    pure_wt: pure.toFixed(3),
-                    wastage: item.wastage || "0",
-                    variation: variation
-                };
-            }).filter(x => x !== null);
-        }
-
-        function openEditById(id) {
-            const item = ledgerData.find(d => d.id == id);
-            if (!item) return;
-
-            editingEntryId = item.id;
-            document.getElementById('display-it-name').innerText = item.it_name || "---";
-            document.getElementById('entry-it-name').value = item.it_name || "";
-            document.getElementById('entry-it-code').value = item.it_code || "";
-
-            let rawId = (item.tag_id || "").toString().trim();
-            if (!rawId || rawId === "undefined" || rawId === "---" || rawId === "-") {
-                rawId = generateUniqueTagID();
-            }
-            document.getElementById('entry-tag-id').value = rawId;
-
-            document.getElementById('entry-pcs').value = item.pcs || 1;
-            document.getElementById('entry-size').value = (item.size && item.size !== "undefined" && item.size !== "-") ? item.size : "";
-            document.getElementById('entry-ds').value = (item.design && item.design !== "undefined" && item.design !== "-") ? item.design : "";
-            document.getElementById('gr-wt').value = item.gr_wt || 0;
-            document.getElementById('para-stone-wt').value = item.para_stone_wt || 0;
-            document.getElementById('ls-wt').value = item.ls_wt || 0;
-            document.getElementById('pkg-wt').value = item.pkg_wt || 0;
-            document.getElementById('entry-ghat').value = item.ghat_wt || 0;
-            document.getElementById('entry-huid').value = (item.huid && item.huid !== "undefined" && item.huid !== "-") ? item.huid : "";
-            document.getElementById('entry-touch').value = item.touch || 0;
-            document.getElementById('entry-wastage').value = item.wastage || 0;
-
-            calculateNetWeight();
-
-            document.getElementById('saveFinalBtn').innerText = "UPDATE ENTRY";
-            openModal('entryModal');
-            validateFormSecurity();
-
-            setTimeout(() => {
-                const pcsInput = document.getElementById('entry-pcs');
-                pcsInput.focus();
-                pcsInput.select();
-            }, 200);
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const entryModal = document.getElementById('entryModal');
-                if (entryModal.style.display === 'flex') {
-                    const targets = Array.from(document.querySelectorAll('.nav-target'));
-                    const currentIndex = targets.indexOf(document.activeElement);
-                    if (currentIndex > -1) {
-                        e.preventDefault();
-                        if (currentIndex < targets.length - 1) {
-                            targets[currentIndex + 1].focus();
-                            if (targets[currentIndex + 1].type === 'number') targets[currentIndex + 1].select();
-                        } else if (!document.getElementById('saveFinalBtn').disabled) {
-                            saveStockEntry();
-                        }
-                    }
-                }
-            }
-        });
-
-        async function initRojmel() {
-            if (window.pywebview?.api) {
-                try {
-                    availableDates = await window.pywebview.api.get_ledger_dates() || [];
-                    const today = new Date().toISOString().split('T')[0];
-                    if (!availableDates.includes(today)) {
-                        availableDates.push(today);
-                        availableDates.sort();
-                    }
-                    currentDateIdx = availableDates.indexOf(today);
-                    viewDate = today;
-                    loadRojmelSheet(viewDate);
-                } catch (err) {}
+document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+        var em=document.getElementById('entryModal');
+        if(em.classList.contains('open')){
+            var targets=Array.from(document.querySelectorAll('.nav-target'));
+            var idx=targets.indexOf(document.activeElement);
+            if(idx>-1){
+                e.preventDefault();
+                if(idx<targets.length-1){targets[idx+1].focus();if(targets[idx+1].type==='number')targets[idx+1].select();}
+                else if(!document.getElementById('saveFinalBtn').disabled) saveStockEntry();
             }
         }
+    }
+    if(e.key==='Escape'){closeModal('entryModal');closeModal('itemModal');closeModal('deleteConfirmModal');closeModal('previewModal');}
+});
 
-        async function navigateDate(direction) {
-            const nextIdx = currentDateIdx + direction;
-            if (nextIdx >= 0 && nextIdx < availableDates.length) {
-                currentDateIdx = nextIdx;
-                viewDate = availableDates[currentDateIdx];
-                loadRojmelSheet(viewDate);
-            }
+async function initRojmel(){
+    if(!window.pywebview?.api) return;
+    try{
+        availableDates=await window.pywebview.api.get_ledger_dates()||[];
+        var today=new Date().toISOString().split('T')[0];
+        if(!availableDates.includes(today)){availableDates.push(today);availableDates.sort();}
+        currentDateIdx=availableDates.indexOf(today);
+        viewDate=today;
+        loadRojmelSheet(viewDate);
+    }catch(e){}
+}
+
+async function navigateDate(dir){
+    var ni=currentDateIdx+dir;
+    if(ni>=0&&ni<availableDates.length){currentDateIdx=ni;viewDate=availableDates[currentDateIdx];loadRojmelSheet(viewDate);}
+}
+
+async function handleManualDateChange(date){
+    if(!date) return;
+    viewDate=date;
+    if(!availableDates.includes(viewDate)){availableDates.push(viewDate);availableDates.sort();}
+    currentDateIdx=availableDates.indexOf(viewDate);
+    await loadRojmelSheet(viewDate);
+}
+
+function updateRojmelUI(){
+    var d=new Date(viewDate);
+    document.getElementById('currentSheetDate').childNodes[0].textContent=
+        d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+' ';
+    document.getElementById('rojmelDatePicker').value=viewDate;
+    document.getElementById('navPrevBtn').disabled=(currentDateIdx<=0);
+    document.getElementById('navNextBtn').disabled=(currentDateIdx>=availableDates.length-1);
+    var today=new Date().toISOString().split('T')[0];
+    var addBtn=document.getElementById('addReceiptBtn');
+    if(addBtn) addBtn.style.display=(viewDate===today)?'inline-flex':'none';
+}
+
+async function loadRojmelSheet(date){
+    if(!window.pywebview?.api) return;
+    try{
+        ledgerData=await window.pywebview.api.get_stock_ledger_by_date(date)||[];
+        var tbody=document.getElementById('ledger-body');
+        if(!ledgerData.length){
+            tbody.innerHTML='<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">No entries for this date.</td></tr>';
+            updateRojmelUI(); updateSelectionState(); return;
         }
+        tbody.innerHTML=ledgerData.map(function(e){
+            var dLess=(parseFloat(e.ls_wt||0)+parseFloat(e.pkg_wt||0)).toFixed(3);
+            var tagId=(e.tag_id||'-').trim();
+            var huId=(e.huid||'-').trim();
+            var sz=(e.size&&e.size!=='undefined')?e.size:'-';
+            var isTagged=e.live_status==='● TAGGED';
+            var rowCls=isTagged?'color-tagged':'color-pending';
+            var badge=isTagged
+                ?'<span class="badge-tagged">● Tagged</span>'
+                :'<span class="badge-pending">● Pending</span>';
+            return '<tr id="row-'+e.id+'" data-id="'+e.id+'" class="'+rowCls+'" ondblclick="openEditById('+e.id+')">'
+                +'<td style="text-align:center;"><input type="checkbox" class="row-checkbox" style="accent-color:var(--gold3);" onclick="handleRowSelect(this);event.stopPropagation();"></td>'
+                +'<td style="font-family:var(--mono);font-size:0.72rem;color:var(--gold3);">'+h(e.it_code||'—')+'</td>'
+                +'<td style="font-weight:600;">'+h(e.it_name||'—')+'</td>'
+                +'<td style="font-weight:700;text-align:center;">'+h(e.pcs||0)+'</td>'
+                +'<td style="color:var(--gold3);font-family:var(--mono);">'+h(e.touch||'—')+'%</td>'
+                +'<td style="color:var(--ink3);">'+h(sz)+'</td>'
+                +'<td style="color:var(--ink3);">'+h(e.design||'-')+'</td>'
+                +'<td style="font-family:var(--mono);">'+parseFloat(e.gr_wt||0).toFixed(3)+'</td>'
+                +'<td style="font-family:var(--mono);color:var(--gold3);">'+parseFloat(e.para_stone_wt||0).toFixed(3)+'</td>'
+                +'<td style="font-family:var(--mono);color:var(--red);">'+dLess+'</td>'
+                +'<td style="font-family:var(--mono);color:var(--green);font-weight:700;">'+parseFloat(e.nt_wt||0).toFixed(3)+'</td>'
+                +'<td style="font-family:var(--mono);">'+parseFloat(e.ghat_wt||0).toFixed(3)+'</td>'
+                +'<td style="font-family:var(--mono);font-size:0.7rem;color:var(--muted2);">'+h(huId)+'</td>'
+                +'<td>'+badge+'</td>'
+                +'<td style="display:none;"><span class="tag-id-hidden">'+h(tagId)+'</span></td>'
+                +'</tr>';
+        }).join('');
+        updateRojmelUI();
+        updateSelectionState();
+    }catch(err){console.error('loadRojmelSheet error:',err);}
+}
 
-        async function handleManualDateChange(selectedDate) {
-            if (!selectedDate) return;
-            viewDate = selectedDate;
-            if (!availableDates.includes(viewDate)) {
-                availableDates.push(viewDate);
-                availableDates.sort();
+async function showTagPreview(){
+    var batch=getSelectedItemsBatch();
+    if(!batch.length){return;}
+    var res=await window.pywebview.api.get_tag_preview(batch[0]);
+    if(res.status==='success'){document.getElementById('tagPreviewImg').src=res.url;openModal('previewModal');}
+}
+
+async function executeSilentPrint(){
+    var checked=Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    var batch=getSelectedItemsBatch();
+    if(!batch.length||window.isPrinting) return;
+    window.isPrinting=true;
+    try{
+        var res=await window.pywebview.api.print_multiple_tags(batch);
+        if(res.status==='success'){
+            for(var cb of checked){
+                var row=cb.closest('tr');
+                if(window.pywebview?.api?.mark_as_tagged) await window.pywebview.api.mark_as_tagged(row.dataset.id);
             }
-            currentDateIdx = availableDates.indexOf(viewDate);
             await loadRojmelSheet(viewDate);
+            document.getElementById('masterCheckbox').checked=false;
+            triggerSaveTable();
         }
+    }catch(e){console.error(e);}
+    finally{window.isPrinting=false;}
+}
 
-        function updateRojmelUI() {
-            const indicator = document.getElementById('currentSheetDate');
-            const d = new Date(viewDate);
-            indicator.innerText = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-            document.getElementById('rojmelDatePicker').value = viewDate;
-            document.getElementById('navPrevBtn').disabled = (currentDateIdx <= 0);
-            document.getElementById('navNextBtn').disabled = (currentDateIdx >= availableDates.length - 1);
-            const todayStr = new Date().toISOString().split('T')[0];
-            const addBtn = document.getElementById('addReceiptBtn');
-            if (addBtn) addBtn.style.display = (viewDate === todayStr) ? 'flex' : 'none';
+function calculateNetWeight(){
+    var gr=parseFloat(document.getElementById('gr-wt').value)||0;
+    var ps=parseFloat(document.getElementById('para-stone-wt').value)||0;
+    var ls=parseFloat(document.getElementById('ls-wt').value)||0;
+    var pk=parseFloat(document.getElementById('pkg-wt').value)||0;
+    var net=gr-(ps+ls+pk);
+    document.getElementById('nt-wt').value=net>0?net.toFixed(3):'0.000';
+    var tc=parseFloat(document.getElementById('entry-touch').value)||0;
+    var ws=parseFloat(document.getElementById('entry-wastage').value)||0;
+    var fine=(net*(tc+ws))/100;
+    document.getElementById('entry-fine-wt').value=fine>0?fine.toFixed(3):'0.000';
+    validateFormSecurity();
+}
+
+function validateFormSecurity(){
+    var pcs=parseInt(document.getElementById('entry-pcs').value)||0;
+    var gr=parseFloat(document.getElementById('gr-wt').value)||0;
+    var name=document.getElementById('entry-it-name').value.trim();
+    var ok=name!==''&&pcs>0&&gr>0;
+    document.getElementById('entry-pcs').style.borderColor=pcs>0?'':'var(--red)';
+    document.getElementById('gr-wt').style.borderColor=gr>0?'':'var(--red)';
+    document.getElementById('saveFinalBtn').disabled=!ok;
+    return ok;
+}
+
+async function saveStockEntry(){
+    if(!validateFormSecurity()) return;
+    var data={
+        it_code:document.getElementById('entry-it-code').value,
+        it_name:document.getElementById('entry-it-name').value,
+        tag_id:document.getElementById('entry-tag-id').value,
+        pkg_wt:parseFloat(document.getElementById('pkg-wt').value)||0,
+        para_stone_wt:parseFloat(document.getElementById('para-stone-wt').value)||0,
+        size:document.getElementById('entry-size').value||'-',
+        design:document.getElementById('entry-ds').value||'-',
+        pcs:parseInt(document.getElementById('entry-pcs').value)||0,
+        gr_wt:parseFloat(document.getElementById('gr-wt').value)||0,
+        ls_wt:parseFloat(document.getElementById('ls-wt').value)||0,
+        nt_wt:parseFloat(document.getElementById('nt-wt').value)||0,
+        ghat_wt:parseFloat(document.getElementById('entry-ghat').value)||0,
+        huid:document.getElementById('entry-huid').value||'-',
+        touch:document.getElementById('entry-touch').value||'0',
+        wastage:document.getElementById('entry-wastage').value||'0'
+    };
+    if(!window.pywebview?.api) return;
+    var res=editingEntryId
+        ?await window.pywebview.api.update_stock_entry(editingEntryId,data)
+        :await window.pywebview.api.add_stock_entry(data);
+    if(res&&res.status==='success'){closeModal('entryModal');await loadRojmelSheet(viewDate);triggerSaveTable();}
+}
+
+function openModal(id){
+    var el=document.getElementById(id);
+    el.style.display='flex';
+    setTimeout(function(){el.classList.add('open');},10);
+}
+function closeModal(id){
+    var el=document.getElementById(id);
+    el.classList.remove('open');
+    setTimeout(function(){el.style.display='none';},200);
+    if(id==='entryModal'){editingEntryId=null;document.getElementById('saveFinalBtn').innerText='Save Entry';document.querySelectorAll('.entry-input').forEach(function(i){i.value='';});document.getElementById('nt-wt').value='0.000';document.getElementById('entry-fine-wt').value='0.000';}
+}
+
+function handleRowSelect(cb){cb.closest('tr').classList.toggle('selected-row',cb.checked);updateSelectionState();}
+function toggleSelectAll(m){document.querySelectorAll('.row-checkbox').forEach(function(cb){cb.checked=m.checked;cb.closest('tr').classList.toggle('selected-row',cb.checked);});updateSelectionState();}
+function updateSelectionState(){
+    var n=document.querySelectorAll('.row-checkbox:checked').length;
+    document.getElementById('deleteBtn').disabled=n===0;
+    document.getElementById('print-tools').style.display=n>0?'flex':'none';
+}
+
+async function fetchMasterProducts(){
+    if(!window.pywebview?.api) return;
+    masterProducts=await window.pywebview.api.get_products()||[];
+    renderModalItems(masterProducts);
+}
+
+function renderModalItems(items){
+    document.getElementById('modal-item-list').innerHTML=items.map(function(item){
+        return '<tr onclick="selectItem(\''+esc(item.code)+'\',\''+esc(item.name)+'\',\''+esc(item.touch||'0')+'\')" style="cursor:pointer;">'
+            +'<td style="font-family:var(--mono);color:var(--gold3);font-size:0.72rem;">'+h(item.code)+'</td>'
+            +'<td style="font-weight:600;">'+h(item.name)+'</td>'
+            +'<td style="color:var(--muted2);">'+h(item.category||'—')+'</td>'
+            +'</tr>';
+    }).join('');
+}
+
+function handleModalSearch(q){
+    var f=q.toLowerCase();
+    renderModalItems(masterProducts.filter(function(i){return i.code.toLowerCase().includes(f)||i.name.toLowerCase().includes(f);}));
+}
+
+function selectItem(code,name,touch){
+    closeModal('itemModal');
+    var prod=masterProducts.find(function(p){return p.code===code;});
+    var ws=prod?(parseFloat(prod.wastage)||0):0;
+    document.getElementById('entry-it-name').value=name;
+    document.getElementById('display-it-name').innerText=name;
+    document.getElementById('entry-it-code').value=code;
+    document.getElementById('entry-tag-id').value=generateUniqueTagID();
+    document.getElementById('entry-touch').value=touch;
+    document.getElementById('entry-wastage').value=ws;
+    openModal('entryModal');
+    calculateNetWeight();
+    setTimeout(function(){var el=document.getElementById('entry-pcs');el.focus();el.select();},200);
+}
+
+function triggerSaveTable(){
+    var t=document.getElementById('toast');
+    t.style.display='block';
+    setTimeout(function(){t.style.display='none';},2200);
+}
+
+function openDeleteConfirm(){
+    var checked=Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    if(!checked.length) return;
+    rowsToDelete=checked;
+    document.getElementById('delete-count-display').innerText=checked.length;
+    openModal('deleteConfirmModal');
+}
+
+async function executeDelete(){
+    if(!window.pywebview?.api||!rowsToDelete.length) return;
+    var btn=document.getElementById('confirmDeleteBtn');
+    btn.disabled=true;btn.innerText='Deleting…';
+    try{
+        for(var cb of rowsToDelete){
+            var row=cb.closest('tr');
+            await window.pywebview.api.delete_stock_entry(row.dataset.id);
         }
+        closeModal('deleteConfirmModal');
+        await loadRojmelSheet(viewDate);
+        document.getElementById('masterCheckbox').checked=false;
+        triggerSaveTable();
+    }catch(e){console.error(e);}
+    finally{btn.disabled=false;btn.innerText='Delete Records';rowsToDelete=[];}
+}
 
-        async function loadRojmelSheet(date) {
-            if (window.pywebview?.api) {
-                try {
-                    ledgerData = await window.pywebview.api.get_stock_ledger_by_date(date);
-                    const tbody = document.getElementById('ledger-body');
-                    tbody.innerHTML = ledgerData.map(entry => {
-                        const displayLess = (parseFloat(entry.ls_wt || 0) + parseFloat(entry.pkg_wt || 0)).toFixed(3);
-                        const rowTagId = (entry.tag_id || "-").trim();
-                        const rowHuId = (entry.huid || "-").trim();
-                        const rowSize = (entry.size && entry.size !== "undefined") ? entry.size : "-";
+function h(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function esc(s){return String(s).replace(/'/g,"\\'");}
 
-                        // ─── SEAMLESS DYNAMIC COLOR BADGE & ROW CLASS ACCENT MATRICES ───
-                        let badgeStyles = 'color: #d97706; background: #fffbeb; border: 1px solid #fef3c7;';
-                        let rowColorClass = 'color-pending';
+document.addEventListener('input',function(e){if(e.target.classList.contains('calc-trigger'))calculateNetWeight();});
 
-                        if (entry.live_status === '● TAGGED') {
-                            badgeStyles = 'color: var(--success); background: #f0fdf4; border: 1px solid #bbf7d0;';
-                            rowColorClass = 'color-tagged';
-                        }
-
-                        return `
-                            <tr id="row-${entry.id}" data-id="${entry.id}" class="${rowColorClass}" ondblclick="openEditById(${entry.id})">
-                                <td style="text-align:center;"><input type="checkbox" class="row-checkbox" onclick="handleRowSelect(this); event.stopPropagation();"></td>
-                                <td>${entry.it_code || '---'}</td>
-                                <td>${entry.it_name || '---'}</td>
-                                <td><b>${entry.pcs || 0}</b></td>
-                                <td style="color: var(--accent); font-weight: 800;">${entry.touch || '--'}%</td>
-                                <td>${rowSize}</td>
-                                <td>${entry.design || '-'}</td>
-                                <td>${parseFloat(entry.gr_wt || 0).toFixed(3)}</td>
-                                <td style="color: var(--accent); font-weight: 700;">${parseFloat(entry.para_stone_wt || 0).toFixed(3)}</td>
-                                <td style="color: var(--error)">${displayLess}</td>
-                                <td style="color: var(--success); font-weight: bold;">${parseFloat(entry.nt_wt || 0).toFixed(3)}</td>
-                                <td>${parseFloat(entry.ghat_wt || 0).toFixed(3)}</td>
-                                <td>${rowHuId}</td>
-                                <td>
-                                    <span class="badge" style="${badgeStyles}">
-                                        ${entry.live_status || '● PENDING'}
-                                    </span>
-                                </td>
-                                <td style="display:none;"><span class="tag-id-hidden">${rowTagId}</span></td>
-                            </tr>`;
-                    }).join('');
-                    updateRojmelUI();
-                    updateSelectionState();
-                } catch (e) {
-                    console.error("❌ UI Render Execution Exception Loop: ", e);
-                }
-            }
-        }
-
-        async function showTagPreview() {
-            const batch = getSelectedItemsBatch();
-            if (batch.length === 0) return alert("Select at least one item!");
-            const res = await window.pywebview.api.get_tag_preview(batch[0]);
-            if (res.status === "success") {
-                document.getElementById('tagPreviewImg').src = res.url;
-                openModal('previewModal');
-            }
-        }
-
-        // ─── FIXED PERMANENTLY: DISPATCHES PRINT lot AND PROMOTES IS_TAGGED STATUS IN REAL-TIME ───
-        async function executeSilentPrint() {
-            const checkedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'));
-            const batch = getSelectedItemsBatch();
-            if (batch.length === 0) return alert("Select at least one item to print!");
-
-            if (window.isPrinting) return;
-            window.isPrinting = true;
-
-            try {
-                const response = await window.pywebview.api.print_multiple_tags(batch);
-                if (response.status === "success") {
-                    // Instantly update database values via python bridge logic
-                    for (let cb of checkedRows) {
-                        const row = cb.closest('tr');
-                        const entryId = row.dataset.id;
-                        if (window.pywebview?.api?.mark_as_tagged) {
-                            await window.pywebview.api.mark_as_tagged(entryId);
-                        }
-                    }
-
-                    await loadRojmelSheet(viewDate);
-                    const master = document.getElementById('masterCheckbox');
-                    if (master) master.checked = false;
-                    triggerSaveTable();
-                } else {
-                    alert(response.message);
-                }
-            } catch (err) {
-                console.error("Critical fault inside printing handler loop: ", err);
-            } finally {
-                window.isPrinting = false;
-            }
-        }
-
-        function calculateNetWeight() {
-            const gross = parseFloat(document.getElementById('gr-wt').value) || 0;
-            const paraStone = parseFloat(document.getElementById('para-stone-wt').value) || 0;
-            const less = parseFloat(document.getElementById('ls-wt').value) || 0;
-            const pkg = parseFloat(document.getElementById('pkg-wt').value) || 0;
-            const net = gross - (paraStone + less + pkg);
-
-            const netEl = document.getElementById('nt-wt');
-            netEl.value = net > 0 ? net.toFixed(3) : "0.000";
-
-            const touch = parseFloat(document.getElementById('entry-touch').value) || 0;
-            const wastage = parseFloat(document.getElementById('entry-wastage').value) || 0;
-
-            const fine = (net * (touch + wastage)) / 100;
-            document.getElementById('entry-fine-wt').value = fine > 0 ? fine.toFixed(3) : "0.000";
-
-            validateFormSecurity();
-        }
-
-        function validateFormSecurity() {
-            const pcsEl = document.getElementById('entry-pcs');
-            const grWtEl = document.getElementById('gr-wt');
-            const nameVal = document.getElementById('entry-it-name').value.trim();
-            const pcs = parseInt(pcsEl.value) || 0;
-            const grWt = parseFloat(grWtEl.value) || 0;
-
-            let formIsValid = (nameVal !== "" && pcs > 0 && grWt > 0);
-            pcsEl.style.borderColor = (pcs > 0) ? "var(--border)" : "var(--error)";
-            grWtEl.style.borderColor = (grWt > 0) ? "var(--border)" : "var(--error)";
-
-            document.getElementById('saveFinalBtn').disabled = !formIsValid;
-            return formIsValid;
-        }
-
-        async function saveStockEntry() {
-            if (!validateFormSecurity()) return;
-            const entryData = {
-                it_code: document.getElementById('entry-it-code').value,
-                it_name: document.getElementById('entry-it-name').value,
-                tag_id: document.getElementById('entry-tag-id').value,
-                pkg_wt: parseFloat(document.getElementById('pkg-wt').value) || 0,
-                para_stone_wt: parseFloat(document.getElementById('para-stone-wt').value) || 0,
-                size: document.getElementById('entry-size').value || "-",
-                design: document.getElementById('entry-ds').value || "-",
-                pcs: parseInt(document.getElementById('entry-pcs').value) || 0,
-                gr_wt: parseFloat(document.getElementById('gr-wt').value) || 0,
-                ls_wt: parseFloat(document.getElementById('ls-wt').value) || 0,
-                nt_wt: parseFloat(document.getElementById('nt-wt').value) || 0,
-                ghat_wt: parseFloat(document.getElementById('entry-ghat').value) || 0,
-                huid: document.getElementById('entry-huid').value || "-",
-                touch: document.getElementById('entry-touch').value || "0",
-                wastage: document.getElementById('entry-wastage').value || "0"
-            };
-
-            if (window.pywebview?.api) {
-                let res;
-                if (editingEntryId) {
-                    res = await window.pywebview.api.update_stock_entry(editingEntryId, entryData);
-                } else {
-                    res = await window.pywebview.api.add_stock_entry(entryData);
-                }
-
-                if (res && res.status === "success") {
-                    closeModal('entryModal');
-                    await loadRojmelSheet(viewDate);
-                    triggerSaveTable();
-                }
-            }
-        }
-
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-            if (id === 'entryModal') {
-                editingEntryId = null;
-                document.getElementById('saveFinalBtn').innerText = "SAVE ENTRY";
-                clearEntryForm();
-            }
-        }
-        function clearEntryForm() {
-            document.querySelectorAll('.entry-input').forEach(i => i.value = "");
-            document.getElementById('nt-wt').value = "0.000";
-            document.getElementById('entry-fine-wt').value = "0.000";
-        }
-        function handleRowSelect(cb) { cb.closest('tr').classList.toggle('selected-row', cb.checked); updateSelectionState(); }
-        function toggleSelectAll(master) { document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = master.checked; cb.closest('tr').classList.toggle('selected-row', cb.checked); }); updateSelectionState(); }
-
-        function updateSelectionState() {
-            const count = document.querySelectorAll('.row-checkbox:checked').length;
-            document.getElementById('deleteBtn').disabled = (count === 0);
-            document.getElementById('print-tools').style.display = (count > 0 ? 'flex' : 'none');
-        }
-
-        async function fetchMasterProducts() { if (window.pywebview?.api) { masterProducts = await window.pywebview.api.get_products() || []; renderModalItems(masterProducts); } }
-
-        function renderModalItems(items) {
-            document.getElementById('modal-item-list').innerHTML = items.map(item => `
-                <tr class="select-row" onclick="selectItem('${item.code}', '${item.name}', '${item.touch || '0'}')" style="cursor:pointer">
-                    <td>${item.code}</td>
-                    <td>${item.name}</td>
-                    <td>${item.category || '-'}</td>
-                </tr>`).join('');
-        }
-
-        function handleModalSearch(query) {
-            const filter = query.toLowerCase();
-            const filtered = masterProducts.filter(item => item.code.toLowerCase().includes(filter) || item.name.toLowerCase().includes(filter));
-            renderModalItems(filtered);
-        }
-
-        function selectItem(code, name, touch) {
-            closeModal('itemModal');
-            const product = masterProducts.find(p => p.code === code);
-            const wastageVal = product ? (parseFloat(product.wastage) || 0) : 0;
-
-            document.getElementById('entry-it-name').value = name;
-            document.getElementById('display-it-name').innerText = name;
-            document.getElementById('entry-it-code').value = code;
-
-            const newTagId = generateUniqueTagID();
-            document.getElementById('entry-tag-id').value = newTagId;
-
-            document.getElementById('entry-touch').value = touch;
-            document.getElementById('entry-wastage').value = wastageVal;
-
-            openModal('entryModal');
-            calculateNetWeight();
-
-            setTimeout(() => {
-                const pcsIn = document.getElementById('entry-pcs');
-                pcsIn.focus();
-                pcsIn.select();
-            }, 150);
-        }
-
-        function triggerSaveTable() {
-            const popup = document.getElementById('saveSuccessPopup');
-            popup.style.display = 'block';
-            setTimeout(() => { popup.style.display = 'none'; }, 2500);
-        }
-
-        function openDeleteConfirm() {
-            const checked = Array.from(document.querySelectorAll('.row-checkbox:checked'));
-            if (checked.length === 0) return;
-
-            rowsToDelete = checked;
-            document.getElementById('delete-count-display').innerText = checked.length;
-            openModal('deleteConfirmModal');
-        }
-
-        async function executeDelete() {
-            if (!window.pywebview?.api || rowsToDelete.length === 0) return;
-
-            const btn = document.getElementById('confirmDeleteBtn');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = "DELETING...";
-
-            try {
-                for (const rowCheckbox of rowsToDelete) {
-                    const row = rowCheckbox.closest('tr');
-                    const entryId = row.dataset.id;
-                    await window.pywebview.api.delete_stock_entry(entryId);
-                }
-
-                closeModal('deleteConfirmModal');
-                await loadRojmelSheet(viewDate);
-                document.getElementById('masterCheckbox').checked = false;
-                triggerSaveTable();
-
-            } catch (err) {
-                console.error("Delete failed:", err);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                rowsToDelete = [];
-            }
-        }
-
-        window.onload = () => {
-            const checkBridge = setInterval(() => {
-                if (window.pywebview?.api) { clearInterval(checkBridge); fetchMasterProducts(); initRojmel(); }
-            }, 150);
-            setInterval(() => {
-                const now = new Date();
-                document.getElementById('real-time-clock').innerText = now.toLocaleDateString('en-GB') + ' | ' + now.toLocaleTimeString();
-            }, 1000);
-        };
-
-        document.addEventListener('input', e => { if(e.target.classList.contains('calc-trigger')) calculateNetWeight(); });
-    </script>
-    </body>
-    </html>
+window.onload=function(){
+    var t=setInterval(function(){
+        if(window.pywebview?.api){clearInterval(t);fetchMasterProducts();initRojmel();}
+    },150);
+};
+</script>
+</body>
+</html>

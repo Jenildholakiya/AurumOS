@@ -1,0 +1,54 @@
+2026-05-26 17:42:31,017 INFO === AurumOS Started ===
+2026-05-26 17:42:54,057 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 17:42:54,059 ERROR [LOGIN] EXCEPTION: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+2026-05-26 17:45:30,383 INFO === AurumOS Started ===
+2026-05-26 17:45:41,095 INFO === AurumOS Started ===
+2026-05-26 17:46:08,363 INFO === AurumOS Started ===
+2026-05-26 17:46:33,513 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 17:46:33,514 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 18:16:46,684 INFO === AurumOS Started ===
+2026-05-26 18:16:56,037 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:16:56,037 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 18:17:15,724 INFO === AurumOS Started ===
+2026-05-26 18:17:24,514 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:17:24,516 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 18:21:32,794 INFO === AurumOS Started ===
+2026-05-26 18:21:40,314 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:21:40,316 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:08:06,807 INFO === AurumOS Started ===
+2026-05-26 23:08:11,876 INFO === AurumOS Started ===
+2026-05-26 23:08:24,013 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:08:24,015 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:15:38,896 INFO === AurumOS Started ===
+2026-05-26 23:15:48,319 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:15:48,321 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:24:19,502 INFO === AurumOS Started ===
+2026-05-26 23:25:05,609 INFO === AurumOS Started ===
+2026-05-26 23:25:16,561 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:25:16,565 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:26:43,041 INFO === AurumOS Started ===
+2026-05-26 23:26:56,124 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:26:56,126 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:52:28,377 INFO === AurumOS Started ===
+2026-05-26 23:52:36,574 INFO === AurumOS Started ===
+2026-05-26 23:53:34,970 INFO === AurumOS Started ===
+2026-05-26 23:55:38,885 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:55:38,892 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 00:21:10,614 INFO === AurumOS Started ===
+2026-05-27 00:21:20,806 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 00:21:20,806 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 00:21:45,182 INFO === AurumOS Started ===
+2026-05-27 00:21:53,672 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 00:21:53,672 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 11:11:29,765 INFO === AurumOS Started ===
+2026-05-27 11:11:40,754 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:11:40,756 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:42:32,483 INFO === AurumOS Started ===
+2026-05-27 11:42:40,444 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:42:40,447 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-28 09:06:11,468 INFO === AurumOS Started ===
+2026-05-28 09:06:18,765 INFO [LOGIN] verify_login called, password len=10
+2026-05-28 09:06:18,781 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-28 09:09:35,173 INFO === AurumOS Started ===
+2026-05-28 09:09:43,138 INFO [LOGIN] verify_login called, password len=10
+2026-05-28 09:09:43,138 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}

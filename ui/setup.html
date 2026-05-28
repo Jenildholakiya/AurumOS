@@ -1,381 +1,675 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AurumOS | Systems Initialization</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #090d16;
-            --primary-light: #1e293b;
-            --accent: #b59410; /* Aurum Premium Gold */
-            --accent-light: #fbf7e6;
-            --bg-body: #f4f6f9;
-            --card: #ffffff;
-            --border: #e4e8f0;
-            --text-main: #0f172a;
-            --text-muted: #7e8e9f;
-            --success: #0ca678;
-            --error: #df2c2c;
-            --shadow-premium: 0 30px 60px -15px rgba(9, 13, 22, 0.05);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --red:#b91c1c;--red-bg:#fef2f2;
+    --green:#15803d;--green-bg:#f0fdf4;
+    --muted:#7a7268;--muted2:#9e9890;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --serif:'DM Serif Display',Georgia,serif;
+    --mono:'DM Mono',monospace;
+}
+body{
+    font-family:var(--sans);
+    background:var(--cream);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;position:relative;overflow:hidden;
+}
+body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(
+        -45deg,transparent,transparent 28px,
+        rgba(168,125,30,0.03) 28px,rgba(168,125,30,0.03) 29px
+    );pointer-events:none;
+}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+/* ── CARD ── */
+.card{
+    width:460px;max-width:100%;background:#fff;
+    border:1px solid var(--rule);border-radius:16px;
+    overflow:hidden;position:relative;
+    box-shadow:0 8px 32px rgba(14,12,9,0.10),0 2px 8px rgba(14,12,9,0.06);
+    animation:cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(0.98)}to{opacity:1;transform:none}}
 
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            background-image: radial-gradient(circle at 1px 1px, #e4e8f0 1.5px, transparent 0);
-            background-size: 32px 32px;
-        }
+.gold-bar{
+    height:3px;width:100%;
+    background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));
+    background-size:200%;animation:goldShimmer 2.5s ease-in-out infinite;
+}
+@keyframes goldShimmer{0%{background-position:0%}100%{background-position:200%}}
 
-        /* Widened Symmetrical Luxury Workspace Card Container */
-        .glass-card {
-            width: 760px;
-            background: var(--card);
-            padding: 55px 65px;
-            border-radius: 24px;
-            box-shadow: var(--shadow-premium);
-            position: relative;
-            border: 1px solid var(--border);
-        }
+/* ── STEP INDICATOR ── */
+.steps{
+    display:flex;align-items:center;gap:0;
+    padding:18px 28px 0;
+}
+.step{
+    display:flex;align-items:center;gap:8px;flex:1;
+    font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--muted2);transition:all 0.3s;
+}
+.step.active{color:var(--gold3);}
+.step.done{color:var(--green);}
+.step-num{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.65rem;font-weight:700;
+    border:1.5px solid var(--rule);
+    background:#fff;color:var(--muted2);
+    flex-shrink:0;transition:all 0.3s;
+}
+.step.active .step-num{
+    background:var(--gold);border-color:var(--gold);color:#fff;
+}
+.step.done .step-num{
+    background:var(--green);border-color:var(--green);color:#fff;
+}
+.step-connector{
+    height:1px;flex:1;margin:0 6px;
+    background:var(--rule);max-width:40px;
+}
 
-        /* --- LOGO ENGINE ARCHITECTURE --- */
-        .brand-header {
-            text-align: center;
-            margin-bottom: 45px;
-        }
-        .brand-header h1 {
-            font-size: 1.65rem;
-            font-weight: 800;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .brand-header h1 span { color: var(--accent); }
+/* ── LOGO ── */
+.logo-wrap{
+    padding:20px 32px 0;
+    display:flex;align-items:center;gap:12px;
+}
+.logo-mark{
+    width:40px;height:40px;border-radius:10px;background:var(--ink);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.logo-mark span{font-family:var(--serif);font-size:0.9rem;color:var(--gold2);font-style:italic;}
+.logo-text{}
+.logo-name{font-family:var(--serif);font-size:1.1rem;color:var(--ink);letter-spacing:-0.2px;}
+.logo-name em{color:var(--gold3);font-style:italic;}
+.logo-sub{font-size:0.58rem;color:var(--muted2);text-transform:uppercase;letter-spacing:1.2px;margin-top:1px;}
 
-        /* --- TOASTER SYSTEM FEEDBACK PANELS --- */
-        .toaster {
-            position: fixed;
-            top: 35px;
-            right: 35px;
-            background: white;
-            border-left: 4px solid var(--error);
-            padding: 18px 28px;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(9, 13, 22, 0.08);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            z-index: 10000;
-            transform: translateX(160%);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .toaster.show { transform: translateX(0); }
-        .toaster.success-toast { border-left-color: var(--success); }
+/* ── STEP PANELS ── */
+.step-panel{display:none;padding:22px 32px 28px;}
+.step-panel.active{display:block;animation:fadeUp 0.3s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-        /* --- STYLED INTERACTIVE PROGRESS TIMELINE TRACKS --- */
-        .progress-container {
-            margin-bottom: 40px;
-        }
-        .progress-track {
-            height: 5px;
-            background: #f1f3f7;
-            border-radius: 100px;
-            width: 100%;
-            overflow: hidden;
-        }
-        #progress-fill {
-            height: 100%;
-            width: 33.33%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 100px;
-            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+.panel-title{
+    font-family:var(--serif);font-size:1.3rem;
+    color:var(--ink);letter-spacing:-0.3px;margin-bottom:5px;
+}
+.panel-title em{color:var(--gold3);font-style:italic;}
+.panel-sub{font-size:0.76rem;color:var(--muted);font-weight:300;margin-bottom:22px;line-height:1.5;}
 
-        /* --- SMOOTH TRANSITION ANIMATIONS LAYERS --- */
-        .step { display: none; }
-        .step.active { display: block; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+/* ── FORM FIELDS ── */
+.fg{margin-bottom:14px;}
+.fg label{
+    display:block;font-size:0.58rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.9px;
+    color:var(--muted);margin-bottom:5px;
+}
+.fg label span{color:var(--red);}
+.fg input{
+    width:100%;height:42px;padding:0 13px;
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:8px;font-family:var(--sans);font-size:0.83rem;
+    color:var(--ink);outline:none;
+    transition:border-color 0.14s,box-shadow 0.14s,background 0.14s;
+}
+.fg input:focus{
+    border-color:var(--gold2);
+    box-shadow:0 0 0 3px rgba(201,162,39,0.12);
+    background:#fff;
+}
+.fg input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(185,28,28,0.1);}
+.fg input.ok{border-color:var(--green);box-shadow:0 0 0 3px rgba(21,128,61,0.1);}
+.fg.key-group{position:relative;}
+.fg.key-group input{
+    font-family:var(--mono);font-size:0.85rem;
+    letter-spacing:1px;text-transform:uppercase;padding-right:44px;
+}
+.key-clear{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--rule);background:#fff;
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;font-size:0.7rem;color:var(--muted2);
+    transition:all 0.15s;
+}
+.key-clear:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.key-clear.show{display:flex;}
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+/* ── KEY STATUS BOX ── */
+.key-status{
+    border-radius:10px;padding:12px 14px;margin-bottom:14px;
+    display:none;animation:fadeUp 0.25s ease;
+    font-size:0.78rem;font-weight:500;line-height:1.5;
+}
+.key-status.show{display:flex;gap:10px;align-items:flex-start;}
+.key-status.success{background:var(--green-bg);border:1px solid rgba(21,128,61,0.2);color:var(--green);}
+.key-status.error{background:var(--red-bg);border:1px solid rgba(185,28,28,0.15);color:var(--red);}
+.key-status.checking{background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);}
+.ks-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+.ks-body{}
+.ks-title{font-weight:700;font-size:0.78rem;margin-bottom:2px;}
+.ks-sub{font-size:0.72rem;opacity:0.8;}
 
-        @keyframes fadeOutLeft {
-            from { opacity: 1; transform: translateX(0); }
-            to { opacity: 0; transform: translateX(-20px); }
-        }
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
-        h2 {
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--primary);
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-            padding-left: 14px;
-            border-left: 3px solid var(--accent);
-        }
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 0.88rem;
-            margin-bottom: 35px;
-            line-height: 1.6;
-            font-weight: 500;
-            padding-left: 14px;
-        }
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--rule2);margin:16px 0;}
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
-        .full-width { grid-column: span 2; }
+/* ── BUTTONS ── */
+.btn{
+    height:44px;padding:0 22px;border:none;border-radius:9px;
+    font-family:var(--sans);font-size:0.82rem;font-weight:600;
+    cursor:pointer;transition:all 0.18s;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-primary{background:var(--ink);color:#fff;width:100%;}
+.btn-primary:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,12,9,0.15);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-gold{background:var(--gold);color:#fff;width:100%;}
+.btn-gold:hover:not(:disabled){background:var(--gold3);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-outline{background:#fff;color:var(--ink3);border:1px solid var(--rule);}
+.btn-outline:hover{background:var(--cream);color:var(--ink);}
+.btn-row{display:flex;gap:10px;margin-top:6px;}
+.btn-row .btn{flex:1;}
 
-        .input-box { margin-bottom: 5px; }
-        .input-box label {
-            display: block;
-            font-size: 0.65rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-        }
+/* ── SUCCESS STATE ── */
+.success-state{
+    display:none;padding:32px;text-align:center;
+}
+.success-state.show{display:block;animation:fadeUp 0.4s ease both;}
+.success-icon{font-size:3rem;margin-bottom:14px;}
+.success-title{font-family:var(--serif);font-size:1.4rem;color:var(--ink);margin-bottom:6px;}
+.success-sub{font-size:0.78rem;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+.biz-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--gold-bg);border:1px solid var(--gold-ln);
+    color:var(--gold3);padding:6px 16px;border-radius:99px;
+    font-size:0.75rem;font-weight:600;margin-bottom:20px;
+}
 
-        input {
-            width: 100%;
-            padding: 15px 20px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            outline: none;
-            transition: all 0.25s ease;
-            background: #ffffff;
-            color: var(--primary);
-        }
+/* ── PASSWORD STRENGTH ── */
+.pw-strength{margin-top:5px;display:flex;gap:3px;}
+.pw-bar{height:3px;flex:1;border-radius:99px;background:var(--rule);transition:background 0.2s;}
+.pw-label{font-size:0.6rem;color:var(--muted2);margin-top:4px;}
 
-        input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-light);
-        }
-        input::placeholder { color: #b1bdcb; font-weight: 500; }
-
-        .btn-group { display: flex; gap: 15px; margin-top: 35px; }
-        button {
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            letter-spacing: 0.5px;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-            box-shadow: 0 10px 20px -5px rgba(9, 13, 22, 0.1);
-        }
-        .btn-primary:hover {
-            background: #151f32;
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px -5px rgba(9, 13, 22, 0.15);
-        }
-        .btn-primary:active { transform: translateY(0); }
-
-        .btn-ghost {
-            background: #f4f6f9;
-            color: var(--text-main);
-            width: 140px;
-            font-weight: 700;
-        }
-        .btn-ghost:hover {
-            background: #e9ecf2;
-            color: var(--primary);
-        }
-    </style>
+/* ── SHAKE ── */
+@keyframes shake{
+    0%,100%{transform:translateX(0)}
+    15%{transform:translateX(-7px)}30%{transform:translateX(7px)}
+    45%{transform:translateX(-5px)}60%{transform:translateX(5px)}
+    75%{transform:translateX(-2px)}90%{transform:translateX(2px)}
+}
+.shake{animation:shake 0.45s cubic-bezier(0.36,0.07,0.19,0.97) both;}
+</style>
 </head>
 <body>
 
-<div class="glass-card">
-    <div class="brand-header">
-        <h1>Aurum<span>OS</span></h1>
-    </div>
+<div class="card" id="main-card">
+    <div class="gold-bar"></div>
 
-    <div class="progress-container">
-        <div class="progress-track">
-            <div id="progress-fill"></div>
+    <!-- Logo -->
+    <div class="logo-wrap">
+        <div class="logo-mark"><span>Au</span></div>
+        <div class="logo-text">
+            <div class="logo-name">Aurum<em>OS</em></div>
+            <div class="logo-sub">First Time Setup</div>
         </div>
     </div>
 
-    <div id="step1" class="step active">
-        <h2>License Security</h2>
-        <p class="subtitle">Enter your unique AurumOS activation key to bind this device to your enterprise license.</p>
-        <div class="input-box">
-            <label>Activation Key</label>
-            <input type="text" id="key" placeholder="AURUM-XXXX-2026" autocomplete="off">
+    <!-- Step indicator -->
+    <div class="steps">
+        <div class="step active" id="step-ind-1">
+            <div class="step-num" id="step-num-1">1</div>
+            <span>License</span>
         </div>
-        <button id="btn-next-1" class="btn-primary" style="margin-top: 25px;" onclick="animateTo(2)">Verify & Initialize</button>
+        <div class="step-connector"></div>
+        <div class="step" id="step-ind-2">
+            <div class="step-num" id="step-num-2">2</div>
+            <span>Business</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step-ind-3">
+            <div class="step-num" id="step-num-3">3</div>
+            <span>Admin</span>
+        </div>
     </div>
 
-    <div id="step2" class="step">
-        <h2>Business Profile</h2>
-        <p class="subtitle">This information will be used for automated invoicing, GST reporting, and firm branding.</p>
+    <!-- ── STEP 1: LICENSE KEY ── -->
+    <div class="step-panel active" id="panel-1">
+        <div class="panel-title">Activate <em>License</em></div>
+        <div class="panel-sub">Enter the license key provided after purchase. This verifies your copy of AurumOS.</div>
+
+        <div class="fg key-group">
+            <label>License Key <span>*</span></label>
+            <input type="text" id="inp-key" placeholder="AU-XXXX-XXXX-XXXX-XXXX"
+                   maxlength="22" autocomplete="off" autocapitalize="characters"
+                   oninput="onKeyInput()" onpaste="setTimeout(onKeyInput,10)">
+            <div class="key-clear" id="key-clear" onclick="clearKey()">✕</div>
+        </div>
+
+        <!-- Status box -->
+        <div class="key-status" id="key-status">
+            <div class="ks-icon" id="ks-icon"></div>
+            <div class="ks-body">
+                <div class="ks-title" id="ks-title"></div>
+                <div class="ks-sub"  id="ks-sub"></div>
+            </div>
+        </div>
+
+        <button class="btn btn-gold" id="btn-verify" onclick="verifyKey()" disabled>
+            <span>🔑</span> Verify License Key
+        </button>
+
+        <div class="divider"></div>
+        <p style="font-size:0.65rem;color:var(--muted2);text-align:center;">
+            Don't have a key? Contact your AurumOS provider.
+        </p>
+    </div>
+
+    <!-- ── STEP 2: BUSINESS INFO ── -->
+    <div class="step-panel" id="panel-2">
+        <div class="panel-title">Business <em>Details</em></div>
+        <div class="panel-sub">This information will appear on your bills and reports.</div>
+
+        <div class="fg">
+            <label>Business / Shop Name <span>*</span></label>
+            <input type="text" id="inp-biz" placeholder="e.g. Dholakiya Jewellers"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-owner').focus()">
+        </div>
+        <div class="fg">
+            <label>Owner Name <span>*</span></label>
+            <input type="text" id="inp-owner" placeholder="e.g. Jenil Dholakiya"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-city').focus()">
+        </div>
         <div class="grid-2">
-            <div class="input-box">
-                <label>Business Name</label>
-                <input type="text" id="biz_name" placeholder="e.g. Royal Wholesale Jewellery">
+            <div class="fg">
+                <label>City</label>
+                <input type="text" id="inp-city" placeholder="Surat"
+                       onkeydown="if(event.key==='Enter')document.getElementById('inp-phone').focus()">
             </div>
-            <div class="input-box">
-                <label>Owner Name</label>
-                <input type="text" id="owner_name" placeholder="e.g. Jenil Dholakiya">
-            </div>
-            <div class="input-box">
-                <label>Phone Number</label>
-                <input type="text" id="phone" placeholder="+91 XXXXX XXXXX">
-            </div>
-            <div class="input-box">
-                <label>GSTIN (Optional)</label>
-                <input type="text" id="gst" placeholder="24AAAAA0000A1Z5">
-            </div>
-            <div class="input-box full-width">
-                <label>Address</label>
-                <input type="text" id="address" placeholder="Building, City, State">
+            <div class="fg">
+                <label>Phone</label>
+                <input type="text" id="inp-phone" placeholder="9876543210"
+                       onkeydown="if(event.key==='Enter')goToStep3()">
             </div>
         </div>
-        <div class="btn-group">
-            <button class="btn-ghost" onclick="animateTo(1)">Back</button>
-            <button id="btn-next-2" class="btn-primary" onclick="animateTo(3)">Continue to Security</button>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+            <button class="btn btn-primary" onclick="goToStep3()">Next →</button>
         </div>
     </div>
 
-    <div id="step3" class="step">
-        <h2>Administrator Lock</h2>
-        <p class="subtitle">Create master credentials. These are used to unlock the terminal and encrypt the local database.</p>
-        <div class="grid-2">
-            <div class="input-box full-width">
-                <label>Master Username</label>
-                <input type="text" id="admin_user" placeholder="e.g. aurum_admin">
+    <!-- ── STEP 3: ADMIN ACCOUNT ── -->
+    <div class="step-panel" id="panel-3">
+        <div class="panel-title">Admin <em>Account</em></div>
+        <div class="panel-sub">Create the owner account. This is used to log in to AurumOS.</div>
+
+        <div class="fg">
+            <label>Password <span>*</span></label>
+            <input type="password" id="inp-pw" placeholder="Min 6 characters"
+                   autocomplete="new-password"
+                   oninput="checkPwStrength()"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-pw2').focus()">
+            <div class="pw-strength">
+                <div class="pw-bar" id="pw-b1"></div>
+                <div class="pw-bar" id="pw-b2"></div>
+                <div class="pw-bar" id="pw-b3"></div>
+                <div class="pw-bar" id="pw-b4"></div>
             </div>
-            <div class="input-box full-width">
-                <label>Master Password</label>
-                <input type="password" id="pass" placeholder="••••••••">
-            </div>
+            <div class="pw-label" id="pw-label"></div>
         </div>
-        <div class="btn-group">
-            <button class="btn-ghost" onclick="animateTo(2)">Back</button>
-            <button id="btn-finish" class="btn-primary" onclick="finishSetup()">Finalize Initialization</button>
+        <div class="fg">
+            <label>Confirm Password <span>*</span></label>
+            <input type="password" id="inp-pw2" placeholder="Re-enter password"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter')finishSetup()">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+            <button class="btn btn-primary" id="btn-finish" onclick="finishSetup()">
+                <span>✓</span> Complete Setup
+            </button>
         </div>
     </div>
-</div>
 
-<div id="toaster" class="toaster">
-    <div id="toaster-msg" style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;"></div>
-</div>
+    <!-- ── SUCCESS STATE ── -->
+    <div class="success-state" id="success-state">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">AurumOS is Ready!</div>
+        <div class="success-sub">Setup complete. You'll be redirected to login in a moment.</div>
+        <div class="biz-pill" id="success-biz-pill">
+            <span>🏪</span> <span id="success-biz-name">Your Business</span>
+        </div>
+        <button class="btn btn-primary" onclick="goLogin()" style="max-width:200px;margin:0 auto;display:flex;">
+            Go to Login →
+        </button>
+    </div>
+
+</div><!-- /card -->
 
 <script>
-    // --- KEYBOARD NAVIGATION LAYOUT RUNTIME CONTROLLERS ---
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const activeStep = document.querySelector('.step.active');
-            const inputs = Array.from(activeStep.querySelectorAll('input'));
-            const activeInput = document.activeElement;
-            const index = inputs.indexOf(activeInput);
+'use strict';
 
-            if (index > -1) {
-                if (index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                } else {
-                    if (activeStep.id === 'step1') animateTo(2);
-                    else if (activeStep.id === 'step2') animateTo(3);
-                    else if (activeStep.id === 'step3') finishSetup();
-                }
-            }
+var verifiedKey     = '';
+var verifiedBiz     = '';
+var verifiedOwner   = '';
+var currentStep     = 1;
+
+// ── KEY INPUT ───────────────────────────────────────────────
+function onKeyInput() {
+    var inp = document.getElementById('inp-key');
+    var raw = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Auto-format: AU-XXXX-XXXX-XXXX-XXXX
+    var formatted = '';
+    if (raw.startsWith('AU')) {
+        formatted = 'AU';
+        raw = raw.substring(2);
+        var segs = ['', '', '', ''];
+        for (var i = 0; i < 4; i++) {
+            segs[i] = raw.substring(i * 4, i * 4 + 4);
         }
+        segs.forEach(function(s) {
+            if (s) formatted += '-' + s;
+        });
+    } else {
+        formatted = inp.value.toUpperCase();
+    }
+
+    inp.value = formatted;
+
+    var clear = document.getElementById('key-clear');
+    clear.classList.toggle('show', formatted.length > 0);
+
+    // Enable verify button only when key looks complete
+    var btn = document.getElementById('btn-verify');
+    var looks_complete = /^AU-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(formatted);
+    btn.disabled = !looks_complete;
+
+    // Reset status if user edits
+    if (verifiedKey && formatted !== verifiedKey) {
+        verifiedKey = '';
+        hideKeyStatus();
+        inp.classList.remove('ok', 'err');
+    }
+}
+
+function clearKey() {
+    document.getElementById('inp-key').value = '';
+    document.getElementById('key-clear').classList.remove('show');
+    document.getElementById('btn-verify').disabled = true;
+    document.getElementById('inp-key').classList.remove('ok', 'err');
+    hideKeyStatus();
+    verifiedKey = '';
+}
+
+// ── VERIFY KEY ──────────────────────────────────────────────
+async function verifyKey() {
+    var key = document.getElementById('inp-key').value.trim().toUpperCase();
+    if (!key) return;
+
+    // Show checking state
+    showKeyStatus('checking', '⏳', 'Verifying License…',
+                  'Connecting to AurumOS license server…');
+    document.getElementById('btn-verify').disabled = true;
+    document.getElementById('btn-verify').innerHTML = '<span>⋯</span> Checking…';
+
+    if (!window.pywebview || !window.pywebview.api) {
+        showKeyStatus('error', '❌', 'Bridge not ready',
+                      'Please wait for the application to fully load.');
+        resetVerifyBtn();
+        return;
+    }
+
+    var res = await window.pywebview.api.verify_key(key).catch(function() {
+        return {status: 'error', message: 'Connection error.'};
     });
 
-    function showToaster(message, type = "error") {
-        const toaster = document.getElementById('toaster');
-        const msgSpan = document.getElementById('toaster-msg');
-        toaster.className = 'toaster' + (type === "success" ? ' success-toast' : '');
-        msgSpan.innerText = message;
-        toaster.classList.add('show');
-        setTimeout(() => { toaster.classList.remove('show'); }, 4000);
+    resetVerifyBtn();
+    var inp = document.getElementById('inp-key');
+
+    if (res.status === 'success') {
+        verifiedKey   = key;
+        verifiedBiz   = res.business || '';
+        verifiedOwner = res.owner    || '';
+
+        inp.classList.remove('err');
+        inp.classList.add('ok');
+
+        var subMsg = res.offline
+            ? 'Key accepted (offline mode — previously validated)'
+            : 'License is valid and active';
+
+        if (verifiedBiz) subMsg += ' · ' + verifiedBiz;
+
+        showKeyStatus('success', '✅', 'License Verified!', subMsg);
+
+        // Auto-fill business info if server returned it
+        if (verifiedBiz && document.getElementById('inp-biz'))
+            document.getElementById('inp-biz').value = verifiedBiz;
+        if (verifiedOwner && document.getElementById('inp-owner'))
+            document.getElementById('inp-owner').value = verifiedOwner;
+
+        // Move to step 2 after short delay
+        setTimeout(function() { goToStep(2); }, 1200);
+
+    } else {
+        inp.classList.remove('ok');
+        inp.classList.add('err');
+        shakeCard();
+
+        showKeyStatus('error', '🚫',
+            res.status === 'locked' ? 'License Revoked' : 'Invalid License Key',
+            res.message || 'This key could not be verified. Please check and try again.'
+        );
+    }
+}
+
+function resetVerifyBtn() {
+    var btn = document.getElementById('btn-verify');
+    btn.innerHTML = '<span>🔑</span> Verify License Key';
+    var key = document.getElementById('inp-key').value.trim();
+    btn.disabled = !/^AU-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
+}
+
+function showKeyStatus(type, icon, title, sub) {
+    var el = document.getElementById('key-status');
+    el.className = 'key-status show ' + type;
+    document.getElementById('ks-icon').innerText  = icon;
+    document.getElementById('ks-title').innerText = title;
+    document.getElementById('ks-sub').innerText   = sub;
+}
+
+function hideKeyStatus() {
+    document.getElementById('key-status').className = 'key-status';
+}
+
+// ── STEP NAVIGATION ─────────────────────────────────────────
+function goToStep(n) {
+    // Validate before advancing
+    if (n === 2 && !verifiedKey) {
+        showKeyStatus('error', '🔑', 'License Required',
+                      'Please verify your license key before continuing.');
+        shakeCard();
+        return;
     }
 
-    async function animateTo(targetStep) {
-        if (targetStep === 2) {
-            const keyInput = document.getElementById('key').value;
-            if (!keyInput || keyInput.trim().length < 5) {
-                showToaster("Please enter a valid activation key.");
-                return;
-            }
+    currentStep = n;
 
-            if (window.pywebview && window.pywebview.api) {
-                const res = await window.pywebview.api.verify_key(keyInput);
-                if (res.status !== "success") {
-                    showToaster(res.message || "Invalid activation key.");
-                    return;
-                }
-            }
-        }
+    // Update panels
+    [1, 2, 3].forEach(function(i) {
+        document.getElementById('panel-' + i).classList.toggle('active', i === n);
+    });
 
-        const currentStep = document.querySelector('.step.active');
-        const nextStep = document.getElementById('step' + targetStep);
-        const progress = document.getElementById('progress-fill');
+    // Update step indicators
+    [1, 2, 3].forEach(function(i) {
+        var ind = document.getElementById('step-ind-' + i);
+        var num = document.getElementById('step-num-' + i);
+        ind.className = 'step';
+        num.innerText = i;
+        if (i < n)       { ind.classList.add('done');   num.innerText = '✓'; }
+        else if (i === n){ ind.classList.add('active'); }
+    });
 
-        currentStep.style.animation = 'fadeOutLeft 0.25s ease forwards';
+    // Focus first field of new step
+    setTimeout(function() {
+        var focusMap = {2: 'inp-biz', 3: 'inp-pw'};
+        var el = document.getElementById(focusMap[n]);
+        if (el) el.focus();
+    }, 150);
+}
 
-        setTimeout(() => {
-            currentStep.classList.remove('active');
-            currentStep.style.animation = '';
-            nextStep.classList.add('active');
+function goToStep3() {
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    if (!biz || !owner) {
+        shakeCard();
+        if (!biz)   document.getElementById('inp-biz').classList.add('err');
+        if (!owner) document.getElementById('inp-owner').classList.add('err');
+        setTimeout(function() {
+            document.getElementById('inp-biz').classList.remove('err');
+            document.getElementById('inp-owner').classList.remove('err');
+        }, 1400);
+        return;
+    }
+    goToStep(3);
+}
 
-            const percent = (targetStep / 3) * 100;
-            progress.style.width = percent + '%';
+// ── PASSWORD STRENGTH ────────────────────────────────────────
+function checkPwStrength() {
+    var pw    = document.getElementById('inp-pw').value;
+    var score = 0;
+    if (pw.length >= 6)                         score++;
+    if (pw.length >= 10)                        score++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw))  score++;
+    if (/[^a-zA-Z0-9]/.test(pw))               score++;
 
-            const firstInput = nextStep.querySelector('input');
-            if(firstInput) firstInput.focus();
-        }, 250);
+    var colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#15803d'];
+    var labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    for (var i = 1; i <= 4; i++) {
+        var bar = document.getElementById('pw-b' + i);
+        bar.style.background = i <= score ? colors[score] : 'var(--rule)';
+    }
+    document.getElementById('pw-label').innerText =
+        pw.length > 0 ? labels[score] + ' password' : '';
+    document.getElementById('pw-label').style.color = colors[score];
+}
+
+// ── FINISH SETUP ─────────────────────────────────────────────
+async function finishSetup() {
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    var pw    = document.getElementById('inp-pw').value;
+    var pw2   = document.getElementById('inp-pw2').value;
+
+    if (pw.length < 6) {
+        shake('inp-pw');
+        document.getElementById('pw-label').innerText = 'Min 6 characters required';
+        document.getElementById('pw-label').style.color = 'var(--red)';
+        return;
+    }
+    if (pw !== pw2) {
+        shake('inp-pw2');
+        document.getElementById('inp-pw2').classList.add('err');
+        document.getElementById('inp-pw2').placeholder = 'Passwords do not match!';
+        setTimeout(function() {
+            document.getElementById('inp-pw2').classList.remove('err');
+            document.getElementById('inp-pw2').placeholder = 'Re-enter password';
+        }, 1500);
+        return;
     }
 
-    async function finishSetup() {
-        const data = {
-            key: document.getElementById('key').value,
-            businessName: document.getElementById('biz_name').value,
-            ownerName: document.getElementById('owner_name').value,
-            phone: document.getElementById('phone').value,
-            gst: document.getElementById('gst').value,
-            address: document.getElementById('address').value,
-            adminUser: document.getElementById('admin_user').value,
-            adminPass: document.getElementById('pass').value
-        };
+    var btn = document.getElementById('btn-finish');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⋯</span> Setting up…';
 
-        if (!data.businessName || !data.ownerName || !data.adminUser || !data.adminPass) {
-            showToaster("Required fields missing.");
-            return;
-        }
-
-        if (window.pywebview && window.pywebview.api) {
-            const res = await window.pywebview.api.save_setup(data);
-            if (res.status === "success") {
-                showToaster("System Initialized! Redirecting...", "success");
-            } else {
-                showToaster(res.message);
-            }
-        } else {
-            console.log("Setup complete (Preview Mode):", data);
-            showToaster("Setup complete!", "success");
-        }
+    if (!window.pywebview || !window.pywebview.api) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✓</span> Complete Setup';
+        return;
     }
+
+    var res = await window.pywebview.api.save_setup({
+        businessName: biz,
+        ownerName:    owner,
+        adminPass:    pw,
+        licenseKey:   verifiedKey,
+    }).catch(function() { return {status:'error'}; });
+
+    if (res && res.status === 'success') {
+        // Show all panels hidden, show success
+        [1,2,3].forEach(function(i) {
+            document.getElementById('panel-' + i).classList.remove('active');
+        });
+        // Update all steps to done
+        [1,2,3].forEach(function(i) {
+            document.getElementById('step-ind-' + i).className = 'step done';
+            document.getElementById('step-num-' + i).innerText = '✓';
+        });
+
+        document.getElementById('success-biz-name').innerText = biz;
+        document.getElementById('success-state').classList.add('show');
+
+        // Auto redirect after 3s
+        setTimeout(goLogin, 3000);
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✓</span> Complete Setup';
+        shakeCard();
+    }
+}
+
+function goLogin() {
+    if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.navigate('login.html');
+    }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function shakeCard() {
+    var card = document.getElementById('main-card');
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+    setTimeout(function() { card.classList.remove('shake'); }, 500);
+}
+
+function shake(id) {
+    shakeCard();
+    var el = document.getElementById(id);
+    if (el) { el.focus(); el.classList.add('err'); setTimeout(function(){ el.classList.remove('err'); }, 1200); }
+}
+
+// Wait for bridge
+var _bridgeReady = false;
+function waitForBridge() {
+    if (window.pywebview && window.pywebview.api) {
+        _bridgeReady = true; return;
+    }
+    setTimeout(waitForBridge, 150);
+}
+waitForBridge();
+
+window.onload = function() {
+    document.getElementById('inp-key').focus();
+};
 </script>
 </body>
 </html>

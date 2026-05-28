@@ -1,190 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AurumOS | Secure Gateway</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0f172a;
-            --accent: #b59410;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --input-bg: #f1f5f9;
-            --error: #e11d48;
-            --success: #059669;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-
-        body {
-            background-color: var(--bg);
-            background-image:
-                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(181, 148, 16, 0.05) 0px, transparent 50%);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(30px); filter: blur(5px); }
-            to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
-        }
-
-        .login-card {
-            background: var(--card-bg);
-            padding: 50px;
-            border-radius: 32px;
-            width: 440px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
-            border: 1px solid rgba(0,0,0,0.05);
-            text-align: center;
-            animation: slideUpFade 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-
-        .brand-logo { font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 5px; letter-spacing: -1.5px; }
-        .brand-logo span { color: var(--accent); }
-        h2 { color: var(--text-main); font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
-        p  { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 35px; }
-
-        .input-group {
-            text-align: left; margin-bottom: 22px;
-            opacity: 0;
-            animation: slideUpFade 0.7s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        .input-group label {
-            display: block; font-size: 0.7rem; font-weight: 800;
-            color: var(--text-muted); text-transform: uppercase;
-            letter-spacing: 1.2px; margin-bottom: 8px; margin-left: 4px;
-        }
-        input {
-            width: 100%; padding: 16px 20px;
-            background: var(--input-bg); border: 2px solid transparent;
-            border-radius: 16px; font-size: 1rem; outline: none;
-            color: var(--text-main);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        input:focus {
-            border-color: var(--accent); background: white;
-            box-shadow: 0 10px 15px -3px rgba(181, 148, 16, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .btn-login {
-            width: 100%; padding: 18px;
-            background: var(--primary); color: white;
-            border: none; border-radius: 16px;
-            font-size: 1rem; font-weight: 700; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 10px; opacity: 0;
-            animation: slideUpFade 0.7s 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        .btn-login:hover {
-            background: #1e293b; transform: translateY(-3px);
-            box-shadow: 0 15px 25px -5px rgba(15, 23, 42, 0.2);
-        }
-
-        #error-msg { font-size: 0.85rem; font-weight: 600; margin-top: 20px; min-height: 20px; }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25%       { transform: translateX(-6px); }
-            75%       { transform: translateX(6px); }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>AurumOS | Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--ink:#0e0c09;--ink2:#2a2620;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
+    --rule:rgba(14,12,9,0.09);--red:#b91c1c;--red-bg:#fef2f2;
+    --green:#15803d;--muted:#7a7268;--muted2:#9e9890;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(168,125,30,0.03) 28px,rgba(168,125,30,0.03) 29px);}
+.card{width:360px;max-width:100%;background:#fff;border:1px solid var(--rule);border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(14,12,9,0.10);animation:ci .4s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes ci{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+.bar{height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));background-size:200%;animation:gs 2.5s ease infinite;}
+@keyframes gs{0%{background-position:0%}100%{background-position:200%}}
+.logo{padding:26px 32px 0;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.lm{width:50px;height:50px;border-radius:12px;background:var(--ink);display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(14,12,9,.2);}
+.lm span{font-family:'DM Serif Display',serif;font-size:1rem;color:var(--gold2);font-style:italic;}
+.ln{font-family:'DM Serif Display',serif;font-size:1.35rem;color:var(--ink);letter-spacing:-.3px;}
+.ln em{color:var(--gold3);}
+.ls{font-size:.6rem;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:1.3px;margin-top:4px;}
+.form{padding:22px 32px 26px;}
+.lbl{font-size:.57rem;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);display:block;margin-bottom:5px;}
+.inp{width:100%;height:42px;padding:0 13px;background:var(--cream);border:1px solid var(--rule);border-radius:8px;font-family:'DM Mono',monospace;font-size:.85rem;color:var(--ink);outline:none;transition:all .14s;}
+.inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,.12);background:#fff;}
+.inp:disabled{opacity:.45;cursor:not-allowed;}
+.field{margin-bottom:13px;}
+.ar{display:none;align-items:center;justify-content:space-between;margin-bottom:14px;min-height:26px;}
+.al{font-size:.6rem;font-weight:500;color:var(--muted2);}
+.dots{display:flex;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--rule);background:#fff;transition:all .25s cubic-bezier(.34,1.56,.64,1);}
+.dot.used{background:var(--red);border-color:rgba(185,28,28,.3);box-shadow:0 0 0 3px rgba(185,28,28,.12);}
+.dot.warn{background:var(--gold2);border-color:var(--gold-ln);}
+.em{display:none;background:var(--red-bg);border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:9px 12px;font-size:.73rem;font-weight:500;color:var(--red);margin-bottom:13px;}
+.em.on{display:block;}
+.lkp{background:#fff8f8;border:1px solid rgba(185,28,28,.15);border-radius:10px;padding:18px;text-align:center;margin-bottom:13px;display:none;}
+.lki{font-size:2rem;margin-bottom:7px;}
+.lkt{font-family:'DM Serif Display',serif;font-size:.95rem;color:var(--ink);margin-bottom:3px;}
+.lks{font-size:.72rem;color:var(--muted);margin-bottom:10px;}
+.lkc{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:500;color:var(--red);letter-spacing:2px;}
+.lkh{font-size:.62rem;color:var(--muted2);margin-top:7px;}
+.btn{width:100%;height:43px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .18s;}
+.btn:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.foot{padding:10px 32px 18px;text-align:center;}
+.sr{display:flex;align-items:center;justify-content:center;gap:5px;font-size:.6rem;color:var(--muted2);margin-bottom:4px;}
+.sd{width:6px;height:6px;border-radius:50%;background:#d1d5db;}
+.sd.on{background:var(--green);animation:sp 2s ease infinite;}
+.sd.er{background:var(--red);}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:.35}}
+.vr{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 8px;border-radius:99px;}
+@keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-5px)}60%{transform:translateX(5px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+.shake{animation:shake .45s ease both;}
+</style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="brand-logo">Aurum<span>OS</span></div>
-        <h2>Enterprise Login</h2>
-        <p>Accessing Secure Wholesale Terminal</p>
-
-        <div class="input-group">
-            <label>Username</label>
-            <input type="text" id="user" class="toggle-input" placeholder="Enter username" autocomplete="off">
-        </div>
-        <div class="input-group">
-            <label>Password</label>
-            <input type="password" id="pass" class="toggle-input" placeholder="••••••••">
-        </div>
-
-        <button class="btn-login" id="login-btn" onclick="handleLogin()">Verify Credentials</button>
-        <div id="error-msg"></div>
+<div class="card" id="card">
+    <div class="bar"></div>
+    <div class="logo">
+        <div class="lm"><span>Au</span></div>
+        <div class="ln">Aurum<em>OS</em></div>
+        <div class="ls">Jewelry ERP · Secure Access</div>
     </div>
+    <div class="form">
+        <div class="field">
+            <label class="lbl">Password</label>
+            <input type="password" id="inp" class="inp"
+                   placeholder="••••••••" autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter')login()">
+        </div>
+        <div class="ar" id="ar">
+            <span class="al" id="al"></span>
+            <div class="dots">
+                <div class="dot" id="d1"></div>
+                <div class="dot" id="d2"></div>
+                <div class="dot" id="d3"></div>
+            </div>
+        </div>
+        <div class="em" id="em"></div>
+        <div class="lkp" id="lkp">
+            <div class="lki">🔒</div>
+            <div class="lkt">Account Locked</div>
+            <div class="lks">Too many incorrect attempts</div>
+            <div class="lkc" id="lkc">15:00</div>
+            <div class="lkh">Please wait before trying again.</div>
+        </div>
+        <button class="btn" id="btn" onclick="login()">
+            <span>→</span> Sign In
+        </button>
+    </div>
+    <div class="foot">
+        <div class="sr"><div class="sd" id="sd"></div><span id="st">Starting…</span></div>
+        <span class="vr" id="vr">AurumOS</span>
+    </div>
+</div>
 
-    <script>
-        // SMART ENTER KEY
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const inputs = Array.from(document.querySelectorAll('.toggle-input'));
-                const index  = inputs.indexOf(document.activeElement);
-                if (index > -1 && index < inputs.length - 1) {
-                    e.preventDefault();
-                    inputs[index + 1].focus();
-                } else {
-                    handleLogin();
-                }
-            }
-        });
+<script>
+'use strict';
 
-        async function handleLogin() {
-            const user  = document.getElementById('user').value.trim();
-            const pass  = document.getElementById('pass').value.trim();
-            const btn   = document.getElementById('login-btn');
-            const error = document.getElementById('error-msg');
+/*
+ * PERMANENT SOLUTION
+ * ══════════════════
+ * pywebview's Promise/.then() is unreliable in PyInstaller exe.
+ * This version uses window.pywebview.api directly with a polling
+ * readiness check, then calls API methods and handles results
+ * through a simple callback wrapper that works in ALL environments:
+ * dev (.py), compiled (.exe), and both 32/64-bit builds.
+ *
+ * Key rules:
+ * 1. Never use async/await on pywebview API calls
+ * 2. Never chain .then() directly — wrap in try/catch
+ * 3. Always check API exists before calling
+ * 4. Use window.pywebview.api.method() — NOT a stored reference
+ */
 
-            if (!user || !pass) {
-                error.style.color = "var(--error)";
-                error.innerText   = "Entry fields cannot be empty.";
-                return;
-            }
+var LOCKED   = false;
+var ATTEMPTS = 0;
+var MAX      = 3;
+var LK_TIMER = null;
+var READY    = false;
 
-            btn.disabled  = true;
-            btn.innerText = "Securing Session...";
-            error.innerText = "";
-
-            if (window.pywebview && window.pywebview.api) {
-                try {
-                    const res = await window.pywebview.api.verify_login(user, pass);
-
-                    if (res.status === "success") {
-                        error.style.color = "var(--success)";
-                        error.innerText   = "Authorized. Redirecting...";
-
-                        // ✅ Save to localStorage as backup (may not persist on fresh machines)
-                        localStorage.setItem('aurum_user_role',    res.role);
-                        localStorage.setItem('aurum_active_user',  res.username || user);
-
-                        // ✅ Route based on role
-                        if (res.role === 'staff') {
-                            window.location.href = "billing.html";
-                        } else {
-                            window.location.href = "dashboard.html";
-                        }
-
-                    } else {
-                        error.style.color = "var(--error)";
-                        error.innerText   = res.message || "Invalid Credentials.";
-                        btn.disabled  = false;
-                        btn.innerText = "Verify Credentials";
-
-                        const card = document.querySelector('.login-card');
-                        card.style.animation = 'none';
-                        card.offsetHeight;
-                        card.style.animation = 'shake 0.4s ease';
-                    }
-                } catch (err) {
-                    console.log("Login error:", err);
-                    btn.disabled  = false;
-                    btn.innerText = "Verify Credentials";
-                }
-            }
+/* ── Poll until bridge ready ── */
+var _pt = setInterval(function() {
+    try {
+        if (window.pywebview && window.pywebview.api &&
+            window.pywebview.api.verify_login) {
+            clearInterval(_pt);
+            READY = true;
+            onReady();
         }
-    </script>
+    } catch(e) {}
+}, 100);
+
+setTimeout(function() {
+    if (!READY) {
+        clearInterval(_pt);
+        setSt('er', 'Timeout — restart app');
+    }
+}, 20000);
+
+function onReady() {
+    setSt('on', 'Ready');
+
+    /* Version — use try/catch, not .then() */
+    try {
+        var vp = window.pywebview.api.get_current_version();
+        if (vp && typeof vp.then === 'function') {
+            vp.then(function(v) {
+                try { if (v) document.getElementById('vr').innerText = 'v' + v; } catch(e) {}
+            }).catch(function(){});
+        }
+    } catch(e) {}
+
+    /* Lockout state */
+    try {
+        var lp = window.pywebview.api.get_lockout_status();
+        if (lp && typeof lp.then === 'function') {
+            lp.then(function(s) {
+                try {
+                    if (!s) return;
+                    ATTEMPTS = parseInt(s.attempts) || 0;
+                    if (s.locked && s.remaining > 0) {
+                        dots(MAX); showAR(); startLock(parseInt(s.remaining));
+                    } else if (ATTEMPTS > 0) {
+                        dots(ATTEMPTS); showAR();
+                    }
+                } catch(e) {}
+            }).catch(function(){});
+        }
+    } catch(e) {}
+}
+
+/* ── LOGIN ── */
+function login() {
+    if (LOCKED) return;
+    if (!READY || !window.pywebview || !window.pywebview.api) {
+        showErr('App not ready — please wait a moment.');
+        return;
+    }
+
+    var pass = document.getElementById('inp').value;
+    if (!pass) { shake(); showErr('Please enter your password.'); return; }
+
+    var btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⋯</span> Checking…';
+    hideErr();
+
+    /* Call verify_login — handle both Promise and sync return */
+    try {
+        var result = window.pywebview.api.verify_login(pass);
+
+        if (result && typeof result.then === 'function') {
+            /* Promise-based (standard pywebview) */
+            result.then(function(res) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>→</span> Sign In';
+                handleResult(res);
+            }).catch(function(e) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>→</span> Sign In';
+                console.error('[login] error:', e);
+                showErr('App error — please try again.');
+            });
+        } else if (result && typeof result === 'object') {
+            /* Sync return (some pywebview builds) */
+            btn.disabled = false;
+            btn.innerHTML = '<span>→</span> Sign In';
+            handleResult(result);
+        } else {
+            /* Null/undefined — wait for push via evaluate_js fallback */
+            window.__loginResult = function(res) {
+                window.__loginResult = null;
+                btn.disabled = false;
+                btn.innerHTML = '<span>→</span> Sign In';
+                handleResult(res);
+            };
+            /* Safety timeout */
+            setTimeout(function() {
+                if (window.__loginResult) {
+                    window.__loginResult = null;
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>→</span> Sign In';
+                    showErr('No response — please try again.');
+                }
+            }, 8000);
+        }
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>→</span> Sign In';
+        console.error('[login] exception:', e);
+        showErr('Call failed — please try again.');
+    }
+}
+
+/* ── Handle result from ANY source ── */
+function handleResult(res) {
+    if (!res) { showErr('No response — try again.'); return; }
+
+    if (res.status === 'success') {
+        var btn = document.getElementById('btn');
+        btn.innerHTML = '<span>✓</span> Welcome!';
+        btn.style.background = '#15803d';
+        setTimeout(function() {
+            try {
+                /* Navigate — most reliable method */
+                var url = window.location.href.replace(/[^\/]*$/, 'dashboard.html');
+                window.location.href = url;
+            } catch(e) {
+                try { window.pywebview.api.navigate('dashboard.html'); } catch(e2) {}
+            }
+        }, 400);
+        return;
+    }
+
+    if (res.status === 'locked') {
+        ATTEMPTS = MAX;
+        dots(MAX); showAR();
+        startLock(parseInt(res.remaining) || 900);
+        return;
+    }
+
+    /* Wrong password */
+    ATTEMPTS = parseInt(res.attempts) || (ATTEMPTS + 1);
+    dots(ATTEMPTS); showAR();
+    shake();
+    document.getElementById('inp').value = '';
+    document.getElementById('inp').focus();
+    showErr(res.message || 'Wrong password.');
+}
+
+/* Also register as global so Python can push if needed */
+window.__loginResult = null;
+
+/* ── LOCKOUT ── */
+function startLock(secs) {
+    LOCKED = true;
+    if (LK_TIMER) clearInterval(LK_TIMER);
+    document.getElementById('inp').disabled = true;
+    var btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>🔒</span> Locked';
+    hideErr();
+    document.getElementById('lkp').style.cssText = 'display:block!important;';
+    tick(secs);
+    LK_TIMER = setInterval(function() {
+        secs--; tick(secs);
+        if (secs <= 0) { clearInterval(LK_TIMER); unlock(); }
+    }, 1000);
+}
+
+function tick(s) {
+    document.getElementById('lkc').innerText =
+        Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);
+}
+
+function unlock() {
+    LOCKED = false; ATTEMPTS = 0;
+    document.getElementById('inp').disabled = false;
+    var btn = document.getElementById('btn');
+    btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In';
+    btn.style.background = '';
+    document.getElementById('lkp').style.cssText = 'display:none!important;';
+    document.getElementById('ar').style.display = 'none';
+    document.getElementById('inp').focus();
+}
+
+/* ── UI helpers ── */
+function dots(n) {
+    [1,2,3].forEach(function(i) {
+        var d = document.getElementById('d'+i);
+        d.className = 'dot';
+        if (i < n) d.classList.add('used');
+        else if (i===n) d.classList.add(n<MAX?'warn':'used');
+    });
+    var left = MAX - n;
+    var al = document.getElementById('al');
+    if (n >= MAX) { al.innerText='Account locked'; al.style.color='var(--red)'; }
+    else { al.innerText=left+' attempt'+(left===1?'':'s')+' remaining'; al.style.color=left===1?'var(--red)':'var(--muted2)'; }
+}
+function showAR()   { document.getElementById('ar').style.display='flex'; }
+function showErr(m) { var e=document.getElementById('em'); e.innerText=m; e.classList.add('on'); }
+function hideErr()  { document.getElementById('em').classList.remove('on'); }
+function shake()    { var c=document.getElementById('card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+function setSt(s,t) {
+    var d=document.getElementById('sd');
+    d.className='sd'+(s==='on'?' on':s==='er'?' er':'');
+    document.getElementById('st').innerText=t;
+}
+
+window.onload = function() { document.getElementById('inp').focus(); };
+</script>
 </body>
 </html>

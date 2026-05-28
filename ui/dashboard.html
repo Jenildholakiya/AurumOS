@@ -1,284 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AurumOS | Executive Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="sidebar.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --primary:#0b0f19; --primary-slate:#111827; --primary-light:#1e293b;
-            --accent:#b59410; --accent-glow:rgba(181,148,16,0.12);
-            --bg-main:#f3f5f9; --card:#ffffff; --border:#e2e8f0;
-            --text-main:#0f172a; --text-muted:#64748b;
-            --danger:#ef4444; --danger-bg:#fef2f2; --success:#10b981;
-        }
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Plus Jakarta Sans',sans-serif;}
-        body{display: block;height:100vh;background:var(--bg-main);color:var(--text-main);overflow:hidden;}
-        main{width: 100%;display:flex;flex-direction:column;overflow:hidden;}
-        header{height:80px;background:var(--card);border-bottom:1px solid rgba(226,232,240,0.6);display:flex;align-items:center;justify-content:space-between;padding:0 40px;flex-shrink:0;}
-        .header-title h1{font-size:1.1rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1.2px;}
-        #real-time-clock{font-size:0.75rem;font-weight:800;color:var(--accent);background:#fffdf5;padding:8px 18px;border-radius:100px;letter-spacing:0.5px;border:1px solid rgba(181,148,16,0.15);}
-        .user-profile-avatar{width:40px;height:40px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;color:#fff;border:1px solid var(--border);text-transform:uppercase;}
-        .content { padding:30px 40px; overflow-y:auto; height: calc(100vh - 80px); }
-        .dashboard-welcome-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:30px;padding-bottom:20px;border-bottom:1px solid rgba(226,232,240,0.7);}
-        .dashboard-welcome-row h2{font-size:2.2rem;font-weight:800;letter-spacing:-1px;color:var(--primary);}
-        .dashboard-welcome-row p{color:var(--text-muted);font-size:0.9rem;font-weight:500;margin-top:4px;}
-        .status-node-tag{font-size:0.65rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;background:#ffffff;padding:6px 14px;border-radius:6px;border:1px solid var(--border);}
-        .hero-dashboard-split{display:grid;grid-template-columns:1fr 1.8fr;gap:25px;margin-bottom:30px;}
-        .vault-summary-panel{background:#0b0f19;color:#ffffff;border-radius:20px;padding:30px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 15px 35px rgba(11,15,25,0.06);position:relative;overflow:hidden;}
-        .vault-header span{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);}
-        .vault-header h2{font-size:2.4rem;font-weight:800;letter-spacing:-1px;margin-top:8px;}
-        .vault-meta{border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:15px;}
-        .vault-meta-item span{font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;}
-        .vault-meta-item h4{font-size:1.1rem;font-weight:700;color:#ffffff;margin-top:4px;}
-        .mini-matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-        .premium-tile{background:var(--card);border:1px solid var(--border);padding:25px;border-radius:16px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;}
-        .premium-tile:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(15,23,42,0.03);border-color:var(--accent);}
-        .premium-tile span{font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;}
-        .premium-tile h3{font-size:1.6rem;font-weight:800;color:var(--primary);margin-top:10px;letter-spacing:-0.5px;}
-        .luxury-section-title{font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--primary);margin:10px 0 20px 0;padding-left:12px;border-left:3px solid var(--accent);display:block;}
-        .lower-analytics-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:25px;}
-        .glass-block{background:var(--card);border-radius:20px;border:1px solid var(--border);padding:30px;}
-        .glass-block.obsidian-panel{background:#0b0f19;border:1px solid #1e293b;}
-        .block-title-header{margin-bottom:25px;}
-        .block-title-header h5{font-size:0.75rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1px;}
-        .obsidian-panel .block-title-header h5{color:#ffffff;}
-        .luxury-table{width:100%;border-collapse:collapse;}
-        .luxury-table th{padding:0 0 12px 0;font-size:0.65rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);}
-        .luxury-table td{padding:14px 0;font-size:0.85rem;font-weight:600;color:var(--text-main);border-bottom:1px solid rgba(238,241,246,0.6);}
-        .luxury-table tr:last-child td{border-bottom:none;}
-        .status-badge-dot{font-size:0.65rem;font-weight:800;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:6px;}
-        .status-badge-dot::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;}
-        .status-danger{background:var(--danger-bg);color:var(--danger);}
-        .status-danger::before{background:var(--danger);}
-        .status-warn{background:#fff9db;color:#f59f00;}
-        .status-warn::before{background:#f59f00;}
-        .stream-timeline{display:flex;flex-direction:column;gap:18px;}
-        .stream-row{display:flex;gap:15px;align-items:flex-start;}
-        .stream-time-stamp{font-size:0.7rem;font-weight:800;color:var(--accent);font-family:monospace;padding:2px 6px;border-radius:4px;}
-        .stream-text-info{font-size:0.8rem;font-weight:500;color:var(--text-main);line-height:1.4;}
-        .chart-container-frame{position:relative;height:310px;width:100%;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Dashboard</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#ffffff;
+    --ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--teal:#0d9488;--blue:#1d4ed8;--red:#b91c1c;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+    --sh2:0 4px 16px rgba(0,0,0,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);display:block;height:100vh;overflow:hidden;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
 
+/* ── HEADER ── */
+header{
+    height:58px;background:var(--white);
+    border-bottom:1px solid var(--rule);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;flex-shrink:0;position:relative;
+}
+header::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);
+}
+.h-brand{font-family:var(--serif);font-size:0.95rem;color:var(--ink);letter-spacing:-0.2px;}
+.h-brand em{color:var(--gold3);font-style:italic;}
+.h-mid{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;}
+.h-clock{font-family:var(--mono);font-size:0.65rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:4px;border:1px solid var(--rule);}
+.h-right{display:flex;align-items:center;gap:10px;}
+.h-uname{font-size:0.73rem;font-weight:600;color:var(--ink);text-align:right;}
+.h-urole{font-size:0.57rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;}
+.h-avatar{width:32px;height:32px;border-radius:6px;background:var(--ink);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#fff;}
+
+/* ── CONTENT ── */
+.page{padding:22px 28px 28px;overflow-y:auto;height:calc(100vh - 58px);scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.page::-webkit-scrollbar{width:3px;}
+.page::-webkit-scrollbar-thumb{background:var(--cream3);}
+
+/* ── WELCOME ── */
+.welcome{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.w-text h2{font-family:var(--serif);font-size:1.65rem;font-weight:400;letter-spacing:-0.4px;color:var(--ink);line-height:1.1;}
+.w-text h2 em{color:var(--gold3);font-style:italic;}
+.w-text p{font-size:0.72rem;font-weight:300;color:var(--muted);margin-top:4px;}
+.live-badge{display:flex;align-items:center;gap:6px;background:rgba(21,128,61,0.07);border:1px solid rgba(21,128,61,0.18);padding:6px 14px;border-radius:6px;font-size:0.62rem;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+
+/* ── KPI STRIP ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh);transition:box-shadow 0.18s,transform 0.18s;cursor:default;}
+.kpi:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:8px 8px 0 0;}
+.kpi-gold::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.kpi-teal::before{background:linear-gradient(90deg,var(--teal),#2dd4bf);}
+.kpi-blue::before{background:linear-gradient(90deg,var(--blue),#60a5fa);}
+.kpi-green::before{background:linear-gradient(90deg,var(--green),#22c55e);}
+.kpi-ink::before{background:linear-gradient(90deg,var(--ink2),var(--ink3));}
+.kpi-lbl{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);margin-bottom:9px;}
+.kpi-val{font-family:var(--serif);font-size:1.5rem;color:var(--ink);letter-spacing:-0.4px;line-height:1;}
+.kpi-val.gold{color:var(--gold3);}
+.kpi-val.teal{color:var(--teal);}
+.kpi-val.green{color:var(--green);}
+.kpi-sub{font-size:0.6rem;color:var(--muted2);margin-top:5px;}
+
+/* ── SECTION LABEL ── */
+.sec{display:flex;align-items:center;gap:12px;margin:6px 0 14px;}
+.sec-text{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted2);white-space:nowrap;}
+.sec::before,.sec::after{content:'';flex:1;height:1px;background:var(--rule);}
+.sec::before{max-width:20px;}
+
+/* ── CHARTS ROW ── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+
+/* Dark chart panel */
+.panel-dark{background:var(--ink2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:20px 22px;}
+.panel-light{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:20px 22px;box-shadow:var(--sh);}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.panel-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.panel-dark .panel-title{color:rgba(255,255,255,0.45);}
+.panel-light .panel-title{color:var(--ink3);}
+.chart-wrap{position:relative;height:190px;width:100%;}
+.legend{display:flex;gap:12px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.58rem;font-weight:500;}
+.panel-dark .leg{color:rgba(255,255,255,0.4);}
+.panel-light .leg{color:var(--muted2);}
+.leg-sq{width:10px;height:3px;border-radius:99px;}
+
+/* ── BOTTOM ROW ── */
+.bottom-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow:hidden;border-radius:10px;background:var(--white);border:1px solid var(--rule);box-shadow:var(--sh);}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.tbl-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);}
+.tbl-link{font-size:0.62rem;font-weight:600;color:var(--gold3);cursor:pointer;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);padding:0 16px 8px;border-bottom:1px solid var(--rule);text-align:left;}
+th:not(:first-child){text-align:right;}
+td{padding:10px 16px;font-size:0.77rem;font-weight:500;color:var(--ink);border-bottom:1px solid var(--rule2);}
+tr:last-child td{border-bottom:none;}
+td:not(:first-child){text-align:right;}
+.b-danger{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fef2f2;color:var(--red);border:1px solid rgba(185,28,28,0.15);}
+.b-warn{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.15);}
+.b-danger::before,.b-warn::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;}
+
+/* ── AUDIT LOG ── */
+.audit-wrap{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+.audit-list{padding:4px 0;}
+.audit-item{display:flex;gap:10px;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--rule2);}
+.audit-item:last-child{border-bottom:none;}
+.audit-time{font-family:var(--mono);font-size:0.6rem;font-weight:500;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
+.audit-msg{font-size:0.72rem;font-weight:400;color:var(--muted);line-height:1.5;}
+
+.empty-cell{text-align:center;padding:20px;font-size:0.75rem;color:var(--muted2);}
+</style>
 <style id="aurum-layout-fix">
 body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 252px !important; }
 body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
-body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+body.sidebar-collapsed #sidebar-container { width: 66px !important; }
 </style>
 </head>
 <body>
 <script src="sidebar.js"></script>
 <div id="sidebar-container"></div>
 
+
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
+
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){
+      clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
 <main>
-    <header>
-        <div class="header-title"><h1>Executive Command Core</h1></div>
-        <div id="real-time-clock">Loading...</div>
-        <div class="user-profile" style="display:flex;align-items:center;gap:15px;">
-            <div style="text-align:right">
-                <div id="owner-header-name" style="font-size:0.8rem;font-weight:800;letter-spacing:-0.2px;">Director</div>
-                <div style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">System Director</div>
-            </div>
-            <div id="owner-avatar-initials" class="user-profile-avatar">OS</div>
+<header>
+    <div class="h-brand">Aurum<em>OS</em></div>
+    <div class="h-mid">
+        <div class="h-clock" id="clock">—</div>
+    </div>
+    <div class="h-right">
+        <div>
+            <div class="h-uname" id="h-uname">Director</div>
+            <div class="h-urole">System Owner</div>
         </div>
-    </header>
+        <div class="h-avatar" id="h-avatar">OS</div>
+    </div>
+</header>
 
-    <div class="content">
-        <div class="dashboard-welcome-row">
-            <div>
-                <h2 id="owner-welcome-string">Welcome, <span id="owner-welcome-name">Director</span></h2>
-                <p>Your jewelry enterprise terminal is synchronized and ready for transactions.</p>
-            </div>
-            <div><span class="status-node-tag" id="dash-sync-status">Node Status: Active</span></div>
+<div class="page">
+
+    <!-- Welcome -->
+    <div class="welcome">
+        <div class="w-text">
+            <h2 id="welcome-str">Good morning, <em id="welcome-name">Director</em></h2>
+            <p>Your jewelry enterprise is synchronized and ready.</p>
         </div>
+        <div class="live-badge"><div class="live-dot"></div><span id="sync-status">Node Active</span></div>
+    </div>
 
-        <div class="hero-dashboard-split">
-            <div class="vault-summary-panel">
-                <div class="vault-header">
-                    <span>Today's Accumulated Sales</span>
-                    <h2 id="dash-sales">&#8377; 0.00</h2>
-                </div>
-                <div class="vault-meta">
-                    <div class="vault-meta-item"><span>Vault Purity Node</span><h4 id="dash-purity-node">Active</h4></div>
-                    <div class="vault-meta-item"><span>Compliance Matrix</span><h4 id="dash-compliance-matrix">100%</h4></div>
-                </div>
-            </div>
-            <div class="mini-matrix-grid">
-                <div class="premium-tile"><span>Total Tracked Stock Units</span><h3 id="dash-units">0</h3></div>
-                <div class="premium-tile"><span>Net Metallic Volume Weight</span><h3 id="dash-weight">0.000 g</h3></div>
-                <div class="premium-tile"><span>HUID Identity Registry</span><h3 id="dash-huid">100% Verified</h3></div>
-                <div class="premium-tile"><span>System Sync Node Status</span><h3 style="color:var(--success);font-size:1.15rem;" id="dash-node-status">Operational</h3></div>
-            </div>
+    <!-- KPI strip -->
+    <div class="kpi-row">
+        <div class="kpi kpi-gold">
+            <div class="kpi-lbl">Today's Revenue</div>
+            <div class="kpi-val gold" id="k-revenue">₹ 0.00</div>
+            <div class="kpi-sub">Accumulated sales</div>
         </div>
+        <div class="kpi kpi-teal">
+            <div class="kpi-lbl">Fine Collected</div>
+            <div class="kpi-val teal" id="k-fine">0.000 g</div>
+            <div class="kpi-sub">All-time metal</div>
+        </div>
+        <div class="kpi kpi-blue">
+            <div class="kpi-lbl">Stock Units</div>
+            <div class="kpi-val" id="k-units">0</div>
+            <div class="kpi-sub">Tracked inventory</div>
+        </div>
+        <div class="kpi kpi-green">
+            <div class="kpi-lbl">Net Metal Weight</div>
+            <div class="kpi-val green" id="k-weight">0.000 g</div>
+            <div class="kpi-sub">Active vault</div>
+        </div>
+        <div class="kpi kpi-ink">
+            <div class="kpi-lbl">System Status</div>
+            <div class="kpi-val" style="font-family:var(--sans);font-size:0.9rem;font-weight:700;" id="k-status">Operational</div>
+            <div class="kpi-sub" id="k-huid">100% Verified</div>
+        </div>
+    </div>
 
-        <span class="luxury-section-title">Telemetry Stream &amp; Risk Mitigation</span>
-
-        <div class="lower-analytics-grid">
-            <div class="glass-block obsidian-panel">
-                <div class="block-title-header"><h5>Gross Metrics Revenue vs Net Capital Margin Performance</h5></div>
-                <div class="chart-container-frame"><canvas id="salesMarginChart"></canvas></div>
+    <!-- Charts -->
+    <div class="sec"><span class="sec-text">Analytics</span></div>
+    <div class="chart-row">
+        <div class="panel-dark">
+            <div class="panel-head">
+                <span class="panel-title">Revenue &amp; Fine — 7 Days</span>
+                <div class="legend">
+                    <div class="leg"><div class="leg-sq" style="background:#c9a227;"></div>Revenue</div>
+                    <div class="leg"><div class="leg-sq" style="background:#14b8a6;"></div>Fine (g)</div>
+                </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:25px;">
-                <div class="glass-block">
-                    <div class="block-title-header"><h4>High-Risk Credit Control Monitor</h4></div>
-                    <table class="luxury-table">
-                        <thead><tr><th>Client Account</th><th style="text-align:right;">Outstanding Line</th><th style="text-align:right;">Assessment</th></tr></thead>
-                        <tbody id="credit-risk-body">
-                            </tbody>
-                    </table>
+            <div class="chart-wrap"><canvas id="revChart"></canvas></div>
+        </div>
+        <div class="panel-light">
+            <div class="panel-head">
+                <span class="panel-title">Stock by IT Code</span>
+                <div class="legend">
+                    <div class="leg"><div class="leg-sq" style="background:var(--gold);"></div>Weight (g)</div>
                 </div>
-                <div class="glass-block">
-                    <div class="block-title-header"><h5>Operational System Audit Log</h5></div>
-                    <div class="stream-timeline" id="audit-log-container">
-                        </div>
-                </div>
+            </div>
+            <div class="chart-wrap"><canvas id="invChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="sec"><span class="sec-text">Risk &amp; Operations</span></div>
+    <div class="bottom-row">
+        <div class="tbl-wrap">
+            <div class="tbl-head">
+                <span class="tbl-title">High-Risk Credit Monitor</span>
+            </div>
+            <table>
+                <thead><tr><th>Client</th><th>Outstanding</th><th>Assessment</th></tr></thead>
+                <tbody id="risk-body"><tr><td colspan="3" class="empty-cell">Loading…</td></tr></tbody>
+            </table>
+        </div>
+        <div class="audit-wrap">
+            <div class="tbl-head">
+                <span class="tbl-title">Operational Audit Log</span>
+            </div>
+            <div class="audit-list" id="audit-list">
+                <div class="audit-item"><span class="audit-time">--:--</span><span class="audit-msg">Loading…</span></div>
             </div>
         </div>
     </div>
+
+</div>
 </main>
 
 <script>
-    function updateClock() {
-        const now = new Date();
-        const opts = {weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
-        document.getElementById('real-time-clock').innerText = now.toLocaleString('en-GB', opts).replace(/,/g,' |');
-    }
+// Clock
+function tick(){
+    var n=new Date();
+    document.getElementById('clock').innerText=n.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
+}
+tick(); setInterval(tick,1000);
 
-    let salesChart;
-    function initAnalyticsChart(initialLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], initialRevenue = [0,0,0,0,0,0,0], initialMargin = [0,0,0,0,0,0,0]) {
-        const ctx = document.getElementById('salesMarginChart').getContext('2d');
-        const g = ctx.createLinearGradient(0,0,0,300);
-        g.addColorStop(0,'rgba(181,148,16,0.22)');
-        g.addColorStop(0.6,'rgba(181,148,16,0.05)');
-        g.addColorStop(1,'rgba(181,148,16,0.0)');
+// Charts
+var revChart=null,invChart=null;
 
-        if (salesChart) {
-            salesChart.destroy();
+function buildRevChart(labels,revenue,fine){
+    var ctx=document.getElementById('revChart').getContext('2d');
+    if(revChart) revChart.destroy();
+    var g=ctx.createLinearGradient(0,0,0,190);
+    g.addColorStop(0,'rgba(201,162,39,0.22)');
+    g.addColorStop(1,'rgba(201,162,39,0)');
+    revChart=new Chart(ctx,{
+        type:'line',
+        data:{labels:labels,datasets:[
+            {label:'Revenue',data:revenue,borderColor:'#c9a227',backgroundColor:g,borderWidth:2.5,tension:0.35,fill:true,yAxisID:'y',pointRadius:4,pointBackgroundColor:'#c9a227',pointBorderColor:'#2a2620',pointBorderWidth:2},
+            {label:'Fine',data:fine,borderColor:'#14b8a6',borderWidth:2,borderDash:[5,3],tension:0.35,fill:false,yAxisID:'y1',pointRadius:3,pointBackgroundColor:'#14b8a6',pointBorderColor:'#2a2620',pointBorderWidth:2}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{backgroundColor:'#0e0c09',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,cornerRadius:6,titleColor:'#fff',bodyColor:'rgba(255,255,255,0.6)'}},
+            scales:{
+                y:{position:'left',grid:{color:'rgba(255,255,255,0.05)',drawBorder:false},border:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:function(v){return '₹'+v.toLocaleString('en-IN');}}},
+                y1:{position:'right',grid:{drawOnChartArea:false,drawBorder:false},border:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:function(v){return v.toFixed(1)+'g';}}},
+                x:{grid:{display:false},border:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}}}
+            }
         }
-
-        salesChart = new Chart(ctx, {
-            type:'line',
-            data:{
-                labels: initialLabels,
-                datasets:[
-                    {label:'Gross Revenue', data: initialRevenue,
-                     borderColor:'#b59410',backgroundColor:g,borderWidth:3,tension:0.28,fill:true,yAxisID:'y',
-                     pointRadius:4,pointBackgroundColor:'#b59410',pointBorderColor:'#0b0f19',pointBorderWidth:2},
-                    {label:'Net Margin', data: initialMargin,
-                     borderColor:'rgba(255,255,255,0.4)',borderWidth:1.5,borderDash:[5,5],tension:0.28,fill:false,yAxisID:'y1',pointRadius:0}
-                ]
-            },
-            options:{
-                responsive:true,maintainAspectRatio:false,
-                plugins:{
-                    legend:{position:'top',align:'end',labels:{boxWidth:8,usePointStyle:true,color:'#94a3b8',font:{size:10},padding:15}},
-                    tooltip:{backgroundColor:'#1e293b',padding:12,cornerRadius:8}
-                },
-                scales:{
-                    y:{type:'linear',display:true,position:'left',grid:{color:'rgba(255,255,255,0.05)'},border:{display:false},ticks:{color:'#475569',font:{size:10}}},
-                    y1:{type:'linear',display:true,position:'right',grid:{drawOnChartArea:false},border:{display:false},ticks:{color:'#475569',font:{size:10}}},
-                    x:{grid:{display:false},border:{display:false},ticks:{color:'#475569',font:{size:10}}}
-                }
-            }
-        });
-    }
-
-    // ── ✅ LOAD DYNAMIC REAL-TIME BUSINESS TELEMETRY ───────────────────
-    async function loadDashboardData() {
-        try {
-            if (window.pywebview && window.pywebview.api) {
-                // 1. Fetch dynamic, time-aware greeting preferences from session
-                const sessionContext = await window.pywebview.api.get_dynamic_greeting() || {};
-                if (sessionContext.status === "success") {
-                    const ownerName = sessionContext.owner_title;
-                    document.getElementById('owner-header-name').innerText = ownerName;
-
-                    // Apply layout greeting change safely
-                    document.getElementById('owner-welcome-string').innerHTML =
-                        `${sessionContext.greeting_prefix}, <span style="color:var(--accent); font-weight:800;">${ownerName}</span>`;
-
-                    const initials = ownerName.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-                    document.getElementById('owner-avatar-initials').innerText = initials || "OS";
-                    localStorage.setItem('aurum_owner_name', ownerName);
-                } else {
-                    const cached = localStorage.getItem('aurum_owner_name') || 'Director';
-                    document.getElementById('owner-header-name').innerText = cached;
-                    document.getElementById('owner-welcome-string').innerHTML = `Welcome, <span style="color:var(--accent);">${cached}</span>`;
-                }
-
-                // 2. Load core telemetry counters
-                const stats = await window.pywebview.api.get_live_command_metrics() || {};
-                if (stats.status === "success") {
-                    document.getElementById('dash-units').innerText  = stats.tracked_units;
-                    document.getElementById('dash-weight').innerText = stats.metallic_weight.toFixed(3) + ' g';
-                    document.getElementById('dash-sales').innerHTML  = '&#8377; ' + stats.accumulated_sales.toLocaleString('en-IN', {minimumFractionDigits:2});
-
-                    document.getElementById('dash-huid').innerText = stats.huid_status || '100% Verified';
-                    document.getElementById('dash-node-status').innerText = stats.sync_node || 'Operational';
-                    document.getElementById('dash-sync-status').innerText = `Node Status: ${stats.sync_node || 'Active'}`;
-
-                    // 3. Render Chart Lines dynamically with historical database arrays
-                    if (stats.chart) {
-                        initAnalyticsChart(stats.chart.labels, stats.chart.revenue, stats.chart.margin);
-                    }
-
-                    // 4. Generate High-Risk Debt Monitor Rows
-                    const riskBody = document.getElementById('credit-risk-body');
-                    if (stats.risk_monitor && stats.risk_monitor.length > 0) {
-                        riskBody.innerHTML = stats.risk_monitor.map(client => `
-                            <tr>
-                                <td style="font-weight:700;">${client.account_name}</td>
-                                <td style="color:var(--danger); text-align:right; font-weight:700;">&#8377; ${client.outstanding.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
-                                <td style="text-align:right;"><span class="status-badge-dot ${client.status_class}">${client.badge_label}</span></td>
-                            </tr>
-                        `).join('');
-                    } else {
-                        riskBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--text-muted); font-size:0.8rem;">No high-risk credit accounts found inside active channels.</td></tr>`;
-                    }
-
-                    // 5. Update Operational System Audit Log
-                    const logContainer = document.getElementById('audit-log-container');
-                    if (stats.audit_logs && stats.audit_logs.length > 0) {
-                        logContainer.innerHTML = stats.audit_logs.map(log => `
-                            <div class="stream-row">
-                                <span class="stream-time-stamp">${log.time}</span>
-                                <p class="stream-text-info">${log.msg}</p>
-                            </div>
-                        `).join('');
-                    }
-                }
-            }
-        } catch(e) {
-            console.error('Dashboard telemetry data engine fault:', e);
-        }
-    }
-
-    function waitForAPI(callback, maxMs) {
-        maxMs = maxMs || 8000;
-        var start = Date.now();
-        var t = setInterval(function() {
-            if (window.pywebview && window.pywebview.api) {
-                clearInterval(t);
-                callback();
-            } else if (Date.now() - start > maxMs) {
-                clearInterval(t);
-                callback();
-            }
-        }, 100);
-    }
-
-    updateClock();
-    setInterval(updateClock, 1000);
-    initAnalyticsChart();
-
-    waitForAPI(async function() {
-        await initSidebar('dashboard');
-        await loadDashboardData();
     });
+}
+
+function buildInvChart(labels,weights){
+    var ctx=document.getElementById('invChart').getContext('2d');
+    if(invChart) invChart.destroy();
+    var palette=['#a87d1e','#8a6c0a','#c9a227','#b5920f','#976010','#d4a420'];
+    invChart=new Chart(ctx,{
+        type:'bar',
+        data:{labels:labels.length?labels:['No data'],datasets:[{
+            data:weights.length?weights:[0],
+            backgroundColor:labels.map(function(_,i){return palette[i%palette.length];}),
+            borderRadius:4,borderSkipped:false
+        }]},
+        options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{backgroundColor:'#0e0c09',borderColor:'rgba(168,125,30,0.3)',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:function(c){return c.parsed.y.toFixed(3)+'g';}}}},
+            scales:{
+                y:{grid:{color:'rgba(14,12,9,0.05)',drawBorder:false},border:{display:false},ticks:{color:'var(--muted2)',font:{size:10},callback:function(v){return v+'g';}}},
+                x:{grid:{display:false},border:{display:false},ticks:{color:'#9e9890',font:{size:10},maxRotation:30}}
+            }
+        }
+    });
+}
+
+buildRevChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]);
+buildInvChart([],[]);
+
+async function loadDashboard(){
+    if(!window.pywebview||!window.pywebview.api){setTimeout(loadDashboard,300);return;}
+    var api=window.pywebview.api;
+
+    // Greeting
+    api.get_dynamic_greeting().then(function(g){
+        if(!g||g.status!=='success')return;
+        var nm=g.owner_title||'Director';
+        document.getElementById('h-uname').innerText=nm;
+        document.getElementById('welcome-name').innerText=nm;
+        document.getElementById('welcome-str').innerHTML=g.greeting_prefix+', <em id="welcome-name">'+nm+'</em>';
+        var ini=nm.split(' ').filter(function(w){return w;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+        document.getElementById('h-avatar').innerText=ini||'OS';
+    }).catch(function(){});
+
+    // Metrics
+    api.get_live_command_metrics().then(function(s){
+        if(!s||s.status!=='success')return;
+        document.getElementById('k-revenue').innerHTML='₹ '+parseFloat(s.accumulated_sales||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-fine').innerText=parseFloat(s.total_fine_collected||0).toFixed(3)+' g';
+        document.getElementById('k-units').innerText=s.tracked_units||0;
+        document.getElementById('k-weight').innerText=parseFloat(s.metallic_weight||0).toFixed(3)+' g';
+        document.getElementById('k-status').innerText=s.sync_node||'Operational';
+        document.getElementById('k-huid').innerText=s.huid_status||'100% Verified';
+        document.getElementById('sync-status').innerText='Node: '+(s.sync_node||'Active');
+
+        if(s.chart) buildRevChart(s.chart.labels||[],s.chart.revenue||[],s.chart.fine||[]);
+        if(s.inventory_chart&&s.inventory_chart.labels&&s.inventory_chart.labels.length)
+            buildInvChart(s.inventory_chart.labels,s.inventory_chart.weights||[]);
+
+        // Risk table
+        var rb=document.getElementById('risk-body');
+        if(s.risk_monitor&&s.risk_monitor.length){
+            rb.innerHTML=s.risk_monitor.map(function(c){
+                var bc=c.status_class==='status-danger'?'b-danger':'b-warn';
+                return '<tr><td style="font-weight:600;">'+c.account_name+'</td>'
+                    +'<td style="color:var(--red);font-family:var(--mono);">₹'+parseFloat(c.outstanding).toLocaleString('en-IN',{maximumFractionDigits:0})+'</td>'
+                    +'<td><span class="'+bc+'">'+c.badge_label+'</span></td></tr>';
+            }).join('');
+        } else {
+            rb.innerHTML='<tr><td colspan="3" class="empty-cell">No high-risk accounts.</td></tr>';
+        }
+
+        // Audit log
+        var al=document.getElementById('audit-list');
+        if(s.audit_logs&&s.audit_logs.length){
+            al.innerHTML=s.audit_logs.map(function(l){
+                return '<div class="audit-item"><span class="audit-time">'+l.time+'</span><span class="audit-msg">'+l.msg+'</span></div>';
+            }).join('');
+        }
+    }).catch(function(e){console.error('Dashboard error:',e);});
+}
+waitForAPI(function(){ initSidebar('dashboard');
+    loadDashboard();
+});
 </script>
 </body>
 </html>

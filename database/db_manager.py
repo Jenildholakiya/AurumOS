@@ -7,10 +7,24 @@ from datetime import datetime
 
 class DBManager:
     def __init__(self):
-        self.db_dir  = os.path.join(os.getcwd(), 'database')
+        # ── Resolve correct DB path for both .py and compiled .exe ──
+        # os.getcwd() fails in PyInstaller — points to temp _MEIPASS folder
+        # sys.executable gives the actual .exe location → use its parent dir
+        import sys as _sys
+        if getattr(_sys, 'frozen', False):
+            # Running as compiled PyInstaller .exe
+            app_dir = os.path.dirname(_sys.executable)
+        else:
+            # Running as plain .py script
+            app_dir = os.path.abspath('.')
+
+        self.db_dir  = os.path.join(app_dir, 'database')
         self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
+
         if not os.path.exists(self.db_dir):
             os.makedirs(self.db_dir)
+
+        print(f"[DB] Path: {self.db_path}")
         self.initialize_tables()
 
     def _get_connection(self):
@@ -186,8 +200,12 @@ class DBManager:
     def authenticate_user(self, username, password):
         try:
             with self._get_connection() as conn:
+                # Debug: show what's in admin_creds
+                all_users = conn.execute("SELECT id, username FROM admin_creds").fetchall()
+                print(f"[DB AUTH] admin_creds has {len(all_users)} row(s): {[dict(r) for r in all_users]}")
+
                 row = conn.execute(
-                    "SELECT id, username FROM admin_creds WHERE username=? AND password=?",
+                    "SELECT id, username FROM admin_creds WHERE LOWER(TRIM(username))=LOWER(TRIM(?)) AND TRIM(password)=TRIM(?)",
                     (str(username).strip(), str(password).strip())
                 ).fetchone()
                 if row:
@@ -195,6 +213,22 @@ class DBManager:
                 return {"authenticated": False, "role": "visitor"}
         except Exception as e:
             print(f"❌ [DB AUTH ERROR] {e}")
+            return {"authenticated": False, "role": "visitor"}
+
+    def authenticate_user_by_password(self, password):
+        """Fallback: check password against ANY account in admin_creds."""
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT id, username FROM admin_creds WHERE TRIM(password)=TRIM(?) LIMIT 1",
+                    (str(password).strip(),)
+                ).fetchone()
+                if row:
+                    print(f"[DB AUTH] Fallback matched username='{row['username']}'")
+                    return {"authenticated": True, "role": "admin" if row["id"]==1 else "staff"}
+                return {"authenticated": False, "role": "visitor"}
+        except Exception as e:
+            print(f"❌ [DB AUTH FALLBACK ERROR] {e}")
             return {"authenticated": False, "role": "visitor"}
 
     def complete_initial_setup(self, biz_name, username, password, owner_name=None):
@@ -1249,25 +1283,29 @@ class DBManager:
             print(f"❌ [STOCK LEDGER ERROR] {e}"); return []
 
     def get_opening_stock(self):
-        """Returns ONLY opening stock entries.
-        Excludes tagged items (real jewelry with proper tag IDs).
-        Includes: N/A, KATTI-, OPENING- prefix, or NULL tag_ids."""
+        """
+        Returns ONLY rows explicitly tagged as OPENING stock.
+        These are entries made via opening_stock.html with tag_id = 'OPENING-xxx'.
+
+        PERMANENT RULE — one source of truth, no overlap:
+        ┌─────────────────┬──────────────────────────────────────────────┐
+        │ OPENING column  │ stock_inventory WHERE tag_id LIKE 'OPENING-%'│
+        │ INWARD column   │ katti_voucher_items (via katti terminal)     │
+        │                 │ + stock_inventory NULL/N/A rows (stock ledger)│
+        │ OUTWARD column  │ sales_history                                │
+        └─────────────────┴──────────────────────────────────────────────┘
+        Rows with tag_id NULL/N/A go into INWARD (not opening).
+        Rows with tag_id KATTI- go into INWARD via katti_voucher_items.
+        Only 'OPENING-' prefix rows are true opening carry-forward stock.
+        """
         try:
             with self._get_connection() as conn:
                 return [dict(r) for r in conn.execute("""
                     SELECT id, it_code, it_name, tag_id,
                            gr_wt, ls_wt, nt_wt, touch, wastage,
-                           entry_date
+                           pcs, entry_date
                     FROM stock_inventory
-                    WHERE (
-                        tag_id IS NULL OR
-                        tag_id = '' OR
-                        tag_id = 'N/A' OR
-                        tag_id = '---' OR
-                        tag_id = '-' OR
-                        tag_id LIKE 'KATTI-%' OR
-                        tag_id LIKE 'OPENING-%'
-                    )
+                    WHERE tag_id LIKE 'OPENING-%'
                     AND gr_wt > 0
                     ORDER BY id DESC
                 """).fetchall()]
@@ -1304,8 +1342,44 @@ class DBManager:
             with self._get_connection() as conn:
                 results = []
 
-                # ── INWARD: katti_voucher_items (weight mode) ───────────────
+                # ── OPENING: weight mode ───────────────────────────────────
+                # These are stock_inventory rows with OPENING- prefix
+                # They appear ONLY here as txn_type='OPENING' — never in Inward
                 if mode == 'weight':
+                    opn_rows = conn.execute("""
+                        SELECT id, it_code, it_name, tag_id,
+                               gr_wt, ls_wt, nt_wt, touch, huid, pcs,
+                               entry_date AS vch_dt
+                        FROM stock_inventory
+                        WHERE tag_id LIKE 'OPENING-%' AND gr_wt > 0
+                    """).fetchall()
+                    for r in opn_rows:
+                        r = dict(r)
+                        tv = float(r.get('touch') or 0)
+                        if not all_touch and round(tv,2) != round(touch_val,2): continue
+                        wt = float(r.get('gr_wt') or 0)
+                        nt = float(r.get('nt_wt') or wt)
+                        results.append({
+                            'txn_type':'OPENING','touch_val':tv,
+                            'book_name':'Opening Stock',
+                            'vch_no':r.get('tag_id',''),'vch_dt':r.get('vch_dt',''),
+                            'ac_name':'Opening Balance','as_type':'Opening A/c',
+                            'sign':'Dr','tag_no':r.get('tag_id',''),
+                            'huid':r.get('huid') or '—',
+                            'it_code':r.get('it_code',''),'gr_name':'Weight Gold',
+                            'primary_val':'','it_name':r.get('it_name',''),
+                            'variety':'Opening','carat':'',
+                            'pcs':int(r.get('pcs') or 1),
+                            'gr_wt':wt,'ls_wt':float(r.get('ls_wt') or 0),
+                            'in_net_wt':nt,'out_net_wt':0.0,'bal_wt':nt,
+                        })
+
+                # ── INWARD: weight mode ────────────────────────────────────
+                # Source 1: katti_voucher_items (katti terminal entries)
+                # Source 2: stock_inventory NULL/N/A rows (stock ledger entries)
+                # OPENING- rows handled above — never included here
+                if mode == 'weight':
+                    # Source 1 — katti_voucher_items
                     inward = conn.execute("""
                         SELECT kvi.it_code, kvi.it_name, kvi.nt_wt AS gr_wt,
                                kvi.touch, kvi.huid, kvi.pcs,
@@ -1329,16 +1403,95 @@ class DBManager:
                             'sign':'Dr','tag_no':'N/A','huid':r.get('huid') or '—',
                             'it_code':r.get('it_code',''),'gr_name':'Weight Gold',
                             'primary_val':r.get('vch_id',''),'it_name':r.get('it_name',''),
-                            'variety':'Bulk',
+                            'variety':'Katti',
                             'carat':'22K' if tv>=91 else ('18K' if tv>=75 else 'Katti'),
                             'pcs':int(r.get('pcs') or 1),'gr_wt':wt,'ls_wt':0.0,
                             'in_net_wt':wt,'out_net_wt':0.0,'bal_wt':wt,
                         })
-                else:
+
+                    # Source 2 — stock_inventory NULL/N/A rows (stock ledger weight entries)
+                    # These are weight-based entries NOT from katti terminal
+                    # EXCLUDE OPENING- (those go to Opening column)
+                    # EXCLUDE KATTI- (those are duplicates of katti_voucher_items above)
+                    weight_stock = conn.execute("""
+                        SELECT id, it_code, it_name, tag_id,
+                               gr_wt, ls_wt, nt_wt, touch, huid, pcs,
+                               entry_date AS vch_dt
+                        FROM stock_inventory
+                        WHERE (
+                            tag_id IS NULL OR
+                            tag_id = '' OR
+                            tag_id = 'N/A' OR
+                            tag_id = '---' OR
+                            tag_id = '-'
+                        )
+                        AND tag_id NOT LIKE 'KATTI-%'
+                        AND tag_id NOT LIKE 'OPENING-%'
+                        AND gr_wt > 0
+                    """).fetchall()
+
+                    for r in weight_stock:
+                        r = dict(r)
+                        tv = float(r.get('touch') or 0)
+                        if not all_touch and round(tv,2) != round(touch_val,2): continue
+                        vdt = r.get('vch_dt','')
+                        if from_date and vdt < from_date: continue
+                        if to_date   and vdt > to_date:   continue
+                        wt = float(r.get('gr_wt') or 0)
+                        nt = float(r.get('nt_wt') or wt)
+                        results.append({
+                            'txn_type':'IN','touch_val':tv,
+                            'book_name':'Stock Ledger','vch_no':str(r.get('id','')),
+                            'vch_dt':vdt,'ac_name':'Stock Inward','as_type':'Weight Stock',
+                            'sign':'Dr','tag_no':r.get('tag_id') or 'N/A',
+                            'huid':r.get('huid') or '—',
+                            'it_code':r.get('it_code',''),'gr_name':'Weight Gold',
+                            'primary_val':'','it_name':r.get('it_name',''),
+                            'variety':'Weight',
+                            'carat':'22K' if tv>=91 else ('18K' if tv>=75 else 'Weight'),
+                            'pcs':int(r.get('pcs') or 1),'gr_wt':wt,'ls_wt':float(r.get('ls_wt') or 0),
+                            'in_net_wt':nt,'out_net_wt':0.0,'bal_wt':nt,
+                        })
+                # ── OPENING: pcs mode ──────────────────────────────────────
+                if mode == 'pcs':
+                    opn_pcs_rows = conn.execute("""
+                        SELECT id, it_code, it_name, tag_id,
+                               gr_wt, ls_wt, nt_wt, touch, huid, pcs,
+                               entry_date AS vch_dt
+                        FROM stock_inventory
+                        WHERE tag_id LIKE 'OPENING-%'
+                        AND gr_wt > 0
+                    """).fetchall()
+
+                    for r in opn_pcs_rows:
+                        r = dict(r)
+                        tv = float(r.get('touch') or 0)
+                        if not all_touch and round(tv,2) != round(touch_val,2): continue
+                        wt = float(r.get('gr_wt') or 0)
+                        nt = float(r.get('nt_wt') or wt)
+                        results.append({
+                            'txn_type':'OPENING','touch_val':tv,
+                            'book_name':'Opening Stock',
+                            'vch_no':r.get('tag_id',''),'vch_dt':r.get('vch_dt',''),
+                            'ac_name':'Opening Balance','as_type':'Opening A/c',
+                            'sign':'Dr','tag_no':r.get('tag_id',''),
+                            'huid':r.get('huid') or '—',
+                            'it_code':r.get('it_code',''),'gr_name':'Ornaments',
+                            'primary_val':'','it_name':r.get('it_name',''),
+                            'variety':'Opening','carat':'',
+                            'pcs':int(r.get('pcs') or 1),
+                            'gr_wt':wt,'ls_wt':float(r.get('ls_wt') or 0),
+                            'in_net_wt':nt,'out_net_wt':0.0,'bal_wt':nt,
+                        })
+
+                if mode == 'pcs':
                     # ✅ FIX: PCS Inward = current stock + sold items (reconstructed from sales_history)
                     # Sold items are DELETED from stock_inventory after sale, so we rebuild from sales
 
                     # Step 1 — Current remaining stock (not yet sold)
+                    # EXCLUDE: KATTI- (counted in katti_voucher_items as Inward)
+                    # EXCLUDE: OPENING- (counted in get_opening_stock as Opening)
+                    # EXCLUDE: NULL/N/A/--- (weight-based, not PCS goods)
                     current_stock = conn.execute("""
                         SELECT it_code, it_name, tag_id, gr_wt, nt_wt, ls_wt,
                                touch, huid, pcs, entry_date AS vch_dt, vch_reference
@@ -1346,6 +1499,7 @@ class DBManager:
                         WHERE tag_id IS NOT NULL
                           AND tag_id NOT IN ('N/A','','---','-')
                           AND tag_id NOT LIKE 'KATTI-%'
+                          AND tag_id NOT LIKE 'OPENING-%'
                     """).fetchall()
 
                     for r in current_stock:

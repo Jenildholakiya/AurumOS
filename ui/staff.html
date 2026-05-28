@@ -1,398 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AurumOS | Staff Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="sidebar.css">
-    <style>
-        :root {
-            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
-            --card: #ffffff; --border: #cbd5e1;
-            --text-main: #0f172a; --text-muted: #64748b;
-            --success: #059669; --error: #e11d48;
-            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
-            --shadow-md: 0 12px 30px -5px rgba(15,23,42,0.08);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { display: block; height: 100vh; width: 100vw; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
-        main { width: 100%; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-
-        header {
-            height: 75px; background: #fff; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 30px; flex-shrink: 0;
-        }
-        .header-biz span { font-size: 0.65rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-        .header-biz h1  { font-size: 1.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-
-        .content { padding: 25px 30px; overflow-y: auto; flex-grow: 1; }
-        .staff-grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 24px; max-width: 1400px; width: 100%; }
-
-        .card {
-            background: var(--card); border-radius: 20px; border: 1px solid var(--border);
-            padding: 26px 30px; box-shadow: var(--shadow-sm);
-            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-        }
-        .card:hover { box-shadow: var(--shadow-md); }
-        h3 { font-size: 0.88rem; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 1.2px; }
-
-        .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: var(--shadow-sm); }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); padding: 16px 20px; border-bottom: 2px solid #f1f5f9; background: #fafbfc; font-weight: 800; }
-        td { padding: 14px 20px; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: var(--primary); vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #f8fafc; }
-
-        .empty-row td { text-align: center; color: var(--text-muted); font-weight: 600; padding: 30px; }
-
-        .role-badge { padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; }
-        .role-admin { background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
-        .role-staff { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
-
-        /* --- REMOVE ACTION BUTTON SYSTEM --- */
-        .action-cell { text-align: right !important; width: 70px; padding-right: 24px; }
-        .delete-staff-btn {
-            background: none; border: none; color: var(--text-muted);
-            cursor: pointer; padding: 8px; border-radius: 10px;
-            display: inline-flex; align-items: center; justify-content: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .delete-staff-btn:hover { color: var(--error); background: #fff1f2; transform: scale(1.05); }
-        .delete-staff-btn svg { stroke: currentColor; fill: none; }
-
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.8px; }
-
-        .input-icon-wrapper { position: relative; display: flex; align-items: center; }
-        .input-icon-wrapper svg { position: absolute; left: 16px; color: var(--text-muted); pointer-events: none; transition: all 0.2s ease; }
-        .input-icon-wrapper input {
-            width: 100%; padding: 14px 16px 14px 46px; background: #f8fafc;
-            border: 1.5px solid #e2e8f0; border-radius: 14px;
-            font-size: 0.95rem; font-weight: 700; outline: none;
-            transition: all 0.2s cubic-bezier(0.4,0,0.2,1); color: var(--primary);
-        }
-        .input-icon-wrapper input:hover { border-color: #cbd5e1; background: #f1f5f9; }
-        .input-icon-wrapper input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(181,148,16,0.08); }
-
-        .btn-add {
-            width: 100%; padding: 16px; background: var(--primary); color: white;
-            border: none; border-radius: 14px; font-weight: 800; cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-            font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1.5px;
-            box-shadow: 0 8px 16px -4px rgba(15,23,42,0.2);
-        }
-        .btn-add:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 12px 20px -2px rgba(15,23,42,0.25); }
-        .btn-add:active { transform: translateY(0); }
-        .btn-add:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-        #status-msg { margin-top: 18px; font-size: 0.85rem; font-weight: 800; text-align: center; height: 1.2rem; letter-spacing: 0.3px; }
-
-        /* ─── DYNAMIC LUXURY TOAST NOTIFICATIONS ─── */
-        .toast-wrapper {
-            position: fixed; top: 25px; right: 25px; z-index: 9999;
-            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-        }
-        .toast-card {
-            background: #ffffff; border-left: 4px solid var(--success);
-            padding: 14px 20px; border-radius: 12px; min-width: 320px;
-            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
-            display: flex; align-items: center; gap: 12px; pointer-events: auto;
-            transform: translateX(120%); transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .toast-card.show { transform: translateX(0); }
-        .toast-icon {
-            width: 20px; height: 20px; border-radius: 50%; background: #dcfce7;
-            color: var(--success); display: flex; align-items: center; justify-content: center;
-        }
-        .toast-text { font-size: 0.85rem; font-weight: 700; color: var(--primary); }
-
-        /* ─── MODAL DIALOG POPUP OVERLAY ─── */
-        .modal-overlay {
-            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.3);
-            backdrop-filter: blur(4px); z-index: 9990;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: all 0.25s ease;
-        }
-        .modal-overlay.open { opacity: 1; pointer-events: auto; }
-        .modal-box {
-            background: #ffffff; border-radius: 20px; width: 420px;
-            padding: 26px 30px; box-shadow: var(--shadow-md); border: 1px solid var(--border);
-            transform: scale(0.92); transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .modal-overlay.open .modal-box { transform: scale(1); }
-        .modal-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; letter-spacing: -0.3px; }
-        .modal-desc { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
-        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
-
-        .btn-modal {
-            padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 0.8rem;
-            text-transform: uppercase; letter-spacing: 0.5px; border: none; cursor: pointer; transition: 0.2s;
-        }
-        .btn-modal-cancel { background: #f1f5f9; color: var(--text-muted); }
-        .btn-modal-cancel:hover { background: #e2e8f0; color: var(--primary); }
-        .btn-modal-confirm { background: var(--error); color: white; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.25); }
-        .btn-modal-confirm:hover { background: #be123c; }
-    </style>
-
+<meta charset="UTF-8">
+<title>AurumOS | Staff</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#faf8f3;--ink:#0e0c09;--rule:rgba(14,12,9,0.09);--gold2:#c9a227;--gold3:#8a6c0a;--muted2:#9e9890;--serif:'DM Serif Display',Georgia,serif;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);color:var(--ink);}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
+header{height:58px;background:#fff;border-bottom:1px solid var(--rule);display:flex;align-items:center;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,rgba(168,125,30,0.2) 50%,transparent 95%);}
+.h-title{font-family:var(--serif);font-size:1rem;color:var(--ink);}
+.h-title em{color:var(--gold3);font-style:italic;}
+.content{padding:40px;display:flex;align-items:center;justify-content:center;flex:1;}
+.placeholder{text-align:center;color:var(--muted2);}
+.placeholder h2{font-family:var(--serif);font-size:1.5rem;color:var(--ink);margin-bottom:8px;}
+.placeholder p{font-size:0.8rem;}
+</style>
 <style id="aurum-layout-fix">
-/* AURUM LAYOUT FIX: sidebar+main side by side */
 body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 252px !important; }
 body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
-body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+body.sidebar-collapsed #sidebar-container { width: 66px !important; }
 </style>
 </head>
 <body>
 <script src="sidebar.js"></script>
-
 <div id="sidebar-container"></div>
 
-
-
-
-
-<div class="toast-wrapper" id="toast-wrapper-mount"></div>
-
-<div class="modal-overlay" id="delete-confirmation-modal">
-    <div class="modal-box">
-        <div class="modal-title">Remove Staff Member?</div>
-        <div class="modal-desc" id="modal-variable-desc">Are you sure you want to completely remove this user record from security tables repository? This action cannot be undone.</div>
-        <div class="modal-actions">
-            <button class="btn-modal btn-modal-cancel" onclick="closeDeletionModal()">Cancel</button>
-            <button class="btn-modal btn-modal-confirm" id="modal-confirm-trigger-btn">Delete Member</button>
-        </div>
-    </div>
-</div>
-
 <main>
-    <header>
-        <div class="header-biz">
-            <span>Security Terminal</span>
-            <h1>Staff Directory</h1>
-        </div>
-        <div style="width:40px; height:40px; background:#fff; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid var(--accent); color:var(--primary); font-size:0.85rem;">JD</div>
-    </header>
-
-    <div class="content">
-        <div class="staff-grid">
-
-            <div class="card">
-                <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    Authorized Team
-                </h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Auth Level</th>
-                                <th class="action-cell"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="staff-table-body">
-                            <tr class="empty-row"><td colspan="3">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
-                    Register User
-                </h3>
-                <div class="form-group">
-                    <label>Username</label>
-                    <div class="input-icon-wrapper">
-                        <input type="text" id="staff-user" placeholder="e.g. rahul_m" autocomplete="off">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>System Password</label>
-                    <div class="input-icon-wrapper">
-                        <input type="password" id="staff-pass" placeholder="••••••••">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    </div>
-                </div>
-                <button class="btn-add" id="add-btn" onclick="handleStaffOnboarding()">Register User</button>
-                <p id="status-msg"></p>
-            </div>
-
-        </div>
-    </div>
+<header><div class="h-title">Staff <em>Management</em></div></header>
+<div class="content">
+  <div class="placeholder">
+    <h2>Staff Module</h2>
+    <p>Coming soon — staff management features will appear here.</p>
+  </div>
+</div>
 </main>
-
-
 <script>
-    let activeDeletionUser = null;
-
-    // ─── ANMTED SUCCESS TOAST MOUNT PIPELINE ───
-    function triggerSuccessToast(message) {
-        const mountNode = document.getElementById('toast-wrapper-mount');
-        if (!mountNode) return;
-
-        const toastCard = document.createElement('div');
-        toastCard.className = 'toast-card';
-        toastCard.innerHTML = `
-            <div class="toast-icon">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            </div>
-            <div class="toast-text">${message}</div>
-        `;
-
-        mountNode.appendChild(toastCard);
-
-        // Minor layout loop paint refresh delay to spark entrance transform animation
-        setTimeout(() => toastCard.classList.add('show'), 50);
-
-        // Automatic slideout decay timer execution
-        setTimeout(() => {
-            toastCard.classList.remove('show');
-            setTimeout(() => toastCard.remove(), 350);
-        }, 3500);
-    }
-
-    // ─── MODAL DIALOG DISPLAY HANDLERS ───
-    function openDeletionModal(username) {
-        activeDeletionUser = username;
-        document.getElementById('modal-variable-desc').innerText = `Are you sure you want to completely remove user '${username}' from security tables repository? This action cannot be undone.`;
-
-        const modal = document.getElementById('delete-confirmation-modal');
-        modal.classList.add('open');
-
-        // Attaches atomic click trigger reference execution hook dynamically
-        document.getElementById('modal-confirm-trigger-btn').onclick = executeConfirmedRemoval;
-    }
-
-    function closeDeletionModal() {
-        const modal = document.getElementById('delete-confirmation-modal');
-        modal.classList.remove('open');
-        activeDeletionUser = null;
-    }
-
-    async function executeConfirmedRemoval() {
-        if (!activeDeletionUser) return;
-
-        if (window.pywebview?.api?.delete_master_entry) {
-            try {
-                const result = await window.pywebview.api.delete_master_entry('admin_creds', activeDeletionUser);
-                closeDeletionModal();
-                await loadStaffTable();
-
-                // Displays slick animated success toast instead of unstyled markup statuses
-                triggerSuccessToast(`Staff member '${activeDeletionUser}' removed successfully.`);
-            } catch (err) {
-                console.error("Deletion API Error:", err);
-                showStatus("Error communicating with delete api.", "var(--error)");
-                closeDeletionModal();
-            }
-        }
-    }
-
-    async function loadStaffTable() {
-        const tbody = document.getElementById('staff-table-body');
-        if (!tbody) return;
-
-        if (!window.pywebview?.api) {
-            setTimeout(loadStaffTable, 150);
-            return;
-        }
-
-        try {
-            const staffList = await window.pywebview.api.get_all_staff();
-
-            if (!staffList || staffList.length === 0) {
-                tbody.innerHTML = '<tr class="empty-row"><td colspan="3">No users found.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = staffList.map(member => {
-                const isAdmin  = member.role === 'admin';
-                const badgeCls = isAdmin ? 'role-admin' : 'role-staff';
-                const badgeTxt = isAdmin ? 'System Admin' : 'Authorized Staff';
-
-                // FIXED: Routes lookups straight through sleek dynamic confirmation overlay windows
-                const actionHtml = isAdmin ? '' : `
-                    <button class="delete-staff-btn" title="Remove Member" onclick="openDeletionModal('${member.username}')">
-                        <svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>`;
-
-                return `
-                    <tr>
-                        <td><strong>${member.username}</strong></td>
-                        <td><span class="role-badge ${badgeCls}">${badgeTxt}</span></td>
-                        <td class="action-cell">${actionHtml}</td>
-                    </tr>`;
-            }).join('');
-
-        } catch (err) {
-            console.error("Table Load Error:", err);
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="3">Error loading users.</td></tr>';
-        }
-    }
-
-    async function handleStaffOnboarding() {
-        const userInput = document.getElementById('staff-user');
-        const passInput = document.getElementById('staff-pass');
-        const addBtn    = document.getElementById('add-btn');
-
-        if (!userInput.value.trim() || !passInput.value.trim()) {
-            showStatus("Required fields missing.", "var(--error)");
-            return;
-        }
-
-        addBtn.innerText = "Registering...";
-        addBtn.disabled  = true;
-
-        try {
-            const result = await window.pywebview.api.add_staff(
-                userInput.value.trim(), passInput.value.trim()
-            );
-            if (result && result.status === "success") {
-                // Success Toast Notification Engine Call
-                triggerSuccessToast(`User '${userInput.value.trim()}' onboarded successfully.`);
-
-                userInput.value = "";
-                passInput.value = "";
-                userInput.focus();
-                await loadStaffTable();
-            } else {
-                showStatus(result.message || "Registration failed.", "var(--error)");
-            }
-        } catch (err) {
-            showStatus("Internal Bridge Error.", "var(--error)");
-        } finally {
-            addBtn.innerText = "Register User";
-            addBtn.disabled  = false;
-        }
-    }
-
-    function showStatus(msg, color) {
-        const el = document.getElementById('status-msg');
-        if (!el) return;
-        el.style.color  = color;
-        el.innerText    = msg;
-        setTimeout(() => { el.innerText = ""; }, 3000);
-    }
-
-    document.getElementById('staff-pass').addEventListener('keypress', e => {
-        if (e.key === 'Enter') handleStaffOnboarding();
-    });
-    document.getElementById('staff-user').addEventListener('keypress', e => {
-        if (e.key === 'Enter') document.getElementById('staff-pass').focus();
-    });
-
-    window.onload = () => {
-        // ✅ FIXED: waitForAPI ensures pywebview is ready before initSidebar
-        waitForAPI(async function() {
-        await initSidebar('staff');
-                    });
-        loadStaffTable();
-    };
+waitForAPI(function(){ initSidebar('staff'); });
 </script>
 </body>
 </html>

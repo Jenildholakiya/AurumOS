@@ -1,0 +1,82 @@
+2026-05-26 18:02:44,233 INFO === AurumOS Started ===
+2026-05-26 18:02:56,793 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:02:56,799 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 18:35:06,299 INFO === AurumOS Started ===
+2026-05-26 18:35:14,423 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:35:14,429 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 18:35:33,636 INFO === AurumOS Started ===
+2026-05-26 18:35:40,208 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 18:35:40,210 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:00:16,340 INFO === AurumOS Started ===
+2026-05-26 23:00:25,312 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:00:25,315 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:30:12,386 INFO === AurumOS Started ===
+2026-05-26 23:30:19,911 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:30:19,921 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:33:09,128 INFO === AurumOS Started ===
+2026-05-26 23:33:18,934 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:33:18,937 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-26 23:58:48,361 INFO === AurumOS Started ===
+2026-05-26 23:59:00,290 INFO [LOGIN] verify_login called, password len=10
+2026-05-26 23:59:00,305 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 00:00:29,342 DEBUG Importing PngImagePlugin
+2026-05-27 00:07:46,691 INFO === AurumOS Started ===
+2026-05-27 00:07:56,814 INFO [LOGIN] verify_login called, password len=1
+2026-05-27 00:07:56,824 INFO [LOGIN] Result: {'status': 'success', 'role': 'staff'}
+2026-05-27 00:12:37,918 INFO === AurumOS Started ===
+2026-05-27 00:12:49,999 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 00:12:50,069 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 00:20:09,714 INFO === AurumOS Started ===
+2026-05-27 00:31:22,553 INFO === AurumOS Started ===
+2026-05-27 00:31:32,393 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 00:31:32,398 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 00:36:29,003 INFO === AurumOS Started ===
+2026-05-27 00:36:37,742 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 00:36:37,742 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin'}
+2026-05-27 11:08:09,492 INFO === AurumOS Started ===
+2026-05-27 11:08:21,210 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:08:21,210 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:12:13,876 INFO === AurumOS Started ===
+2026-05-27 11:12:24,609 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:12:24,625 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:15:15,688 INFO === AurumOS Started ===
+2026-05-27 11:15:29,826 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:15:29,831 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:26:09,056 INFO === AurumOS Started ===
+2026-05-27 11:26:46,563 INFO === AurumOS Started ===
+2026-05-27 11:26:54,834 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:26:54,834 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:33:03,986 INFO === AurumOS Started ===
+2026-05-27 11:33:14,383 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:33:14,384 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:34:03,048 INFO === AurumOS Started ===
+2026-05-27 11:34:11,695 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:34:11,706 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:36:42,926 INFO === AurumOS Started ===
+2026-05-27 11:37:23,545 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:37:23,545 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 11:38:01,383 INFO === AurumOS Started ===
+2026-05-27 11:38:08,639 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 11:38:08,643 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 14:34:08,111 INFO === AurumOS Started ===
+2026-05-27 14:34:26,194 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 14:34:26,194 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 14:34:40,381 INFO === AurumOS Started ===
+2026-05-27 14:34:48,659 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 14:34:48,665 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 16:19:49,377 INFO === AurumOS Started ===
+2026-05-27 16:20:06,121 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 16:20:06,130 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 16:27:05,631 INFO === AurumOS Started ===
+2026-05-27 16:27:14,833 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 16:27:14,835 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 16:31:53,618 INFO === AurumOS Started ===
+2026-05-27 16:32:26,429 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 16:32:26,441 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-27 22:27:20,658 INFO === AurumOS Started ===
+2026-05-27 22:30:09,582 INFO === AurumOS Started ===
+2026-05-27 22:31:37,869 INFO [LOGIN] verify_login called, password len=10
+2026-05-27 22:31:37,877 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}
+2026-05-28 08:28:11,176 INFO === AurumOS Started ===
+2026-05-28 08:28:21,942 INFO [LOGIN] verify_login called, password len=10
+2026-05-28 08:28:21,946 INFO [LOGIN] Result: {'status': 'success', 'role': 'admin', 'landing': 'dashboard.html'}

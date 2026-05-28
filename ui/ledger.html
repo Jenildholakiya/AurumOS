@@ -1,124 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AurumOS | General Ledger Terminal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="sidebar.css">
-    <style>
-        :root {
-            --primary: #0f172a; --accent: #b59410; --bg-main: #f8fafc;
-            --border: #cbd5e1; --text-muted: #64748b;
-            --success: #059669; --error: #e11d48;
-            --card-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.03);
-            --bg-dr: #fef2f2;
-            --bg-cr: #f0fdf4;
-            --border-dr: #fecaca;
-            --border-cr: #bbf7d0;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { display: block; height: 100vh; background: var(--bg-main); color: var(--primary); overflow: hidden; }
-        main { width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+<meta charset="UTF-8">
+<title>AurumOS | Master Ledger</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.06);--green-ln:rgba(21,128,61,0.2);
+    --red:#b91c1c;--red-bg:rgba(185,28,28,0.06);--red-ln:rgba(185,28,28,0.18);
+    --blue:#1d4ed8;--blue-bg:rgba(29,78,216,0.06);--blue-ln:rgba(29,78,216,0.18);
+    --serif:'DM Serif Display',Georgia,serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;display:block;height:100vh;background:var(--cream);color:var(--ink);overflow:hidden;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
 
-        header {
-            height: 75px; background: #fff; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
-        }
+/* Header */
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-title{font-family:var(--serif);font-size:1rem;font-weight:400;color:var(--ink);letter-spacing:-0.2px;}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-sub{font-size:0.58rem;color:var(--muted2);margin-top:1px;}
+.h-right{display:flex;gap:10px;align-items:center;}
+#real-time-clock{font-family:var(--mono);font-size:0.63rem;color:var(--muted2);background:var(--cream2);padding:5px 11px;border-radius:4px;border:1px solid var(--rule);}
+.btn-csv{background:var(--white);border:1px solid var(--rule);border-radius:6px;padding:6px 13px;font-family:inherit;font-weight:600;font-size:0.72rem;color:var(--ink3);cursor:pointer;transition:all 0.14s;}
+.btn-csv:hover{border-color:var(--gold-ln);color:var(--gold3);background:var(--gold-bg);}
 
-        .content { padding: 25px 30px; overflow-y: hidden; flex-grow: 1; display: flex; flex-direction: column; }
+/* Content */
+.content{padding:16px 22px 20px;overflow-y:hidden;flex-grow:1;display:flex;flex-direction:column;gap:14px;}
 
-        /* ── 4-CARD SUMMARY RIBBON ──────────────────────────────────────────── */
-        .summary-ribbon { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; flex-shrink: 0; }
-        .sum-card {
-            background: #fff; padding: 16px 20px; border-radius: 16px;
-            border: 1px solid var(--border); box-shadow: var(--card-shadow);
-            position: relative; overflow: hidden;
-        }
-        .sum-card label { font-size: 0.62rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px; }
-        .sum-card span { font-size: 1.3rem; font-weight: 800; display: block; letter-spacing: -0.5px; }
-        .mini-stat { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); margin-top: 3px; opacity: 0.8; }
+/* Summary ribbon */
+.summary-ribbon{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0;}
+.sum-card{background:var(--white);padding:13px 16px;border-radius:8px;border:1px solid var(--rule);box-shadow:var(--sh);position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.dr-card::before{background:var(--red);}
+.cr-card::before{background:var(--green);}
+.sum-card label{font-size:0.53rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:3px;}
+.sum-card span{font-family:var(--serif);font-size:1.2rem;font-weight:400;display:block;letter-spacing:-0.3px;}
+.sum-card span.dr{color:var(--red);}
+.sum-card span.cr{color:var(--green);}
+.mini-stat{font-size:0.56rem;font-weight:500;color:var(--muted2);margin-top:2px;}
 
-        /* Card accent borders — DR = red left border, CR = green left border */
-        .dr-card { border-left: 4px solid var(--error); }
-        .cr-card { border-left: 4px solid var(--success); }
-        .sum-card span.dr { color: var(--error); }
-        .sum-card span.cr { color: var(--success); }
+/* Table card */
+.table-card{background:var(--white);border-radius:10px;border:1px solid var(--rule);overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column;flex-grow:1;min-height:0;}
+.table-header{padding:12px 18px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
+.th-top{display:flex;justify-content:space-between;align-items:center;}
+.th-label{font-family:var(--serif);font-size:0.95rem;color:var(--ink);}
+.th-label em{color:var(--gold3);font-style:italic;}
 
-        /* ── TABLE CARD ─────────────────────────────────────────────────────── */
-        .table-card {
-            background: #fff; border-radius: 20px; border: 1px solid var(--border);
-            overflow: hidden; box-shadow: var(--card-shadow);
-            display: flex; flex-direction: column; flex-grow: 1;
-        }
-        .table-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
-        .filter-toggle { background: var(--bg-main); padding: 4px; border-radius: 10px; display: flex; gap: 4px; border: 1px solid var(--border); }
-        .tgl-btn {
-            border: none; padding: 6px 14px; border-radius: 6px;
-            font-weight: 800; font-size: 0.68rem; cursor: pointer;
-            transition: all 0.2s ease; background: transparent;
-            color: var(--text-muted); text-transform: uppercase;
-        }
-        .tgl-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(15,23,42,0.15); }
+/* Toggle pills */
+.filter-toggle{display:flex;background:var(--cream2);padding:3px;border-radius:6px;border:1px solid var(--rule);gap:2px;}
+.tgl-btn{border:none;padding:5px 13px;border-radius:4px;font-family:inherit;font-weight:600;font-size:0.65rem;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--muted);text-transform:uppercase;}
+.tgl-btn.active{background:var(--white);color:var(--ink);box-shadow:var(--sh);}
 
-        .date-input-group label { font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block; }
-        .date-input-group input { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 0.8rem; outline: none; background: #fff; height: 38px; cursor: pointer; }
+/* Filter bar */
+.filter-bar{display:flex;gap:10px;align-items:flex-end;background:var(--cream2);padding:10px 12px;border-radius:7px;border:1px solid var(--rule);}
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fg label{font-size:0.52rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;}
+.fg input[type=date],.fg input[type=text]{height:32px;padding:0 9px;border:1px solid var(--rule);border-radius:5px;font-family:inherit;font-size:0.76rem;font-weight:500;color:var(--ink);background:var(--white);outline:none;transition:all 0.14s;}
+.fg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);}
+.fg.grow{flex:1;}
+.btn-reset{height:32px;padding:0 13px;background:var(--white);border:1px solid var(--rule);border-radius:5px;font-family:inherit;font-weight:600;font-size:0.7rem;cursor:pointer;color:var(--ink3);transition:all 0.14s;}
+.btn-reset:hover{border-color:var(--red-ln);color:var(--red);background:var(--red-bg);}
 
-        .btn-reset { background: white; border: 1px solid var(--border); padding: 0 16px; border-radius: 10px; font-weight: 800; font-size: 0.68rem; cursor: pointer; height: 38px; transition: 0.2s; text-transform: uppercase; }
-        .btn-reset:hover { border-color: var(--error); color: var(--error); background: var(--bg-dr); }
+/* Table */
+.scroll-area{flex-grow:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.scroll-area::-webkit-scrollbar{width:3px;}.scroll-area::-webkit-scrollbar-thumb{background:var(--cream3);}
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{background:var(--cream2);padding:9px 16px;text-align:left;font-size:0.53rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:10;}
+td{padding:10px 16px;border-bottom:1px solid var(--rule2);font-size:0.77rem;font-weight:500;transition:background 0.1s;}
+tr.row-paid td{background:rgba(21,128,61,0.025);}
+tr.row-credit td{background:rgba(185,28,28,0.025);}
+tr:hover td{filter:brightness(0.97);cursor:default;}
 
-        .scroll-area { flex-grow: 1; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th {
-            background: #fafbfc; padding: 14px 24px; text-align: left;
-            font-size: 0.65rem; font-weight: 800; color: var(--text-muted);
-            text-transform: uppercase; letter-spacing: 1.2px;
-            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
-        }
-        td { padding: 14px 24px; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; font-weight: 700; transition: all 0.15s ease; }
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border:1px solid transparent;}
+.badge-paid{background:var(--green-bg);color:var(--green);border-color:var(--green-ln);}
+.badge-credit{background:var(--red-bg);color:var(--red);border-color:var(--red-ln);}
+.badge-jama{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-ln);}
 
-        /* ── ROW COLORS: FIXED CURSOR AND POINTER EFFECTS BLOCKED PERMANENTLY ── */
-        tr.row-paid td { background-color: var(--bg-cr); border-bottom-color: var(--border-cr); }
-        tr.row-credit td { background-color: var(--bg-dr); border-bottom-color: var(--border-dr); }
-        tr:hover td { filter: brightness(0.98); cursor: default; }
-
-        /* ── STATUS BADGE ───────────────────────────────────────────────────── */
-        .status-badge {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 3px 10px; border-radius: 20px;
-            font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .badge-paid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .badge-credit { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-jama { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-
-        .client-pill {
-            background: #fff; padding: 5px 10px; border-radius: 8px;
-            font-weight: 800; font-size: 0.7rem; border: 1px solid var(--border);
-            display: inline-flex; align-items: center; gap: 6px;
-            color: var(--primary); text-transform: uppercase; cursor: default;
-        }
-        .num-text { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 0.9rem; }
-        .text-dr { color: var(--error) !important; }
-        .text-cr { color: var(--success) !important; }
-
-        .search-box {
-            background: #fff; border: 1px solid var(--border); border-radius: 10px;
-            padding: 10px 16px; font-weight: 600; outline: none; transition: 0.25s ease; height: 38px;
-        }
-        .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(181,148,16,0.05); }
-    </style>
-
+.client-pill{background:var(--cream2);padding:3px 9px;border-radius:4px;font-weight:600;font-size:0.68rem;border:1px solid var(--rule);display:inline-block;color:var(--ink3);}
+.num-text{font-family:var(--mono);font-size:0.73rem;}
+.text-dr{color:var(--red)!important;}
+.text-cr{color:var(--green)!important;}
+.vch-ref{font-weight:600;color:var(--ink);font-size:0.77rem;}
+.vch-desc{font-size:0.67rem;color:var(--muted2);margin-top:1px;}
+</style>
 <style id="aurum-layout-fix">
-/* AURUM LAYOUT FIX: sidebar+main side by side */
 body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { flex-shrink: 0 !important; width: 240px !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 252px !important; }
 body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
-body.sidebar-collapsed #sidebar-container { width: 70px !important; }
+body.sidebar-collapsed #sidebar-container { width: 66px !important; }
 </style>
 </head>
 <body>
 <script src="sidebar.js"></script>
-
 <div id="sidebar-container"></div>
 
 
@@ -126,267 +110,180 @@ body.sidebar-collapsed #sidebar-container { width: 70px !important; }
 
 
 <main>
-    <header>
-        <div style="display:flex; flex-direction:column;">
-            <h1 style="font-weight:800; font-size:1.25rem; letter-spacing:-0.5px;">Master Ledger</h1>
-            <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700;">Global Transaction Register</span>
-        </div>
-        <div style="display:flex; gap:12px; align-items:center;">
-            <div id="real-time-clock" style="font-weight:800; font-size:0.78rem; color:var(--accent); padding-right:12px; border-right:1px solid var(--border);">-- | --</div>
-            <button class="btn-reset" style="height:34px; font-size:0.65rem;" onclick="exportToCSV()">Export CSV</button>
-        </div>
-    </header>
+<header>
+    <div>
+        <div class="h-title">Master <em>Ledger</em></div>
+        <div class="h-sub">Global Transaction Register</div>
+    </div>
+    <div class="h-right">
+        <div id="real-time-clock">-- | --</div>
+        <button class="btn-csv" onclick="exportToCSV()">Export CSV</button>
+    </div>
+</header>
 
-    <div class="content">
+<div class="content">
 
-        <div class="summary-ribbon">
-            <div class="sum-card dr-card">
-                <label>Total Market Metal (DR)</label>
-                <span id="total-m-dr" class="dr">0.000 g</span>
-                <div class="mini-stat">Market Udhar</div>
-            </div>
-            <div class="sum-card dr-card">
-                <label>Total Market Cash (DR)</label>
-                <span id="total-c-dr" class="dr">₹ 0.00</span>
-                <div class="mini-stat">Pending Payments</div>
-            </div>
-            <div class="sum-card cr-card">
-                <label>Metal Collected (CR)</label>
-                <span id="total-m-cr" class="cr">0.000 g</span>
-                <div class="mini-stat">Total Jama</div>
-            </div>
-            <div class="sum-card cr-card">
-                <label>Cash Collected (CR)</label>
-                <span id="total-c-cr" class="cr">₹ 0.00</span>
-                <div class="mini-stat">Total Received</div>
-            </div>
-        </div>
+    <div class="summary-ribbon">
+        <div class="sum-card dr-card"><label>Metal DR</label><span id="total-m-dr" class="dr">0.000 g</span><div class="mini-stat">Market Udhar</div></div>
+        <div class="sum-card dr-card"><label>Cash DR</label><span id="total-c-dr" class="dr">Rs. 0.00</span><div class="mini-stat">Pending Payments</div></div>
+        <div class="sum-card cr-card"><label>Metal CR</label><span id="total-m-cr" class="cr">0.000 g</span><div class="mini-stat">Total Jama</div></div>
+        <div class="sum-card cr-card"><label>Cash CR</label><span id="total-c-cr" class="cr">Rs. 0.00</span><div class="mini-stat">Total Received</div></div>
+    </div>
 
-        <div class="table-card">
-            <div class="table-header">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 style="font-size:1rem; font-weight:800; letter-spacing:-0.5px;">Transaction Stream</h2>
-                    <div class="filter-toggle">
-                        <button class="tgl-btn active" id="btn-all" onclick="setFilterType('all')">All</button>
-                        <button class="tgl-btn" id="btn-paid" onclick="setFilterType('paid')">Paid</button>
-                        <button class="tgl-btn" id="btn-credit" onclick="setFilterType('credit')">Credit</button>
-                        <button class="tgl-btn" id="btn-jama" onclick="setFilterType('jama')">Jama</button>
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:12px; align-items:flex-end; background:var(--bg-main); padding:12px; border-radius:16px; border:1px solid var(--border);">
-                    <div class="date-input-group">
-                        <label>From Date</label>
-                        <input type="date" id="date-from" onchange="filterLedger()">
-                    </div>
-                    <div class="date-input-group">
-                        <label>To Date</label>
-                        <input type="date" id="date-to" onchange="filterLedger()">
-                    </div>
-                    <div style="flex-grow:1;">
-                        <label style="font-size:0.6rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">Keyword Search</label>
-                        <input type="text" class="search-box" style="width:100%;" id="ledger-search" placeholder="Search Client, Voucher or Note..." oninput="filterLedger()">
-                    </div>
-                    <button class="btn-reset" onclick="resetFilters()">Reset</button>
+    <div class="table-card">
+        <div class="table-header">
+            <div class="th-top">
+                <div class="th-label">Transaction <em>Stream</em></div>
+                <div class="filter-toggle">
+                    <button class="tgl-btn active" id="btn-all"    onclick="setFilter('all')">All</button>
+                    <button class="tgl-btn"        id="btn-paid"   onclick="setFilter('paid')">Paid</button>
+                    <button class="tgl-btn"        id="btn-credit" onclick="setFilter('credit')">Credit</button>
+                    <button class="tgl-btn"        id="btn-jama"   onclick="setFilter('jama')">Jama</button>
                 </div>
             </div>
-
-            <div class="scroll-area">
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="120">Date</th>
-                            <th width="175">Account / Client</th>
-                            <th>Reference &amp; Description</th>
-                            <th width="110" style="text-align:center;">Status</th>
-                            <th width="155" style="text-align:right;">Metal Impact</th>
-                            <th width="175" style="text-align:right;">Cash Impact</th>
-                        </tr>
-                    </thead>
-                    <tbody id="master-ledger-body">
-                        <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Synchronizing Stream...</td></tr>
-                    </tbody>
-                </table>
+            <div class="filter-bar">
+                <div class="fg"><label>From</label><input type="date" id="date-from" onchange="filterLedger()"></div>
+                <div class="fg"><label>To</label><input type="date" id="date-to" onchange="filterLedger()"></div>
+                <div class="fg grow"><label>Search</label><input type="text" id="ledger-search" placeholder="Client, voucher or note…" oninput="filterLedger()"></div>
+                <button class="btn-reset" onclick="resetFilters()">Reset</button>
             </div>
+        </div>
+        <div class="scroll-area">
+            <table>
+                <thead><tr>
+                    <th width="110">Date</th>
+                    <th width="160">Account</th>
+                    <th>Reference &amp; Description</th>
+                    <th width="100" style="text-align:center;">Status</th>
+                    <th width="140" style="text-align:right;">Metal</th>
+                    <th width="155" style="text-align:right;">Cash</th>
+                </tr></thead>
+                <tbody id="master-ledger-body">
+                    <tr><td colspan="6" style="text-align:center;padding:36px;color:var(--muted2);">Loading...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
+
+</div>
 </main>
 
-
 <script>
-    let masterData = [];
-    let currentTypeFilter = 'all';
+var masterData = [];
+var activeFilter = 'all';
 
-    function classifyRow(e) {
-        const metalDr = parseFloat(e.metal_dr || 0);
-        const metalCr = parseFloat(e.metal_cr || 0);
-        const cashDr = parseFloat(e.cash_dr || 0);
-        const cashCr = parseFloat(e.cash_cr || 0);
+function classify(e){
+    var mCr=parseFloat(e.metal_cr||0), cCr=parseFloat(e.cash_cr||0);
+    var mDr=parseFloat(e.metal_dr||0), cDr=parseFloat(e.cash_dr||0);
+    if(cCr>0) return 'paid';
+    if(mCr>0) return 'jama';
+    if(mDr>0||cDr>0) return 'credit';
+    return 'credit';
+}
 
-        if (e.description && e.description.includes("Sales Invoice Entry") && metalCr > 0) {
-            return 'paid';
-        }
-        if (cashCr > 0) return 'paid';
-        if (metalCr > 0) return 'jama';
-        if (metalDr > 0 || cashDr > 0) return 'credit';
-        return 'credit';
-    }
-
-    async function fetchMasterLedger() {
-        if (!window.pywebview?.api) return;
-        try {
-            const summary = await window.pywebview.api.get_ledger_summary();
-
-            document.getElementById('total-m-dr').innerText =
-                (summary.metal_dr || 0).toFixed(3) + " g";
-            document.getElementById('total-c-dr').innerText =
-                "₹ " + (summary.cash_dr || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-            document.getElementById('total-m-cr').innerText =
-                (summary.metal_cr || 0).toFixed(3) + " g";
-            document.getElementById('total-c-cr').innerText =
-                "₹ " + (summary.cash_cr || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-
-            masterData = await window.pywebview.api.get_full_ledger_stream();
-            filterLedger();
-        } catch (e) { console.error("Ledger Load Error:", e); }
-    }
-
-    function setFilterType(type) {
-        currentTypeFilter = type;
-        document.querySelectorAll('.tgl-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`btn-${type}`).classList.add('active');
+async function fetchMasterLedger(){
+    if(!window.pywebview?.api) return;
+    try{
+        var s = await window.pywebview.api.get_ledger_summary();
+        document.getElementById('total-m-dr').innerText = (s.metal_dr||0).toFixed(3)+' g';
+        document.getElementById('total-c-dr').innerText = 'Rs. '+(s.cash_dr||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('total-m-cr').innerText = (s.metal_cr||0).toFixed(3)+' g';
+        document.getElementById('total-c-cr').innerText = 'Rs. '+(s.cash_cr||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        masterData = await window.pywebview.api.get_full_ledger_stream();
         filterLedger();
+    }catch(e){console.error(e);}
+}
+
+function setFilter(type){
+    activeFilter=type;
+    document.querySelectorAll('.tgl-btn').forEach(function(b){b.classList.remove('active');});
+    document.getElementById('btn-'+type).classList.add('active');
+    filterLedger();
+}
+
+function resetFilters(){
+    document.getElementById('ledger-search').value='';
+    document.getElementById('date-from').value='';
+    document.getElementById('date-to').value='';
+    setFilter('all');
+}
+
+function filterLedger(){
+    var q    = document.getElementById('ledger-search').value.toLowerCase();
+    var dFrom= document.getElementById('date-from').value;
+    var dTo  = document.getElementById('date-to').value;
+    var list = masterData.filter(function(e){
+        var rt = classify(e);
+        var matchText = !q || (e.client_name||'').toLowerCase().includes(q)
+                           || (e.vch_reference||'').toLowerCase().includes(q)
+                           || (e.description||'').toLowerCase().includes(q);
+        var matchType = activeFilter==='all' || activeFilter===rt;
+        var matchDate = (!dFrom||e.date>=dFrom) && (!dTo||e.date<=dTo);
+        return matchText&&matchType&&matchDate;
+    });
+    renderTable(list);
+}
+
+function renderTable(data){
+    var tbody=document.getElementById('master-ledger-body');
+    if(!data.length){
+        tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted2);">No transactions found.</td></tr>';
+        return;
     }
+    tbody.innerHTML=data.map(function(e){
+        var mDr=parseFloat(e.metal_dr||0), mCr=parseFloat(e.metal_cr||0);
+        var cDr=parseFloat(e.cash_dr||0),  cCr=parseFloat(e.cash_cr||0);
+        var rt=classify(e);
+        var rc=rt==='paid'||rt==='jama'?'row-paid':'row-credit';
 
-    function resetFilters() {
-        document.getElementById('ledger-search').value = '';
-        document.getElementById('date-from').value = '';
-        document.getElementById('date-to').value = '';
-        setFilterType('all');
-    }
+        var badge = rt==='paid'
+            ? '<span class="status-badge badge-paid">Paid</span>'
+            : rt==='jama'
+            ? '<span class="status-badge badge-jama">Jama</span>'
+            : '<span class="status-badge badge-credit">Credit</span>';
 
-    function filterLedger() {
-        const q = document.getElementById('ledger-search').value.toLowerCase();
-        const dFrom = document.getElementById('date-from').value;
-        const dTo = document.getElementById('date-to').value;
+        var mTxt='--', mCls='';
+        if(mDr>0){ mTxt='+'+mDr.toFixed(3)+' g DR'; mCls='text-dr'; }
+        else if(mCr>0){ mTxt='-'+mCr.toFixed(3)+' g CR'; mCls='text-cr'; }
 
-        const filtered = masterData.filter(e => {
-            const rowType = classifyRow(e);
-            const matchesText =
-                (e.client_name && e.client_name.toLowerCase().includes(q)) ||
-                (e.vch_reference && e.vch_reference.toLowerCase().includes(q)) ||
-                (e.description && e.description.toLowerCase().includes(q));
-            const matchesType =
-                (currentTypeFilter === 'all') ||
-                (currentTypeFilter === rowType);
-            let matchesDate = true;
-            if (dFrom) matchesDate = matchesDate && (e.date >= dFrom);
-            if (dTo) matchesDate = matchesDate && (e.date <= dTo);
-            return matchesText && matchesType && matchesDate;
-        });
-        renderTable(filtered);
-    }
+        var cTxt='--', cCls='';
+        if(cDr>0){ cTxt='Rs.'+cDr.toLocaleString('en-IN',{minimumFractionDigits:2})+' DR'; cCls='text-dr'; }
+        else if(cCr>0){ cTxt='Rs.'+cCr.toLocaleString('en-IN',{minimumFractionDigits:2})+' CR'; cCls='text-cr'; }
 
-    function renderTable(data) {
-        const tbody = document.getElementById('master-ledger-body');
-        tbody.innerHTML = '';
-        if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:100px; color:var(--text-muted); font-weight:700;">No transactions found.</td></tr>';
-            return;
-        }
+        return '<tr class="'+rc+'">'
+            +'<td style="font-family:var(--mono);font-size:0.7rem;color:var(--muted2);">'+(e.date||'--')+'</td>'
+            +'<td><span class="client-pill">'+(e.client_name||'System')+'</span></td>'
+            +'<td><div class="vch-ref">'+(e.vch_reference||'Manual')+'</div>'
+            +'<div class="vch-desc">'+(e.description||'')+'</div></td>'
+            +'<td style="text-align:center;">'+badge+'</td>'
+            +'<td style="text-align:right;" class="num-text '+mCls+'">'+mTxt+'</td>'
+            +'<td style="text-align:right;" class="num-text '+cCls+'">'+cTxt+'</td>'
+            +'</tr>';
+    }).join('');
+}
 
-        data.forEach(e => {
-            const metalDr = parseFloat(e.metal_dr || 0);
-            const metalCr = parseFloat(e.metal_cr || 0);
-            const cashDr = parseFloat(e.cash_dr || 0);
-            const cashCr = parseFloat(e.cash_cr || 0);
-            const rowType = classifyRow(e);
+function exportToCSV(){
+    if(!masterData.length) return;
+    var hdr=['Date','Account','Reference','Description','Status','Metal DR','Metal CR','Cash DR','Cash CR'];
+    var rows=masterData.map(function(e){
+        return [e.date,e.client_name,e.vch_reference||'Manual',e.description,classify(e).toUpperCase(),e.metal_dr,e.metal_cr,e.cash_dr,e.cash_cr];
+    });
+    var csv='data:text/csv;charset=utf-8,'+hdr.join(',')+'\n'+rows.map(function(r){return r.join(',');}).join('\n');
+    var a=document.createElement('a');
+    a.setAttribute('href',encodeURI(csv));
+    a.setAttribute('download','Master_Ledger_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
 
-            const rowClass = (rowType === 'paid' || rowType === 'jama') ? 'row-paid' : 'row-credit';
-
-            let badgeHtml;
-            if (rowType === 'paid') {
-                badgeHtml = `<span class="status-badge badge-paid">✓ Paid</span>`;
-            } else if (rowType === 'jama') {
-                badgeHtml = `<span class="status-badge badge-jama">↓ Jama</span>`;
-            } else {
-                badgeHtml = `<span class="status-badge badge-credit">● Credit</span>`;
-            }
-
-            let metalHtml, metalClass;
-            if (rowType === 'paid' || rowType === 'jama') {
-                metalHtml = metalCr > 0 ? `−${metalCr.toFixed(3)} g (CR)` : (metalDr > 0 ? `+${metalDr.toFixed(3)} g (DR)` : '--');
-                metalClass = metalCr > 0 ? 'text-cr' : 'text-dr';
-            } else {
-                metalHtml = metalDr > 0 ? `+${metalDr.toFixed(3)} g (DR)` : (metalCr > 0 ? `−${metalCr.toFixed(3)} g (CR)` : '--');
-                metalClass = metalDr > 0 ? 'text-dr' : 'text-cr';
-            }
-            if(metalDr === 0 && metalCr === 0) { metalHtml = '--'; metalClass = ''; }
-
-            let cashHtml, cashClass;
-            if (rowType === 'paid' || rowType === 'jama') {
-                cashHtml = cashCr > 0 ? `₹${cashCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (CR)` : (cashDr > 0 ? `₹${cashDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (DR)` : '--');
-                cashClass = cashCr > 0 ? 'text-cr' : 'text-dr';
-            } else {
-                cashHtml = cashDr > 0 ? `₹${cashDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (DR)` : (cashCr > 0 ? `₹${cashCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (CR)` : '--');
-                cashClass = cashDr > 0 ? 'text-dr' : 'text-cr';
-            }
-            if(cashDr === 0 && cashCr === 0) { cashHtml = '--'; cashClass = ''; }
-
-            // FIXED: Removed onclick redirect execution hook block entirely
-            tbody.innerHTML += `
-                <tr class="${rowClass}">
-                    <td style="color:var(--text-muted); font-size:0.8rem;">${e.date || '--'}</td>
-                    <td><div class="client-pill">👤 ${e.client_name || 'SYSTEM'}</div></td>
-                    <td>
-                        <div style="font-weight:800; color:var(--primary);">${e.vch_reference || 'MANUAL'}</div>
-                        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700; margin-top:2px;">${e.description || ''}</div>
-                    </td>
-                    <td style="text-align:center;">${badgeHtml}</td>
-                    <td style="text-align:right;" class="num-text ${metalClass}">${metalHtml}</td>
-                    <td style="text-align:right;" class="num-text ${cashClass}">${cashHtml}</td>
-                </tr>`;
-        });
-    }
-
-    // FIXED: Formally blanked out background tracking method callbacks
-    function navigateToClient(name) {}
-
-    function exportToCSV() {
-        if (!masterData.length) return;
-        const headers = ["Date","Account","Reference","Description","Status","Metal DR","Metal CR","Cash DR","Cash CR"];
-        const rows = masterData.map(e => [
-            e.date, e.client_name, e.vch_reference || 'MANUAL', e.description,
-            classifyRow(e).toUpperCase(),
-            e.metal_dr, e.metal_cr, e.cash_dr, e.cash_cr
-        ]);
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + headers.join(",") + "\n"
-            + rows.map(r => r.join(",")).join("\n");
-        const link = document.createElement("a");
-        link.setAttribute("href", encodeURI(csvContent));
-        link.setAttribute("download", `Master_Ledger_${new Date().toLocaleDateString()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    window.onload = () => {
-        // ✅ FIXED: waitForAPI ensures pywebview is ready before initSidebar
-        waitForAPI(async function() {
-        await initSidebar('ledger');
-                    });
-        setInterval(() => {
-            document.getElementById('real-time-clock').innerText =
-                new Date().toLocaleString('en-GB', {
-                    hour:'2-digit', minute:'2-digit', second:'2-digit',
-                    day:'2-digit', month:'short'
-                }).replace(/,/g, ' |');
-        }, 1000);
-        const check = setInterval(() => {
-            if (window.pywebview?.api) { fetchMasterLedger(); clearInterval(check); }
-        }, 100);
-    };
+window.onload=function(){
+        waitForAPI(function(){ initSidebar('ledger'); });
+    setInterval(function(){
+        var n=new Date();
+        document.getElementById('real-time-clock').innerText=
+            n.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' | '+n.toLocaleTimeString();
+    },1000);
+    var t=setInterval(function(){if(window.pywebview?.api){fetchMasterLedger();clearInterval(t);}},100);
+};
 </script>
 </body>
 </html>

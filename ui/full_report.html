@@ -1,451 +1,610 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AurumOS | Master Inventory Audit Report</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0f172a; --accent: #b59410; --accent-dark: #8a7b0d;
-            --accent-glow: rgba(181,148,16,0.06); --bg-main: #f1f5f9;
-            --card: #ffffff; --border: #cbd5e1; --border-light: #e2e8f0;
-            --text-main: #1e293b; --text-muted: #475569;
-            --success: #166534; --success-bg: #dcfce7;
-            --shadow-lux: 0 20px 25px -5px rgba(15,23,42,0.03),0 10px 10px -5px rgba(15,23,42,0.02);
-            --shadow-btn: 0 4px 12px rgba(15,23,42,0.08);
-            --perf-high: #e11d48; --perf-med: #10b981; --perf-low: #f59e0b;
-        }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-        body { background:var(--bg-main); color:var(--text-main); min-height:100vh; display: block; flex-direction:column; overflow-x:hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Inventory Audit Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.06);
+    --red:#b91c1c;--red-bg:rgba(185,28,28,0.05);
+    --blue:#1d4ed8;--blue-bg:rgba(29,78,216,0.05);
+    --amber:#b45309;--amber-bg:rgba(180,83,9,0.06);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+    --sh2:0 4px 16px rgba(14,12,9,0.08);
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);display:block;height:100vh;overflow:hidden;width:100vw;}
+main{width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
-        header {
-            height:95px; background:#fff; border-bottom:4px solid var(--accent);
-            display:flex; align-items:center; justify-content:space-between;
-            padding:0 45px; flex-shrink:0; z-index:100;
-            box-shadow:0 4px 20px rgba(0,0,0,0.02);
-        }
-        .header-left { display:flex; flex-direction:column; gap:4px; }
-        .header-left h1 { font-size:1.6rem; font-weight:700; color:var(--primary); letter-spacing:-0.5px; }
-        .header-left p  { font-size:0.8rem; color:var(--text-muted); font-weight:500; }
-        .btn-container { display:flex; gap:12px; }
-        .btn-back {
-            padding:12px 26px; border-radius:12px; font-weight:600; font-size:0.8rem;
-            cursor:pointer; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-            border:1.5px solid var(--primary); background:transparent; color:var(--primary);
-            text-transform:uppercase; letter-spacing:0.5px;
-        }
-        .btn-back:hover { background:var(--primary); color:white; transform:translateY(-2px); box-shadow:var(--shadow-btn); }
+/* ── HEADER ── */
+header{
+    height:62px;background:var(--white);border-bottom:1px solid var(--rule);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;flex-shrink:0;position:relative;z-index:100;
+}
+header::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);
+}
+.h-left{display:flex;align-items:center;gap:14px;}
+.h-sep{width:1px;height:28px;background:var(--rule);flex-shrink:0;}
+.h-title{font-family:var(--serif);font-size:1rem;color:var(--ink);letter-spacing:-0.2px;}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-sub{font-size:0.6rem;color:var(--muted2);margin-top:2px;}
+.h-right{display:flex;align-items:center;gap:10px;}
 
-        .report-container { flex:1; padding:35px 45px; display:flex; flex-direction:column; gap:28px; }
+.btn-back{
+    display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
+    border-radius:6px;border:1px solid var(--rule);background:var(--cream);
+    font-size:0.72rem;font-weight:600;color:var(--ink3);
+    cursor:pointer;font-family:var(--sans);transition:all 0.14s;
+}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-        .control-panel {
-            background:#fff; padding:24px 30px; border-radius:24px;
-            border:1px solid var(--border-light); box-shadow:var(--shadow-lux);
-            display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:24px;
-        }
-        .filter-group { display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
-        .filter-box   { display:flex; flex-direction:column; gap:8px; }
-        .filter-box label { font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; }
-        .control-panel input[type="date"] {
-            height:46px; padding:0 16px; border-radius:12px; border:1.5px solid var(--border-light);
-            font-size:0.9rem; font-weight:600; color:var(--primary); outline:none; transition:all 0.2s; background:#fafbfc;
-        }
-        .control-panel input[type="date"]:focus { border-color:var(--accent); background:#fffef2; box-shadow:0 0 0 4px rgba(181,148,16,0.08); }
-        .btn-filter {
-            height:46px; padding:0 28px; background:var(--primary); color:white; border:none;
-            border-radius:12px; font-weight:600; font-size:0.8rem; text-transform:uppercase;
-            letter-spacing:1px; cursor:pointer; transition:all 0.2s;
-        }
-        .btn-filter:hover { background:var(--accent); transform:translateY(-1px); }
+/* ── CONTENT ── */
+.page{flex:1;overflow-y:auto;padding:18px 24px 24px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.page::-webkit-scrollbar{width:3px;}
+.page::-webkit-scrollbar-thumb{background:var(--cream3);}
 
-        .report-toggles { display:flex; background:#f1f5f9; padding:6px; border-radius:16px; border:1px solid var(--border-light); }
-        .toggle-btn {
-            padding:12px 26px; border-radius:12px; font-weight:600; font-size:0.78rem;
-            border:none; cursor:pointer; background:transparent; color:var(--text-muted);
-            transition:all 0.25s cubic-bezier(0.4,0,0.2,1); text-transform:uppercase; letter-spacing:0.5px;
-        }
-        .toggle-btn.active { background:white; color:var(--primary); box-shadow:0 8px 16px rgba(15,23,42,0.04); }
+/* ── CONTROL PANEL ── */
+.ctrl{
+    background:var(--white);border:1px solid var(--rule);border-radius:10px;
+    padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;box-shadow:var(--sh);flex-shrink:0;
+}
+.filter-group{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fg label{font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
+.date-inp{
+    height:34px;padding:0 10px;border-radius:6px;
+    border:1px solid var(--rule);background:var(--cream);
+    font-family:var(--mono);font-size:0.76rem;color:var(--ink);
+    outline:none;transition:all 0.14s;
+}
+.date-inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);background:var(--white);}
+.btn-filter{
+    height:34px;padding:0 16px;background:var(--ink);color:#fff;
+    border:none;border-radius:6px;font-family:var(--sans);
+    font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.14s;
+}
+.btn-filter:hover{background:var(--ink2);}
 
-        .table-section { background:#fff; border-radius:28px; border:1px solid var(--border-light); box-shadow:var(--shadow-lux); overflow-x:auto; }
-        table { width:100%; border-collapse:collapse; text-align:left; white-space:nowrap; }
+/* Toggle pills */
+.toggles{display:flex;background:var(--cream2);padding:3px;border-radius:7px;border:1px solid var(--rule);}
+.tog{
+    padding:6px 16px;border-radius:5px;font-size:0.68rem;font-weight:600;
+    border:none;cursor:pointer;background:transparent;color:var(--muted);
+    transition:all 0.18s;font-family:var(--sans);
+}
+.tog.active{background:var(--white);color:var(--ink);box-shadow:var(--sh);}
 
-        th {
-            padding:18px 20px; background:#f8fafc; font-size:0.65rem;
-            text-transform:uppercase; font-weight:700; color:var(--text-muted);
-            letter-spacing:1px; border-bottom:2px solid #f1f5f9;
-        }
-        th.section-header { color:var(--primary); text-align:center; font-size:0.7rem; letter-spacing:1.2px; font-weight:700; }
-        td { padding:16px 20px; font-size:0.9rem; font-weight:500; border-bottom:1px solid #f1f5f9; color:var(--primary); }
-        tr:last-child td { border-bottom:none; }
+/* ── TABLE CARD ── */
+.tbl-card{
+    background:var(--white);border:1px solid var(--rule);border-radius:10px;
+    overflow:hidden;box-shadow:var(--sh);flex:1;display:flex;flex-direction:column;min-height:0;
+}
+.tbl-head-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 16px;border-bottom:1px solid var(--rule);background:var(--cream);flex-shrink:0;
+}
+.tbl-head-title{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);display:flex;align-items:center;gap:7px;}
+.tbl-head-title::before{content:'';width:3px;height:13px;background:var(--gold2);border-radius:99px;}
+.tbl-scroll{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.tbl-scroll::-webkit-scrollbar{width:3px;height:3px;}
+.tbl-scroll::-webkit-scrollbar-thumb{background:var(--cream3);}
 
-        .master-row-clickable { cursor:pointer; transition:background 0.2s; }
-        .master-row-clickable:hover td { background:var(--accent-glow); }
+table{width:100%;border-collapse:collapse;white-space:nowrap;}
+thead{position:sticky;top:0;z-index:10;}
 
-        .td-code { font-family:'JetBrains Mono',monospace; font-weight:600; color:#7c3aed; font-size:0.9rem; }
-        .mono-num { font-family:'JetBrains Mono',monospace; font-weight:500; font-size:0.88rem; text-align:right; color:#1e293b; }
-        th.num-header { text-align:right; font-weight:700; }
+/* Section header row */
+.sec-row th{
+    padding:7px 12px;font-size:0.56rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.8px;text-align:center;border-bottom:1px solid var(--rule);
+}
+.sec-opn{background:rgba(29,78,216,0.06);color:var(--blue);}
+.sec-in {background:rgba(21,128,61,0.06);color:var(--green);}
+.sec-out{background:rgba(185,28,28,0.06);color:var(--red);}
+.sec-cls{background:rgba(168,125,30,0.08);color:var(--gold3);}
+.sec-info{background:var(--cream);color:var(--ink3);}
 
-        .col-opn { background:rgba(219,234,254,0.4); }
-        .col-in  { background:rgba(220,252,231,0.4); }
-        .col-out { background:rgba(254,226,226,0.4); }
-        .col-bal { background:rgba(254,249,195,0.5); }
+/* Column header row */
+th{
+    padding:8px 12px;background:var(--cream2);
+    font-size:0.54rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:0.7px;color:var(--muted2);text-align:left;
+    border-bottom:1px solid var(--rule);
+}
+th.r{text-align:right;}
 
-        .weight-text  { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--success); }
-        .storage-text { font-family:'JetBrains Mono',monospace; font-weight:500; color:var(--accent-dark); }
-        .status-pill  { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:#f1f5f9; color:var(--primary); font-weight:600; font-size:0.65rem; border-radius:6px; text-transform:uppercase; }
+/* Data rows */
+td{
+    padding:9px 12px;font-size:0.76rem;font-weight:500;
+    color:var(--ink);border-bottom:1px solid var(--rule2);
+    font-family:var(--sans);
+}
+td.r{text-align:right;font-family:var(--mono);font-size:0.72rem;}
+tr:hover td{background:rgba(168,125,30,0.025);cursor:pointer;}
 
-        .perf-indicator { width:12px; height:12px; border-radius:50%; display:block; margin:0 auto; }
-        .perf-indicator.high   { background:var(--perf-high); animation:pulseH 1.2s infinite; box-shadow:0 0 10px var(--perf-high); }
-        .perf-indicator.medium { background:var(--perf-med);  animation:pulseM 1.8s infinite; box-shadow:0 0 8px var(--perf-med); }
-        .perf-indicator.low    { background:var(--perf-low);  animation:pulseL 2.5s infinite; box-shadow:0 0 6px var(--perf-low); }
-        @keyframes pulseH { 0%,100%{transform:scale(0.9);box-shadow:0 0 4px rgba(225,29,72,0.5)} 50%{transform:scale(1.15);box-shadow:0 0 12px rgba(225,29,72,0.8)} }
-        @keyframes pulseM { 0%,100%{opacity:0.6;transform:scale(0.95)} 50%{opacity:1;transform:scale(1.1)} }
-        @keyframes pulseL { 0%,100%{filter:brightness(0.85)} 50%{filter:brightness(1.15)} }
-        .slide-view-container { animation:viewSlide 0.3s cubic-bezier(0.16,1,0.3,1); }
-        @keyframes viewSlide { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
-    </style>
+/* Column tints */
+.c-opn{background:rgba(29,78,216,0.025);}
+.c-in {background:rgba(21,128,61,0.025);}
+.c-out{background:rgba(185,28,28,0.025);}
+.c-cls{background:rgba(168,125,30,0.03);}
 
-    <link rel="stylesheet" href="sidebar.css">
+/* Touch badge */
+.touch-badge{
+    font-family:var(--mono);font-size:0.76rem;font-weight:600;
+    color:var(--gold3);background:var(--gold-bg);
+    border:1px solid var(--gold-ln);padding:2px 9px;border-radius:4px;
+    display:inline-block;
+}
+/* Status pill */
+.pill{
+    display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+    border-radius:4px;font-size:0.56rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.5px;
+    background:var(--cream2);color:var(--ink3);border:1px solid var(--rule);
+}
+
+/* Performance dot */
+.perf{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.perf.high  {background:var(--red);  box-shadow:0 0 6px rgba(185,28,28,0.5); animation:ph 1.4s ease infinite;}
+.perf.med   {background:var(--green);box-shadow:0 0 5px rgba(21,128,61,0.4); animation:pm 2s ease infinite;}
+.perf.low   {background:var(--muted2);}
+@keyframes ph{0%,100%{transform:scale(.9)}50%{transform:scale(1.2)}}
+@keyframes pm{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* Green/red values */
+.v-in {color:var(--green);font-family:var(--mono);}
+.v-out{color:var(--red);  font-family:var(--mono);}
+.v-cls{color:var(--gold3);font-family:var(--mono);font-weight:600;}
+.v-muted{color:var(--muted2);font-family:var(--mono);}
+
+/* Empty / loading */
+.empty td{text-align:center;padding:32px;color:var(--muted2);font-size:0.76rem;}
+
+/* Drilldown header — dark */
+.dd-th{
+    padding:9px 12px;background:var(--ink);color:rgba(255,255,255,0.75);
+    font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;
+    text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);
+    position:sticky;top:0;z-index:10;
+}
+.dd-th.r{text-align:right;}
+
+/* Slide animation */
+@keyframes slideIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.slide{animation:slideIn 0.25s ease both;}
+</style>
+<link rel="stylesheet" href="sidebar.css">
 <style id="aurum-layout-fix">
-/* AURUM LAYOUT FIX: sub-page (no sidebar) — full width */
-body { display: block !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
-#sidebar-container { display: none !important; }
-body > main, main { width: 100% !important; height: 100vh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+body{display:block !important;height:100vh !important;overflow:hidden !important;width:100vw !important;}
+#sidebar-container{display:none !important;}
+body>main,main{width:100% !important;height:100vh !important;display:flex !important;flex-direction:column !important;overflow:hidden !important;}
 </style>
 </head>
 <body>
 <script src="sidebar.js"></script>
-
 <div id="sidebar-container"></div>
 
-
-
-
-
+<main>
+<!-- HEADER -->
 <header>
-    <div class="header-left">
-        <h1 id="report-main-title">Master Inventory Audit Report</h1>
-        <p id="report-subtitle">Streaming row-wise audit balances grouped by touch purity</p>
+    <div class="h-left">
+        <button class="btn-back" id="btn-back" onclick="handleBack()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            <span id="back-label">Inventory</span>
+        </button>
+        <div class="h-sep"></div>
+        <div>
+            <div class="h-title" id="h-title">Inventory <em>Audit Report</em></div>
+            <div class="h-sub" id="h-sub">Touch-wise opening, inward, outward &amp; closing balances</div>
+        </div>
     </div>
-    <div class="btn-container">
-        <button class="btn-back" id="btn-universal-back" onclick="handleBackAction()">&larr; BACK TO INTELLIGENCE</button>
+    <div class="h-right">
+        <!-- version/date pill -->
+        <div style="font-family:var(--mono);font-size:0.6rem;color:var(--muted2);background:var(--cream2);border:1px solid var(--rule);padding:4px 10px;border-radius:4px;" id="h-date">—</div>
     </div>
 </header>
 
-<div class="report-container">
-    <div class="control-panel" id="report-filter-strip">
+<!-- PAGE -->
+<div class="page">
+
+    <!-- Control Panel -->
+    <div class="ctrl" id="ctrl-panel">
         <div class="filter-group">
-            <div class="filter-box"><label>From Date</label><input type="date" id="filter-from-date"></div>
-            <div class="filter-box"><label>To Date</label><input type="date" id="filter-to-date"></div>
-            <button class="btn-filter" onclick="applyDateFilter()">Apply Filter</button>
+            <div class="fg">
+                <label>From Date</label>
+                <input type="date" id="from-date" class="date-inp">
+            </div>
+            <div class="fg">
+                <label>To Date</label>
+                <input type="date" id="to-date" class="date-inp">
+            </div>
+            <button class="btn-filter" onclick="applyFilter()">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Apply
+            </button>
         </div>
-        <div class="report-toggles" id="toggle-wrapper-panel">
-            <button class="toggle-btn active" id="mode-weight" onclick="switchReportMode('weight')">WEIGHT BASED BATCHES</button>
-            <button class="toggle-btn"         id="mode-pcs"    onclick="switchReportMode('pcs')">TAGGED PIECE GOODS</button>
+        <div class="toggles" id="toggles">
+            <button class="tog active" id="tog-weight" onclick="switchMode('weight')">Weight Based</button>
+            <button class="tog"        id="tog-pcs"    onclick="switchMode('pcs')">Piece Goods</button>
         </div>
     </div>
 
-    <!-- MASTER VIEW -->
-    <div class="table-section" id="master-view-container">
-        <table>
-            <thead>
-                <tr>
-                    <th colspan="4" style="background:#e2e8f0;border-right:1px solid var(--border);color:var(--primary);">Item Master Specifications</th>
-                    <th colspan="5" class="section-header" style="background:#dbeafe;color:#1e3a8a;">Opening Balance (Opn)</th>
-                    <th colspan="5" class="section-header" style="background:#dcfce7;color:#166534;">Inward Log Additions (In)</th>
-                    <th colspan="5" class="section-header" style="background:#fca5a5;color:#7f1d1d;">Outward Log Sales (Out)</th>
-                    <th colspan="5" class="section-header" style="background:#fef08a;color:#713f12;">Closing Balance Ledger (Cls)</th>
-                </tr>
-                <tr id="report-table-header"></tr>
-            </thead>
-            <tbody id="report-table-body"></tbody>
-        </table>
+    <!-- Master Table -->
+    <div class="tbl-card" id="master-card">
+        <div class="tbl-head-bar">
+            <div class="tbl-head-title">Touch-wise Balance Ledger</div>
+            <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted2);" id="row-count">0 rows</span>
+        </div>
+        <div class="tbl-scroll">
+            <table id="master-table">
+                <thead>
+                    <tr class="sec-row">
+                        <th colspan="3" class="sec-info" style="text-align:left;">Item Specifications</th>
+                        <th colspan="4" class="sec-opn">Opening Balance</th>
+                        <th colspan="4" class="sec-in">Inward Additions</th>
+                        <th colspan="4" class="sec-out">Outward Sales</th>
+                        <th colspan="4" class="sec-cls">Closing Balance</th>
+                        <th class="sec-info">Storage</th>
+                    </tr>
+                    <tr>
+                        <th style="width:28px;"></th>
+                        <th>Touch</th>
+                        <th>Name</th>
+                        <th class="r c-opn">Pcs</th><th class="r c-opn">Gr Wt</th><th class="r c-opn">Nt Wt</th><th class="r c-opn">Fine</th>
+                        <th class="r c-in">Pcs</th><th class="r c-in">Gr Wt</th><th class="r c-in">Nt Wt</th><th class="r c-in">Fine</th>
+                        <th class="r c-out">Pcs</th><th class="r c-out">Gr Wt</th><th class="r c-out">Nt Wt</th><th class="r c-out">Fine</th>
+                        <th class="r c-cls">Pcs</th><th class="r c-cls">Gr Wt</th><th class="r c-cls">Nt Wt</th><th class="r c-cls">Fine</th>
+                        <th>Box</th>
+                    </tr>
+                </thead>
+                <tbody id="master-body">
+                    <tr class="empty"><td colspan="21">Loading data…</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- DRILLDOWN VIEW -->
-    <div class="table-section slide-view-container" id="drilldown-view-container" style="display:none;">
-        <table style="width:100%;">
-            <thead>
-                <tr style="background:#0f172a;color:white;">
-                    <th style="color:white;background:#0f172a;">Status</th>
-                    <th style="color:white;background:#0f172a;">Book Name</th>
-                    <th style="color:white;background:#0f172a;">Vch No</th>
-                    <th style="color:white;background:#0f172a;">Vch Dt</th>
-                    <th style="color:white;background:#0f172a;">Ac Name</th>
-                    <th style="color:white;background:#0f172a;">As Type</th>
-                    <th style="color:white;background:#0f172a;">Sign</th>
-                    <th style="color:white;background:#0f172a;">TagNo</th>
-                    <th style="color:white;background:#0f172a;">HUID</th>
-                    <th style="color:white;background:#0f172a;">Tag Vch</th>
-                    <th style="color:white;background:#0f172a;">It Code</th>
-                    <th style="color:white;background:#0f172a;">Gr Name</th>
-                    <th style="color:white;background:#0f172a;">Primary</th>
-                    <th style="color:white;background:#0f172a;">It Name</th>
-                    <th style="color:white;background:#0f172a;">Variety</th>
-                    <th style="color:white;background:#0f172a;">Carat</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">Pcs</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">Gr Wt</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">Less Wt</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">IN Net Wt</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">OUT Net Wt</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">BAL Wt</th>
-                    <th class="num-header" style="color:white;background:#0f172a;">Old Wt</th>
-                    <th style="color:white;background:#0f172a;">Rch</th>
-                </tr>
-            </thead>
-            <tbody id="drilldown-table-body"></tbody>
-        </table>
+    <!-- Drilldown Table (hidden by default) -->
+    <div class="tbl-card slide" id="drill-card" style="display:none;">
+        <div class="tbl-head-bar">
+            <div class="tbl-head-title" id="drill-head-title">Transaction Detail</div>
+            <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted2);" id="drill-count">0 rows</span>
+        </div>
+        <div class="tbl-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="dd-th"></th>
+                        <th class="dd-th">Book</th>
+                        <th class="dd-th">Vch No</th>
+                        <th class="dd-th">Date</th>
+                        <th class="dd-th">Account</th>
+                        <th class="dd-th">Type</th>
+                        <th class="dd-th">Sign</th>
+                        <th class="dd-th">Tag No</th>
+                        <th class="dd-th">HUID</th>
+                        <th class="dd-th">IT Code</th>
+                        <th class="dd-th">IT Name</th>
+                        <th class="dd-th r">Pcs</th>
+                        <th class="dd-th r">Gr Wt</th>
+                        <th class="dd-th r">Less Wt</th>
+                        <th class="dd-th r">In Net</th>
+                        <th class="dd-th r">Out Net</th>
+                        <th class="dd-th r">Bal Wt</th>
+                    </tr>
+                </thead>
+                <tbody id="drill-body">
+                    <tr class="empty"><td colspan="17">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
+
 </div>
+</main>
 
 <script>
-    let currentMode = 'weight';
-    let viewState   = 'master';
-    let compiledReportRows = [];
+'use strict';
 
-    // ── MASTER TABLE ──────────────────────────────────────────────
-    async function fetchTouchGroups() {
-        const tbody = document.getElementById('report-table-body');
-        tbody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--text-muted);">Loading...</td></tr>`;
-        if (!window.pywebview || !window.pywebview.api) return;
+var currentMode = 'weight';
+var viewState   = 'master';
+var reportRows  = [];
 
-        try {
-            const [touchGroups, allTxns] = await Promise.all([
-                window.pywebview.api.get_touch_groups(),
-                window.pywebview.api.get_touch_ledger_details('ALL', currentMode, '', '')
-            ]);
+// Date display
+(function(){
+    var n = new Date();
+    var el = document.getElementById('h-date');
+    if(el) el.innerText = n.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+})();
 
-            const groups = touchGroups || [];
-            const txns   = allTxns    || [];
+// ── SWITCH MODE ───────────────────────────────────────────────
+function switchMode(m) {
+    currentMode = m;
+    document.getElementById('tog-weight').classList.toggle('active', m==='weight');
+    document.getElementById('tog-pcs').classList.toggle('active', m==='pcs');
+    fetchMaster();
+}
 
-            compiledReportRows = groups.map(g => {
-                const tv = parseFloat(g.value || 0);
-                const rows = txns.filter(r => Math.round(parseFloat(r.touch_val||0)) === Math.round(tv));
+// ── FETCH MASTER DATA ─────────────────────────────────────────
+async function fetchMaster() {
+    var tbody = document.getElementById('master-body');
+    tbody.innerHTML = '<tr class="empty"><td colspan="21">Loading…</td></tr>';
+    document.getElementById('row-count').innerText = '—';
+    if (!window.pywebview || !window.pywebview.api) return;
 
-                const inRows  = rows.filter(r => r.txn_type === 'IN');
-                const outRows = rows.filter(r => r.txn_type === 'OUT');
+    try {
+        var from = document.getElementById('from-date').value || '';
+        var to   = document.getElementById('to-date').value   || '';
 
-                const inPcs  = inRows.reduce((s,r)  => s + parseInt(r.pcs||0), 0);
-                const inGr   = inRows.reduce((s,r)  => s + parseFloat(r.gr_wt||0), 0);
-                const inNt   = inRows.reduce((s,r)  => s + parseFloat(r.in_net_wt||0), 0);
-                const inFn   = inNt * (tv/100);
+        // Two sources only — no get_opening_stock() to avoid overlap
+        var results = await Promise.all([
+            window.pywebview.api.get_touch_groups(),
+            window.pywebview.api.get_touch_ledger_details('ALL', currentMode, from, to)
+        ]);
+        var groups = results[0] || [];
+        var txns   = results[1] || [];
 
-                const outPcs = outRows.reduce((s,r) => s + parseInt(r.pcs||0), 0);
-                const outGr  = outRows.reduce((s,r) => s + parseFloat(r.gr_wt||0), 0);
-                const outNt  = outRows.reduce((s,r) => s + parseFloat(r.out_net_wt||0), 0);
-                const outFn  = outNt * (tv/100);
-
-                // Opening = 0 (no previous period data yet)
-                // Closing = Inward - Outward
-                const clsPcs = inPcs  - outPcs;
-                const clsGr  = inGr   - outGr;
-                const clsNt  = inNt   - outNt;
-                const clsFn  = clsNt  * (tv/100);
-
-                const boxes = [...new Set(rows.map(r => r.huid).filter(h => h && h !== '—'))];
-
-                return {
-                    touch:    tv,
-                    name:     g.name || `Touch ${Math.round(tv)}`,
-                    // Opening (no previous — show 0)
-                    opn_pcs:0, opn_gr:0, opn_nt:0, opn_fn:0, opn_amt:0,
-                    // Inward
-                    in_pcs:inPcs, in_gr:inGr, in_nt:inNt, in_fn:inFn, in_amt:0,
-                    // Outward
-                    out_pcs:outPcs, out_gr:outGr, out_nt:outNt, out_fn:outFn, out_amt:0,
-                    // Closing
-                    cls_pcs:clsPcs, cls_gr:clsGr, cls_nt:clsNt, cls_fn:clsFn,
-                    storage_box: boxes.length > 0 ? boxes.join(', ') : '—'
-                };
+        // ── Split txns into 3 buckets by txn_type — zero overlap possible ──
+        // OPENING  = txn_type 'OPENING'  (OPENING- tag rows)
+        // INWARD   = txn_type 'IN'       (katti vouchers + stock ledger)
+        // OUTWARD  = txn_type 'OUT'      (sales_history)
+        var opnMap = {};
+        txns.filter(function(r){ return r.txn_type === 'OPENING'; })
+            .forEach(function(r) {
+                var tv = Math.round(parseFloat(r.touch_val || 0));
+                if (!opnMap[tv]) opnMap[tv] = { pcs:0, gr:0, nt:0 };
+                opnMap[tv].pcs += parseInt(r.pcs || 0);
+                opnMap[tv].gr  += parseFloat(r.gr_wt || 0);
+                opnMap[tv].nt  += parseFloat(r.in_net_wt || r.gr_wt || 0);
             });
 
-            renderReportTable();
-        } catch(e) {
-            console.error(e);
-            tbody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:50px;color:var(--perf-high);">⚠️ Error: ${e}</td></tr>`;
-        }
+        reportRows = groups.map(function(g) {
+            var tv   = parseFloat(g.value || 0);
+            var tKey = Math.round(tv);
+
+            /*
+             * DATA SOURCES (no overlap):
+             * ┌─────────────────────────────────────────────────────────┐
+             * │ OPENING │ get_opening_stock()                           │
+             * │         │ stock_inventory WHERE tag IS NULL/N/A/OPENING │
+             * │         │ EXCLUDES KATTI- (fixed in db_manager.py)      │
+             * ├─────────────────────────────────────────────────────────┤
+             * │ INWARD  │ get_touch_ledger_details() txn_type='IN'      │
+             * │         │ Source: katti_voucher_items only              │
+             * │         │ (new material received during period)         │
+             * ├─────────────────────────────────────────────────────────┤
+             * │ OUTWARD │ get_touch_ledger_details() txn_type='OUT'     │
+             * │         │ Source: sales_history                         │
+             * └─────────────────────────────────────────────────────────┘
+             * CLOSING = Opening + Inward - Outward
+             */
+
+            var rows = txns.filter(function(r){
+                return Math.round(parseFloat(r.touch_val||0)) === tKey;
+            });
+            // Strictly separate — OPENING never in Inward, IN never in Opening
+            var inR  = rows.filter(function(r){ return r.txn_type==='IN';      });
+            var outR = rows.filter(function(r){ return r.txn_type==='OUT';     });
+            // opnMap already built from txn_type='OPENING' rows above
+            var sum  = function(arr,k){ return arr.reduce(function(s,r){ return s+parseFloat(r[k]||0); },0); };
+
+            var inPcs  = sum(inR,'pcs'),  inGr  = sum(inR,'gr_wt'),  inNt  = sum(inR,'in_net_wt');
+            var outPcs = sum(outR,'pcs'), outGr = sum(outR,'gr_wt'), outNt = sum(outR,'out_net_wt');
+
+            // Opening from pre-built map (KATTI- excluded — fixed in db_manager)
+            var opn    = opnMap[tKey] || { pcs:0, gr:0, nt:0 };
+            var opnPcs = opn.pcs, opnGr = opn.gr, opnNt = opn.nt;
+            var opnFn  = opnNt * (tv / 100);
+
+            // Closing = Opening + Inward - Outward
+            var clsPcs = opnPcs + inPcs  - outPcs;
+            var clsGr  = opnGr  + inGr   - outGr;
+            var clsNt  = opnNt  + inNt   - outNt;
+            var clsFn  = clsNt  * (tv / 100);
+
+            var boxes  = [...new Set(rows.map(function(r){ return r.huid; })
+                           .filter(function(h){ return h && h!=='—'; }))];
+            return {
+                touch:tv,  name:g.name || ('Touch '+Math.round(tv)),
+                opn_pcs:opnPcs, opn_gr:opnGr, opn_nt:opnNt, opn_fn:opnFn,
+                in_pcs:inPcs,   in_gr:inGr,   in_nt:inNt,   in_fn:inNt*(tv/100),
+                out_pcs:outPcs, out_gr:outGr,  out_nt:outNt,  out_fn:outNt*(tv/100),
+                cls_pcs:clsPcs, cls_gr:clsGr,  cls_nt:clsNt,  cls_fn:clsFn,
+                box:boxes.length ? boxes.join(', ') : '—'
+            };
+        });
+
+        // Show totals footer
+        renderMaster();
+        renderTotals();
+    } catch(e) {
+        console.error(e);
+        tbody.innerHTML = '<tr class="empty"><td colspan="21">Error: '+e+'</td></tr>';
+    }
+}
+
+// ── TOTALS FOOTER ─────────────────────────────────────────────
+function renderTotals() {
+    // Remove old footer if exists
+    var old = document.getElementById('totals-foot');
+    if (old) old.remove();
+
+    if (!reportRows.length) return;
+
+    var sum = function(k){ return reportRows.reduce(function(s,r){ return s+r[k]; },0); };
+    var f3  = function(v){ return v.toFixed(3); };
+
+    var tfoot = document.createElement('tfoot');
+    tfoot.id  = 'totals-foot';
+    tfoot.innerHTML = '<tr style="background:var(--ink);color:#fff;font-weight:700;">'
+        +'<td colspan="3" style="padding:10px 12px;font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.7);font-family:var(--sans);">TOTALS</td>'
+        // Opn
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:rgba(201,162,39,0.9);">'+sum('opn_pcs')+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:rgba(201,162,39,0.9);">'+f3(sum('opn_gr'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:rgba(201,162,39,0.9);">'+f3(sum('opn_nt'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:rgba(201,162,39,0.9);">'+f3(sum('opn_fn'))+'</td>'
+        // In
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#86efac;">'+sum('in_pcs')+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#86efac;">'+f3(sum('in_gr'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#86efac;">'+f3(sum('in_nt'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#86efac;">'+f3(sum('in_fn'))+'</td>'
+        // Out
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#fca5a5;">'+sum('out_pcs')+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#fca5a5;">'+f3(sum('out_gr'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#fca5a5;">'+f3(sum('out_nt'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:#fca5a5;">'+f3(sum('out_fn'))+'</td>'
+        // Cls
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:var(--gold2);">'+sum('cls_pcs')+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:var(--gold2);">'+f3(sum('cls_gr'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:var(--gold2);">'+f3(sum('cls_nt'))+'</td>'
+        +'<td style="text-align:right;font-family:var(--mono);font-size:0.72rem;padding:10px 12px;color:var(--gold2);">'+f3(sum('cls_fn'))+'</td>'
+        +'<td></td>'
+        +'</tr>';
+
+    document.getElementById('master-table').appendChild(tfoot);
+}
+
+// ── RENDER MASTER ─────────────────────────────────────────────
+function renderMaster() {
+    var tbody = document.getElementById('master-body');
+    var f3 = function(v){ return v.toFixed(3); };
+    document.getElementById('row-count').innerText = reportRows.length + ' rows';
+
+    if (!reportRows.length) {
+        tbody.innerHTML = '<tr class="empty"><td colspan="21">No touch groups configured.</td></tr>';
+        return;
     }
 
-    function switchReportMode(mode) {
-        currentMode = mode;
-        document.getElementById('mode-weight').classList.toggle('active', mode === 'weight');
-        document.getElementById('mode-pcs').classList.toggle('active', mode === 'pcs');
-        fetchTouchGroups();
-    }
+    tbody.innerHTML = reportRows.map(function(row) {
+        var vel = row.cls_nt > 50 ? 'high' : row.cls_nt > 0 ? 'med' : 'low';
+        var f3  = function(v){ return v.toFixed(3); };
+        return '<tr onclick="drilldown(\''+row.touch+'\',\''+row.name+'\')">'
+            +'<td style="text-align:center;"><span class="perf '+vel+'"></span></td>'
+            +'<td><span class="touch-badge">'+Math.round(row.touch)+'</span></td>'
+            +'<td style="font-weight:600;">'+h(row.name)+'</td>'
+            // Opening — real data from opening_stock table
+            +'<td class="r c-opn" style="font-family:var(--mono);color:var(--blue);">'+row.opn_pcs+'</td>'
+            +'<td class="r c-opn" style="font-family:var(--mono);color:var(--blue);">'+f3(row.opn_gr)+'</td>'
+            +'<td class="r c-opn" style="font-family:var(--mono);color:var(--blue);">'+f3(row.opn_nt)+'</td>'
+            +'<td class="r c-opn" style="font-family:var(--mono);color:var(--blue);">'+f3(row.opn_fn)+'</td>'
+            // Inward
+            +'<td class="r c-in v-in">'+row.in_pcs+'</td>'
+            +'<td class="r c-in v-in">'+f3(row.in_gr)+'</td>'
+            +'<td class="r c-in v-in">'+f3(row.in_nt)+'</td>'
+            +'<td class="r c-in v-in">'+f3(row.in_fn)+'</td>'
+            // Outward
+            +'<td class="r c-out v-out">'+row.out_pcs+'</td>'
+            +'<td class="r c-out v-out">'+f3(row.out_gr)+'</td>'
+            +'<td class="r c-out v-out">'+f3(row.out_nt)+'</td>'
+            +'<td class="r c-out v-out">'+f3(row.out_fn)+'</td>'
+            // Closing
+            +'<td class="r c-cls v-cls">'+row.cls_pcs+'</td>'
+            +'<td class="r c-cls v-cls">'+f3(row.cls_gr)+'</td>'
+            +'<td class="r c-cls v-cls">'+f3(row.cls_nt)+'</td>'
+            +'<td class="r c-cls v-cls">'+f3(row.cls_fn)+'</td>'
+            +'<td style="font-size:0.68rem;color:var(--muted2);font-family:var(--mono);">'+h(row.box)+'</td>'
+            +'</tr>';
+    }).join('');
+}
 
-    function renderReportTable() {
-        const thead = document.getElementById('report-table-header');
-        const tbody = document.getElementById('report-table-body');
+// ── DRILLDOWN ─────────────────────────────────────────────────
+async function drilldown(touchVal, name) {
+    viewState = 'drilldown';
+    document.getElementById('master-card').style.display = 'none';
+    document.getElementById('ctrl-panel').querySelector('.toggles').style.display = 'none';
+    var dc = document.getElementById('drill-card');
+    dc.style.display = 'flex';
+    dc.classList.add('slide');
 
-        thead.innerHTML = `
-            <th style="text-align:center;">Status</th>
-            <th style="color:var(--accent-dark);font-weight:700;">TOUCH</th>
-            <th>Primary</th>
-            <th>Item Name</th>
+    document.getElementById('h-title').innerHTML = 'Touch <em>'+Math.round(touchVal)+'</em> — Transaction Log';
+    document.getElementById('h-sub').innerText   = 'Voucher-level detail for ' + name;
+    document.getElementById('back-label').innerText = 'Summary';
+    document.getElementById('drill-head-title').innerText = name + ' · Detail';
 
-            <th class="col-opn num-header">Opn Pcs</th>
-            <th class="col-opn num-header">Opn Gr</th>
-            <th class="col-opn num-header">Opn Nt</th>
-            <th class="col-opn num-header">Opn Fn</th>
-            <th class="col-opn num-header">Opn Amt</th>
+    var tbody = document.getElementById('drill-body');
+    tbody.innerHTML = '<tr class="empty"><td colspan="17">Loading transactions…</td></tr>';
+    document.getElementById('drill-count').innerText = '—';
 
-            <th class="col-in num-header">In Pcs</th>
-            <th class="col-in num-header">In Gr</th>
-            <th class="col-in num-header">In Nt</th>
-            <th class="col-in num-header">In Fine</th>
-            <th class="col-in num-header">In Amt</th>
+    if (!window.pywebview || !window.pywebview.api) return;
+    try {
+        var from = document.getElementById('from-date').value || '';
+        var to   = document.getElementById('to-date').value   || '';
+        var rows = await window.pywebview.api.get_touch_ledger_details(touchVal, currentMode, from, to) || [];
 
-            <th class="col-out num-header">Out Pcs</th>
-            <th class="col-out num-header">Out Gr</th>
-            <th class="col-out num-header">Out Nt</th>
-            <th class="col-out num-header">Out Fi</th>
-            <th class="col-out num-header">Out Amt</th>
+        document.getElementById('drill-count').innerText = rows.length + ' rows';
 
-            <th class="col-bal num-header">Cls Pcs</th>
-            <th class="col-bal num-header">Cls Gr</th>
-            <th class="col-bal num-header">Cls Nt</th>
-            <th class="col-bal num-header">Cls Fn</th>
-            <th class="col-bal" style="text-align:left;">Storage Box</th>
-        `;
-
-        if (!compiledReportRows.length) {
-            tbody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:50px;color:var(--text-muted);font-weight:600;">No touch config loaded.</td></tr>`;
+        if (!rows.length) {
+            tbody.innerHTML = '<tr class="empty"><td colspan="17">No transactions found for this touch group.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = compiledReportRows.map(row => {
-            const primary = currentMode === 'weight' ? 'WEIGHT' : 'PCS';
-            let vel = 'medium';
-            if (row.cls_nt > 100) vel = 'high';
-            if (row.cls_nt === 0) vel = 'low';
-
-            return `
-                <tr class="master-row-clickable" onclick="drillIntoTouch('${row.touch}','${row.name}')">
-                    <td style="text-align:center;"><div class="perf-indicator ${vel}"></div></td>
-                    <td class="td-code" style="color:var(--primary);font-size:0.95rem;font-weight:600;">${Math.round(row.touch)}</td>
-                    <td><span class="status-pill" style="background:#f1f5f9;color:var(--primary);">${primary}</span></td>
-                    <td style="font-weight:600;">${row.name}</td>
-
-                    <td class="mono-num col-opn">${row.opn_pcs}</td>
-                    <td class="mono-num col-opn">0.000</td>
-                    <td class="mono-num col-opn">0.000</td>
-                    <td class="mono-num col-opn">0.000</td>
-                    <td class="mono-num col-opn" style="color:#64748b;">₹ 0</td>
-
-                    <td class="mono-num col-in">${row.in_pcs}</td>
-                    <td class="mono-num col-in">${row.in_gr.toFixed(3)}</td>
-                    <td class="mono-num col-in weight-text">${row.in_nt.toFixed(3)}</td>
-                    <td class="mono-num col-in" style="color:#166534;">${row.in_fn.toFixed(3)}</td>
-                    <td class="mono-num col-in" style="color:#64748b;">₹ 0</td>
-
-                    <td class="mono-num col-out">${row.out_pcs}</td>
-                    <td class="mono-num col-out">${row.out_gr.toFixed(3)}</td>
-                    <td class="mono-num col-out" style="color:var(--perf-high);">${row.out_nt.toFixed(3)}</td>
-                    <td class="mono-num col-out" style="color:var(--perf-high);">${row.out_fn.toFixed(3)}</td>
-                    <td class="mono-num col-out" style="color:#64748b;">₹ 0</td>
-
-                    <td class="mono-num col-bal" style="font-weight:600;">${row.cls_pcs}</td>
-                    <td class="mono-num col-bal" style="color:#475569;">${row.cls_gr.toFixed(3)}</td>
-                    <td class="mono-num col-bal weight-text">${row.cls_nt.toFixed(3)}</td>
-                    <td class="mono-num col-bal" style="color:var(--accent-dark);font-weight:600;">${row.cls_fn.toFixed(3)}</td>
-                    <td class="storage-text col-bal">${row.storage_box}</td>
-                </tr>`;
+        tbody.innerHTML = rows.map(function(v) {
+            var isOut = v.txn_type === 'OUT';
+            var f3    = function(x){ return parseFloat(x||0).toFixed(3); };
+            return '<tr style="background:'+(isOut?'rgba(185,28,28,0.02)':'rgba(21,128,61,0.02)')+'">'
+                +'<td style="text-align:center;"><span class="perf '+(isOut?'high':'med')+'"></span></td>'
+                +'<td style="font-size:0.7rem;color:var(--muted2);">'+h(v.book_name||'—')+'</td>'
+                +'<td style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--ink);">'+h(v.vch_no||'—')+'</td>'
+                +'<td style="font-size:0.7rem;color:var(--muted2);">'+h(v.vch_dt||'—')+'</td>'
+                +'<td style="font-weight:600;">'+h(v.ac_name||'—')+'</td>'
+                +'<td><span class="pill">'+h(v.as_type||'—')+'</span></td>'
+                +'<td style="font-weight:700;color:'+(isOut?'var(--red)':'var(--green)')+';">'+h(v.sign||'—')+'</td>'
+                +'<td style="font-family:var(--mono);font-size:0.68rem;color:var(--gold3);">'+h(v.tag_no||'—')+'</td>'
+                +'<td style="font-family:var(--mono);font-size:0.68rem;color:var(--muted2);">'+h(v.huid||'—')+'</td>'
+                +'<td><span class="touch-badge" style="font-size:0.65rem;">'+h(v.it_code||'—')+'</span></td>'
+                +'<td style="font-weight:600;">'+h(v.it_name||'—')+'</td>'
+                +'<td class="r" style="font-family:var(--mono);">'+parseInt(v.pcs||0)+'</td>'
+                +'<td class="r" style="font-family:var(--mono);">'+f3(v.gr_wt)+'</td>'
+                +'<td class="r" style="font-family:var(--mono);color:var(--muted2);">'+f3(v.ls_wt)+'</td>'
+                +'<td class="r v-in">'+f3(v.in_net_wt)+'</td>'
+                +'<td class="r v-out">'+f3(v.out_net_wt)+'</td>'
+                +'<td class="r v-cls">'+f3(v.bal_wt)+'</td>'
+                +'</tr>';
         }).join('');
+    } catch(e) {
+        console.error(e);
+        tbody.innerHTML = '<tr class="empty"><td colspan="17">Error: '+e+'</td></tr>';
     }
+}
 
-    // ── DRILLDOWN ─────────────────────────────────────────────────
-    async function drillIntoTouch(touchValue, groupName) {
-        viewState = 'drilldown';
-        document.getElementById('master-view-container').style.display   = 'none';
-        document.getElementById('toggle-wrapper-panel').style.display     = 'none';
-        document.getElementById('drilldown-view-container').style.display = 'block';
-        document.getElementById('report-main-title').innerText  = `Touch Ledger Matrix: ${Math.round(touchValue)} Purity`;
-        document.getElementById('report-subtitle').innerText    = `Compiling voucher logs for ${groupName}...`;
-        document.getElementById('btn-universal-back').innerHTML = `&larr; BACK TO SUMMARY`;
-
-        const drillBody = document.getElementById('drilldown-table-body');
-        drillBody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--text-muted);font-weight:600;">Compiling comprehensive bill line histories...</td></tr>`;
-
-        if (!window.pywebview || !window.pywebview.api) return;
-
-        try {
-            const fromDt = document.getElementById('filter-from-date').value || "";
-            const toDt   = document.getElementById('filter-to-date').value   || "";
-
-            // ✅ Direct call — no typeof check (pywebview proxies break typeof)
-            const liveVouchers = await window.pywebview.api.get_touch_ledger_details(
-                touchValue, currentMode, fromDt, toDt
-            ) || [];
-
-            document.getElementById('report-subtitle').innerText = `Viewing transaction logs for ${groupName} — ${liveVouchers.length} line(s)`;
-
-            if (!liveVouchers.length) {
-                drillBody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:var(--text-muted);font-weight:600;">No bills or vouchers found under ${Math.round(touchValue)} Touch inside historical records.</td></tr>`;
-                return;
-            }
-
-            drillBody.innerHTML = liveVouchers.map(v => {
-                const isOut = v.txn_type === 'OUT';
-                const rowBg = isOut ? 'background:rgba(254,242,242,0.5)' : 'background:rgba(240,253,244,0.4)';
-                return `
-                    <tr style="${rowBg}">
-                        <td style="text-align:center;"><div class="perf-indicator ${isOut ? 'high' : 'medium'}"></div></td>
-                        <td>${v.book_name||'—'}</td>
-                        <td style="font-family:'JetBrains Mono';font-weight:600;color:#000;">${v.vch_no||'—'}</td>
-                        <td>${v.vch_dt||'—'}</td>
-                        <td style="font-weight:600;color:#000;">${v.ac_name||'—'}</td>
-                        <td style="color:var(--text-muted);">${v.as_type||'—'}</td>
-                        <td style="font-weight:700;color:${isOut?'var(--perf-high)':'var(--perf-med)'};">${v.sign||'—'}</td>
-                        <td><span class="status-pill" style="font-family:'JetBrains Mono';">${v.tag_no||'—'}</span></td>
-                        <td style="font-family:'JetBrains Mono';color:var(--accent-dark);">${v.huid||'—'}</td>
-                        <td>${v.tag_vch||v.vch_no||'—'}</td>
-                        <td class="td-code">${v.it_code||'—'}</td>
-                        <td>${v.gr_name||'—'}</td>
-                        <td>${v.primary_val||'—'}</td>
-                        <td style="font-weight:600;color:#000;">${v.it_name||'—'}</td>
-                        <td>${v.variety||'—'}</td>
-                        <td>${v.carat||'—'}</td>
-                        <td class="mono-num">${parseInt(v.pcs||0)}</td>
-                        <td class="mono-num">${parseFloat(v.gr_wt||0).toFixed(3)}</td>
-                        <td class="mono-num">${parseFloat(v.ls_wt||0).toFixed(3)}</td>
-                        <td class="mono-num weight-text">${parseFloat(v.in_net_wt||0).toFixed(3)}</td>
-                        <td class="mono-num" style="color:var(--perf-high);font-family:'JetBrains Mono';">${parseFloat(v.out_net_wt||0).toFixed(3)}</td>
-                        <td class="mono-num col-bal" style="color:var(--primary);font-weight:600;">${parseFloat(v.bal_wt||0).toFixed(3)}</td>
-                        <td class="mono-num">${parseFloat(v.bal_wt||0).toFixed(3)}</td>
-                        <td><span style="font-size:0.75rem;font-weight:600;color:var(--success);">RECON</span></td>
-                    </tr>`;
-            }).join('');
-
-        } catch(err) {
-            console.error("Drilldown error:", err);
-            drillBody.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--perf-high);">Error loading transaction bills ledger: ${err}</td></tr>`;
-        }
+// ── BACK ──────────────────────────────────────────────────────
+function handleBack() {
+    if (viewState === 'drilldown') {
+        viewState = 'master';
+        document.getElementById('drill-card').style.display  = 'none';
+        document.getElementById('master-card').style.display = 'flex';
+        document.getElementById('ctrl-panel').querySelector('.toggles').style.display = 'flex';
+        document.getElementById('h-title').innerHTML = 'Inventory <em>Audit Report</em>';
+        document.getElementById('h-sub').innerText   = 'Touch-wise opening, inward, outward & closing balances';
+        document.getElementById('back-label').innerText = 'Inventory';
+    } else {
+        window.location.href = 'inventory.html';
     }
+}
 
-    function handleBackAction() {
-        if (viewState === 'drilldown') {
-            viewState = 'master';
-            document.getElementById('drilldown-view-container').style.display = 'none';
-            document.getElementById('master-view-container').style.display    = 'block';
-            document.getElementById('toggle-wrapper-panel').style.display     = 'flex';
-            document.getElementById('report-main-title').innerText  = "Master Inventory Audit Report";
-            document.getElementById('report-subtitle').innerText    = "Streaming row-wise audit balances grouped by touch purity";
-            document.getElementById('btn-universal-back').innerHTML = `&larr; BACK TO INTELLIGENCE`;
-            fetchTouchGroups();
-        } else {
-            window.location.href = 'inventory.html';
-        }
-    }
+function applyFilter() { fetchMaster(); }
+function h(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    function applyDateFilter() { fetchTouchGroups(); }
-
-    window.onload = () => {
-        document.getElementById('filter-to-date').value = new Date().toISOString().split('T')[0];
-        const check = setInterval(() => {
-            if (window.pywebview && window.pywebview.api) { clearInterval(check); fetchTouchGroups(); }
-        }, 150);
-    };
+window.onload = function() {
+    document.getElementById('to-date').value = new Date().toISOString().split('T')[0];
+    var t = setInterval(function() {
+        if (window.pywebview && window.pywebview.api) { clearInterval(t); fetchMaster(); }
+    }, 150);
+};
 </script>
 </body>
 </html>

@@ -1,139 +1,182 @@
-// sidebar.js — AurumOS
-// Role comes from Python server session via get_session()
+/**
+ * AurumOS Sidebar
+ * Theme: Cream/gold — matches opening page (stock_ledger.html) aesthetic
+ */
 
-const sidebarConfig = [
-    { id: 'dashboard', label: 'Dashboard',   icon: 'grid',      url: 'dashboard.html' },
-    { id: 'inventory', label: 'Inventory',   icon: 'box',       url: 'inventory.html' },
-    { id: 'billing',   label: 'Create Bill', icon: 'file-text', url: 'billing.html'   },
-    { id: 'history',   label: 'History',     icon: 'clock',     url: 'history.html'   },
-    { id: 'accounts',  label: 'Accounts',    icon: 'users',     url: 'accounts.html'  },
-    { id: 'ledger',    label: 'Ledger',      icon: 'book',      url: 'ledger.html'    },
-    { id: 'staff',     label: 'Staff',       icon: 'user',      url: 'staff.html'     }
+var NAV_ITEMS = [
+    { id:'dashboard', label:'Dashboard',   icon:'grid',      page:'dashboard.html',  section:'Main' },
+    { id:'inventory', label:'Inventory',   icon:'box',       page:'inventory.html',  section:'Main' },
+    { id:'billing',   label:'Create Bill', icon:'file-text', page:'billing.html',    section:'Main' },
+    { id:'history',   label:'History',     icon:'clock',     page:'history.html',    section:'Main' },
+    { id:'accounts',  label:'Accounts',    icon:'users',     page:'accounts.html',   section:'Finance' },
+    { id:'ledger',    label:'Ledger',      icon:'book',      page:'ledger.html',     section:'Finance' },
+    { id:'staff',     label:'Staff',       icon:'user',      page:'staff.html',      section:'Finance' },
 ];
 
-async function initSidebar(activePageId) {
-    const container = document.getElementById('sidebar-container');
+// SVG icons — crisp, minimal line icons matching the luxury editorial theme
+var ICONS = {
+    'grid':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+    'box':       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
+    'file-text': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>',
+    'clock':     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    'users':     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    'book':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+    'user':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+};
+
+var SIDEBAR_VERSION = '1.0.0';
+
+// ── INIT ─────────────────────────────────────────────────────
+function initSidebar(activePage) {
+    var container = document.getElementById('sidebar-container');
     if (!container) return;
 
-    let currentSessionRole = null;
+    // Render sidebar HTML IMMEDIATELY — no bridge needed for nav structure
+    var collapsed = localStorage.getItem('sb_collapsed') === '1';
+    if (collapsed) document.body.classList.add('sidebar-collapsed');
+    container.innerHTML = buildSidebar(activePage);
 
-    try {
+    // Load owner/version from bridge AFTER render — non-blocking
+    // Sidebar is already visible; this just fills in name/version
+    setTimeout(_loadSidebarData, 0);
+}
+
+// ── RETRY BRIDGE ─────────────────────────────────────────────
+function _loadSidebarData() {
+    var start = Date.now();
+    var poll  = setInterval(function() {
         if (window.pywebview && window.pywebview.api) {
-            const session = await window.pywebview.api.get_session();
-            if (session && session.status === 'ok' && session.role) {
-                currentSessionRole = session.role;
-                localStorage.setItem('aurum_user_role', session.role);
-                if (session.username) {
-                    localStorage.setItem('aurum_active_user', session.username);
-                }
-            }
+            clearInterval(poll);
+            _fetchOwner();
+            _fetchVersion();
+        } else if (Date.now() - start > 8000) {
+            clearInterval(poll);
         }
-    } catch (e) {
-        console.warn('get_session error:', e);
-    }
+    }, 120);
+}
 
-    if (!currentSessionRole) {
-        currentSessionRole = localStorage.getItem('aurum_user_role');
-    }
+function _fetchOwner() {
+    window.pywebview.api.get_dynamic_greeting()
+        .then(function(g) {
+            if (!g || g.status !== 'success') return;
+            var name = g.owner_title || 'Director';
+            var el = document.getElementById('sb-owner-name');
+            var av = document.getElementById('sb-owner-avatar');
+            if (el) el.innerText = name;
+            if (av) {
+                av.innerText = name.split(' ')
+                    .filter(function(w){ return w.length > 0; })
+                    .map(function(w){ return w[0]; })
+                    .join('').substring(0, 2).toUpperCase() || 'OS';
+            }
+        }).catch(function(){});
+}
 
-    if (!currentSessionRole) {
-        window.location.href = 'login.html';
-        return;
-    }
+function _fetchVersion() {
+    if (!window.pywebview.api.get_current_version) return;
+    window.pywebview.api.get_current_version()
+        .then(function(v) {
+            var el = document.getElementById('sb-ver-pill');
+            if (v && el) el.innerText = 'v' + v;
+        }).catch(function(){});
+}
 
-    const isCollapsed = localStorage.getItem('aurum_sidebar_collapsed') === 'true';
-    if (isCollapsed) document.body.classList.add('sidebar-collapsed');
-    else document.body.classList.remove('sidebar-collapsed');
-
-    const allowedConfig = sidebarConfig.filter(item => {
-        if (currentSessionRole === 'staff') return item.id === 'billing';
-        return true;
+// ── BUILD HTML ────────────────────────────────────────────────
+function buildSidebar(activePage) {
+    // Group by section
+    var sections = {};
+    var order    = [];
+    NAV_ITEMS.forEach(function(item) {
+        if (!sections[item.section]) { sections[item.section] = []; order.push(item.section); }
+        sections[item.section].push(item);
     });
 
-    const menuItems = allowedConfig.map(item => `
-        <li class="nav-item ${activePageId === item.id ? 'active' : ''}"
-            onclick="sideNavigate('${item.url}')" title="${item.label}">
-            <span class="nav-icon">${getIcon(item.icon)}</span>
-            <span class="nav-label">${item.label}</span>
-        </li>
-    `).join('');
+    var h = '';
 
-    container.innerHTML = `
-        <nav id="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-text">Aurum<span>OS</span></div>
-                <div class="brand-icon">A<span>OS</span></div>
-                ${currentSessionRole === 'staff' ? '<small class="staff-mode-tag">STAFF MODE</small>' : ''}
-            </div>
-            <div class="sidebar-toggle" onclick="toggleSidebarMenu(event)" title="Toggle Navigation Panel">
-                ${getIcon('chevron')}
-            </div>
-            <ul class="nav-menu">
-                ${menuItems}
-            </ul>
-            <div class="sidebar-footer">
-                <div class="logout-btn" onclick="handleSystemLogout()" title="Logout">
-                    <span class="nav-icon">${getIcon('logout')}</span>
-                    <span class="nav-label">Logout</span>
-                </div>
-            </div>
-        </nav>
-    `;
+    // Logo
+    h += '<div class="sb-logo">'
+       +   '<div class="sb-logo-mark"><span>Au</span></div>'
+       +   '<div class="sb-logo-text">'
+       +     '<div class="sb-logo-name">Aurum<em>OS</em></div>'
+       +     '<div class="sb-logo-sub">Jewelry ERP</div>'
+       +   '</div>'
+       + '</div>';
+
+    // Owner
+    h += '<div class="sb-owner">'
+       +   '<div class="sb-owner-avatar" id="sb-owner-avatar">OS</div>'
+       +   '<div class="sb-owner-info">'
+       +     '<div class="sb-owner-name" id="sb-owner-name">Director</div>'
+       +     '<div class="sb-owner-role">System Owner</div>'
+       +   '</div>'
+       + '</div>';
+
+    // Version
+    h += '<div class="sb-version">'
+       +   '<span class="sb-ver-label">Version</span>'
+       +   '<span class="sb-ver-pill" id="sb-ver-pill">v' + SIDEBAR_VERSION + '</span>'
+       + '</div>';
+
+    // Nav
+    h += '<nav class="sb-nav">';
+    order.forEach(function(sec, si) {
+        if (si > 0) h += '<div class="sb-divider"></div>';
+        h += '<div class="sb-section-label">' + sec + '</div>';
+
+        sections[sec].forEach(function(item) {
+            var active = (item.id === activePage);
+            var icon   = ICONS[item.icon] || '';
+            h += '<div class="sb-item' + (active ? ' active' : '') + '"'
+               +   ' data-tip="' + item.label + '"'
+               +   ' onclick="sideNavigate(\'' + item.page + '\')">'
+               +   '<div class="sb-icon">' + icon + '</div>'
+               +   '<span class="sb-label">' + item.label + '</span>'
+               + '</div>';
+        });
+    });
+    h += '</nav>';
+
+    // Footer
+    h += '<div class="sb-footer">'
+       +   '<button class="sb-collapse-btn" onclick="toggleSidebar()">'
+       +     '<span class="sb-collapse-icon">←</span>'
+       +     '<span class="sb-collapse-text">Collapse</span>'
+       +   '</button>'
+       + '</div>';
+
+    return h;
 }
 
-function toggleSidebarMenu(event) {
-    event.stopPropagation();
-    const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('aurum_sidebar_collapsed', isCollapsed);
-    if (typeof Chart !== 'undefined') {
-        Object.values(Chart.instances).forEach(chart => {
-            setTimeout(() => chart.resize(), 160);
-        });
+// ── NAVIGATE — no return value needed, use load_url via api ──
+function sideNavigate(page) {
+    // Use window.location.href — works always, no bridge needed
+    // This is the most reliable navigation in PyInstaller exe
+    try {
+        var base = window.location.href.replace(/[^\/\\]*$/, '');
+        window.location.href = base + page;
+    } catch(e) {
+        // Fallback to pywebview if location fails
+        try {
+            if (window.pywebview && window.pywebview.api)
+                window.pywebview.api.navigate(page);
+        } catch(e2) {}
     }
 }
 
-function sideNavigate(url) {
-    document.body.style.opacity    = '0.5';
-    document.body.style.transform  = 'scale(0.99)';
-    document.body.style.transition = 'all 0.3s ease';
-    window.location.href = url;
+function toggleSidebar() {
+    var collapsed = document.body.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sb_collapsed', collapsed ? '1' : '0');
 }
 
-async function handleSystemLogout() {
-    try {
-        if (window.pywebview && window.pywebview.api) {
-            await window.pywebview.api.logout();
-        }
-    } catch (e) {}
-    localStorage.clear();
-    sideNavigate('login.html');
-}
-
+// waitForAPI — used by all pages
 function waitForAPI(callback, maxMs) {
     maxMs = maxMs || 8000;
     var start = Date.now();
-    var t = setInterval(function () {
+    var t = setInterval(function() {
         if (window.pywebview && window.pywebview.api) {
-            clearInterval(t);
-            callback();
+            clearInterval(t); callback();
         } else if (Date.now() - start > maxMs) {
-            clearInterval(t);
-            callback();
+            clearInterval(t); callback();
         }
-    }, 100);
-}
-
-function getIcon(name) {
-    const icons = {
-        grid:        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
-        box:         '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path></svg>',
-        'file-text': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg>',
-        clock:       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
-        users:       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
-        book:        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
-        user:        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-        logout:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
-        chevron:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>'
-    };
-    return icons[name] || '';
+    }, 80);
 }
