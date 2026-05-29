@@ -2,10 +2,11 @@
   "version": "1.0.1",
   "release_date": "2026-05-29",
   "changelog": [
-    "Staff sidebar fixed",
-    "Popup positioning corrected",
-    "Opening stock filter"
+    "Sidebar staff role fixed",
+    "Update banner in dashboard",
+    "Opening stock filter",
+    "Popup positioning fixed"
   ],
-  "download_url": "https://github.com/Jenildholakiya/AurumOS/releases/download/v1.0.1/AurumOS_v1.0.1.zip",
+  "download_url": "",
   "size_mb": 15.2
 }
