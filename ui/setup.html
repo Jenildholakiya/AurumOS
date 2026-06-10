@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --red:#b91c1c;--red-bg:#fef2f2;
+    --green:#15803d;--green-bg:#f0fdf4;
+    --muted:#7a7268;--muted2:#9e9890;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --serif:'DM Serif Display',Georgia,serif;
+    --mono:'DM Mono',monospace;
+}
+body{
+    font-family:var(--sans);
+    background:var(--cream);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;position:relative;overflow:hidden;
+}
+body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(
+        -45deg,transparent,transparent 28px,
+        rgba(168,125,30,0.03) 28px,rgba(168,125,30,0.03) 29px
+    );pointer-events:none;
+}
+.card{
+    width:460px;max-width:100%;background:#fff;
+    border:1px solid var(--rule);border-radius:16px;
+    overflow:hidden;position:relative;
+    box-shadow:0 8px 32px rgba(14,12,9,0.10),0 2px 8px rgba(14,12,9,0.06);
+    animation:cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(0.98)}to{opacity:1;transform:none}}
+.gold-bar{
+    height:3px;width:100%;
+    background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));
+    background-size:200%;animation:goldShimmer 2.5s ease-in-out infinite;
+}
+@keyframes goldShimmer{0%{background-position:0%}100%{background-position:200%}}
+.steps{
+    display:flex;align-items:center;gap:0;
+    padding:18px 28px 0;
+}
+.step{
+    display:flex;align-items:center;gap:8px;flex:1;
+    font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--muted2);transition:all 0.3s;
+}
+.step.active{color:var(--gold3);}
+.step.done{color:var(--green);}
+.step-num{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.65rem;font-weight:700;
+    border:1.5px solid var(--rule);
+    background:#fff;color:var(--muted2);
+    flex-shrink:0;transition:all 0.3s;
+}
+.step.active .step-num{background:var(--gold);border-color:var(--gold);color:#fff;}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff;}
+.step-connector{height:1px;flex:1;margin:0 6px;background:var(--rule);max-width:40px;}
+.logo-wrap{padding:20px 32px 0;display:flex;align-items:center;gap:12px;}
+.logo-mark{width:40px;height:40px;border-radius:10px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-mark span{font-family:var(--serif);font-size:0.9rem;color:var(--gold2);font-style:italic;}
+.logo-name{font-family:var(--serif);font-size:1.1rem;color:var(--ink);letter-spacing:-0.2px;}
+.logo-name em{color:var(--gold3);font-style:italic;}
+.logo-sub{font-size:0.58rem;color:var(--muted2);text-transform:uppercase;letter-spacing:1.2px;margin-top:1px;}
+.step-panel{display:none;padding:22px 32px 28px;}
+.step-panel.active{display:block;animation:fadeUp 0.3s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.panel-title{font-family:var(--serif);font-size:1.3rem;color:var(--ink);letter-spacing:-0.3px;margin-bottom:5px;}
+.panel-title em{color:var(--gold3);font-style:italic;}
+.panel-sub{font-size:0.76rem;color:var(--muted);font-weight:300;margin-bottom:22px;line-height:1.5;}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);margin-bottom:5px;}
+.fg label span{color:var(--red);}
+.fg input{
+    width:100%;height:42px;padding:0 13px;
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:8px;font-family:var(--sans);font-size:0.83rem;
+    color:var(--ink);outline:none;
+    transition:border-color 0.14s,box-shadow 0.14s,background 0.14s;
+}
+.fg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.12);background:#fff;}
+.fg input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(185,28,28,0.1);}
+.fg input.ok{border-color:var(--green);box-shadow:0 0 0 3px rgba(21,128,61,0.1);}
+.fg.key-group{position:relative;}
+.fg.key-group input{font-family:var(--mono);font-size:0.85rem;letter-spacing:1px;text-transform:uppercase;padding-right:44px;}
+.key-clear{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--rule);background:#fff;
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;font-size:0.7rem;color:var(--muted2);transition:all 0.15s;
+}
+.key-clear:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.key-clear.show{display:flex;}
+.key-status{
+    border-radius:10px;padding:12px 14px;margin-bottom:14px;
+    display:none;animation:fadeUp 0.25s ease;
+    font-size:0.78rem;font-weight:500;line-height:1.5;
+}
+.key-status.show{display:flex;gap:10px;align-items:flex-start;}
+.key-status.success{background:var(--green-bg);border:1px solid rgba(21,128,61,0.2);color:var(--green);}
+.key-status.error{background:var(--red-bg);border:1px solid rgba(185,28,28,0.15);color:var(--red);}
+.key-status.checking{background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);}
+.ks-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+.ks-title{font-weight:700;font-size:0.78rem;margin-bottom:2px;}
+.ks-sub{font-size:0.72rem;opacity:0.8;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.divider{height:1px;background:var(--rule2);margin:16px 0;}
+.btn{
+    height:44px;padding:0 22px;border:none;border-radius:9px;
+    font-family:var(--sans);font-size:0.82rem;font-weight:600;
+    cursor:pointer;transition:all 0.18s;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-primary{background:var(--ink);color:#fff;width:100%;}
+.btn-primary:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,12,9,0.15);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-gold{background:var(--gold);color:#fff;width:100%;}
+.btn-gold:hover:not(:disabled){background:var(--gold3);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-outline{background:#fff;color:var(--ink3);border:1px solid var(--rule);}
+.btn-outline:hover{background:var(--cream);color:var(--ink);}
+.btn-row{display:flex;gap:10px;margin-top:6px;}
+.btn-row .btn{flex:1;}
+.success-state{display:none;padding:32px;text-align:center;}
+.success-state.show{display:block;animation:fadeUp 0.4s ease both;}
+.success-icon{font-size:3rem;margin-bottom:14px;}
+.success-title{font-family:var(--serif);font-size:1.4rem;color:var(--ink);margin-bottom:6px;}
+.success-sub{font-size:0.78rem;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+.biz-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--gold-bg);border:1px solid var(--gold-ln);
+    color:var(--gold3);padding:6px 16px;border-radius:99px;
+    font-size:0.75rem;font-weight:600;margin-bottom:20px;
+}
+.pw-strength{margin-top:5px;display:flex;gap:3px;}
+.pw-bar{height:3px;flex:1;border-radius:99px;background:var(--rule);transition:background 0.2s;}
+.pw-label{font-size:0.6rem;color:var(--muted2);margin-top:4px;}
+@keyframes shake{
+    0%,100%{transform:translateX(0)}
+    15%{transform:translateX(-7px)}30%{transform:translateX(7px)}
+    45%{transform:translateX(-5px)}60%{transform:translateX(5px)}
+    75%{transform:translateX(-2px)}90%{transform:translateX(2px)}
+}
+.shake{animation:shake 0.45s cubic-bezier(0.36,0.07,0.19,0.97) both;}
+
+/* ── BASTION Badge ── */
+.bastion-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:rgba(14,12,9,0.05);border:1px solid rgba(14,12,9,0.1);font-size:0.58rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(14,12,9,0.4);font-family:'DM Mono',monospace;user-select:none;}
+.bastion-badge .bb-dot{width:6px;height:6px;border-radius:50%;background:#15803d;animation:bb-pulse 2.5s ease-in-out infinite;flex-shrink:0;}
+.bastion-badge .bb-shield{font-size:0.7rem;}
+@keyframes bb-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
+.bastion-badge.green{background:rgba(21,128,61,0.08);border:1px solid rgba(21,128,61,0.2);color:#15803d;}
+.bastion-badge.green .bb-dot{background:#15803d;}
+.bastion-badge.dark{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);}
+
+/* ═══════════════════════════════════════════════════
+   BASTION™ Security Badge — AurumOS
+   ═══════════════════════════════════════════════════ */
+.bastion-footer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 99px;
+    background: rgba(14,12,9,0.04);
+    border: 1px solid rgba(14,12,9,0.08);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: rgba(14,12,9,0.35);
+    user-select: none;
+    transition: all 0.2s;
+}
+.bastion-footer-badge:hover {
+    background: rgba(14,12,9,0.07);
+    color: rgba(14,12,9,0.55);
+}
+.bastion-footer-badge .bfb-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #15803d;
+    animation: bfb-blink 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+@keyframes bfb-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.25; }
+}
+/* Header variant — green pill */
+.bastion-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 5px;
+    background: rgba(21,128,61,0.07);
+    border: 1px solid rgba(21,128,61,0.18);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #15803d;
+    user-select: none;
+    flex-shrink: 0;
+}
+.bastion-header-badge .bhb-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #15803d;
+    animation: bfb-blink 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+/* Revoked variant — red pill */
+.bastion-revoked-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 18px;
+    border-radius: 99px;
+    background: rgba(185,28,28,0.08);
+    border: 1px solid rgba(185,28,28,0.2);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: rgba(248,113,113,0.8);
+    user-select: none;
+}
+.bastion-revoked-badge .brb-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #f87171;
+    animation: brb-pulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+@keyframes brb-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.3; transform: scale(0.7); }
+}
+</style>
+</head>
+<body>
+
+<div class="card" id="main-card">
+    <div class="gold-bar"></div>
+
+    <div class="logo-wrap">
+        <div class="logo-mark"><span>Au</span></div>
+        <div class="logo-text">
+            <div class="logo-name">Aurum<em>OS</em></div>
+            <div class="logo-sub">BASTION™ Secured Setup</div>
+        </div>
+    </div>
+
+    <div class="steps">
+        <div class="step active" id="step-ind-1">
+            <div class="step-num" id="step-num-1">1</div>
+            <span>License</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step-ind-2">
+            <div class="step-num" id="step-num-2">2</div>
+            <span>Business</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step-ind-3">
+            <div class="step-num" id="step-num-3">3</div>
+            <span>Admin</span>
+        </div>
+    </div>
+
+    <!-- STEP 1: LICENSE -->
+    <div class="step-panel active" id="panel-1">
+        <div class="panel-title">Activate <em>License</em></div>
+        <div class="panel-sub">BASTION™ License Verification — Enter the key provided after purchase to activate your copy of AurumOS.</div>
+
+        <div class="fg key-group">
+            <label>License Key <span>*</span></label>
+            <input type="text" id="inp-key" placeholder="AU-XXXX-XXXX-XXXX-XXXX"
+                   maxlength="22" autocomplete="off" autocapitalize="characters"
+                   oninput="onKeyInput()" onpaste="setTimeout(onKeyInput,10)"
+                   onkeydown="if(event.key==='Enter'&&!document.getElementById('btn-verify').disabled)verifyKey()">
+            <div class="key-clear" id="key-clear" onclick="clearKey()">&#10005;</div>
+        </div>
+
+        <div class="key-status" id="key-status">
+            <div class="ks-icon" id="ks-icon"></div>
+            <div class="ks-body">
+                <div class="ks-title" id="ks-title"></div>
+                <div class="ks-sub"   id="ks-sub"></div>
+            </div>
+        </div>
+
+        <button class="btn btn-gold" id="btn-verify" onclick="verifyKey()" disabled>
+            <span>&#128273;</span> Verify License Key
+        </button>
+
+        <div class="divider"></div>
+        <p style="font-size:0.65rem;color:var(--muted2);text-align:center;">
+            🛡️ BASTION™ verifies every installation. Don't have a key? Contact your AurumOS provider.
+        </p>
+    </div>
+
+    <!-- STEP 2: BUSINESS -->
+    <div class="step-panel" id="panel-2">
+        <div class="panel-title">Business <em>Details</em></div>
+        <div class="panel-sub">This information will appear on your bills and reports.</div>
+
+        <div class="fg">
+            <label>Business / Shop Name <span>*</span></label>
+            <input type="text" id="inp-biz" placeholder="e.g. Dholakiya Jewellers"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-owner').focus()">
+        </div>
+        <div class="fg">
+            <label>Owner Name <span>*</span></label>
+            <input type="text" id="inp-owner" placeholder="e.g. Jenil Dholakiya"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-city').focus()">
+        </div>
+        <div class="grid-2">
+            <div class="fg">
+                <label>City</label>
+                <input type="text" id="inp-city" placeholder="Surat"
+                       onkeydown="if(event.key==='Enter')document.getElementById('inp-phone').focus()">
+            </div>
+            <div class="fg">
+                <label>Phone</label>
+                <input type="text" id="inp-phone" placeholder="9876543210"
+                       onkeydown="if(event.key==='Enter')goToStep3()">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(1)">&#8592; Back</button>
+            <button class="btn btn-primary" onclick="goToStep3()">Next &#8594;</button>
+        </div>
+    </div>
+
+    <!-- STEP 3: ADMIN -->
+    <div class="step-panel" id="panel-3">
+        <div class="panel-title">Admin <em>Account</em></div>
+        <div class="panel-sub">Create the owner account. This is used to log in to AurumOS.</div>
+
+        <div class="fg">
+            <label>Password <span>*</span></label>
+            <input type="password" id="inp-pw" placeholder="Min 6 characters"
+                   autocomplete="new-password"
+                   oninput="checkPwStrength()"
+                   onkeydown="if(event.key==='Enter')document.getElementById('inp-pw2').focus()">
+            <div class="pw-strength">
+                <div class="pw-bar" id="pw-b1"></div>
+                <div class="pw-bar" id="pw-b2"></div>
+                <div class="pw-bar" id="pw-b3"></div>
+                <div class="pw-bar" id="pw-b4"></div>
+            </div>
+            <div class="pw-label" id="pw-label"></div>
+        </div>
+        <div class="fg">
+            <label>Confirm Password <span>*</span></label>
+            <input type="password" id="inp-pw2" placeholder="Re-enter password"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter')finishSetup()">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(2)">&#8592; Back</button>
+            <button class="btn btn-primary" id="btn-finish" onclick="finishSetup()">
+                <span>&#10003;</span> Complete Setup
+            </button>
+        </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success-state" id="success-state">
+        <div class="success-icon">&#127881;</div>
+        <div class="success-title">AurumOS is Ready!</div>
+        <div class="success-sub">Setup complete. Redirecting to login in a moment...</div>
+        <div class="biz-pill">
+            <span>&#127978;</span>
+            <span id="success-biz-name">Your Business</span>
+        </div>
+        <button class="btn btn-primary" onclick="goLogin()" style="max-width:200px;margin:0 auto;display:flex;">
+            Go to Login &#8594;
+        </button>
+    </div>
+
+    <!-- BASTION™ Security Badge -->
+        <div style="text-align:center;margin-top:5px;padding-bottom:20px;">
+            <span class="bastion-footer-badge">
+                <span class="bfb-dot"></span>
+                &#128737;&nbsp; Protected by BASTION&#8482;
+            </span>
+        </div>
+</div>
+
+
+<script>
+'use strict';
+
+var verifiedKey   = '';
+var verifiedBiz   = '';
+var verifiedOwner = '';
+var currentStep   = 1;
+
+// ── KEY INPUT ────────────────────────────────────────────────────────────────
+function onKeyInput() {
+    var inp = document.getElementById('inp-key');
+    var raw = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Auto-format: AU-XXXX-XXXX-XXXX-XXXX
+    var formatted = '';
+    if (raw.startsWith('AU')) {
+        formatted = 'AU';
+        raw = raw.substring(2);
+        for (var i = 0; i < 4; i++) {
+            var seg = raw.substring(i * 4, i * 4 + 4);
+            if (seg) formatted += '-' + seg;
+        }
+    } else {
+        formatted = inp.value.toUpperCase();
+    }
+
+    inp.value = formatted;
+
+    document.getElementById('key-clear').classList.toggle('show', formatted.length > 0);
+
+    var complete = /^AU-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(formatted);
+    document.getElementById('btn-verify').disabled = !complete;
+
+    // Reset if user edits after verification
+    if (verifiedKey && formatted !== verifiedKey) {
+        verifiedKey = '';
+        hideKeyStatus();
+        inp.classList.remove('ok', 'err');
+    }
+}
+
+function clearKey() {
+    document.getElementById('inp-key').value = '';
+    document.getElementById('key-clear').classList.remove('show');
+    document.getElementById('btn-verify').disabled = true;
+    document.getElementById('inp-key').classList.remove('ok', 'err');
+    hideKeyStatus();
+    verifiedKey = '';
+}
+
+// ── VERIFY KEY ───────────────────────────────────────────────────────────────
+async function verifyKey() {
+    var key = document.getElementById('inp-key').value.trim().toUpperCase();
+    if (!key) return;
+
+    showKeyStatus('checking', '&#8987;', 'Verifying License...', 'Connecting to AurumOS license server...');
+    document.getElementById('btn-verify').disabled = true;
+    document.getElementById('btn-verify').innerHTML = '<span>&#8943;</span> Checking...';
+
+    if (!window.pywebview || !window.pywebview.api) {
+        showKeyStatus('error', '&#10060;', 'Bridge not ready', 'Please wait for the application to fully load, then try again.');
+        resetVerifyBtn();
+        return;
+    }
+
+    var res = null;
+    try {
+        res = await window.pywebview.api.verify_key(key);
+    } catch(e) {
+        res = {status: 'error', message: 'Connection error: ' + e};
+    }
+
+    resetVerifyBtn();
+    var inp = document.getElementById('inp-key');
+
+    if (res && res.status === 'success') {
+        verifiedKey   = key;
+        verifiedBiz   = res.business || '';
+        verifiedOwner = res.owner    || '';
+
+        inp.classList.remove('err');
+        inp.classList.add('ok');
+
+        var sub = res.offline
+            ? 'Key accepted (offline -- previously validated)'
+            : 'License is valid and active';
+        if (verifiedBiz) sub += ' | ' + verifiedBiz;
+
+        showKeyStatus('success', '&#9989;', 'License Verified!', sub);
+
+        // Auto-fill from server response
+        if (verifiedBiz   && document.getElementById('inp-biz'))
+            document.getElementById('inp-biz').value = verifiedBiz;
+        if (verifiedOwner && document.getElementById('inp-owner'))
+            document.getElementById('inp-owner').value = verifiedOwner;
+
+        setTimeout(function(){ goToStep(2); }, 1200);
+
+    } else {
+        inp.classList.remove('ok');
+        inp.classList.add('err');
+        shakeCard();
+
+        var isRevoked = res && (res.status === 'locked' || (res.message && res.message.toLowerCase().indexOf('revok') >= 0));
+        showKeyStatus('error', '&#128683;',
+            isRevoked ? 'License Revoked' : 'Invalid License Key',
+            (res && res.message) || 'This key could not be verified. Please check and try again.'
+        );
+    }
+}
+
+function resetVerifyBtn() {
+    document.getElementById('btn-verify').innerHTML = '<span>&#128273;</span> Verify License Key';
+    var key = document.getElementById('inp-key').value.trim();
+    document.getElementById('btn-verify').disabled =
+        !/^AU-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
+}
+
+function showKeyStatus(type, icon, title, sub) {
+    var el = document.getElementById('key-status');
+    el.className = 'key-status show ' + type;
+    document.getElementById('ks-icon').innerHTML  = icon;
+    document.getElementById('ks-title').innerText = title;
+    document.getElementById('ks-sub').innerText   = sub;
+}
+
+function hideKeyStatus() {
+    document.getElementById('key-status').className = 'key-status';
+}
+
+// ── STEP NAVIGATION ──────────────────────────────────────────────────────────
+function goToStep(n) {
+    if (n === 2 && !verifiedKey) {
+        showKeyStatus('error', '&#128273;', 'License Required',
+                      'Please verify your license key before continuing.');
+        shakeCard();
+        return;
+    }
+    currentStep = n;
+
+    [1, 2, 3].forEach(function(i) {
+        document.getElementById('panel-' + i).classList.toggle('active', i === n);
+        var ind = document.getElementById('step-ind-' + i);
+        var num = document.getElementById('step-num-' + i);
+        ind.className = 'step';
+        num.innerText = i;
+        if (i < n)        { ind.classList.add('done');   num.innerText = '&#10003;'; }
+        else if (i === n) { ind.classList.add('active'); }
+    });
+
+    setTimeout(function() {
+        var m = {2: 'inp-biz', 3: 'inp-pw'};
+        var el = document.getElementById(m[n]);
+        if (el) el.focus();
+    }, 150);
+}
+
+function goToStep3() {
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    if (!biz || !owner) {
+        shakeCard();
+        if (!biz)   markErr('inp-biz');
+        if (!owner) markErr('inp-owner');
+        return;
+    }
+    goToStep(3);
+}
+
+function markErr(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('err');
+    setTimeout(function(){ el.classList.remove('err'); }, 1400);
+}
+
+// ── PASSWORD STRENGTH ────────────────────────────────────────────────────────
+function checkPwStrength() {
+    var pw    = document.getElementById('inp-pw').value;
+    var score = 0;
+    if (pw.length >= 6)                         score++;
+    if (pw.length >= 10)                        score++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw))  score++;
+    if (/[^a-zA-Z0-9]/.test(pw))               score++;
+
+    var colors = ['', '#ef4444', '#f59e0b', '#3b82f6', '#15803d'];
+    var labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+    for (var i = 1; i <= 4; i++) {
+        document.getElementById('pw-b' + i).style.background =
+            i <= score ? colors[score] : 'var(--rule)';
+    }
+    var lbl = document.getElementById('pw-label');
+    lbl.innerText = pw.length > 0 ? labels[score] + ' password' : '';
+    lbl.style.color = colors[score] || 'var(--muted2)';
+}
+
+// ── FINISH SETUP ─────────────────────────────────────────────────────────────
+async function finishSetup() {
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    var city  = document.getElementById('inp-city').value.trim();
+    var phone = document.getElementById('inp-phone').value.trim();
+    var pw    = document.getElementById('inp-pw').value;
+    var pw2   = document.getElementById('inp-pw2').value;
+
+    if (pw.length < 6) {
+        document.getElementById('pw-label').innerText = 'Min 6 characters required';
+        document.getElementById('pw-label').style.color = 'var(--red)';
+        markErr('inp-pw');
+        shakeCard();
+        return;
+    }
+    if (pw !== pw2) {
+        markErr('inp-pw2');
+        shakeCard();
+        document.getElementById('inp-pw2').placeholder = 'Passwords do not match!';
+        setTimeout(function(){
+            document.getElementById('inp-pw2').placeholder = 'Re-enter password';
+        }, 1500);
+        return;
+    }
+
+    var btn = document.getElementById('btn-finish');
+    btn.disabled = true;
+    btn.innerHTML = '<span>&#8943;</span> Setting up...';
+
+    if (!window.pywebview || !window.pywebview.api) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+        shakeCard();
+        return;
+    }
+
+    var res = null;
+    try {
+        // Pass as object -- Python save_setup receives it as a dict
+        res = await window.pywebview.api.save_setup({
+            businessName: biz,
+            ownerName:    owner,
+            adminPass:    pw,
+            licenseKey:   verifiedKey,
+            city:         city,
+            phone:        phone
+        });
+    } catch(e) {
+        res = {status: 'error', message: String(e)};
+    }
+
+    if (res && res.status === 'success') {
+        // Cache owner name for offline sidebar
+        try { localStorage.setItem('aurum_owner_name', owner); } catch(e) {}
+        try { localStorage.setItem('aurum_biz_name',   biz);   } catch(e) {}
+
+        // Hide all panels, show success
+        [1, 2, 3].forEach(function(i) {
+            document.getElementById('panel-' + i).classList.remove('active');
+            document.getElementById('step-ind-' + i).className = 'step done';
+            document.getElementById('step-num-' + i).innerHTML = '&#10003;';
+        });
+        document.getElementById('success-biz-name').innerText = biz;
+        document.getElementById('success-state').classList.add('show');
+        setTimeout(goLogin, 3000);
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+        shakeCard();
+        alert('Setup failed: ' + ((res && res.message) || 'Unknown error'));
+    }
+}
+
+function goLogin() {
+    if (window.pywebview && window.pywebview.api) {
+        window.pywebview.api.navigate('login.html');
+    }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function shakeCard() {
+    var card = document.getElementById('main-card');
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+    setTimeout(function(){ card.classList.remove('shake'); }, 500);
+}
+
+window.onload = function() {
+    document.getElementById('inp-key').focus();
+};
+</script>
+</body>
+</html>

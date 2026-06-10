@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Create Bill</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --primary:#0e0c09;--accent:#a87d1e;--accent2:#c9a227;
+  --bg-main:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+  --card:#ffffff;--border:rgba(14,12,9,0.09);--border2:rgba(14,12,9,0.05);
+  --text-main:#0e0c09;--text-muted:#7a7268;--text-muted2:#9e9890;
+  --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+  --success:#15803d;--error:#b91c1c;
+  --shadow-sm:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+  --shadow-lux:0 4px 16px rgba(14,12,9,0.08);
+  --serif:"DM Serif Display",Georgia,serif;--mono:"DM Mono",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"DM Sans",system-ui,sans-serif;}
+body{display:flex;height:100vh;width:100vw;background:var(--bg-main);color:var(--text-main);overflow:hidden;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+#sidebar-container{flex-shrink:0;width:252px;}
+body.sidebar-collapsed #sidebar-container{width:66px;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* ── HEADER — taller to fit bigger scale widget ── */
+header{
+  height:58px;
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;z-index:200;position:relative;gap:14px;
+}
+header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.header-biz h1{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:var(--primary);letter-spacing:-0.2px;}
+.header-biz h1 em{color:#8a6c0a;font-style:italic;}
+#real-time-clock{font-family:var(--mono);font-size:0.68rem;color:var(--text-muted2);background:var(--cream2);padding:6px 13px;border-radius:5px;border:1px solid var(--border);white-space:nowrap;}
+
+
+#scale-header.connected .sh-btn,
+#scale-header.stable .sh-btn{background:rgba(21,128,61,0.08);color:#15803d;border-color:rgba(21,128,61,0.25);}
+#scale-header.connected .sh-btn:hover,
+#scale-header.stable .sh-btn:hover{background:#15803d;color:#fff;}
+
+/* ── SCALE POPUP (unchanged) ── */
+#sc-conn-overlay{position:fixed;inset:0;background:rgba(14,12,9,0.5);backdrop-filter:blur(4px);z-index:9000;display:none;align-items:center;justify-content:center;}
+#sc-conn-overlay.open{display:flex;}
+#scale-popup{background:#0e0c09;border-radius:16px;padding:0;width:380px;border:1px solid rgba(201,162,39,0.25);box-shadow:0 24px 60px rgba(0,0,0,0.4);animation:popIn 0.22s cubic-bezier(0.34,1.56,0.64,1);overflow:hidden;}
+@keyframes popIn{from{transform:scale(0.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.sp-head{padding:16px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;}
+.sp-title{font-family:var(--serif);font-size:1rem;color:#fff;}
+.sp-title em{color:var(--accent2);font-style:italic;}
+.sp-close{width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.13s;}
+.sp-close:hover{background:rgba(185,28,28,0.2);color:#f87171;}
+.sp-live{padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);}
+.sp-wt-label{font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);}
+.sp-wt-value{font-family:var(--mono);font-size:2rem;font-weight:600;color:#fff;letter-spacing:-1px;line-height:1;}
+.sp-wt-value.stable{color:#4ade80;}
+.sp-wt-value.moving{color:#fbbf24;}
+.sp-wt-unit{font-size:0.75rem;color:rgba(255,255,255,0.4);}
+.sp-status-pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:0.62rem;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.8px;}
+.sp-status-pill.stable{background:rgba(21,128,61,0.15);border-color:rgba(74,222,128,0.25);color:#4ade80;}
+.sp-status-pill.moving{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.25);color:#fbbf24;}
+.sp-pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.sp-status-pill.stable .sp-pill-dot{animation:shPulse 1.5s ease infinite;}
+.sp-status-pill.moving .sp-pill-dot{animation:shFlash 0.5s ease infinite;}
+.sp-enter-tip{margin:0 20px 16px;padding:8px 12px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.15);border-radius:8px;display:flex;align-items:center;gap:8px;font-size:0.65rem;color:#4ade80;font-weight:600;}
+.sp-enter-tip kbd{background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:0.62rem;}
+.sp-form{padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;}
+.sp-row{display:flex;gap:8px;}
+.sp-field{display:flex;flex-direction:column;gap:4px;flex:1;}
+.sp-field label{font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.35);}
+.sp-sel,.sp-inp{height:34px;padding:0 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);border-radius:7px;color:#fff;font-family:var(--mono);font-size:0.75rem;outline:none;}
+.sp-sel:focus,.sp-inp:focus{border-color:rgba(201,162,39,0.4);}
+.sp-sel option{background:#1a1812;color:#fff;}
+.sp-connect{width:100%;height:38px;background:linear-gradient(135deg,rgba(201,162,39,0.2),rgba(168,125,30,0.15));border:1px solid rgba(201,162,39,0.35);border-radius:8px;color:var(--accent2);font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.sp-connect:hover{background:linear-gradient(135deg,rgba(201,162,39,0.3),rgba(168,125,30,0.25));color:#fff;}
+.sp-disconnect{width:100%;height:34px;background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.25);border-radius:7px;color:#f87171;font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.13s;}
+.sp-disconnect:hover{background:rgba(185,28,28,0.2);}
+.sp-hint{font-size:0.6rem;color:rgba(255,255,255,0.3);text-align:center;padding:0 4px;line-height:1.4;}
+.sp-hint.ok{color:#4ade80;}
+.sp-hint.err{color:#f87171;}
+
+.content{padding:16px 22px;overflow-y:auto;flex-grow:1;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.content::-webkit-scrollbar{width:3px;}.content::-webkit-scrollbar-thumb{background:var(--cream3);}
+.billing-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start;max-width:1600px;}
+.card{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;margin-bottom:14px;}
+h3{font-size:0.58rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;}
+h3 span{background:var(--primary);color:white;border-radius:5px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;}
+.form-group{margin-bottom:11px;}
+label{display:block;font-size:0.55rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;letter-spacing:0.8px;}
+input{width:100%;height:36px;padding:0 10px;background:var(--bg-main);border:1px solid var(--border);border-radius:6px;font-size:0.82rem;font-weight:500;outline:none;transition:all 0.14s;color:var(--primary);font-family:inherit;}
+input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);background:#fff;}
+input[readonly]{background:var(--cream2);color:var(--text-muted2);cursor:not-allowed;font-family:var(--mono);font-size:0.78rem;}
+.table-area{border:1px solid var(--border);border-radius:8px;background:#fff;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:0.54rem;text-transform:uppercase;color:var(--text-muted2);padding:8px 14px;border-bottom:1px solid var(--border);background:var(--cream2);font-weight:600;letter-spacing:0.7px;}
+td{padding:10px 14px;font-size:0.8rem;border-bottom:1px solid var(--border2);font-weight:500;color:var(--primary);}
+tfoot td{background:var(--cream2);border-top:1px solid var(--border);color:var(--primary);font-weight:700;font-size:0.88rem;}
+.entry-row{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:10px;align-items:flex-end;background:var(--cream2);padding:14px;border-radius:8px;border:1px solid var(--border);}
+.summary-row{padding:7px 0;font-size:0.78rem;display:flex;justify-content:space-between;font-weight:500;border-bottom:1px solid var(--border2);color:var(--text-muted);}
+.amount-row{padding:18px;background:var(--primary);border-radius:10px;margin-top:14px;color:white;display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 16px rgba(14,12,9,0.18);border:1px solid rgba(201,162,39,0.15);}
+.fine-display{display:flex;align-items:center;gap:16px;padding-bottom:0;}
+.fine-display .label{font-size:0.56rem;font-weight:600;text-transform:uppercase;color:rgba(255,255,255,0.4);letter-spacing:0.9px;}
+.fine-display .val{font-size:0.95rem;font-weight:600;color:var(--accent2);font-family:var(--mono);}
+.amount-value{font-size:1.5rem;font-weight:700;color:#fff;display:flex;align-items:baseline;gap:6px;font-family:var(--mono);}
+.amount-value span{color:var(--accent2);font-size:0.9rem;}
+.amount-label{font-size:0.56rem;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;}
+.btn-add{width:100%;height:42px;background:var(--primary);color:white;border:none;border-radius:7px;font-weight:600;cursor:pointer;transition:all 0.15s;font-size:0.78rem;margin-top:14px;font-family:inherit;}
+.btn-add:hover{background:#2a2620;transform:translateY(-1px);}
+.btn-plus{height:36px;width:36px;background:var(--primary);color:white;border:none;border-radius:6px;font-size:1.2rem;cursor:pointer;transition:0.15s;display:flex;align-items:center;justify-content:center;}
+.btn-plus:hover{background:#2a2620;}
+.remove-icon{color:var(--text-muted2);cursor:pointer;font-size:1.1rem;transition:0.15s;padding:2px 6px;border-radius:4px;}
+.remove-icon:hover{color:var(--error);background:rgba(185,28,28,0.08);}
+.switch{position:relative;display:inline-block;width:40px;height:20px;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--cream3);transition:.3s;border-radius:34px;}
+.slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;}
+input:checked+.slider{background-color:var(--accent);}
+input:checked+.slider:before{transform:translateX(20px);}
+.search-container{position:relative;width:100%;}
+.luxury-dropdown{position:absolute;top:calc(100% + 5px);left:0;width:100%;background:var(--primary);border-radius:8px;box-shadow:0 8px 24px rgba(14,12,9,0.18);z-index:9999;max-height:220px;overflow-y:auto;display:none;border:1px solid rgba(201,162,39,0.2);animation:dropSlide 0.18s ease-out;scrollbar-width:thin;}
+@keyframes dropSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.dropdown-item{padding:10px 14px;color:rgba(255,255,255,0.8);font-weight:500;font-size:0.78rem;cursor:pointer;transition:all 0.13s;border-bottom:1px solid rgba(255,255,255,0.06);}
+.dropdown-item:last-child{border-bottom:none;}
+.dropdown-item:hover,.dropdown-item.selected{background:var(--accent);color:#fff;padding-left:18px;}
+.it-code-wrapper{position:relative;width:100%;}
+.it-dropdown{position:absolute;bottom:calc(100% + 5px);left:0;width:320px;background:var(--primary);border:1px solid rgba(201,162,39,0.25);border-radius:8px;box-shadow:0 -8px 24px rgba(14,12,9,0.18);z-index:99999;max-height:240px;overflow-y:auto;display:none;animation:dropSlideUp 0.15s ease-out;scrollbar-width:thin;}
+@keyframes dropSlideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.it-dropdown.open{display:block;}
+.it-option{padding:9px 13px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);transition:all 0.13s;display:flex;flex-direction:column;gap:2px;}
+.it-option:last-child{border-bottom:none;}
+.it-option:hover,.it-option.highlighted{background:rgba(201,162,39,0.15);padding-left:18px;}
+.it-option-row{display:flex;justify-content:space-between;align-items:center;}
+.it-option-code{font-size:0.78rem;font-weight:600;color:var(--accent2);font-family:var(--mono);}
+.it-option-touch{font-size:0.68rem;color:rgba(201,162,39,0.7);font-family:var(--mono);}
+.it-option-name{font-size:0.7rem;color:rgba(255,255,255,0.55);}
+.it-option:hover .it-option-name,.it-option.highlighted .it-option-name{color:rgba(255,255,255,0.8);}
+.it-option-stock{font-size:0.64rem;color:#4ade80;font-weight:600;font-family:var(--mono);}
+.it-no-results{padding:14px;font-size:0.75rem;color:rgba(255,255,255,0.4);text-align:center;}
+.btn-scale-open{height:28px;padding:0 10px;border-radius:5px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--accent);font-size:0.65rem;font-weight:600;cursor:pointer;transition:all 0.13s;display:flex;align-items:center;gap:4px;}
+.btn-scale-open:hover{background:rgba(168,125,30,0.14);}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(14,12,9,0.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10000;}
+.modal-content{background:#fff;width:400px;border-radius:12px;padding:28px;box-shadow:var(--shadow-lux);text-align:center;border:1px solid var(--border);animation:modalPop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes modalPop{from{transform:scale(0.96) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-icon{width:46px;height:46px;background:rgba(185,28,28,0.08);color:var(--error);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto 16px;}
+.modal-title{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:var(--primary);margin-bottom:6px;}
+.modal-msg{font-size:0.78rem;color:var(--text-muted);font-weight:400;line-height:1.5;margin-bottom:22px;}
+.modal-btn{width:100%;height:40px;background:var(--primary);color:white;border:none;border-radius:7px;font-weight:600;font-size:0.78rem;cursor:pointer;font-family:inherit;}
+.modal-btn:hover{background:#2a2620;}
+.print-modal-content{background:#fff;width:380px;border-radius:12px;padding:24px;box-shadow:var(--shadow-lux);text-align:center;border:1px solid var(--border);animation:modalPop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.print-options-list{display:flex;flex-direction:column;gap:8px;margin:16px 0;}
+.print-card{border:1px solid var(--border);border-radius:7px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.14s;background:var(--cream2);}
+.print-card:hover{border-color:var(--gold-ln);background:var(--gold-bg);}
+.print-card.selected{border-color:var(--accent);background:var(--gold-bg);}
+.print-details{text-align:left;}
+.print-title{font-size:0.8rem;font-weight:600;color:var(--primary);}
+.print-desc{font-size:0.68rem;color:var(--text-muted);margin-top:2px;}
+.radio-dot{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;position:relative;}
+.print-card.selected .radio-dot{border-color:var(--accent);}
+.print-card.selected .radio-dot::before{content:"";position:absolute;top:2px;left:2px;width:6px;height:6px;background:var(--accent);border-radius:50%;}
+.print-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:10px;}
+.btn-action-modal{height:38px;border:none;border-radius:7px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-action-cancel{background:var(--cream2);color:var(--text-muted);border:1px solid var(--border);}
+.btn-action-cancel:hover{background:var(--cream3);}
+.btn-action-confirm{background:var(--primary);color:white;}
+.btn-action-confirm:hover{background:#2a2620;}
+.touch-mode-badge{display:inline-flex;align-items:center;gap:4px;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--accent);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:1px 7px;border-radius:4px;margin-left:6px;}
+@keyframes shPulse{0%,100%{opacity:1}50%{opacity:0.35}}
+@keyframes shFlash{0%,100%{opacity:1}50%{opacity:0.2}}
+
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"></div>
+
+</div>
+
+<div class="modal-overlay" id="error-modal">
+  <div class="modal-content">
+    <div class="modal-icon">&#10005;</div>
+    <div class="modal-title" id="modal-title">Notice</div>
+    <div class="modal-msg" id="modal-error-text">Message</div>
+    <button class="modal-btn" onclick="closeModal()">Dismiss</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="touch-warn-modal" style="z-index:10001;">
+  <div class="modal-content" style="border:1px solid rgba(201,162,39,0.3);max-width:380px;">
+    <div class="modal-icon" style="background:rgba(180,83,9,0.08);color:#b45309;font-size:1.3rem;">&#9888;</div>
+    <div class="modal-title" style="font-family:var(--serif);">Touch Not Found</div>
+    <div class="modal-msg" id="touch-warn-msg" style="margin-bottom:16px;">Touch value not in master list.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="modal-btn" style="background:var(--cream2);color:var(--text-muted);border:1px solid var(--border);" onclick="touchWarnCancel()">Go Back</button>
+      <button class="modal-btn" id="touch-warn-proceed-btn" onclick="touchWarnProceed()" style="background:#b45309;">Proceed Anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="print-selector-modal">
+  <div class="print-modal-content">
+    <div class="modal-title" style="font-family:var(--serif);font-size:1rem;margin-bottom:4px;">Print Invoice</div>
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Select number of copies</div>
+    <div class="print-options-list">
+      <div class="print-card selected" id="opt-copy-1" onclick="selectPrintCopyCount(1)"><div class="print-details"><div class="print-title">1 Copy</div><div class="print-desc">Single copy for customer</div></div><div class="radio-dot"></div></div>
+      <div class="print-card" id="opt-copy-2" onclick="selectPrintCopyCount(2)"><div class="print-details"><div class="print-title">2 Copies</div><div class="print-desc">Customer + office record</div></div><div class="radio-dot"></div></div>
+      <div class="print-card" id="opt-copy-3" onclick="selectPrintCopyCount(3)"><div class="print-details"><div class="print-title">3 Copies</div><div class="print-desc">Customer + office + accounts</div></div><div class="radio-dot"></div></div>
+    </div>
+    <div class="print-actions">
+      <button class="btn-action-modal btn-action-cancel" onclick="closePrintSelectorModal()">Cancel</button>
+      <button class="btn-action-modal btn-action-confirm" onclick="commitBillingTransactionPipeline()">Confirm &amp; Print</button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ── SCALE PANEL — always visible, top-center, floats over content ── -->
+  <!-- ── SCALE PANEL — compact, Connect opens popup ── -->
+  <div id="scale-panel" style="
+    position:fixed;top:0;left:50%;transform:translateX(-50%);
+    z-index:500;width:420px;
+    background:#fff;
+    border:1px solid var(--border);border-top:none;
+    border-radius:0 0 14px 14px;
+    box-shadow:0 6px 24px rgba(14,12,9,0.10);
+    overflow:hidden;font-family:var(--mono);
+  ">
+    <div id="sp-bar" style="display:flex;align-items:center;padding:10px 18px;gap:16px;background:#fff;border-bottom:1px solid rgba(14,12,9,0.08);transition:background 0.3s;">
+
+      <!-- LEFT: status pill -->
+      <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;min-width:90px;">
+        <div id="sp-dot" style="width:8px;height:8px;border-radius:50%;background:#d1cfc9;flex-shrink:0;transition:all 0.3s;"></div>
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <span style="font-size:0.48rem;color:#9e9890;text-transform:uppercase;letter-spacing:0.8px;">Scale</span>
+          <span id="sp-status" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.8px;color:#9e9890;transition:color 0.3s;white-space:nowrap;">Offline</span>
+        </div>
+      </div>
+
+      <!-- CENTER: big weight display -->
+      <div style="flex:1;display:flex;align-items:baseline;justify-content:center;gap:5px;">
+        <span id="sp-weight-big" style="font-family:'DM Mono',monospace;font-size:2.8rem;letter-spacing:-1px;line-height:1;color:#c9c5bc;transition:color 0.25s,font-size 0.2s;">--.-</span>
+        <span id="sp-unit-big" style="font-size:1rem;color:#c9c5bc;margin-bottom:4px;transition:color 0.25s;">g</span>
+      </div>
+
+      <!-- RIGHT: Enter hint OR Connect button -->
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <!-- shown when STABLE -->
+        <div id="sp-enter-hint" style="display:none;align-items:center;gap:6px;">
+          <kbd style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(21,128,61,0.1);border:1px solid rgba(21,128,61,0.25);border-radius:5px;font-size:0.65rem;color:#15803d;font-family:'DM Mono',monospace;white-space:nowrap;cursor:default;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            Enter &rarr; Fill Weight
+          </kbd>
+        </div>
+        <!-- shown when offline/reading -->
+        <button id="sp-connect-btn" onclick="scaleDoConnectDirect()" style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 14px;border-radius:6px;border:1px solid rgba(168,125,30,0.25);background:rgba(168,125,30,0.08);color:#8a6c0a;font-family:inherit;font-size:0.68rem;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Connect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCALE CONNECTION POPUP ── -->
+  <div id="sc-conn-overlay" style="position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:9000;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)scaleCloseConnectPopup()">
+    <div style="background:#0e0c09;border-radius:16px;width:340px;max-height:90vh;border:1px solid rgba(201,162,39,0.22);box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;display:flex;flex-direction:column;animation:scPopIn 0.22s cubic-bezier(0.34,1.56,0.64,1);">
+
+      <!-- Header -->
+      <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="font-family:var(--serif);font-size:0.95rem;color:#fff;">Scale <em style="color:#c9a227;font-style:italic;">Connection</em></div>
+        <button onclick="scaleCloseConnectPopup()" style="width:24px;height:24px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;line-height:1;">&#10005;</button>
+      </div>
+
+      <!-- Live weight display -->
+      <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div>
+          <div style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);margin-bottom:5px;">Live Reading</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span id="scp-wt" style="font-family:var(--mono);font-size:2.2rem;font-weight:500;color:#fff;letter-spacing:-1px;line-height:1;">--.-</span>
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.35);">g</span>
+          </div>
+        </div>
+        <div id="scp-pill" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:0.58rem;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.7px;">
+          <div id="scp-dot" style="width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
+          <span id="scp-status">Not Connected</span>
+        </div>
+      </div>
+
+      <!-- Form — scrollable if needed -->
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0;">
+
+        <!-- COM Port -->
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <label style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.3);">COM Port</label>
+          <div style="position:relative;">
+            <select id="sp-port" style="width:100%;height:38px;padding:0 30px 0 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-family:var(--mono);font-size:0.82rem;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:all 0.15s;">
+              <option value="" style="background:#1a1812;color:rgba(255,255,255,0.5);">Scanning...</option>
+            </select>
+            <div style="pointer-events:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.35);font-size:0.65rem;">&#9660;</div>
+          </div>
+        </div>
+
+        <!-- Baud Rate -->
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <label style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.3);">Baud Rate</label>
+          <input id="sp-baud" value="9600" style="width:100%;height:38px;padding:0 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-family:var(--mono);font-size:0.82rem;outline:none;text-align:left;transition:all 0.15s;">
+        </div>
+
+        <!-- Connect button -->
+        <button id="scp-connect-btn" onclick="scalePanelConnect()" style="width:100%;height:40px;background:linear-gradient(135deg,rgba(201,162,39,0.2),rgba(168,125,30,0.15));border:1px solid rgba(201,162,39,0.35);border-radius:9px;color:#c9a227;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all 0.15s;flex-shrink:0;">
+          &#9889; Connect Scale
+        </button>
+        <button id="scp-disconnect-btn" onclick="scalePanelConnect()" style="display:none;width:100%;height:36px;background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.25);border-radius:8px;color:#f87171;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:var(--sans);">
+          Disconnect
+        </button>
+
+        <!-- Status message -->
+        <div id="sp-msg" style="font-size:0.62rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5;padding:0 4px;">
+          Select a COM port then click Connect
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>
+  @keyframes scPopIn{from{transform:scale(0.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+#sp-port:focus{border-color:rgba(201,162,39,0.5) !important;background:rgba(255,255,255,0.12) !important;}
+#sp-port option{background:#1a1812;color:#fff;padding:8px;}
+#sp-baud:focus{border-color:rgba(201,162,39,0.5) !important;background:rgba(255,255,255,0.12) !important;}
+  </style>
+
+  <header>
+    <div class="header-biz"><h1 id="header-title-display">Create <em>Invoice</em></h1></div>
+    <div style="flex:1;"></div>
+    <div id="real-time-clock">Syncing...</div>
+    <div id="session-avatar-badge" style="width:40px;height:40px;background:var(--primary);border-radius:10px;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;border:2px solid var(--accent);flex-shrink:0;">JD</div>
+  </header>
+
+  <div class="content" style="padding-top:76px;">
+    <div class="billing-grid">
+      <div class="billing-left-col">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3><span>1</span></h3>
+            <div style="display:flex;align-items:center;gap:20px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span id="uchak-toggle-label" style="font-size:0.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">WEIGHT BILL</span>
+                <label class="switch"><input type="checkbox" id="uchak-toggle" onchange="toggleUchakMode()"><span class="slider"></span></label>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label style="margin:0;font-size:0.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">CREDIT BILL</label>
+                <label class="switch"><input type="checkbox" id="credit-toggle" onchange="toggleCreditMode()"><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+          <div id="credit-info-bar" style="display:none;background:#0f172a;color:white;padding:12px 18px;border-radius:10px;margin-bottom:14px;justify-content:space-between;align-items:center;border:1px solid rgba(181,148,16,0.2);">
+            <div style="font-size:0.55rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Live Outstanding</div>
+            <div style="display:flex;gap:20px;">
+              <div style="text-align:right;"><small style="font-size:0.5rem;color:#94a3b8;display:block;">METAL</small><span style="font-size:1rem;font-weight:700;color:#f59e0b;font-family:var(--mono);" id="live-metal-bal">0.000 g</span></div>
+              <div style="text-align:right;"><small style="font-size:0.5rem;color:#94a3b8;display:block;">CASH</small><span style="font-size:1rem;font-weight:700;color:#b59410;font-family:var(--mono);" id="live-cash-bal">Rs. 0.00</span></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group"><label>Voucher ID</label><input type="text" id="v-id" placeholder="VCH-001" data-next="cust-name"></div>
+            <div class="form-group"><label>Date</label><input type="text" id="v-date" readonly></div>
+            <div class="form-group"><label>Time</label><input type="text" id="v-time" readonly></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:12px;">
+            <div class="form-group" style="position:relative;">
+              <label>Customer Name</label>
+              <div class="search-container">
+                <input type="text" id="cust-name" placeholder="Search or Type" autocomplete="off" data-next="v-overall-touch">
+                <div id="custom-dropdown" class="luxury-dropdown"></div>
+              </div>
+            </div>
+            <div class="form-group" id="step1-overall-touch-block"><label>Overall Touch</label><input type="number" id="v-overall-touch" placeholder="0.000" data-next="v-overall-wastage"></div>
+            <div class="form-group" id="step1-overall-wastage-block"><label>Wastage</label><input type="number" id="v-overall-wastage" placeholder="0.000" data-next="v-tag"></div>
+            <div class="form-group" id="step1-tag-block"><label>Tag ID</label><input type="text" id="v-tag" placeholder="Scan Tag..." data-next="it-code"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span>2</span></h3>
+          <div class="table-area">
+            <table>
+              <thead id="table-dynamic-header-mount">
+                <tr><th>NO</th><th>IT Code</th><th>Weight</th><th style="color:var(--accent);">Para</th><th style="color:var(--error);">Less</th><th>Touch</th><th>Fine</th><th style="text-align:right">Del</th></tr>
+              </thead>
+              <tbody id="item-list"></tbody>
+              <tfoot id="table-dynamic-footer-mount">
+                <tr><td colspan="2">TOTAL LEDGER</td><td id="total-wt-cell">0.000</td><td id="total-para-cell" style="color:var(--accent);">0.000</td><td id="total-less-cell" style="color:var(--error);">0.000</td><td>-</td><td id="total-fine-cell">0.000</td><td></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span>3</span></h3>
+          <div class="entry-row">
+            <div class="form-group it-code-wrapper" style="margin:0;">
+              <label id="entry-fld-1-label">IT Code / Touch <span id="stock-count-badge" style="color:var(--success);font-size:0.58rem;"></span></label>
+              <input type="text" id="it-code" placeholder="Type IT code or touch (e.g. 68)" autocomplete="off" oninput="onITCodeInput(this.value)" onkeydown="onITCodeKeydown(event)" onblur="scheduleCloseITDropdown()">
+              <div class="it-dropdown" id="it-dropdown"></div>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label id="entry-fld-2-label" style="display:flex;align-items:center;justify-content:space-between;">
+                <span id="entry-fld-2-label-text">Weight</span>
+                <span style="display:flex;align-items:center;gap:6px;">
+                  <span id="wt-scale-status" style="font-size:0.5rem;color:var(--text-muted2);font-weight:600;"></span>
+
+                </span>
+              </label>
+              <input type="number" id="it-weight" oninput="calcFine()" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();var _w=window._scW||_scW;if(_w!==null&&_w!==undefined&&parseFloat(_w)>0){this.value=parseFloat(_w).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
+            </div>
+            <div class="form-group" style="margin:0;"><label id="entry-fld-3-label">Wastage</label><input type="number" id="it-wastage" oninput="calcFine()" placeholder="0.000"></div>
+            <div class="form-group" style="margin:0;"><label id="entry-fld-4-label">Fine</label><input type="number" id="it-fine" readonly placeholder="0.000"></div>
+            <button class="btn-plus" onclick="enterItem()">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="billing-right-col">
+        <div class="card">
+          <h3><span>4</span></h3>
+
+          <!-- Total fine display -->
+          <div class="summary-row">
+            <span id="summary-total-left-label">Total Gross Fine</span>
+            <span id="sum-fine" style="color:var(--accent);font-family:var(--mono);font-size:0.95rem;font-weight:700;">0.000</span>
+          </div>
+          <hr style="border:0;border-top:1px solid var(--border);margin:12px 0;">
+
+          <!-- Collect Fine — full width with Scale btn inside label -->
+          <div class="form-group">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Collect Fine</span>
+              <button class="btn-scale-open" onclick="insertScaleToField('collect-fine');event.stopPropagation();" type="button">&#9878; Scale</button>
+            </label>
+            <input type="number" id="collect-fine" oninput="calcFinalSettlement()" placeholder="0.000" data-next="settle-995-wt">
+          </div>
+
+          <!-- 995 row: Wt | Touch | Fine — equal columns, inputs all same height -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px;">
+            <div class="form-group" style="margin:0;">
+              <label style="display:flex;align-items:center;justify-content:space-between;min-height:20px;">
+                <span>995 Wt</span>
+                <button class="btn-scale-open" onclick="insertScaleToField('settle-995-wt');event.stopPropagation();" type="button" style="height:20px;padding:0 7px;font-size:0.58rem;">&#9878;</button>
+              </label>
+              <input type="number" id="settle-995-wt" oninput="calcSpecialFines()" placeholder="0.000" data-next="settle-995-touch">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="min-height:20px;display:flex;align-items:center;">Touch</label>
+              <input type="number" id="settle-995-touch" oninput="calcSpecialFines()" value="99.50" data-next="settle-dhal-wt">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="min-height:20px;display:flex;align-items:center;">995 Fine</label>
+              <input type="number" id="settle-995-fine" readonly placeholder="0.000">
+            </div>
+          </div>
+
+          <!-- Dhal row: Wt | Touch | Fine — same grid as 995 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px;">
+            <div class="form-group" style="margin:0;">
+              <label style="display:flex;align-items:center;justify-content:space-between;min-height:20px;">
+                <span>Dhal Wt</span>
+                <button class="btn-scale-open" onclick="insertScaleToField('settle-dhal-wt');event.stopPropagation();" type="button" style="height:20px;padding:0 7px;font-size:0.58rem;">&#9878;</button>
+              </label>
+              <input type="number" id="settle-dhal-wt" oninput="calcSpecialFines()" placeholder="0.000" data-next="settle-dhal-touch">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="min-height:20px;display:flex;align-items:center;">Touch</label>
+              <input type="number" id="settle-dhal-touch" oninput="calcSpecialFines()" placeholder="0.00" data-next="gold-rate-input">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="min-height:20px;display:flex;align-items:center;">Dhal Fine</label>
+              <input type="number" id="settle-dhal-fine" readonly placeholder="0.000">
+            </div>
+          </div>
+
+          <!-- Gold Rate -->
+          <div class="form-group" id="gold-rate-input-field-block">
+            <label>Gold Rate (10g)</label>
+            <input type="number" id="gold-rate-input" onchange="saveGoldRatePersistent(this.value)" oninput="calcFinalSettlement()" placeholder="Rs. 00,000" data-next="disc-touch-val">
+          </div>
+
+          <!-- Discount — Two tabs: Touch | Fine -->
+          <div style="background:var(--cream2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;">
+
+            <!-- Tab headers -->
+            <div style="display:flex;border-bottom:1px solid var(--border);">
+              <button id="disc-tab-touch" onclick="setDiscountType('touch')"
+                style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:all 0.13s;letter-spacing:0.5px;">
+                Touch %
+              </button>
+              <button id="disc-tab-fine" onclick="setDiscountType('fine')"
+                style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
+                Fine (g)
+              </button>
+            </div>
+
+            <!-- Tab 1: Touch discount -->
+            <div id="disc-touch-block" style="padding:10px 12px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin:0;">
+                  <label>Touch Disc (%)</label>
+                  <input type="number" id="disc-touch-val" step="0.5" min="0"
+                    placeholder="e.g. 0.5" oninput="calcFinalSettlement()"
+                    style="font-family:var(--mono);">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Fine Saved (g)</label>
+                  <input type="number" id="disc-touch-fine" readonly placeholder="0.000"
+                    style="background:rgba(21,128,61,0.05);border-color:rgba(21,128,61,0.2);color:var(--success);font-family:var(--mono);font-weight:700;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Fine discount -->
+            <div id="disc-fine-block" style="display:none;padding:10px 12px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin:0;">
+                  <label>Fine Disc (g)</label>
+                  <input type="number" id="disc-fine-val" step="0.001" min="0"
+                    placeholder="e.g. 0.100" oninput="calcFinalSettlement()"
+                    style="font-family:var(--mono);">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Net Fine (g)</label>
+                  <input type="number" id="disc-net-fine" readonly placeholder="0.000"
+                    style="background:rgba(21,128,61,0.05);border-color:rgba(21,128,61,0.2);color:var(--success);font-family:var(--mono);font-weight:700;">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Final amount -->
+          <div class="amount-row">
+            <div class="fine-display">
+              <span class="label" id="summary-remaining-fine-title-label">Remaining Fine</span>
+              <span id="rem-fine-val" class="val">0.000</span>
+            </div>
+            <div>
+              <span class="amount-label">Net Balance to Settle</span>
+              <div class="amount-value"><span>Rs.</span><div id="total-amount">0.00</div></div>
+            </div>
+          </div>
+
+          <button class="btn-add" id="bill-btn" onclick="handleBilling()">Authorize &amp; Record</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ScaleBridge inline */
+/* AurumOS Scale Bridge — ES5 only, works in Edge WebView EXE */
+'use strict';
+
+var ScaleBridge = {
+    _port: null,
+    _baud: 9600,
+    _connected: false,
+    _weightCb: null,
+    _errorCb: null,
+    LS_PORT: 'aurum_scale_port',
+    LS_BAUD: 'aurum_scale_baud',
+
+    init: function(weightCb, errorCb) {
+        this._weightCb = weightCb || null;
+        this._errorCb  = errorCb  || null;
+        var self = this;
+        window.__onScale = function(d) {
+            if (!d) return;
+            if (d.error) {
+                self._connected = false;
+                if (self._errorCb) self._errorCb(d.error);
+                return;
+            }
+            if (self._weightCb) self._weightCb(d.weight, !!d.stable);
+        };
+        // Direct fallback — always update DOM even if no callback set
+        var _origOnScale = window.__onScale;
+        window.__onScale = function(d) {
+            JSLOG('__onScale fired: '+(d?JSON.stringify(d):'null'));
+            _origOnScale(d);
+            if (!d || d.error) return;
+            _scW = d.weight; _scStable = d.stable;
+            window._scW = d.weight; window._scStable = (d.weight !== null && parseFloat(d.weight) > 0);
+            _updateScaleUI(d.weight, d.stable);
+        };
+    },
+
+    loadSaved: function() {
+        var port = null, baud = 9600;
+        try { port = localStorage.getItem(this.LS_PORT); } catch(e){}
+        try { baud = parseInt(localStorage.getItem(this.LS_BAUD)) || 9600; } catch(e){}
+        return { port: port, baud: baud };
+    },
+
+    _savePort: function(p) { try { localStorage.setItem(this.LS_PORT, p); } catch(e){} },
+    _saveBaud: function(b) { try { localStorage.setItem(this.LS_BAUD, String(b)); } catch(e){} },
+
+    scanPorts: function(cb) {
+        var saved = this.loadSaved();
+        if (!window.pywebview || !window.pywebview.api) { cb([]); return; }
+        window.pywebview.api.scale_get_ports().then(function(ports) {
+            ports = ports || [];
+            if (saved.port) {
+                ports.sort(function(a, b) {
+                    if (a.port === saved.port) return -1;
+                    if (b.port === saved.port) return  1;
+                    return 0;
+                });
+            }
+            cb(ports);
+        }).catch(function() { cb([]); });
+    },
+
+    connect: function(port, baud, onDone) {
+        var self = this;
+        if (!window.pywebview || !window.pywebview.api) {
+            if (onDone) onDone(false, 'App bridge not ready. Please wait.');
+            return;
+        }
+        self._port = port;
+        self._baud = parseInt(baud) || 9600;
+        window.pywebview.api.scale_connect(self._port, self._baud).then(function(r) {
+            if (r && r.status === 'success') {
+                self._connected = true;
+                self._savePort(self._port);
+                self._saveBaud(self._baud);
+                if (onDone) onDone(true, null);
+            } else {
+                self._connected = false;
+                var msg = (r && r.message) || 'Connection failed';
+                if (onDone) onDone(false, msg);
+            }
+        }).catch(function(e) {
+            self._connected = false;
+            if (onDone) onDone(false, String(e));
+        });
+    },
+
+    disconnect: function() {
+        this._connected = false;
+        if (window.pywebview && window.pywebview.api) {
+            window.pywebview.api.scale_disconnect().catch(function(){});
+        }
+    },
+
+    getConnected: function() { return this._connected; },
+
+    autoConnect: function(onDone) {
+        var saved = this.loadSaved();
+        if (saved.port) {
+            this.connect(saved.port, saved.baud, onDone);
+        } else {
+            if (onDone) onDone(false, 'No saved port');
+        }
+    }
+};
+
+</script>
+<script>
+
+// ── JS Logger — sends messages to Python terminal log ────────────
+function _updateScaleUI(weight, stable) {
+    var w = (weight !== null && weight !== undefined) ? parseFloat(weight).toFixed(3) : '--.-';
+    var isStable = !!stable;
+
+    // ── Popup weight (scp-wt) ──────────────────────────────────────
+    var scpWt = document.getElementById('scp-wt');
+    if (scpWt) scpWt.innerText = w;
+
+    // ── No auto-fill — user presses Enter to capture weight ─────
+
+    // ── Weight field label status ────────────────────────────────
+    var wtSts = document.getElementById('wt-scale-status');
+    if (wtSts) {
+        if (isStable)        { wtSts.innerText = 'STABLE'; wtSts.style.color = '#15803d'; }
+        else if (_scConnected){ wtSts.innerText = 'READING'; wtSts.style.color = '#d97706'; }
+        else                  { wtSts.innerText = ''; }
+    }
+
+    // ── Popup status pill ──────────────────────────────────────────
+    var scpDot = document.getElementById('scp-dot');
+    var scpSts = document.getElementById('scp-status');
+    var scpPill= document.getElementById('scp-pill');
+    if (isStable) {
+        if (scpDot)  scpDot.style.color  = '#16a34a';
+        if (scpSts)  scpSts.innerText    = 'STABLE';
+        if (scpPill) scpPill.style.color = '#16a34a';
+    } else {
+        if (scpDot)  scpDot.style.color  = '#d97706';
+        if (scpSts)  scpSts.innerText    = 'READING';
+        if (scpPill) scpPill.style.color = '#d97706';
+    }
+
+    // ── Main billing scale bar — dynamic design ──────────────────
+    var spWt  = document.getElementById('sp-weight-big');
+    var spUt  = document.getElementById('sp-unit-big');
+    var spDot = document.getElementById('sp-dot');
+    var spSts = document.getElementById('sp-status');
+    var spHnt = document.getElementById('sp-enter-hint');
+    var spBtn = document.getElementById('sp-connect-btn');
+    var spBar = document.getElementById('sp-bar');
+    var shWt  = document.getElementById('sh-weight');
+
+    if (spWt) spWt.innerText = w;
+    if (shWt) shWt.innerText = w;
+
+    if (isStable) {
+        // GREEN — stable, weight ready
+        if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
+        if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
+        if (spUt)  spUt.style.color = '#15803d';
+        if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
+        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
+        if (spHnt) spHnt.style.display = 'flex';
+        if (spBtn) spBtn.style.display = 'none';
+    } else if (_scConnected && (weight === null || weight === undefined || parseFloat(weight) <= 0)) {
+        // AMBER — connected but no weight yet
+        if (spBar) spBar.style.background = 'rgba(217,119,6,0.03)';
+        if (spWt)  { spWt.style.color = '#d97706'; spWt.style.fontSize = '2.8rem'; }
+        if (spUt)  spUt.style.color = '#d97706';
+        if (spDot) { spDot.style.background = '#d97706'; spDot.style.boxShadow = 'none'; }
+        if (spSts) { spSts.innerText = 'Reading'; spSts.style.color = '#d97706'; }
+        if (spHnt) spHnt.style.display = 'none';
+        if (spBtn) spBtn.style.display = 'none';
+    } else if (_scConnected) {
+        // GREEN — connected and has weight value (treat as stable)
+        if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
+        if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
+        if (spUt)  spUt.style.color = '#15803d';
+        if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
+        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
+        if (spHnt) spHnt.style.display = 'flex';
+        if (spBtn) spBtn.style.display = 'none';
+    } else {
+        // GREY — offline
+        if (spBar) spBar.style.background = '#fff';
+        if (spWt)  { spWt.style.color = '#c9c5bc'; spWt.style.fontSize = '2.8rem'; }
+        if (spUt)  spUt.style.color = '#c9c5bc';
+        if (spDot) { spDot.style.background = '#d1cfc9'; spDot.style.boxShadow = 'none'; }
+        if (spSts) { spSts.innerText = 'Offline'; spSts.style.color = '#9e9890'; }
+        if (spHnt) spHnt.style.display = 'none';
+        if (spBtn) spBtn.style.display = 'inline-flex';
+    }
+}
+
+function JSLOG(msg) {
+    try { console.log('[JS] ' + msg); } catch(e) {}
+    try {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.js_log) {
+            window.pywebview.api.js_log(msg);
+        }
+    } catch(e) {}
+}
+var currentItems=[],registeredClients=[],selectedIndex=-1;
+var currentClientLimits={metal:0,cash:0};
+var latestSalesVch='VCH-001',latestUchakVch='UCHK-001';
+var weightStockItems=[],allProducts=[];
+var itDropdownHighlight=-1,itCloseTimer=null;
+var printCopiesConfigTarget=1;
+var activeDiscountType='touch';
+var _scW=null,_scStable=false,_scConnected=false;
+
+function _isTouchCode(val){var n=parseFloat(val);return !isNaN(n)&&n>=1&&n<=100&&String(val).trim()===String(n);}
+
+
+function scalePopupClose(){document.getElementById('sc-conn-overlay').style.display='none';}
+function scalePopupOutsideClick(e){if(e.target===document.getElementById('sc-conn-overlay')){document.getElementById('sc-conn-overlay').style.display='none';}}
+
+// ── SCALE PANEL FUNCTIONS ────────────────────────────────────────────────
+function scalePanelLoadPorts(){
+    var sel=document.getElementById('sp-port');
+    if(!sel)return;
+    sel.innerHTML='<option value="">Scanning...</option>';
+    if(!window.pywebview||!window.pywebview.api)return;
+    window.pywebview.api.scale_get_ports().then(function(ports){
+        if(!ports||!ports.length){
+            sel.innerHTML='<option value="">No COM ports detected</option>';
+            var msg=document.getElementById('sp-msg');
+            if(msg)msg.innerText='No COM ports found. Check cable and try refresh.';
+            return;
+        }
+        sel.innerHTML='<option value="">— Select COM Port —</option>';
+        (ports||[]).forEach(function(p){
+            var o=document.createElement('option');
+            o.value=p.port;
+            // Show port + short description
+            var desc=(p.desc||'').substring(0,28);
+            o.innerText=desc?p.port+' — '+desc:p.port;
+            sel.appendChild(o);
+        });
+        // Auto-select preferred port
+        var preferred=['COM3','COM4','COM5','COM6','COM7','COM8'];
+        var pref=(ports||[]).find(function(p){return preferred.indexOf(p.port)!==-1;});
+        if(pref)sel.value=pref.port;
+        else if(ports.length===1)sel.value=ports[0].port;
+        var msg=document.getElementById('sp-msg');
+        if(msg)msg.innerText=ports.length+' port'+(ports.length>1?'s':'')+' detected. Select and connect.';
+    }).catch(function(e){
+        sel.innerHTML='<option value="">Error scanning ports</option>';
+    });
+}
+// Alias for backward compat
+function scaleLoadPorts(){
+    JSLOG('scaleLoadPorts called');
+    var sel  = document.getElementById('sp-port');
+    var msg  = document.getElementById('sp-msg');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Scanning...</option>';
+
+    if(!window.pywebview || !window.pywebview.api){
+        sel.innerHTML = '<option value="">Bridge not ready</option>';
+        return;
+    }
+
+    window.pywebview.api.scale_get_ports().then(function(ports){
+        sel.innerHTML = '';
+        if(!ports || !ports.length){
+            sel.innerHTML = '<option value="">No COM ports found</option>';
+            if(msg) msg.innerText = 'No COM ports detected';
+            return;
+        }
+        // Load last saved port
+        var lastPort = '';
+        try { lastPort = localStorage.getItem('aurum_scale_port') || ''; } catch(e){}
+        var lastBaud = 9600;
+        try { lastBaud = parseInt(localStorage.getItem('aurum_scale_baud'))||9600; } catch(e){}
+
+        ports.forEach(function(p){
+            var o=document.createElement('option');
+            o.value=p.port;
+            o.text=p.port+(p.desc?' - '+p.desc.substring(0,20):'');
+            if(p.port===lastPort) o.selected=true;
+            sel.appendChild(o);
+        });
+        if(!sel.value && ports.length) sel.value=ports[0].port;
+
+        var baudEl=document.getElementById('sp-baud');
+        if(baudEl && lastBaud) baudEl.value=lastBaud;
+
+        if(msg) msg.innerText='Select port and click Connect';
+        console.log('[SCALE] Ports loaded:', ports.map(function(p){return p.port;}).join(', '));
+    }).catch(function(e){
+        sel.innerHTML='<option value="">Error: '+e+'</option>';
+        console.error('[SCALE] scale_get_ports error:', e);
+    });
+}
+function scaleCloseConnectPopup(){
+    document.getElementById('sc-conn-overlay').style.display='none';
+}
+
+function scalePanelConnect(){
+    JSLOG('scalePanelConnect called');
+    var msg  = document.getElementById('sp-msg');
+    var btn  = document.getElementById('scp-connect-btn');
+    var disc = document.getElementById('scp-disconnect-btn');
+    var sel  = document.getElementById('sp-port');
+    JSLOG('sp-port el: '+(sel?'found, value='+sel.value:'NULL'));
+
+    function log(m){ JSLOG(m); if(msg) msg.innerText=m; }
+
+    if(_scConnected){
+        log('Disconnecting...');
+        if(window.pywebview && window.pywebview.api) window.pywebview.api.scale_disconnect();
+        _scConnected=false; _scW=null;
+        if(btn)  btn.style.display='block';
+        if(disc) disc.style.display='none';
+        log('Disconnected');
+        return;
+    }
+
+    var sel  = document.getElementById('sp-port');
+    var baud = document.getElementById('sp-baud');
+    var port = sel ? sel.value : '';
+    var b    = baud ? (parseInt(baud.value)||9600) : 9600;
+
+    log('port='+port+' baud='+b);
+    if(!port){ log('ERROR: No port selected'); return; }
+
+    log('Calling scale_connect...');
+    if(btn){ btn.innerText='Connecting...'; btn.disabled=true; }
+
+    if(!window.pywebview || !window.pywebview.api){
+        log('ERROR: pywebview bridge not ready');
+        if(btn){ btn.innerText='⚡ Connect Scale'; btn.disabled=false; }
+        return;
+    }
+
+    window.pywebview.api.scale_connect(port, b).then(function(r){
+        log('Response: '+JSON.stringify(r));
+        if(btn){ btn.disabled=false; btn.innerText='⚡ Connect Scale'; }
+        if(r && r.status==='success'){
+            _scConnected=true;
+            if(btn)  btn.style.display='none';
+            if(disc) disc.style.display='block';
+            log('Connected OK to '+port);
+            try{localStorage.setItem('aurum_scale_port',port);localStorage.setItem('aurum_scale_baud',String(b));}catch(e){}
+
+            // ── Update popup status ────────────────────────────────
+            var scpSts = document.getElementById('scp-status');
+            var scpDot = document.getElementById('scp-dot');
+            if(scpSts) scpSts.innerText = 'Connected';
+            if(scpDot) scpDot.style.color = '#16a34a';
+
+            // ── Update MAIN scale bar (sp-dot, sp-status) ──────────
+            var spDot = document.getElementById('sp-dot');
+            var spSts = document.getElementById('sp-status');
+            if(spDot){ spDot.style.background='#16a34a'; spDot.style.animation='shPulse 1.5s ease infinite'; }
+            if(spSts){ spSts.innerText='Connected'; spSts.style.color='#15803d'; }
+            log('Main bar updated to Connected');
+
+} else {
+            var err=(r&&r.message)||'Failed';
+            log('ERROR: '+err);
+        }
+    }).catch(function(e){
+        log('EXCEPTION: '+e);
+        if(btn){ btn.disabled=false; btn.innerText='⚡ Connect Scale'; }
+    });
+}
+// Keep scaleDoDisconnect working for backward compat
+function scaleDoDisconnect(){ scalePanelConnect(); }
+// Keep scaleDoConnect working
+function scaleDoConnectDirect(){
+    JSLOG('scaleDoConnectDirect called');
+    // Open popup
+    var ov = document.getElementById('sc-conn-overlay');
+    JSLOG('overlay: '+(ov?'FOUND':'NULL'));
+    if(ov){
+        ov.style.cssText='display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
+        JSLOG('popup opened');
+    }
+    // Scan ports
+    scaleLoadPorts();
+}
+
+function scalePopupOpen(){
+    var ov=document.getElementById('sc-conn-overlay');
+    if(ov){ ov.style.display='flex'; scalePanelLoadPorts(); }
+}
+function scalePopupClose(){
+    var ov=document.getElementById('sc-conn-overlay');
+    if(ov) ov.style.display='none';
+}
+function scalePopupOutsideClick(e){
+    if(e.target===document.getElementById('sc-conn-overlay')) scalePopupClose();
+}
+
+function scaleDoConnect(){
+    var port=document.getElementById('sp-port').value;
+    var baud=parseInt(document.getElementById('sp-baud').value)||9600;
+    if(!port){document.getElementById('sp-hint').innerText='Select a port first';document.getElementById('sp-hint').className='sp-hint err';return;}
+    document.getElementById('sp-hint').innerText='Connecting...';document.getElementById('sp-hint').className='sp-hint';
+    document.getElementById('sp-wt').innerText='...';
+    if(window.pywebview&&window.pywebview.api){
+        window.pywebview.api.scale_connect(port,baud).then(function(r){
+            if(r&&r.status==='success'){
+                document.getElementById('sp-hint').innerText='Connected to '+port+' @ '+baud+' baud';
+                document.getElementById('sp-hint').className='sp-hint ok';
+                document.getElementById('sp-connect-btn').style.display='none';
+                document.getElementById('sp-disconnect-btn').style.display='block';
+                document.getElementById('sh-action-btn').innerText='Disconnect';
+                _scConnected=true;
+            }else{
+                document.getElementById('sp-hint').innerText='Failed: '+((r&&r.message)||'unknown');
+                document.getElementById('sp-hint').className='sp-hint err';
+            }
+        }).catch(function(e){document.getElementById('sp-hint').innerText='Error: '+e;document.getElementById('sp-hint').className='sp-hint err';});
+    }
+}
+
+function scaleDoDisconnect(){
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.scale_disconnect)window.pywebview.api.scale_disconnect();
+    _scConnected=false;_scW=null;_scStable=false;
+    document.getElementById('sp-connect-btn').style.display='block';
+    document.getElementById('sp-disconnect-btn').style.display='none';
+    document.getElementById('sp-hint').innerText='Disconnected';document.getElementById('sp-hint').className='sp-hint';
+    document.getElementById('sp-wt').innerText='--.-';document.getElementById('sp-wt').className='sp-wt-value';
+    document.getElementById('sp-pill').className='sp-status-pill';document.getElementById('sp-pill-txt').innerText='Not Connected';
+    document.getElementById('sh-weight').innerText='--.-';document.getElementById('scale-header').className='';
+    document.getElementById('sh-action-btn').innerText='Connect';document.getElementById('sh-label').innerText='Scale';
+    document.getElementById('sp-enter-tip').style.display='none';
+}
+
+// Python calls this when scale auto-connects on startup
+window.__onScaleConnected = function(info) {
+    _scConnected = true;
+    var sts = document.getElementById('scp-status');
+    var dot = document.getElementById('scp-dot');
+    var msg = document.getElementById('sp-msg');
+    if (sts) sts.innerText = 'Connected';
+    if (dot) dot.style.background = '#16a34a';
+    if (msg) msg.innerText = '✓ Auto-connected to ' + (info && info.port ? info.port : 'scale');
+    var spDot = document.getElementById('sp-dot');
+    var spSts = document.getElementById('sp-status');
+    if (spDot) { spDot.style.background='#16a34a'; spDot.style.animation='shPulse 1.5s ease infinite'; }
+    if (spSts) { spSts.innerText='Connected'; spSts.style.color='#15803d'; }
+};
+
+// ScaleBridge weight handler — wired when bridge ready
+window.__onScale = function(d){
+    if(!d) return;
+    if(d.error){
+        _scConnected=false;
+        var msg=document.getElementById('sp-msg');
+        if(msg){ msg.innerText='✕ '+d.error; msg.style.color='#f87171'; }
+        var disc=document.getElementById('scp-disconnect-btn');
+        var btn=document.getElementById('scp-connect-btn');
+        if(disc) disc.style.display='none';
+        if(btn)  btn.style.display='block';
+        return;
+    }
+    _scW=d.weight; _scStable=d.stable; window._scW=d.weight; window._scStable=d.stable;
+    var w=_scW!==null ? parseFloat(_scW).toFixed(3) : '--.-';
+    // Main billing weight display
+    var wEl=document.getElementById('sp-weight-big');
+    var uEl=document.getElementById('sp-unit-big');
+    var dot=document.getElementById('sp-dot');
+    var sts=document.getElementById('sp-status');
+    var hint=document.getElementById('sp-enter-hint');
+    if(wEl) wEl.innerText=w;
+    // Popup weight
+    var pw=document.getElementById('scp-wt'); if(pw) pw.innerText=w;
+    if(d.stable){
+        if(wEl)  wEl.style.color='#15803d';
+        if(uEl)  uEl.style.color='#15803d';
+        if(dot){ dot.style.background='#16a34a'; dot.style.animation='shPulse 1.5s ease infinite'; }
+        if(sts){ sts.innerText='STABLE'; sts.style.color='#15803d'; }
+        if(hint) hint.style.display='flex';
+    } else {
+        if(wEl)  wEl.style.color='#d97706';
+        if(uEl)  uEl.style.color='#d97706';
+        if(dot){ dot.style.background='#d97706'; dot.style.animation=''; }
+        if(sts){ sts.innerText='READING'; sts.style.color='#d97706'; }
+        if(hint) hint.style.display='none';
+    }
+};
+// Init ScaleBridge with the handler above
+ScaleBridge.init(null, null); // __onScale already set above
+
+
+function insertScaleToField(fieldId){
+    var el=document.getElementById(fieldId);if(!el)return;
+    if(!_scConnected){scalePopupOpen();return;}
+    if(_scStable&&_scW!==null){
+        var val=parseFloat(_scW).toFixed(3);
+        el.value=val;
+        el.style.borderColor='#15803d';el.style.boxShadow='0 0 0 3px rgba(21,128,61,0.15)';
+        setTimeout(function(){el.style.borderColor='';el.style.boxShadow='';},700);
+        document.getElementById('sh-label').innerText='Got '+val+'g';
+        setTimeout(function(){if(_scStable)document.getElementById('sh-label').innerText='STABLE -- Enter';},1400);
+        if(fieldId==='collect-fine')calcFinalSettlement();
+        else if(fieldId==='settle-995-wt'||fieldId==='settle-dhal-wt')calcSpecialFines();
+        el.focus();
+    }else{
+        el.style.borderColor='#b91c1c';el.style.boxShadow='0 0 0 3px rgba(185,28,28,0.15)';
+        setTimeout(function(){el.style.borderColor='';el.style.boxShadow='';},700);
+        document.getElementById('sh-label').innerText='Settling...';
+    }
+}
+function scaleInsertWeight() {
+    if (!_scConnected) {
+        scalePopupOpen();
+        return;
+    }
+    if (_scW !== null) {
+        var el = document.getElementById('it-weight');
+        if (el) {
+            el.value = parseFloat(_scW).toFixed(3);
+            el.style.borderColor = '#15803d';
+            el.style.boxShadow   = '0 0 0 3px rgba(21,128,61,0.15)';
+            if (typeof calcFine === 'function') calcFine();
+            setTimeout(function(){ el.style.borderColor=''; el.style.boxShadow=''; }, 800);
+        }
+    } else {
+        scalePopupOpen();
+    }
+}
+
+
+
+document.addEventListener('keydown',function(e){
+    if(e.key!=='Enter')return;
+    var id=document.activeElement?document.activeElement.id:'';
+    if(id==='it-weight'){
+        e.preventDefault();e.stopImmediatePropagation();
+        var wf=document.getElementById('it-weight');
+        if(_scStable&&_scW!==null&&!wf.value){
+            wf.value=parseFloat(_scW).toFixed(3);
+            wf.style.borderColor='#15803d';wf.style.boxShadow='0 0 0 3px rgba(21,128,61,0.15)';
+            setTimeout(function(){wf.style.borderColor='';wf.style.boxShadow='';},600);
+            document.getElementById('sh-label').innerText='Got '+parseFloat(_scW).toFixed(3)+'g';
+            setTimeout(function(){if(_scStable)document.getElementById('sh-label').innerText='STABLE -- Enter';},1400);
+        }
+        calcFine();
+        var wst=document.getElementById('it-wastage');
+        if(wst){wst.focus();if(wst.value&&parseFloat(wst.value)>0)wst.select();}
+        return;
+    }
+    if(id==='it-wastage'){e.preventDefault();e.stopImmediatePropagation();enterItem();return;}
+    var SF={'collect-fine':1,'settle-995-wt':1,'settle-dhal-wt':1};
+    if(SF[id]){
+        var el=document.getElementById(id);
+        if(el&&!el.value&&_scStable&&_scW!==null){
+            e.preventDefault();e.stopImmediatePropagation();
+            insertScaleToField(id);
+            var nx=el.getAttribute('data-next');
+            if(nx)setTimeout(function(){var n=document.getElementById(nx);if(n){n.focus();if(n.value)n.select();}},50);
+            return;
+        }
+    }
+},true);
+
+document.addEventListener('keydown',async function(e){
+    if(document.getElementById('error-modal').style.display==='flex'){if(e.key==='Enter'){e.preventDefault();closeModal();}return;}
+    if(e.key!=='Enter')return;
+    var active=document.activeElement;if(!active)return;
+    if(active.id==='cust-name'){
+        var dd=document.getElementById('custom-dropdown');var items=dd.querySelectorAll('.dropdown-item');
+        if(dd.style.display==='block'&&selectedIndex>-1){e.preventDefault();items[selectedIndex].click();return;}
+        if(document.getElementById('credit-toggle').checked){
+            var n=active.value.trim();
+            if(!registeredClients.some(function(c){return c.name===n;})){e.preventDefault();showError('"'+(n||'Client')+'" is not registered.',"Registry Required");active.value='';return;}
+        }
+        e.preventDefault();document.getElementById('v-overall-touch').focus();return;
+    }
+    if(active.id==='v-id'){
+        e.preventDefault();var vid=active.value.trim();if(!vid)return;
+        if(window.pywebview&&window.pywebview.api){
+            var res=await window.pywebview.api.get_bill_details(vid);
+            if(res&&res.status==='success'){
+                document.getElementById('cust-name').value=res.voucher.customer;
+                document.getElementById('collect-fine').value=res.voucher.collected_fine;
+                document.getElementById('settle-995-fine').value=res.voucher.fine_995;
+                document.getElementById('settle-dhal-fine').value=res.voucher.fine_dhal;
+                document.getElementById('gold-rate-input').value=res.voucher.gold_rate;
+                currentItems=res.items;renderTable();
+                document.getElementById('bill-btn').innerText='Update Record';
+                document.getElementById('bill-btn').style.background='var(--success)';
+            }else{showError((res&&res.message)||'Voucher not found.',"Lookup Failed");}
+            document.getElementById('cust-name').focus();
+        }
+        return;
+    }
+    if(active.id==='v-tag'){
+        var tagId=active.value.trim();
+        if(tagId){e.preventDefault();await handleTagScan(tagId);active.value='';active.focus();}
+        return;
+    }
+    if(active.id==='it-code'){
+        var dd2=document.getElementById('it-dropdown');
+        if(dd2.classList.contains('open'))return;
+        var isUchak=document.getElementById('uchak-toggle').checked;
+        if(isUchak){e.preventDefault();document.getElementById('it-weight').focus();return;}
+        e.preventDefault();
+        var val=active.value.trim();if(!val)return;
+        if(_isTouchCode(val)){await validateTouchAndProceed(val);return;}
+        var exactStock=weightStockItems.find(function(s){return s.it_code.toUpperCase()===val.toUpperCase();});
+        if(exactStock){
+            document.getElementById('it-code').value=exactStock.it_code;
+            await fetchAndFillWastage(exactStock.touch);
+            calcFine();document.getElementById('it-weight').focus();return;
+        }
+        if(window.pywebview&&window.pywebview.api){
+            try{
+                var validation=await window.pywebview.api.validate_touch_value(val);
+                if(validation.valid){await fetchAndFillWastage(val);calcFine();document.getElementById('it-weight').focus();}
+                else{showError(validation.message||'"'+val+'" not found.',"Not Found");active.value='';document.getElementById('it-wastage').value='';}
+            }catch(err){}
+        }
+        return;
+    }
+    var nextId=active.dataset.next;
+    if(nextId){e.preventDefault();var el=document.getElementById(nextId);if(el)el.focus();return;}
+});
+
+document.addEventListener('keydown',function(e){
+    var active=document.activeElement;if(!active)return;
+    if(active.id==='cust-name'){
+        var dd=document.getElementById('custom-dropdown');var items=dd.querySelectorAll('.dropdown-item');
+        if(dd.style.display==='block'){
+            if(e.key==='ArrowDown'){e.preventDefault();selectedIndex=(selectedIndex+1)%items.length;updateSelection(items);}
+            else if(e.key==='ArrowUp'){e.preventDefault();selectedIndex=(selectedIndex-1+items.length)%items.length;updateSelection(items);}
+        }
+    }
+});
+
+function updateSelection(items){items.forEach(function(item,i){item.classList.toggle('selected',i===selectedIndex);if(i===selectedIndex)item.scrollIntoView({block:'nearest'});});}
+function saveGoldRatePersistent(v){var r=parseFloat(v)||0;if(r>0)localStorage.setItem('aurum_gold_rate',r);}
+document.addEventListener('wheel',function(e){if(document.activeElement.type==='number')document.activeElement.blur();});
+document.addEventListener('click',function(e){if(!e.target.closest('.search-container'))closeDropdown();});
+function showError(msg,title){document.getElementById('modal-title').innerText=title||'Error';document.getElementById('modal-error-text').innerText=msg;document.getElementById('error-modal').style.display='flex';}
+function closeModal(){document.getElementById('error-modal').style.display='none';document.getElementById('it-code').focus();}
+
+var _touchWarnCallback=null;
+function showTouchWarn(touchVal,onProceed){
+    _touchWarnCallback=onProceed;
+    document.getElementById('touch-warn-msg').innerText='Touch "'+touchVal+'%" is not in your Touch Master list. You can go back and correct it, or proceed anyway.';
+    document.getElementById('touch-warn-modal').style.display='flex';
+}
+function touchWarnCancel(){document.getElementById('touch-warn-modal').style.display='none';_touchWarnCallback=null;document.getElementById('it-code').focus();document.getElementById('it-code').select();}
+function touchWarnProceed(){document.getElementById('touch-warn-modal').style.display='none';if(typeof _touchWarnCallback==='function'){_touchWarnCallback();_touchWarnCallback=null;}}
+
+async function validateTouchAndProceed(touchVal){
+    if(!window.pywebview||!window.pywebview.api){await fetchAndFillWastage(touchVal);calcFine();document.getElementById('it-weight').focus();return;}
+    try{
+        var res=await window.pywebview.api.validate_touch_value(touchVal);
+        if(res&&res.valid){await fetchAndFillWastage(touchVal);calcFine();document.getElementById('it-weight').focus();}
+        else{showTouchWarn(touchVal,async function(){await fetchAndFillWastage(touchVal);calcFine();document.getElementById('it-weight').focus();});}
+    }catch(e){await fetchAndFillWastage(touchVal);calcFine();document.getElementById('it-weight').focus();}
+}
+
+function openPrintSelectorModal(){document.getElementById('print-selector-modal').style.display='flex';}
+function closePrintSelectorModal(){document.getElementById('print-selector-modal').style.display='none';}
+function selectPrintCopyCount(count){printCopiesConfigTarget=count;document.querySelectorAll('.print-card').forEach(function(c){c.classList.remove('selected');});document.getElementById('opt-copy-'+count).classList.add('selected');}
+
+async function loadWeightStockCodes(){
+    try{
+        if(window.pywebview && window.pywebview.api){
+            weightStockItems = await window.pywebview.api.get_weight_stock_it_codes() || [];
+            allProducts      = await window.pywebview.api.get_products() || [];
+
+            // Load opening stock per touch directly from ledger
+            window._touchOpeningMap = {};
+            try {
+                var report = await window.pywebview.api.get_touch_ledger_details('ALL', 'weight', '', '');
+                var opnMap  = {};
+                var outMap  = {};
+                (report || []).forEach(function(r){
+                    var tv = parseFloat(r.touch_val || 0);
+                    if(!tv) return;
+                    if(r.txn_type === 'OPENING'){
+                        opnMap[tv] = (opnMap[tv] || 0) + parseFloat(r.gr_wt || 0);
+                    }
+                    if(r.txn_type === 'OUT'){
+                        outMap[tv] = (outMap[tv] || 0) + parseFloat(r.gr_wt || 0);
+                    }
+                });
+                // opening available = opening - outward already done
+                // katti live is already in weightStockItems
+                // so opening remaining = opening - max(0, outward - katti)
+                Object.keys(opnMap).forEach(function(tv){
+                    tv = parseFloat(tv);
+                    var kattiLive = weightStockItems
+                        .filter(function(s){ return Math.abs(parseFloat(s.touch||0)-tv)<0.01; })
+                        .reduce(function(s,r){ return s+parseFloat(r.gr_wt||0); }, 0);
+                    var totalOut  = outMap[tv] || 0;
+                    var opn       = opnMap[tv] || 0;
+                    // remaining from opening = opening - (outward that exceeded katti)
+                    var openingRemain = Math.max(0, opn - Math.max(0, totalOut - kattiLive));
+                    if(openingRemain > 0) window._touchOpeningMap[tv] = openingRemain;
+                });
+            } catch(e){ console.warn('[STOCK] opening map error', e); }
+
+            var b = document.getElementById('stock-count-badge');
+            if(b) b.innerText = weightStockItems.length > 0 ? '('+weightStockItems.length+' in stock)' : '';
+        }
+    } catch(e){ console.error('[STOCK]', e); }
+}
+
+function onITCodeInput(val){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var dd=document.getElementById('it-dropdown');
+    if(isUchak||!val.trim()){dd.classList.remove('open');return;}
+    if(_isTouchCode(val)){dd.classList.remove('open');calcFine();return;}
+    itDropdownHighlight=-1;
+    var q=val.trim().toUpperCase();
+    var filtered=weightStockItems.filter(function(s){return s.it_code.toUpperCase().includes(q)||(s.it_name||'').toUpperCase().includes(q)||String(s.touch||'').includes(q);});
+    if(!filtered.length){dd.innerHTML='<div class="it-no-results">No stock found for "'+val+'"</div>';}
+    else{dd.innerHTML=filtered.map(function(s,i){return'<div class="it-option" data-index="'+i+'" onmousedown="selectStockItem('+i+','+JSON.stringify(filtered).replace(/"/g,'&quot;')+')">'+'<div class="it-option-row"><span class="it-option-code">'+s.it_code+'</span><span class="it-option-touch">T: '+(s.touch||'--')+'%</span></div>'+'<div class="it-option-name">'+(s.it_name||'')+'</div>'+'<div class="it-option-stock">'+parseFloat(s.gr_wt||0).toFixed(3)+'g available</div></div>';}).join('');}
+    dd.classList.add('open');
+}
+
+async function selectStockItem(idx,arr){
+    if(itCloseTimer)clearTimeout(itCloseTimer);
+    var s=arr&&arr[idx]?arr[idx]:weightStockItems.find(function(x){return x.it_code.toUpperCase()===document.getElementById('it-code').value.trim().toUpperCase();});
+    if(!s)return;
+    document.getElementById('it-code').value=s.it_code;
+    await fetchAndFillWastage(s.touch);
+    document.getElementById('it-dropdown').classList.remove('open');
+    itDropdownHighlight=-1;
+    document.getElementById('it-weight').focus();
+}
+
+async function fetchAndFillWastage(touchVal){
+    var wastEl=document.getElementById('it-wastage');
+    if(!touchVal){wastEl.value='';return;}
+    if(!window.pywebview||!window.pywebview.api){wastEl.value='';return;}
+    try{
+        var groups=await window.pywebview.api.get_touch_groups();
+        var tv=parseFloat(touchVal)||0;
+        var match=groups.find(function(g){var gv=parseFloat(g.value||0);return gv===tv||Math.abs(gv-tv)<0.01||(g.value||'').toString().trim()===touchVal.toString().trim();});
+        if(match){wastEl.value=parseFloat(match.wastage)||0;wastEl.style.borderColor='#15803d';wastEl.style.boxShadow='0 0 0 3px rgba(21,128,61,0.12)';setTimeout(function(){wastEl.style.borderColor='';wastEl.style.boxShadow='';},700);}
+        else{wastEl.value='';}
+        calcFine();
+    }catch(e){wastEl.value='';}
+}
+
+function scheduleCloseITDropdown(){itCloseTimer=setTimeout(function(){document.getElementById('it-dropdown').classList.remove('open');itDropdownHighlight=-1;},220);}
+
+function onITCodeKeydown(e){
+    var dd=document.getElementById('it-dropdown');if(!dd.classList.contains('open'))return;
+    var opts=dd.querySelectorAll('.it-option');
+    if(e.key==='ArrowDown'){e.preventDefault();itDropdownHighlight=Math.min(itDropdownHighlight+1,opts.length-1);highlightITOption(opts);}
+    else if(e.key==='ArrowUp'){e.preventDefault();itDropdownHighlight=Math.max(itDropdownHighlight-1,0);highlightITOption(opts);}
+    else if(e.key==='Enter'){if(itDropdownHighlight>=0&&opts[itDropdownHighlight]){e.preventDefault();opts[itDropdownHighlight].onmousedown();}else{dd.classList.remove('open');}}
+    else if(e.key==='Escape'){dd.classList.remove('open');}
+}
+
+function highlightITOption(opts){opts.forEach(function(o,i){o.classList.toggle('highlighted',i===itDropdownHighlight);if(i===itDropdownHighlight)o.scrollIntoView({block:'nearest'});});}
+
+function toggleUchakMode(){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    currentItems=[];document.getElementById('it-dropdown').classList.remove('open');
+    ['disc-touch-val','disc-touch-fine','disc-fine-val','disc-net-fine'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    if(isUchak){
+        localStorage.setItem('aurum_active_billing_mode','uchak');
+
+        document.getElementById('uchak-toggle-label').innerText='UCHAK BILL';document.getElementById('uchak-toggle-label').style.color='var(--accent)';
+        document.getElementById('gold-rate-input-field-block').style.display='none';
+        document.getElementById('summary-total-left-label').innerText='Total Bill Amount';
+        document.getElementById('summary-remaining-fine-title-label').innerText='Remaining Amount';
+        ['step1-overall-touch-block','step1-overall-wastage-block','step1-tag-block'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
+        document.getElementById('table-dynamic-header-mount').innerHTML='<tr><th style="width:70px;text-align:center;">#</th><th>IT Code</th><th>Rate</th><th>Pcs</th><th style="text-align:right">Amount</th><th style="width:70px;text-align:center;">Del</th></tr>';
+        document.getElementById('table-dynamic-footer-mount').innerHTML='<tr><td colspan="3">TOTAL UCHAK</td><td id="total-pcs-cell">0</td><td id="total-amt-cell" style="text-align:right;color:var(--accent);">Rs. 0.00</td><td></td></tr>';
+        document.getElementById('entry-fld-1-label').innerHTML='IT Code';
+        document.getElementById('it-code').placeholder='Description/Code';
+        document.getElementById('entry-fld-2-label-text').innerText='Rate';
+        document.getElementById('it-weight').placeholder='0.00';
+        document.getElementById('entry-fld-3-label').innerText='Pcs';
+        document.getElementById('it-wastage').placeholder='0';
+        document.getElementById('entry-fld-4-label').innerText='Amount';
+    }else{
+        localStorage.setItem('aurum_active_billing_mode','weight');
+
+        document.getElementById('uchak-toggle-label').innerText='WEIGHT BILL';document.getElementById('uchak-toggle-label').style.color='var(--text-muted)';
+        document.getElementById('gold-rate-input-field-block').style.display='block';
+        document.getElementById('summary-total-left-label').innerText='Total Gross Fine';
+        document.getElementById('summary-remaining-fine-title-label').innerText='Remaining Fine';
+        ['step1-overall-touch-block','step1-overall-wastage-block','step1-tag-block'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='block';});
+        document.getElementById('table-dynamic-header-mount').innerHTML='<tr><th>NO</th><th>IT Code / Touch</th><th>Weight</th><th style="color:var(--accent);">Para</th><th style="color:var(--error);">Less</th><th>Touch%</th><th>Fine</th><th style="text-align:right">Del</th></tr>';
+        document.getElementById('table-dynamic-footer-mount').innerHTML='<tr><td colspan="2">TOTAL LEDGER</td><td id="total-wt-cell">0.000</td><td id="total-para-cell" style="color:var(--accent);">0.000</td><td id="total-less-cell" style="color:var(--error);">0.000</td><td>-</td><td id="total-fine-cell">0.000</td><td></td></tr>';
+        document.getElementById('entry-fld-1-label').innerHTML='IT Code / Touch <span id="stock-count-badge" style="color:var(--success);font-size:0.58rem;">'+(weightStockItems.length>0?'('+weightStockItems.length+' in stock)':'')+'</span>';
+        document.getElementById('it-code').placeholder='Type IT code or touch (e.g. 68)';
+        document.getElementById('entry-fld-2-label-text').innerText='Weight';
+        document.getElementById('it-weight').placeholder='0.000';
+        document.getElementById('entry-fld-3-label').innerText='Wastage';
+        document.getElementById('it-wastage').placeholder='0.000';
+        document.getElementById('entry-fld-4-label').innerText='Fine';
+    }
+    syncLiveVoucher();renderTable();
+}
+
+async function toggleCreditMode(){
+    var isCredit=document.getElementById('credit-toggle').checked;
+    if(isCredit){
+        document.getElementById('credit-info-bar').style.display='flex';
+        if(window.pywebview&&window.pywebview.api)registeredClients=await window.pywebview.api.get_client_list();
+        document.getElementById('cust-name').placeholder='Search Registered Client...';
+    }else{
+        document.getElementById('credit-info-bar').style.display='none';
+        document.getElementById('cust-name').placeholder='Search or Type';
+        document.getElementById('live-metal-bal').innerText='0.000 g';document.getElementById('live-cash-bal').innerText='Rs. 0.00';
+        currentClientLimits={metal:0,cash:0};closeDropdown();calcFinalSettlement();
+    }
+}
+
+document.getElementById('cust-name').addEventListener('input',function(){
+    if(!document.getElementById('credit-toggle').checked)return;
+    var val=this.value.toLowerCase();var dd=document.getElementById('custom-dropdown');
+    var filtered=registeredClients.filter(function(c){return c.name.toLowerCase().includes(val);});
+    if(filtered.length>0&&val){dd.innerHTML=filtered.map(function(c){return'<div class="dropdown-item" onclick="selectClient(\''+c.name+'\')">'+c.name+'</div>';}).join('');dd.style.display='block';selectedIndex=-1;}
+    else{dd.style.display='none';}
+});
+
+async function selectClient(name){
+    document.getElementById('cust-name').value=name;closeDropdown();
+    if(window.pywebview&&window.pywebview.api){
+        var res=await window.pywebview.api.get_client_live_outstanding(name);
+        if(res&&res.status==='success'){
+            var mBal=parseFloat(res.metal_outstanding||0),cBal=parseFloat(res.cash_outstanding||0);
+            document.getElementById('live-metal-bal').innerText=mBal.toFixed(3)+' g';
+            document.getElementById('live-cash-bal').innerText='Rs. '+cBal.toLocaleString('en-IN',{minimumFractionDigits:2});
+            document.getElementById('live-metal-bal').style.color=mBal>0?'#ef4444':(mBal<0?'#10b981':'#f59e0b');
+            document.getElementById('live-cash-bal').style.color=cBal>0?'#ef4444':(cBal<0?'#10b981':'#b59410');
+        }
+        var meta=registeredClients.find(function(c){return c.name===name;});
+        if(meta){currentClientLimits.metal=parseFloat(meta.metal_limit);currentClientLimits.cash=parseFloat(meta.cash_limit);}
+        calcFinalSettlement();
+    }
+    document.getElementById('v-overall-touch').focus();
+}
+
+function closeDropdown(){document.getElementById('custom-dropdown').style.display='none';selectedIndex=-1;}
+
+function calcFine(){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var w=parseFloat(document.getElementById('it-weight').value)||(_scStable&&_scW?_scW:0);
+    var wast=parseFloat(document.getElementById('it-wastage').value)||0;
+    if(isUchak){document.getElementById('it-fine').value=(w*wast).toFixed(2);return;}
+    var code=document.getElementById('it-code').value.trim();
+    var t=0;
+    if(_isTouchCode(code)){t=parseFloat(code);}
+    else{var sm=weightStockItems.find(function(s){return s.it_code.toUpperCase()===code.toUpperCase();});var pm=allProducts.find(function(p){return p.code.toUpperCase()===code.toUpperCase();});t=sm?parseFloat(sm.touch||0):(pm?parseFloat(pm.touch||0):0);}
+    document.getElementById('it-fine').value=(w*(t+wast)/100).toFixed(3);
+}
+
+function calcSpecialFines(){
+    var w9=parseFloat(document.getElementById('settle-995-wt').value)||0,t9=parseFloat(document.getElementById('settle-995-touch').value)||0;
+    document.getElementById('settle-995-fine').value=(w9*t9/100).toFixed(3);
+    var wd=parseFloat(document.getElementById('settle-dhal-wt').value)||0,td=parseFloat(document.getElementById('settle-dhal-touch').value)||0;
+    document.getElementById('settle-dhal-fine').value=(wd*td/100).toFixed(3);
+    calcFinalSettlement();
+}
+
+function setDiscountType(type){
+    activeDiscountType=type;
+    var tTab=document.getElementById('disc-tab-touch');
+    var fTab=document.getElementById('disc-tab-fine');
+    var tBlk=document.getElementById('disc-touch-block');
+    var fBlk=document.getElementById('disc-fine-block');
+    var ON ='background:var(--primary);color:#fff;';
+    var OFF='background:var(--cream3);color:var(--text-muted);';
+    if(type==='touch'){
+        tTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+ON;
+        fTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+OFF;
+        tBlk.style.display='block'; fBlk.style.display='none';
+        var fv=document.getElementById('disc-fine-val');if(fv)fv.value='';
+        var nf=document.getElementById('disc-net-fine');if(nf)nf.value='';
+    }else{
+        fTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+ON;
+        tTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+OFF;
+        fBlk.style.display='block'; tBlk.style.display='none';
+        var tv=document.getElementById('disc-touch-val');if(tv)tv.value='';
+        var tf=document.getElementById('disc-touch-fine');if(tf)tf.value='';
+    }
+    calcFinalSettlement();
+}
+
+function getDiscountValues(totalFine,totalNetWt){
+    var fineSaved=0;
+    if(activeDiscountType==='touch'){
+        var touchDisc=parseFloat(document.getElementById('disc-touch-val').value)||0;
+        fineSaved=(totalNetWt>0&&touchDisc>0)?(totalNetWt*touchDisc)/100:0;
+        var tf=document.getElementById('disc-touch-fine');
+        if(tf) tf.value=fineSaved>0?fineSaved.toFixed(3):'';
+    }else{
+        var fineDisc=parseFloat(document.getElementById('disc-fine-val').value)||0;
+        fineSaved=fineDisc;
+        var netFine=Math.max(0,totalFine-fineSaved);
+        var nf=document.getElementById('disc-net-fine');
+        if(nf) nf.value=fineSaved>0?netFine.toFixed(3):'';
+    }
+    return{touchDisc:activeDiscountType==='touch'?(parseFloat(document.getElementById('disc-touch-val').value)||0):0,fineSaved:fineSaved,amountDisc:0};
+}
+
+function calcFinalSettlement(){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var tf=parseFloat(document.getElementById('sum-fine').innerText)||0;
+    var cv=parseFloat(document.getElementById('collect-fine').value)||0;
+    var f9=parseFloat(document.getElementById('settle-995-fine').value)||0;
+    var fd=parseFloat(document.getElementById('settle-dhal-fine').value)||0;
+    var r=parseFloat(document.getElementById('gold-rate-input').value)||0;
+    var totalNetWt=0;
+    if(!isUchak)currentItems.forEach(function(it){totalNetWt+=(parseFloat(it.weight||0)-parseFloat(it.para||0)-parseFloat(it.less||0));});
+    var disc=getDiscountValues(tf,totalNetWt);
+    var fine=0,cash=0;
+    if(isUchak){cash=tf-cv-f9-fd;fine=0;}
+    else{fine=tf-cv-f9-fd-disc.fineSaved;cash=(fine*r)/10;}
+    document.getElementById('rem-fine-val').innerText=isUchak?'0.000':fine.toFixed(3);
+    document.getElementById('total-amount').innerText=cash.toLocaleString('en-IN',{minimumFractionDigits:2});
+    var btn=document.getElementById('bill-btn');
+    if(document.getElementById('credit-toggle').checked&&currentClientLimits.metal>0){
+        var em=parseFloat(document.getElementById('live-metal-bal').innerText)||0;
+        var ec=parseFloat((document.getElementById('live-cash-bal').innerText||'').replace(/[Rs.,\s]/g,''))||0;
+        if(em+fine>currentClientLimits.metal||ec+cash>currentClientLimits.cash){btn.disabled=true;btn.innerText='LIMIT EXCEEDED';btn.style.background='var(--error)';}
+        else{btn.disabled=false;btn.innerText='Authorize & Record';btn.style.background='var(--primary)';}
+    }else{btn.disabled=false;btn.innerText='Authorize & Record';btn.style.background='var(--primary)';}
+}
+
+function enterItem(){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var code=document.getElementById('it-code').value.trim();
+    var weight=parseFloat(document.getElementById('it-weight').value)||0;
+    var wastage=parseFloat(document.getElementById('it-wastage').value)||0;
+    var fine=parseFloat(document.getElementById('it-fine').value)||0;
+    if(!code||weight<=0)return;
+
+    if(isUchak){
+        currentItems.push({name:code,it_code:code,rate:weight,pcs:parseInt(wastage)||1,amount:fine});
+    } else {
+        var touchVal=0;
+        var codeIsTouch=_isTouchCode(code);
+
+        if(codeIsTouch){
+            touchVal=parseFloat(code);
+
+            // ── Katti live stock (KATTI-% rows already reduced by previous sales) ──
+            var kattiAvail = weightStockItems
+                .filter(function(s){ return Math.abs(parseFloat(s.touch||0)-touchVal)<0.01; })
+                .reduce(function(s,r){ return s+parseFloat(r.gr_wt||0); },0);
+
+            // ── Opening stock remaining for this touch (loaded at page init) ──
+            var openingAvail = (window._touchOpeningMap && window._touchOpeningMap[touchVal]) || 0;
+
+            // ── Total available = katti live + opening remaining ──
+            var touchAvail = Math.round((kattiAvail + openingAvail) * 1000) / 1000;
+
+            // ── Already added to THIS bill for this touch ──
+            var touchUsed = currentItems
+                .filter(function(i){ return Math.abs(parseFloat(i.touch||0)-touchVal)<0.01 && !i.tag_id; })
+                .reduce(function(s,i){ return s+parseFloat(i.weight||0); },0);
+
+            var touchRemain = Math.round((touchAvail - touchUsed) * 1000) / 1000;
+
+            if(touchAvail <= 0){
+                showOutOfStockPopup(touchVal+'%');
+                document.getElementById('it-weight').focus();
+                document.getElementById('it-weight').select();
+                return;
+            }
+            if(weight > touchRemain + 0.001){
+                showOutOfStockPopup(touchVal+'%');
+                document.getElementById('it-weight').focus();
+                document.getElementById('it-weight').select();
+                return;
+            }
+        } else {
+            var sm=weightStockItems.find(function(s){return s.it_code.toUpperCase()===code.toUpperCase();});
+            var pm=allProducts.find(function(p){return p.code.toUpperCase()===code.toUpperCase();});
+            touchVal=sm?parseFloat(sm.touch||0):(pm?parseFloat(pm.touch||0):0);
+            if(sm){
+                var avail=parseFloat(sm.gr_wt||0);
+                var used=currentItems
+                    .filter(function(i){return(i.it_code||'').toUpperCase()===code.toUpperCase();})
+                    .reduce(function(s,i){return s+parseFloat(i.weight||0);},0);
+                if(weight>avail-used){
+                    showOutOfStockPopup(code);
+                    document.getElementById('it-weight').focus();
+                    document.getElementById('it-weight').select();
+                    return;
+                }
+            }
+        }
+
+        currentItems.push({
+            tag_id:'',
+            it_code:code,
+            code:code,
+            weight:weight,
+            para:0,
+            less:0,
+            pkg_wt:0,
+            touch:touchVal,
+            wastage:wastage,
+            fine:fine
+        });
+    }
+
+    renderTable();
+    ['it-code','it-weight','it-wastage','it-fine'].forEach(function(id){
+        document.getElementById(id).value='';
+    });
+    document.getElementById('it-dropdown').classList.remove('open');
+    document.getElementById('it-code').focus();
+}
+
+function renderTable(){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var tbody=document.getElementById('item-list');tbody.innerHTML='';
+    if(isUchak){
+        var tp=0,ta=0;
+        currentItems.forEach(function(item,i){tp+=item.pcs;ta+=item.amount;tbody.innerHTML+='<tr><td style="text-align:center;">'+(i+1)+'</td><td>'+item.name+'</td><td>Rs. '+item.rate.toFixed(2)+'</td><td>'+item.pcs+'</td><td style="text-align:right;color:var(--success);">Rs. '+item.amount.toFixed(2)+'</td><td style="text-align:center;"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';});
+        var tpc=document.getElementById('total-pcs-cell');if(tpc)tpc.innerText=tp;
+        var tac=document.getElementById('total-amt-cell');if(tac)tac.innerText='Rs. '+ta.toFixed(2);
+        document.getElementById('sum-fine').innerText=ta.toFixed(2);
+    }else{
+        var tw=0,tpp=0,tl=0,tf=0;
+        currentItems.forEach(function(item,i){
+            tw+=item.weight;tpp+=(item.para||0);tl+=(item.less||0);tf+=item.fine;
+            var dispCode=_isTouchCode(item.code)?'<span style="color:var(--accent);font-weight:700;">'+parseFloat(item.code)+'%</span>':item.code;
+            tbody.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+dispCode+'</td><td>'+item.weight.toFixed(3)+'</td><td>'+(item.para||0).toFixed(3)+'</td><td>'+(item.ls_wt||item.less||0).toFixed(3)+'</td><td>'+item.touch.toFixed(1)+'</td><td>'+item.fine.toFixed(3)+'</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';
+        });
+        var twc=document.getElementById('total-wt-cell');if(twc)twc.innerText=tw.toFixed(3);
+        var tpc2=document.getElementById('total-para-cell');if(tpc2)tpc2.innerText=tpp.toFixed(3);
+        var tlc=document.getElementById('total-less-cell');if(tlc)tlc.innerText=tl.toFixed(3);
+        var tfc=document.getElementById('total-fine-cell');if(tfc)tfc.innerText=tf.toFixed(3);
+        document.getElementById('sum-fine').innerText=tf.toFixed(3);
+    }
+    calcFinalSettlement();
+}
+
+function removeItem(i){currentItems.splice(i,1);renderTable();}
+
+async function handleTagScan(tagId){
+    if(document.getElementById('uchak-toggle').checked)return;
+    if(!window.pywebview||!window.pywebview.api)return;
+    try{
+        var item=await window.pywebview.api.get_product_by_tag(tagId);
+        if(item){
+            if(item.is_tagged===0||item.is_tagged===false){
+                showError('Tag '+tagId+' is not registered yet.','Tag Error');
+                return;
+            }
+
+            function parseExpr(val){
+                var s=String(val||'').replace(/\s/g,'');
+                if(s.indexOf('+')!==-1){
+                    var p=s.split('+');
+                    return (parseFloat(p[0])||0)+(parseFloat(p[1])||0);
+                }
+                return parseFloat(s)||0;
+            }
+
+            var ovTouch=document.getElementById('v-overall-touch').value.trim();
+            var ovWast =document.getElementById('v-overall-wastage').value.trim();
+
+            var dbW  = parseFloat(item.gr_wt||0);
+            var dbP  = parseFloat(item.para_stone_wt||0);
+            var dbL  = parseFloat(item.ls_wt||0);
+
+            var fT = ovTouch ? parseExpr(ovTouch) : parseFloat(item.touch  ||0);
+            var fW = ovWast  ? parseExpr(ovWast)  : parseFloat(item.wastage||0);
+
+            // Fine calculation mate combined use karo (76+5 = 81)
+            var combinedTouch = fT + fW;
+            var fine = parseFloat(((dbW - dbP - dbL) * (combinedTouch) / 100).toFixed(3));
+
+            currentItems.push({
+                tag_id  : item.tag_id   || '',
+                it_code : item.it_code  || '',
+                code    : item.it_code  || 'TAG',
+                weight  : dbW,
+                para    : dbP,
+                less    : dbL,
+                ls_wt   : dbL,
+                pkg_wt  : parseFloat(item.pkg_wt||0),
+                touch   : fT + fW,           // <--- FAKT ORIGINAL TOUCH SAVE KARO
+                wastage : 0,           // <--- FAKT WASTAGE SAVE KARO
+                fine    : fine          // <--- FINE CALCULATED CHE E J RAHESHE
+            });
+
+            renderTable();
+
+            document.getElementById('v-overall-touch').value='';
+            document.getElementById('v-overall-wastage').value='';
+        } else {
+            showError('ID '+tagId+' not found.','Tag Missing');
+        }
+    }catch(err){ console.error('handleTagScan error:',err); }
+}
+
+function handleBilling(){
+    if(!currentItems.length){showError('Add at least one item.','Empty Invoice');return;}
+    var rate=parseFloat(document.getElementById('gold-rate-input').value)||0;
+    var isCredit=document.getElementById('credit-toggle').checked;
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    if(!isCredit&&rate===0&&!isUchak){showError('Gold Rate required for Cash Bills.','Missing Rate');return;}
+    openPrintSelectorModal();
+}
+
+async function commitBillingTransactionPipeline(){
+
+    // ── STOCK AVAILABILITY CHECK ──────────────────────────────────────────
+    if(window.pywebview && window.pywebview.api && currentItems && currentItems.length>0){
+        try{
+            var checkPayload = currentItems.map(function(it){
+                return {
+                    tag_id:  String(it.tag_id  || ''),
+                    it_code: String(it.it_code || it.touch || ''),
+                    weight:  parseFloat(it.weight || it.gr_wt || 0)
+                };
+            });
+            var stockResult = await window.pywebview.api.check_weight_stock_available(
+                JSON.stringify(checkPayload)
+            );
+            if(stockResult && stockResult.status==='insufficient'){
+                var first=stockResult.items&&stockResult.items[0];
+                showOutOfStockPopup(first?'Touch '+first.touch+'%':'Item');
+                return;
+            }
+        }catch(e){ console.warn('[STOCK CHECK]',e); }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    closePrintSelectorModal();
+    var btn=document.getElementById('bill-btn');btn.disabled=true;btn.innerText='SYNCHRONIZING...';btn.style.opacity='0.7';
+    var rate=parseFloat(document.getElementById('gold-rate-input').value)||0;
+    var isCredit=document.getElementById('credit-toggle').checked;
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    var totalNetWt=0;
+    if(!isUchak)currentItems.forEach(function(it){totalNetWt+=(parseFloat(it.weight||0)-parseFloat(it.para||0)-parseFloat(it.less||0));});
+    var discData=getDiscountValues(parseFloat(document.getElementById('sum-fine').innerText)||0,totalNetWt);
+    var data={vch_id:document.getElementById('v-id').value,customer:document.getElementById('cust-name').value||'Walking Customer',status:isCredit?'CREDIT':'PAID',is_credit:isCredit,is_uchak:isUchak,totalLedgerFine:isUchak?0:parseFloat(document.getElementById('sum-fine').innerText),remainingFine:isUchak?0:parseFloat(document.getElementById('rem-fine-val').innerText),collectedFine:isUchak?0:(parseFloat(document.getElementById('collect-fine').value)||0),fine995:parseFloat(document.getElementById('settle-995-fine').value)||0,fineDhal:parseFloat(document.getElementById('settle-dhal-fine').value)||0,goldRate:isUchak?0:rate,totalAmount:parseFloat(document.getElementById('total-amount').innerText.replace(/,/g,'')),discountType:activeDiscountType,discountTouch:discData.touchDisc,discountFine:discData.fineSaved,items:currentItems};
+    try{
+        if(window.pywebview&&window.pywebview.api){
+            var res=await window.pywebview.api.generate_bill(data);
+            if(res.status==='success'){
+                if(window.pywebview.api.trigger_print_window)await window.pywebview.api.trigger_print_window(data.vch_id,printCopiesConfigTarget);
+                try{localStorage.setItem('aurum_stock_dirty','1');}catch(e){}
+                if(isUchak)latestUchakVch=await window.pywebview.api.get_next_uchak_vch_id();
+                else latestSalesVch=await window.pywebview.api.get_sales_vch_id();
+                setTimeout(function(){window.location.reload();},600);
+            }else{showError(res.message||'Database rejected the entry.','Failed');}
+        }else{showError('System Bridge not found.','Error');}
+    }catch(err){showError('A critical error occurred.','System Crash');}
+    finally{btn.disabled=false;btn.style.opacity='1';calcFinalSettlement();}
+}
+
+function startVchSync(){var check=setInterval(async function(){if(window.pywebview&&window.pywebview.api){await syncLiveVoucher();clearInterval(check);}},100);}
+
+async function syncLiveVoucher(){
+    var now=new Date();
+    document.getElementById('v-date').value=now.toLocaleDateString('en-GB');
+    document.getElementById('v-time').value=now.toLocaleTimeString();
+    var savedRate=localStorage.getItem('aurum_gold_rate');
+    if(savedRate&&parseFloat(savedRate)>0)document.getElementById('gold-rate-input').value=savedRate;
+    var isUchak=document.getElementById('uchak-toggle').checked;
+    if(window.pywebview&&window.pywebview.api){
+        try{if(isUchak){latestUchakVch=await window.pywebview.api.get_next_uchak_vch_id()||'UCHK-001';document.getElementById('v-id').value=latestUchakVch;}else{latestSalesVch=await window.pywebview.api.get_sales_vch_id()||'VCH-001';document.getElementById('v-id').value=latestSalesVch;}}catch(e){document.getElementById('v-id').value=isUchak?latestUchakVch:latestSalesVch;}
+    }
+    calcFinalSettlement();
+}
+
+window.onload=function(){
+    var role=localStorage.getItem('aurum_user_role')||'admin';
+    var userName=localStorage.getItem('aurum_active_user')||'Admin';
+    var mode=localStorage.getItem('aurum_active_billing_mode')||'weight';
+    document.getElementById('uchak-toggle').checked=(mode==='uchak');
+    document.getElementById('header-title-display').innerHTML=role==='staff'?'Wholesale <em>Terminal</em>':'Create <em>Invoice</em>';
+    var vInput=document.getElementById('v-id');
+    vInput.readOnly=false;vInput.removeAttribute('tabIndex');vInput.placeholder='VCH-001 (editable)';
+    document.getElementById('session-avatar-badge').innerText=userName.substring(0,2).toUpperCase();
+    initSidebar('billing');
+    scalePanelLoadPorts();
+    (function(){
+        var _a=0;
+        function _try(){_a++;if(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_weight_stock_it_codes==='function'){loadWeightStockCodes().then(function(){toggleUchakMode();});}else if(_a<300){setTimeout(_try,50);}else{toggleUchakMode();}}
+        _try();
+    })();
+    startVchSync();
+    setInterval(function(){document.getElementById('real-time-clock').innerText=new Date().toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');},1000);
+};
+</script>
+</body>
+</html>

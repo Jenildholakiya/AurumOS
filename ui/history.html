@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Bill <em style="color:#8a6c0a;font-style:italic;">History</em></title>
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="sidebar.css">
+    <style>
+        :root {
+            --primary:#0e0c09; --accent:#a87d1e; --accent2:#c9a227;
+            --bg-main:#faf8f3; --cream2:#f2efe7; --cream3:#e8e3d8;
+            --card:#ffffff; --border:rgba(14,12,9,0.09); --border2:rgba(14,12,9,0.05);
+            --text-main:#0e0c09; --text-muted:#7a7268; --text-muted2:#9e9890;
+            --gold-bg:rgba(168,125,30,0.07); --gold-ln:rgba(168,125,30,0.2);
+            --success:#15803d; --error:#b91c1c;
+            --shadow-sm:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+            --shadow-md:0 4px 16px rgba(14,12,9,0.08);
+            --serif:'DM Serif Display',Georgia,serif;
+            --mono:'DM Mono',monospace;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'DM Sans',system-ui,sans-serif; }
+        body { display:block; height:100vh; width:100vw; background:var(--bg-main); color:var(--text-main); overflow:hidden; }
+        main { width:100%; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+        header { height:58px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; flex-shrink:0; position:relative; }
+        header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%); }
+        .header-biz h1 { font-family:var(--serif); font-size:1rem; font-weight:400; color:var(--primary); letter-spacing:-0.2px; }
+        #real-time-clock { font-family:var(--mono); font-size:0.63rem; color:var(--text-muted2); background:var(--cream2); padding:5px 11px; border-radius:4px; border:1px solid var(--border); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        input[type=number] { -moz-appearance:textfield; }
+        .content { padding:16px 22px; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; scrollbar-width:thin; scrollbar-color:var(--cream3) transparent; }
+        .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; flex-shrink:0; }
+        .stat-card { background:#fff; padding:14px 18px; border-radius:8px; border:1px solid var(--border); box-shadow:var(--shadow-sm); transition:all 0.18s; position:relative; overflow:hidden; }
+        .stat-card:hover { transform:translateY(-1px); box-shadow:var(--shadow-md); border-color:var(--gold-ln); }
+        .stat-card label { font-size:0.55rem; font-weight:600; color:var(--text-muted2); text-transform:uppercase; letter-spacing:0.8px; }
+        .stat-card span { font-family:var(--serif); font-size:1.35rem; font-weight:400; color:var(--primary); display:block; margin-top:5px; letter-spacing:-0.4px; }
+        .filter-toolbar { display:flex; align-items:center; gap:12px; background:#fff; padding:10px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:14px; box-shadow:var(--shadow-sm); flex-shrink:0; height:52px; }
+        .filter-group { display:flex; align-items:center; gap:10px; }
+        .filter-label { font-size:0.56rem; font-weight:600; color:var(--text-muted2); text-transform:uppercase; letter-spacing:0.8px; }
+        .premium-select, .date-picker { height:32px; padding:0 10px; font-size:0.76rem; font-weight:500; color:var(--primary); background:var(--cream2); border:1px solid var(--border); border-radius:6px; outline:none; cursor:pointer; transition:all 0.14s; font-family:inherit; }
+        .premium-select:focus, .date-picker:focus { border-color:var(--accent2); background:#fff; box-shadow:0 0 0 3px rgba(201,162,39,0.1); }
+        .custom-date-container { display:flex; align-items:center; gap:8px; display:none; }
+        .search-wrapper { background:var(--cream2); border-radius:6px; border:1px solid var(--border); padding:0 10px; display:flex; align-items:center; gap:7px; height:32px; width:180px; min-width:180px; transition:all 0.25s; margin-left:auto; }
+        .search-wrapper:focus-within { border-color:var(--accent2); background:#fff; width:260px; box-shadow:0 0 0 3px rgba(201,162,39,0.1); }
+        .search-wrapper input { border:none; outline:none; width:100%; font-size:0.76rem; color:var(--primary); background:transparent; font-family:inherit; }
+        .history-container { background:#fff; border-radius:8px; border:1px solid var(--border); overflow:hidden; box-shadow:var(--shadow-sm); flex-grow:1; display:flex; flex-direction:column; }
+        .table-scroll { overflow-y:auto; flex-grow:1; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; background:var(--cream2); padding:9px 14px; font-size:0.54rem; font-weight:600; color:var(--text-muted2); text-transform:uppercase; border-bottom:1px solid var(--border); letter-spacing:0.7px; cursor:pointer; transition:all 0.14s; user-select:none; position:sticky; top:0; z-index:10; }
+        th:hover { background:var(--cream3); color:var(--primary); }
+        th .sort-icon { font-size:0.75rem; margin-left:4px; opacity:0.6; }
+        th.active-sort { color:var(--accent); border-bottom:2px solid var(--accent2); }
+        td { padding:9px 14px; font-size:0.78rem; font-weight:500; border-bottom:1px solid var(--border2); color:var(--text-main); }
+        tr:hover td { background:rgba(168,125,30,0.025); }
+        .vch-badge { background:var(--gold-bg); color:#8a6c0a; padding:3px 8px; border-radius:4px; font-family:var(--mono); font-size:0.7rem; font-weight:500; border:1px solid var(--gold-ln); }
+        .badge { padding:2px 8px; border-radius:4px; font-size:0.58rem; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; display:inline-block; }
+        .badge-credit { background:rgba(180,83,9,0.07); color:#b45309; border:1px solid rgba(180,83,9,0.2); }
+        .badge-cash { background:rgba(21,128,61,0.07); color:#15803d; border:1px solid rgba(21,128,61,0.2); }
+        .btn-group { display:flex; gap:6px; justify-content:flex-end; }
+        .action-btn { width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--cream2); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.14s; color:var(--text-muted2); font-size:0.85rem; }
+        .action-btn:hover { border-color:var(--gold-ln); color:var(--accent); background:var(--gold-bg); }
+
+        /* ── MODAL BASE ── */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,12,9,0.45); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; opacity:0; transition:all 0.25s; }
+        .modal-overlay.active { display:flex; opacity:1; }
+        .modal-content { background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(14,12,9,0.12); position:relative; border:1px solid var(--border); }
+        .close-btn { position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:5px; background:var(--cream2); border:1px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem; color:var(--text-muted); transition:all 0.14s; z-index:1001; }
+        .close-btn:hover { background:rgba(185,28,28,0.08); color:var(--error); border-color:rgba(185,28,28,0.2); }
+
+        /* ── VIEW RECEIPT MODAL — REDESIGNED ── */
+        #view-modal .modal-content {
+            width: 560px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Receipt top header strip */
+        .receipt-top-strip {
+            background: var(--primary);
+            padding: 20px 28px 18px;
+            text-align: center;
+            position: relative;
+        }
+        .receipt-brand-tag {
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .receipt-vch-num {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -1px;
+            font-family: var(--mono);
+        }
+
+        /* Type badge inside header */
+        .receipt-type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .receipt-type-pill.uchak { background: rgba(181,148,16,0.2); color: var(--accent); border: 1px solid rgba(181,148,16,0.3); }
+        .receipt-type-pill.udhar { background: rgba(225,29,72,0.15); color: #fca5a5; border: 1px solid rgba(225,29,72,0.25); }
+        .receipt-type-pill.paid  { background: rgba(5,150,105,0.15); color: #6ee7b7; border: 1px solid rgba(5,150,105,0.25); }
+
+        /* Receipt body */
+        .receipt-body { padding: 24px 35px 30px; }
+
+        /* Info row — DATE + ACCOUNT properly labeled */
+        .receipt-info-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .receipt-info-cell {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        .receipt-info-cell .cell-label {
+            font-size: 0.58rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .receipt-info-cell .cell-value {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: block;
+        }
+
+        /* Items table */
+        .receipt-items-title {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: block;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .receipt-items-table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+        .receipt-items-table th { padding:8px 10px; text-align:left; font-size:0.58rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; border-bottom:1.5px solid #f1f5f9; }
+        .receipt-items-table th:not(:first-child) { text-align:right; }
+        .receipt-items-table td { padding:12px 10px; font-size:0.88rem; font-weight:700; border-bottom:1px solid #f8fafc; color:var(--primary); }
+        .receipt-items-table td:not(:first-child) { text-align:right; font-family:var(--mono); }
+        .receipt-items-table tr:last-child td { border-bottom:none; }
+        .receipt-items-table tr:hover td { background:#fafbfc; }
+        .item-code-badge { background:#f1f5f9; border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:0.8rem; font-family:var(--mono); font-weight:700; color:#7c3aed; }
+
+        /* Settlement card */
+        .settlement-dark {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 18px;
+            padding: 22px 24px;
+            color: white;
+        }
+        .settle-line { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .settle-line:last-child { margin-bottom:0; }
+        .settle-line .s-label { font-size:0.62rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:1px; }
+        .settle-line .s-val { font-size:1rem; font-weight:800; color:#ffffff; font-family:var(--mono); }
+        .settle-line .s-val.green { color:#34d399; }
+        .settle-divider { height:1px; background:rgba(255,255,255,0.08); margin:14px 0; }
+        .settle-total-row { display:flex; justify-content:space-between; align-items:center; padding-top:14px; border-top:1px solid rgba(255,255,255,0.1); }
+        .settle-total-row .t-label { font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; }
+        .settle-total-row .t-val { font-size:2rem; font-weight:900; color:var(--accent); font-family:var(--mono); letter-spacing:-1px; }
+
+        /* UDHAR footer */
+        .udhar-footer { text-align:center; color:var(--accent); font-weight:800; font-size:1rem; margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.1); letter-spacing:1px; text-transform:uppercase; }
+
+        /* ── EDIT MODAL ── */
+        #edit-modal .modal-content { width:1050px; padding:0; max-height:85vh; border-radius:28px; }
+        .edit-modal-header { padding:25px 40px; border-bottom:1px solid var(--border); background:#fafbfc; }
+        .edit-grid { display:grid; grid-template-columns:1.35fr 1fr; gap:0; height:100%; flex:1; overflow:hidden; }
+        .edit-left-col { padding:30px 40px; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); background:#fff; }
+        .edit-right-col { padding:30px 40px; background:#f8fafc; display:flex; flex-direction:column; justify-content:space-between; overflow-y:auto; }
+        .edit-section-head { font-size:0.7rem; font-weight:800; color:var(--accent); text-transform:uppercase; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:20px; display:block; letter-spacing:1px; }
+        .edit-input-group { margin-bottom:18px; }
+        .edit-input-group label { font-size:0.65rem; font-weight:800; color:var(--text-muted); margin-bottom:8px; display:block; text-transform:uppercase; }
+        .edit-input-group input { width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px; font-weight:700; outline:none; font-size:0.95rem; background:#fff; color:var(--primary); }
+        .edit-table-container { flex:1; overflow-y:auto; border:1.5px solid var(--border); border-radius:16px; background:#fff; margin-bottom:20px; min-height:180px; }
+        .edit-table { width:100%; border-collapse:collapse; }
+        .edit-table th { position:sticky; top:0; background:#fafbfc; padding:12px; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; border-bottom:1px solid var(--border); z-index:5; }
+        .edit-table td { padding:14px; border-bottom:1px solid #f1f5f9; text-align:center; }
+        .edit-table input { border:none; background:#f8fafc; width:100%; padding:10px; text-align:center; border-radius:8px; font-weight:700; font-size:0.95rem; outline:none; border:1px solid transparent; transition:all 0.2s; }
+        .edit-table input:focus { background:#fff; border-color:var(--accent); }
+        .btn-add-entry { background:var(--primary); color:#fff; border:none; padding:12px 20px; border-radius:12px; font-weight:800; cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; text-transform:uppercase; font-size:0.8rem; }
+        .btn-add-entry:hover { background:#1e293b; }
+        .financial-summary-card { background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); color:white; border-radius:24px; padding:28px 24px; margin-top:auto; border:1px solid rgba(255,255,255,0.08); box-shadow:0 20px 40px -10px rgba(15,23,42,0.3); }
+        .financial-summary-card .summary-row { display:flex; justify-content:space-between; align-items:center; }
+        .financial-summary-card label { font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1.5px; }
+        .financial-summary-card .val.big { font-size:2.2rem; color:var(--accent); font-weight:900; font-family:var(--mono); letter-spacing:-1px; }
+        .btn-update-terminal { width:100%; padding:16px; background:var(--accent); color:white; border:none; border-radius:14px; font-weight:800; font-size:0.98rem; cursor:pointer; transition:all 0.3s; text-transform:uppercase; letter-spacing:1.5px; margin-top:20px; }
+        .btn-update-terminal:hover { filter:brightness(1.1); transform:translateY(-2px); }
+
+        #pagination { display:flex; gap:6px; justify-content:center; padding:15px 0; background:#fafbfc; border-top:1px solid var(--border); flex-shrink:0; }
+    /* ══ DELETE CONFIRMATION MODAL ══ */
+        #delete-modal {
+            position:fixed;inset:0;
+            background:rgba(15,23,42,0.55);
+            backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+            display:flex;align-items:center;justify-content:center;
+            z-index:9000;opacity:0;pointer-events:none;
+            transition:opacity 0.2s ease;
+        }
+        #delete-modal.active { opacity:1;pointer-events:all; }
+        .del-card {
+            background:#fff;border-radius:20px;padding:36px;
+            width:420px;max-width:90vw;
+            box-shadow:0 32px 64px rgba(15,23,42,0.18),0 0 0 1px rgba(15,23,42,0.05);
+            transform:translateY(16px) scale(0.97);
+            transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            position:relative;overflow:hidden;
+        }
+        #delete-modal.active .del-card { transform:translateY(0) scale(1); }
+        .del-card::before {
+            content:'';position:absolute;top:0;left:0;right:0;height:3px;
+            background:linear-gradient(90deg,#ef4444,#f87171,#ef4444);
+            background-size:200%;animation:delShimmer 2s linear infinite;
+        }
+        @keyframes delShimmer{0%{background-position:0%}100%{background-position:200%}}
+        .del-icon-wrap {
+            width:64px;height:64px;border-radius:18px;
+            background:#fef2f2;border:2px solid rgba(239,68,68,0.15);
+            display:flex;align-items:center;justify-content:center;
+            margin:0 0 20px;position:relative;
+        }
+        .del-icon-wrap::after {
+            content:'';position:absolute;inset:-6px;border-radius:22px;
+            border:2px solid rgba(239,68,68,0.08);
+            animation:delPulse 2s ease-in-out infinite;
+        }
+        @keyframes delPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:0.5}}
+        .del-icon{font-size:1.8rem;}
+        .del-title{font-size:1.15rem;font-weight:800;color:#0f172a;letter-spacing:-0.3px;margin-bottom:8px;}
+        .del-subtitle{font-size:0.82rem;font-weight:500;color:#64748b;line-height:1.5;margin-bottom:6px;}
+        .del-vch-pill {
+            display:inline-flex;align-items:center;gap:6px;
+            background:#fef2f2;border:1px solid rgba(239,68,68,0.2);
+            color:#dc2626;font-size:0.78rem;font-weight:800;
+            padding:5px 12px;border-radius:8px;margin:8px 0 20px;
+            font-family:var(--mono);letter-spacing:0.5px;
+        }
+        .del-warning-box {
+            background:#fffbeb;border:1px solid rgba(245,158,11,0.25);
+            border-radius:10px;padding:12px 14px;margin-bottom:24px;
+            display:flex;gap:10px;align-items:flex-start;
+        }
+        .del-warning-text{font-size:0.75rem;font-weight:600;color:#92400e;line-height:1.5;}
+        .del-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .del-btn-cancel {
+            padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;
+            background:#fff;font-weight:700;font-size:0.82rem;color:#64748b;
+            cursor:pointer;transition:all 0.18s;
+        }
+        .del-btn-cancel:hover{background:#f8fafc;border-color:#cbd5e1;color:#475569;}
+        .del-btn-confirm {
+            padding:12px;border:none;border-radius:10px;
+            background:linear-gradient(135deg,#ef4444,#dc2626);
+            font-weight:800;font-size:0.82rem;color:#fff;cursor:pointer;
+            transition:all 0.18s;box-shadow:0 4px 12px rgba(239,68,68,0.35);
+        }
+        .del-btn-confirm:hover{background:linear-gradient(135deg,#dc2626,#b91c1c);transform:translateY(-1px);}
+    </style>
+<style id="aurum-layout-fix">
+body { display: flex !important; height: 100vh !important; overflow: hidden !important; width: 100vw !important; }
+#sidebar-container { flex-shrink: 0 !important; width: 252px !important; }
+body > main { flex: 1 !important; min-width: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+body.sidebar-collapsed #sidebar-container { width: 66px !important; }
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"><div style="width:100%;height:100%;display:flex;flex-direction:column;background:#fff;border-right:1px solid rgba(14,12,9,0.09);overflow:hidden;"><div id="sb-admin" style="display:none;width:100%;height:100%;flex-direction:column;"><div class="sb-logo">  <div class="sb-logo-mark"><span>Au</span></div>  <div class="sb-logo-text">    <div class="sb-logo-name">Aurum<em>OS</em></div>    <div class="sb-logo-sub">Jewelry ERP</div>  </div></div><div class="sb-version"><span class="sb-ver-label">Version</span><span class="sb-ver-pill" id="sb-ver-pill">v1.0</span></div><div class="sb-owner" style="position:relative;">  <div id="sb-logout-pop" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:#0e0c09;border-radius:8px;padding:6px;box-shadow:0 8px 24px rgba(14,12,9,0.25);z-index:999;border:1px solid rgba(201,162,39,0.15);">    <div style="padding:6px 10px 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;"><div id="sb-pop-name" style="font-size:0.72rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Director</div><div style="font-size:0.57rem;color:rgba(255,255,255,0.35);margin-top:1px;">System Owner</div></div>    <button onclick="sbLogout()" style="width:100%;padding:8px 10px;background:transparent;border:none;border-radius:5px;font-family:inherit;font-size:0.73rem;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;color:rgba(255,100,100,0.85);text-align:left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>  </div>  <div id="sb-owner-row" onclick="sbToggleLogout()" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all 0.13s;border:1px solid transparent;">    <div class="sb-owner-avatar" id="sb-owner-avatar">OS</div>    <div class="sb-owner-info"><div class="sb-owner-name" id="sb-owner-name">Director</div><div class="sb-owner-role">System Owner</div></div>    <svg id="sb-owner-chev" style="flex-shrink:0;color:#b0aa9e;transition:transform 0.2s;margin-left:auto;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>  </div></div><nav class="sb-nav"><div class="sb-section-label">Main</div><div class="sb-item " data-tip="Dashboard" onclick="sideNavigate('dashboard.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><span class="sb-label">Dashboard</span></div><div class="sb-item " data-tip="Inventory" onclick="sideNavigate('inventory.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><span class="sb-label">Inventory</span></div><div class="sb-item " data-tip="Create Bill" onclick="sideNavigate('billing.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div><span class="sb-label">Create Bill</span></div><div class="sb-item active" data-tip="History" onclick="sideNavigate('history.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="sb-label">History</span></div><div class="sb-divider"></div><div class="sb-section-label">Finance</div><div class="sb-item " data-tip="Accounts" onclick="sideNavigate('accounts.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><span class="sb-label">Accounts</span></div><div class="sb-item " data-tip="Ledger" onclick="sideNavigate('ledger.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><span class="sb-label">Ledger</span></div><div class="sb-item " data-tip="Staff" onclick="sideNavigate('staff.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="sb-label">Staff</span></div></nav><div class="sb-footer"><button class="sb-collapse-btn" onclick="toggleSidebar()"><span class="sb-collapse-icon">&#8592;</span><span class="sb-collapse-text">Collapse</span></button></div></div><div id="sb-staff" style="display:none;width:100%;height:100%;flex-direction:column;"><div class="sb-logo">  <div class="sb-logo-mark"><span>Au</span></div>  <div class="sb-logo-text">    <div class="sb-logo-name">Aurum<em>OS</em></div>    <div class="sb-logo-sub">Jewelry ERP</div>  </div></div><div class="sb-version"><span class="sb-ver-label">Version</span><span class="sb-ver-pill" id="sb-ver-pill">v1.0</span></div><div class="sb-owner" style="position:relative;">  <div id="sb-logout-pop" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:#0e0c09;border-radius:8px;padding:6px;box-shadow:0 8px 24px rgba(14,12,9,0.25);z-index:999;border:1px solid rgba(201,162,39,0.15);">    <div style="padding:6px 10px 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;"><div id="sb-pop-name" style="font-size:0.72rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Director</div><div style="font-size:0.57rem;color:rgba(255,255,255,0.35);margin-top:1px;">System Owner</div></div>    <button onclick="sbLogout()" style="width:100%;padding:8px 10px;background:transparent;border:none;border-radius:5px;font-family:inherit;font-size:0.73rem;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;color:rgba(255,100,100,0.85);text-align:left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>  </div>  <div id="sb-owner-row" onclick="sbToggleLogout()" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all 0.13s;border:1px solid transparent;">    <div class="sb-owner-avatar" id="sb-owner-avatar">OS</div>    <div class="sb-owner-info"><div class="sb-owner-name" id="sb-owner-name">Director</div><div class="sb-owner-role">System Owner</div></div>    <svg id="sb-owner-chev" style="flex-shrink:0;color:#b0aa9e;transition:transform 0.2s;margin-left:auto;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>  </div></div><nav class="sb-nav"><div class="sb-section-label">Main</div><div class="sb-item " data-tip="Create Bill" onclick="sideNavigate('billing.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div><span class="sb-label">Create Bill</span></div></nav><div class="sb-footer"><button class="sb-collapse-btn" onclick="toggleSidebar()"><span class="sb-collapse-icon">&#8592;</span><span class="sb-collapse-text">Collapse</span></button></div></div><script>
+(function(){
+  if(localStorage.getItem('sb_collapsed')==='1')
+    document.body.classList.add('sidebar-collapsed');
+
+  /* Read role from URL param first, then localStorage */
+  var _urlRole = (location.search.match(/[?&]role=([^&]+)/)||[])[1] || '';
+  var _lsRole  = '';
+  try{ _lsRole = localStorage.getItem('aurum_user_role') || ''; }catch(e){}
+  var role = _urlRole || _lsRole || 'admin';
+
+  /* Log to console so we can debug in terminal */
+  console.log('[SIDEBAR] URL=' + location.href);
+  console.log('[SIDEBAR] urlRole="' + _urlRole + '" lsRole="' + _lsRole + '" final="' + role + '"');
+
+  /* Sync localStorage */
+  if(_urlRole){ try{ localStorage.setItem('aurum_user_role', _urlRole); }catch(e){} }
+
+  var admin = document.getElementById('sb-admin');
+  var staff = document.getElementById('sb-staff');
+  console.log('[SIDEBAR] sb-admin=' + (admin?'found':'NULL') + ' sb-staff=' + (staff?'found':'NULL'));
+
+  if(role === 'staff'){
+    console.log('[SIDEBAR] Showing STAFF sidebar (billing only)');
+    if(staff){ staff.style.display = 'flex'; }
+    if(admin){ admin.style.display = 'none'; }
+  } else {
+    console.log('[SIDEBAR] Showing ADMIN sidebar (full)');
+    if(admin){ admin.style.display = 'flex'; }
+    if(staff){ staff.style.display = 'none'; }
+  }
+
+  /* Also log through Python API as soon as bridge is ready */
+  var _logT = setInterval(function(){
+    if(window.pywebview && window.pywebview.api && window.pywebview.api.log_js){
+      clearInterval(_logT);
+      window.pywebview.api.log_js('SIDEBAR role="' + role + '" url=' + location.href);
+      window.pywebview.api.log_js('SIDEBAR urlRole="' + _urlRole + '" lsRole="' + _lsRole + '"');
+      window.pywebview.api.log_js('SIDEBAR sb-admin=' + (document.getElementById('sb-admin')?'found':'NULL') + ' display=' + (document.getElementById('sb-admin')||{}).style.display);
+      window.pywebview.api.log_js('SIDEBAR sb-staff=' + (document.getElementById('sb-staff')?'found':'NULL') + ' display=' + (document.getElementById('sb-staff')||{}).style.display);
+    }
+  }, 100);
+
+  var _t = setInterval(function(){
+    if(window.pywebview && window.pywebview.api){
+      clearInterval(_t);
+      try{
+        window.pywebview.api.get_dynamic_greeting().then(function(g){
+          if(!g||g.status!=='success') return;
+          var n = g.owner_title||'Director';
+          ['sb-owner-name','sb-pop-name'].forEach(function(id){
+            var el=document.getElementById(id); if(el) el.innerText=n;
+          });
+          var av=document.getElementById('sb-owner-avatar');
+          if(av) av.innerText=n.split(' ').filter(function(w){return w.length>0;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()||'OS';
+        }).catch(function(){});
+        if(window.pywebview.api.get_current_version){
+          window.pywebview.api.get_current_version().then(function(v){
+            var el=document.getElementById('sb-ver-pill');
+            if(v&&el) el.innerText='v'+v;
+          }).catch(function(){});
+        }
+      }catch(e){}
+    }
+  }, 200);
+
+  document.addEventListener('click',function(e){
+    var pop=document.getElementById('sb-logout-pop');
+    var row=document.getElementById('sb-owner-row');
+    if(pop&&pop.style.display!=='none'&&!pop.contains(e.target)&&row&&!row.contains(e.target)){
+      pop.style.display='none';
+      var ch=document.getElementById('sb-owner-chev');
+      if(ch) ch.style.transform='';
+    }
+  });
+})();
+
+function sbToggleLogout(){
+  var pop=document.getElementById('sb-logout-pop');
+  var ch=document.getElementById('sb-owner-chev');
+  var open=!pop.style.display||pop.style.display==='none';
+  pop.style.display=open?'block':'none';
+  if(ch) ch.style.transform=open?'rotate(180deg)':'';
+}
+
+function sbLogout(){
+  try{if(window.pywebview&&window.pywebview.api)window.pywebview.api.logout();}catch(e){}
+  localStorage.removeItem('aurum_user_role');
+  localStorage.removeItem('aurum_active_user');
+  window.location.href='login.html';
+}
+</script></div></div>
+
+
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
+
+<script>
+(function(){
+  var p=location.href.split('/').pop().split('?')[0]||'dashboard.html';
+  document.querySelectorAll('.sbl').forEach(function(a){if(a.dataset.p===p)a.classList.add('act');});
+  var t=setInterval(function(){
+    if(window.pywebview&&window.pywebview.api){
+      clearInterval(t);
+      try{window.pywebview.api.get_current_version().then(function(v){var e=document.getElementById('sb-ver');if(e&&v)e.innerText='v'+v;}).catch(function(){});}catch(e){}
+    }
+  },300);
+})();
+</script>
+<main>
+    <header>
+        <div class="header-biz"><h1 id="header-biz-name">Archive Terminal</h1></div>
+        <div id="real-time-clock">...</div>
+        <div style="width:45px;height:45px;background:var(--primary);border-radius:14px;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid var(--accent);">JD</div>
+    </header>
+    <div class="content">
+        <div class="stats-grid">
+            <div class="stat-card"><label>Total Records</label><span id="stat-count">0</span></div>
+            <div class="stat-card"><label>Total Ledger Fine</label><span id="stat-fine">0.000 g</span></div>
+            <div class="stat-card"><label>Avg Fine/Bill</label><span id="stat-avg">0.000 g</span></div>
+        </div>
+        <div class="filter-toolbar">
+            <div class="filter-group">
+                <span class="filter-label">Bill Status:</span>
+                <select id="filter-status" class="premium-select" onchange="currentPage=1;applyLogic()">
+                    <option value="ALL">Show All Invoices</option>
+                    <option value="PAID">Paid (Cash Settlement)</option>
+                    <option value="CREDIT">Credit (Udhar Ledger)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Timeline:</span>
+                <select id="filter-date-range" class="premium-select" onchange="handleTimelineDropdown(this.value)">
+                    <option value="ALL">All Time</option>
+                    <option value="TODAY">Today</option>
+                    <option value="WEEK">This Week</option>
+                    <option value="CUSTOM">Custom Range...</option>
+                </select>
+                <div id="custom-date-pickers" class="custom-date-container">
+                    <input type="date" id="date-start" class="date-picker" onchange="currentPage=1;applyLogic()">
+                    <span style="font-size:0.8rem;font-weight:800;color:var(--text-muted);">TO</span>
+                    <input type="date" id="date-end" class="date-picker" onchange="currentPage=1;applyLogic()">
+                </div>
+            </div>
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Search by Client or VCH ID..." oninput="currentPage=1;applyLogic()">
+            </div>
+        </div>
+        <div class="history-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="toggleSort('date')" id="th-date">Date <span class="sort-icon">⇅</span></th>
+                            <th onclick="toggleSort('id')" id="th-id">Voucher ID <span class="sort-icon">⇅</span></th>
+                            <th onclick="toggleSort('customer')" id="th-customer">Client Name <span class="sort-icon">⇅</span></th>
+                            <th>Status</th>
+                            <th onclick="toggleSort('l_fine')" id="th-l_fine">Ledger Fine <span class="sort-icon">⇅</span></th>
+                            <th onclick="toggleSort('coll')" id="th-coll">Collected <span class="sort-icon">⇅</span></th>
+                            <th onclick="toggleSort('total_cash')" id="th-total_cash">Cash Total / Amount Due <span class="sort-icon">⇅</span></th>
+                            <th style="text-align:right;cursor:default;">Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">Syncing Bridge...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="pagination"></div>
+        </div>
+    </div>
+</main>
+
+<!-- ── VIEW MODAL — REDESIGNED ── -->
+<div id="view-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAllModals()">×</button>
+
+        <!-- Dark header strip -->
+        <div class="receipt-top-strip">
+            <span class="receipt-brand-tag">AurumOS Terminal Receipt</span>
+            <div class="receipt-vch-num" id="v-vch-id">VCH-001</div>
+            <div id="v-type-pill"></div>
+        </div>
+
+        <!-- Receipt body -->
+        <div class="receipt-body">
+
+            <!-- Date + Account info cells -->
+            <div class="receipt-info-row">
+                <div class="receipt-info-cell">
+                    <span class="cell-label">Date</span>
+                    <span class="cell-value" id="v-date">--</span>
+                </div>
+                <div class="receipt-info-cell">
+                    <span class="cell-label">Account</span>
+                    <span class="cell-value" id="v-cust">--</span>
+                </div>
+            </div>
+
+            <!-- Items table -->
+            <span class="receipt-items-title">Itemized Ledger</span>
+            <table class="receipt-items-table" id="v-items-table">
+                <thead id="v-table-head"></thead>
+                <tbody id="v-items-body"></tbody>
+            </table>
+
+            <!-- Settlement card -->
+            <div class="settlement-dark">
+                <!-- Weight bill rows -->
+                <div id="v-weight-rows">
+                    <div class="settle-line">
+                        <span class="s-label">Gross Ledger Fine</span>
+                        <span class="s-val" id="v-lfine">0.000 g</span>
+                    </div>
+                    <div class="settle-line">
+                        <span class="s-label">Collected Fine</span>
+                        <span class="s-val green" id="v-coll-view">0.000 g</span>
+                    </div>
+                    <div class="settle-line">
+                        <span class="s-label">995 / Dhal Cuts</span>
+                        <span class="s-val" id="v-cuts">0.000 g</span>
+                    </div>
+                    <div class="settle-line" style="margin-bottom:0;">
+                        <span class="s-label">Remaining Fine</span>
+                        <span class="s-val" id="v-rem">0.000 g</span>
+                    </div>
+                    <div class="settle-divider"></div>
+                    <div class="settle-line" id="v-gold-rate-row">
+                        <span class="s-label">Gold Rate</span>
+                        <span class="s-val" id="v-rate" style="font-size:0.9rem;color:#94a3b8;">₹ 00,000 / 10g</span>
+                    </div>
+                </div>
+
+                <!-- Total row -->
+                <div class="settle-total-row" id="v-settlement-area">
+                    <span class="t-label" id="v-amount-label">Net Balance Due</span>
+                    <span class="t-val" id="v-amt">₹ 0.00</span>
+                </div>
+
+                <!-- Udhar text -->
+                <div id="v-udhar-text" style="display:none;" class="udhar-footer">
+                    Settled in Fine Metal
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── EDIT MODAL ── -->
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAllModals()">×</button>
+        <div class="edit-modal-header"><h2 style="font-weight:800;font-size:1.3rem;color:var(--primary);" id="e-title">Terminal Edit</h2></div>
+        <div class="edit-grid">
+            <div class="edit-left-col">
+                <span class="edit-section-head">Client & Ledger Entries</span>
+                <div class="edit-input-group"><label>Client Name</label><input type="text" id="e-cust-name" placeholder="Name"></div>
+                <div class="edit-table-container"><table class="edit-table"><thead><tr><th>Code / Name</th><th>Weight / Pcs</th><th>Touch / Price</th><th>Fine / Amount</th><th></th></tr></thead><tbody id="e-items-body"></tbody></table></div>
+                <button class="btn-add-entry" id="e-add-btn" onclick="addNewItemRow()">+ ADD NEW ENTRY</button>
+            </div>
+            <div class="edit-right-col">
+                <div id="e-settlement-box">
+                    <span class="edit-section-head">Settlement Logic</span>
+                    <div class="edit-input-group"><label>Collected Fine</label><input type="number" id="e-collect" oninput="recalcEdit()"></div>
+                    <div class="edit-input-group"><label>Gold Rate</label><input type="number" id="e-rate" oninput="recalcEdit()"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                        <div class="edit-input-group"><label>995 Wt</label><input type="number" id="e-wt-995" oninput="recalcEdit()"></div>
+                        <div class="edit-input-group"><label>Dhal Wt</label><input type="number" id="e-wt-dhal" oninput="recalcEdit()"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="financial-summary-card">
+                        <div class="summary-row" id="e-rem-fine-row" style="margin-bottom:14px;"><label>Remaining Fine</label><span class="val" id="e-rem-fine">0.000 g</span></div>
+                        <div class="summary-row"><label id="e-amount-label">Amount Due</label><span class="val big" id="e-total-amt">₹ 0.00</span></div>
+                    </div>
+                    <button class="btn-update-terminal" onclick="submitUpdate()">Authorize & Overwrite</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allRecords=[],displayRecords=[],currentPage=1,pageSize=12,currentEditItems=[],activeVchId="";
+    let sortConfig={key:'date',direction:'desc'};
+
+    function startBridgeWatchdog(){const c=setInterval(()=>{if(window.pywebview&&window.pywebview.api){fetchData();clearInterval(c);}},100);}
+
+    async function fetchData(){
+        try{
+            const data=await window.pywebview.api.fetch_history();
+            allRecords=data.map(r=>({date:r.date,id:r.voucher_id,customer:r.client_name,status:r.status?r.status.toUpperCase().trim():'CREDIT',l_fine:parseFloat(r.ledger_fine||0),coll:parseFloat(r.collected||0),rate:parseFloat(r.gold_rate||0),amt:parseFloat(r.amount_due||0),total_cash:parseFloat(r.total_cash_amount||0)}));
+            applyLogic();
+        }catch(e){console.error(e);}
+    }
+
+    function toggleSort(k){if(sortConfig.key===k)sortConfig.direction=sortConfig.direction==='asc'?'desc':'asc';else{sortConfig.key=k;sortConfig.direction='asc';}updateSortUI();applyLogic();}
+    function updateSortUI(){document.querySelectorAll('th').forEach(t=>{t.classList.remove('active-sort');const i=t.querySelector('.sort-icon');if(i)i.innerHTML='⇅';});const a=document.getElementById(`th-${sortConfig.key}`);if(a){a.classList.add('active-sort');a.querySelector('.sort-icon').innerHTML=sortConfig.direction==='asc'?'↑':'↓';}}
+    function handleTimelineDropdown(t){const c=document.getElementById('custom-date-pickers');c.style.display=t==='CUSTOM'?'flex':'none';if(t!=='CUSTOM'){document.getElementById('date-start').value='';document.getElementById('date-end').value='';}currentPage=1;applyLogic();}
+    function parseDateString(s){
+    if(!s)return new Date(0);
+    if(s.includes('/')){const p=s.split('/');return new Date(p[2],p[1]-1,p[0]);}
+    // YYYY-MM-DD — parse as LOCAL time to avoid UTC midnight offset bug
+    const parts=s.split('-');
+    if(parts.length===3)return new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    return new Date(s);
+}
+
+    function applyLogic(){
+        const q=(document.getElementById('search-input').value||'').toLowerCase();
+        const sf=document.getElementById('filter-status').value;
+        const tf=document.getElementById('filter-date-range').value;
+        const sv=document.getElementById('date-start').value;
+        const ev=document.getElementById('date-end').value;
+        let f=allRecords.filter(r=>{
+            if(!((r.customer||'').toLowerCase().includes(q)||(r.id||'').toLowerCase().includes(q)))return false;
+            const ip=(r.status==='PAID'||r.status==='CASH'||r.status==='UCHAK_PAID');
+            if(sf==='PAID'&&!ip)return false;
+            if(sf==='CREDIT'&&ip)return false;
+            if(tf!=='ALL'){const rd=parseDateString(r.date);const t=new Date();t.setHours(0,0,0,0);
+                if(tf==='TODAY'){const rc=new Date(rd);rc.setHours(0,0,0,0);if(rc.getTime()!==t.getTime())return false;}
+                else if(tf==='WEEK'){const w=new Date();w.setDate(t.getDate()-7);if(rd<w)return false;}
+                else if(tf==='CUSTOM'){if(sv){const sd=new Date(sv);sd.setHours(0,0,0,0);if(rd<sd)return false;}if(ev){const ed=new Date(ev);ed.setHours(23,59,59,999);if(rd>ed)return false;}}
+            }
+            return true;
+        });
+        f.sort((a,b)=>{let va=a[sortConfig.key],vb=b[sortConfig.key];if(sortConfig.key==='date'){va=parseDateString(va);vb=parseDateString(vb);}if(va<vb)return sortConfig.direction==='asc'?-1:1;if(va>vb)return sortConfig.direction==='asc'?1:-1;return 0;});
+        displayRecords=f;
+        const tf2=displayRecords.reduce((s,r)=>s+(r.l_fine||0),0);
+        document.getElementById('stat-count').innerText=displayRecords.length;
+        document.getElementById('stat-fine').innerText=tf2.toFixed(3)+' g';
+        document.getElementById('stat-avg').innerText=displayRecords.length?(tf2/displayRecords.length).toFixed(3)+' g':'0.000 g';
+        renderUI();
+    }
+
+    function renderUI(){
+        const b=document.getElementById('history-body');b.innerHTML='';
+        const items=displayRecords.slice((currentPage-1)*pageSize,currentPage*pageSize);
+        if(!items.length){b.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No Transactions Found.</td></tr>';return;}
+        items.forEach(r=>{
+            const ip=(r.status==='PAID'||r.status==='CASH'||r.status==='UCHAK_PAID');
+            const fv=r.id.startsWith('UCHK-')?'—':r.l_fine.toFixed(3)+' g';
+            const cv=r.id.startsWith('UCHK-')?'—':r.coll.toFixed(3)+' g';
+            b.innerHTML+=`<tr>
+                <td style="color:var(--text-muted);font-size:0.85rem;">${r.date}</td>
+                <td><span class="vch-badge">${r.id}</span></td>
+                <td>${r.customer}</td>
+                <td><span class="badge ${ip?'badge-cash':'badge-credit'}">${ip?'Paid':'Credit'}</span></td>
+                <td>${fv}</td>
+                <td style="color:var(--success);">${cv}</td>
+                <td style="font-weight:800;color:var(--primary);">₹ ${r.total_cash.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                <td style="text-align:right;">
+                    <div class="btn-group">
+                        <div class="action-btn" onclick="openView('${r.id}')">👁</div>
+                        <div class="action-btn" onclick="openEdit('${r.id}')">✎</div>
+                        <div class="action-btn" style="color:var(--error)" onclick="handleDelete('${r.id}')">🗑</div>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        renderPagination();
+    }
+
+    async function openView(id){
+        if(!window.pywebview||!window.pywebview.api)return;
+        const data=await window.pywebview.api.get_bill_details(id);
+        if(!data)return;
+        const isUchak=id.startsWith('UCHK-');
+        const rate=parseFloat(data.voucher?data.voucher.gold_rate:(data.gold_rate||0));
+        const vCustomer=data.voucher?data.voucher.customer:data.customer;
+        const vDate=data.voucher?data.voucher.date:data.date;
+        const vVchId=data.voucher?data.voucher.vch_id:data.vch_id;
+        const vLFine=data.voucher?data.voucher.ledger_fine:(data.ledger_fine||0);
+        const vColl=data.voucher?data.voucher.collected_fine:(data.collected_fine||0);
+        const vF995=data.voucher?data.voucher.fine_995:(data.fine_995||0);
+        const vDhal=data.voucher?data.voucher.fine_dhal:(data.fine_dhal||0);
+        const vRem=data.voucher?data.voucher.remaining_fine:(data.remaining_fine||0);
+        const vTotalAmt=data.voucher?data.voucher.total_amount:(data.total_amount||0);
+        const isCredit=(rate===0&&!isUchak);
+
+        document.getElementById('v-vch-id').innerText=vVchId;
+        document.getElementById('v-date').innerText=vDate;
+        document.getElementById('v-cust').innerText=vCustomer;
+
+        // Type pill
+        const pill=document.getElementById('v-type-pill');
+        if(isUchak) pill.innerHTML='<span class="receipt-type-pill uchak">📦 Wholesale Uchak Invoice</span>';
+        else if(isCredit) pill.innerHTML='<span class="receipt-type-pill udhar">⚠ Fine Udhar — Metal Debt</span>';
+        else pill.innerHTML='<span class="receipt-type-pill paid">✓ Cash Settled Invoice</span>';
+
+        // Show/hide sections
+        document.getElementById('v-weight-rows').style.display=isUchak?'none':'block';
+        document.getElementById('v-gold-rate-row').style.display=(isUchak||isCredit)?'none':'flex';
+        document.getElementById('v-udhar-text').style.display=isCredit?'block':'none';
+        document.getElementById('v-settlement-area').style.display=isCredit?'none':'flex';
+        document.getElementById('v-amount-label').innerText=isUchak?'Total Cash Billing':'Net Balance Due';
+
+        const items=Array.isArray(data.items)?data.items:JSON.parse(data.items||'[]');
+        const th=document.getElementById('v-table-head');
+
+        if(isUchak){
+            th.innerHTML=`<tr><th>Item Code</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>`;
+            document.getElementById('v-items-body').innerHTML=items.map(it=>{
+                const pcs=parseInt(it.pcs||it.weight||1);
+                const price=parseFloat(it.price||it.rate||it.touch||0);
+                return `<tr>
+                    <td><span class="item-code-badge">${it.it_code||it.name||'Item'}</span></td>
+                    <td>${pcs} PCS</td>
+                    <td>₹ ${price.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                    <td>₹ ${(pcs*price).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('v-amt').innerText='₹ '+parseFloat(vTotalAmt).toLocaleString('en-IN',{minimumFractionDigits:2});
+        } else {
+            th.innerHTML=`<tr><th>Code</th><th>Weight</th><th>Touch</th><th>Fine</th></tr>`;
+            document.getElementById('v-items-body').innerHTML=items.map(it=>`<tr>
+                <td><span class="item-code-badge">${it.code}</span></td>
+                <td>${parseFloat(it.weight).toFixed(3)} g</td>
+                <td>${parseFloat((it.touch||0)+(it.wastage||0)).toFixed(2)}%</td>
+                <td>${parseFloat(it.fine).toFixed(3)} g</td>
+            </tr>`).join('');
+            document.getElementById('v-lfine').innerText=parseFloat(vLFine).toFixed(3)+' g';
+            document.getElementById('v-coll-view').innerText=parseFloat(vColl).toFixed(3)+' g';
+            document.getElementById('v-cuts').innerText=(vF995+vDhal).toFixed(3)+' g';
+            document.getElementById('v-rem').innerText=parseFloat(vRem).toFixed(3)+' g';
+            if(!isCredit){
+                document.getElementById('v-rate').innerText='₹ '+rate.toLocaleString('en-IN')+' / 10g';
+                document.getElementById('v-amt').innerText='₹ '+parseFloat(vTotalAmt).toLocaleString('en-IN',{minimumFractionDigits:2});
+            }
+        }
+        document.getElementById('view-modal').classList.add('active');
+    }
+
+    async function openEdit(id){
+        if(!window.pywebview||!window.pywebview.api)return;
+        const res=await window.pywebview.api.get_bill_details(id);
+        if(!res)return;
+        activeVchId=id;
+        currentEditItems=Array.isArray(res.items)?res.items:JSON.parse(res.items||'[]');
+        const isUchak=id.startsWith('UCHK-');
+        const vCustomer=res.voucher?res.voucher.customer:res.customer;
+        const vColl=res.voucher?res.voucher.collected_fine:(res.collected_fine||0);
+        const vRate=res.voucher?res.voucher.gold_rate:(res.gold_rate||0);
+        const vF995=res.voucher?res.voucher.fine_995:(res.fine_995||0);
+        const vDhal=res.voucher?res.voucher.fine_dhal:(res.fine_dhal||0);
+        document.getElementById('e-title').innerText='Terminal Edit: '+id;
+        document.getElementById('e-cust-name').value=vCustomer;
+        if(isUchak){document.getElementById('e-settlement-box').style.display='none';document.getElementById('e-rem-fine-row').style.display='none';document.getElementById('e-add-btn').style.display='none';document.getElementById('e-amount-label').innerText='TOTAL CASH BILLING';}
+        else{document.getElementById('e-settlement-box').style.display='block';document.getElementById('e-rem-fine-row').style.display='flex';document.getElementById('e-add-btn').style.display='block';document.getElementById('e-amount-label').innerText='Amount Due';document.getElementById('e-collect').value=vColl;document.getElementById('e-rate').value=vRate;document.getElementById('e-wt-995').value=(vF995/0.995).toFixed(3);document.getElementById('e-wt-dhal').value=vDhal.toFixed(3);}
+        renderEditTable();recalcEdit();document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function renderEditTable(){
+        const b=document.getElementById('e-items-body');b.innerHTML='';
+        const isUchak=activeVchId.startsWith('UCHK-');
+        currentEditItems.forEach((it,i)=>{
+            if(isUchak){const p=parseInt(it.pcs||it.weight||1);const pr=parseFloat(it.price||it.rate||it.touch||0);
+                b.innerHTML+=`<tr><td><input type="text" value="${it.it_code||it.name||''}" oninput="updateUchakEditData(${i},'name',this.value)"></td><td><input type="number" value="${p}" oninput="updateUchakEditData(${i},'pcs',this.value)"></td><td><input type="number" value="${pr}" oninput="updateUchakEditData(${i},'price',this.value)"></td><td style="font-weight:800;text-align:center;font-family:'JetBrains Mono';">₹ ${(p*pr).toFixed(2)}</td><td style="text-align:center;color:var(--text-muted);">-</td></tr>`;}
+            else{const ct=(it.touch||0)+(it.wastage||0);
+                b.innerHTML+=`<tr><td><input type="text" value="${it.code}" oninput="updateEditData(${i},'code',this.value)"></td><td><input type="number" value="${it.weight}" oninput="updateEditData(${i},'weight',this.value)"></td><td><input type="number" value="${ct}" oninput="updateEditData(${i},'combined',this.value)"></td><td style="font-weight:800;text-align:center;">${(it.fine||0).toFixed(3)}</td><td style="text-align:center;color:var(--error);cursor:pointer;" onclick="removeEditItem(${i})">×</td></tr>`;}
+        });
+    }
+
+    function updateEditData(i,f,v){if(f==='code')currentEditItems[i].code=v;else if(f==='combined'){currentEditItems[i].touch=parseFloat(v)||0;currentEditItems[i].wastage=0;}else currentEditItems[i][f]=parseFloat(v)||0;currentEditItems[i].fine=(currentEditItems[i].weight*(currentEditItems[i].touch+(currentEditItems[i].wastage||0)))/100;renderEditTable();recalcEdit();}
+    function updateUchakEditData(i,f,v){if(f==='name'){if(currentEditItems[i].it_name)currentEditItems[i].it_name=v;else currentEditItems[i].name=v;}else if(f==='pcs'){if('pcs'in currentEditItems[i])currentEditItems[i].pcs=parseInt(v)||0;else currentEditItems[i].weight=parseInt(v)||0;}else if(f==='price'){if('price'in currentEditItems[i])currentEditItems[i].price=parseFloat(v)||0;else currentEditItems[i].touch=parseFloat(v)||0;}renderEditTable();recalcEdit();}
+    function addNewItemRow(){currentEditItems.push({code:'NEW',weight:0,touch:0,wastage:0,fine:0});renderEditTable();}
+    function removeEditItem(i){currentEditItems.splice(i,1);renderEditTable();recalcEdit();}
+
+    function recalcEdit(){
+        const isUchak=activeVchId.startsWith('UCHK-');
+        if(isUchak){const t=currentEditItems.reduce((s,it)=>{const p=parseInt(it.pcs||it.weight||1);const pr=parseFloat(it.price||it.rate||it.touch||0);return s+(p*pr);},0);document.getElementById('e-total-amt').innerText='₹ '+t.toLocaleString('en-IN',{minimumFractionDigits:2});}
+        else{const lf=currentEditItems.reduce((s,x)=>s+(x.fine||0),0);const c=parseFloat(document.getElementById('e-collect').value)||0;const r=parseFloat(document.getElementById('e-rate').value)||0;const f9=(parseFloat(document.getElementById('e-wt-995').value)||0)*0.995;const fd=parseFloat(document.getElementById('e-wt-dhal').value)||0;const rm=lf-c-f9-fd;document.getElementById('e-rem-fine').innerText=rm.toFixed(3)+' g';document.getElementById('e-total-amt').innerText='₹ '+((rm*r)/10).toLocaleString('en-IN',{minimumFractionDigits:2});}
+    }
+
+    async function submitUpdate(){
+        if(!window.pywebview||!window.pywebview.api)return;
+        const isUchak=activeVchId.startsWith('UCHK-');
+        let data={};
+        if(isUchak){const t=currentEditItems.reduce((s,it)=>{const p=parseInt(it.pcs||it.weight||1);const pr=parseFloat(it.price||it.rate||it.touch||0);return s+(p*pr);},0);data={vch_id:activeVchId,customer:document.getElementById('e-cust-name').value,totalLedgerFine:0,collectedFine:0,fine995:0,fineDhal:0,remainingFine:0,goldRate:0,totalAmount:t,items:currentEditItems};}
+        else{const lf=currentEditItems.reduce((s,x)=>s+(x.fine||0),0);const c=parseFloat(document.getElementById('e-collect').value)||0;const r=parseFloat(document.getElementById('e-rate').value)||0;const f9=(parseFloat(document.getElementById('e-wt-995').value)||0)*0.995;const fd=parseFloat(document.getElementById('e-wt-dhal').value)||0;const rm=lf-c-f9-fd;data={vch_id:activeVchId,customer:document.getElementById('e-cust-name').value,totalLedgerFine:lf,collectedFine:c,fine995:f9,fineDhal:fd,remainingFine:rm,goldRate:r,totalAmount:(rm*r)/10,items:currentEditItems};}
+        const res=await window.pywebview.api.generate_bill(data);
+        if(res.status==='success'){closeAllModals();fetchData();}
+    }
+
+    function handleDelete(id){
+        // Show custom delete confirmation modal
+        document.getElementById('del-vch-id').innerText = id;
+        document.getElementById('del-confirm-btn').onclick = async function(){
+            closeDeleteModal();
+            if(!window.pywebview||!window.pywebview.api)return;
+            const res = await window.pywebview.api.delete_bill(id);
+            if(res.status==='success'){
+                try{ localStorage.setItem('aurum_stock_dirty','1'); }catch(e){}
+                fetchData();
+                showDeleteToast(id);
+            } else {
+                showErrorToast('Delete failed: '+(res.message||'Unknown error'));
+            }
+        };
+        document.getElementById('delete-modal').classList.add('active');
+    }
+    function closeDeleteModal(){
+        document.getElementById('delete-modal').classList.remove('active');
+    }
+
+    function showErrorToast(msg){
+        const t=document.createElement('div');
+        t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:0.82rem;z-index:9999;box-shadow:0 8px 24px rgba(239,68,68,0.3);';
+        t.innerText=msg;
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(),3000);
+    }
+
+    function showDeleteToast(id){
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#0f172a;color:#fff;padding:14px 22px;border-radius:14px;font-weight:700;font-size:0.85rem;border:1px solid rgba(181,148,16,0.3);box-shadow:0 20px 40px rgba(0,0,0,0.2);z-index:99999;animation:slideIn 0.3s ease;';
+        t.innerHTML = `✅ Bill <b>${id}</b> deleted — stock restored to inventory`;
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(), 3500);
+    }
+
+    function closeAllModals(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('active'));}
+
+    function renderPagination(){
+        const total=Math.ceil(displayRecords.length/pageSize),c=document.getElementById('pagination');
+        c.innerHTML='';if(total<=1)return;
+        for(let i=1;i<=total;i++){const n=document.createElement('div');n.innerText=i;n.style.cssText=`min-width:35px;height:35px;border-radius:10px;border:1.5px solid ${i===currentPage?'var(--primary)':'var(--border)'};background:${i===currentPage?'var(--primary)':'#fff'};color:${i===currentPage?'#fff':'var(--text-main)'};display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;transition:0.2s;`;n.onclick=()=>{currentPage=i;renderUI();};c.appendChild(n);}
+    }
+
+    window.onload = () => { initSidebar('history');
+startBridgeWatchdog();updateSortUI();
+        setInterval(()=>{const n=new Date();document.getElementById('real-time-clock').innerText=n.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');},1000);
+    };
+</script>
+<!-- ══ DELETE CONFIRMATION MODAL ══ -->
+<div id="delete-modal">
+    <div class="del-card">
+        <div class="del-icon-wrap">
+            <span class="del-icon">🗑️</span>
+        </div>
+        <div class="del-title">Delete this Bill?</div>
+        <div class="del-subtitle">You are about to permanently delete voucher</div>
+        <div class="del-vch-pill" id="del-vch-id">VCH-000</div>
+        <div class="del-warning-box">
+            <span class="del-warning-icon">⚠️</span>
+            <span class="del-warning-text">This action will restore all deducted stock back to inventory and remove all associated ledger entries. This cannot be undone.</span>
+        </div>
+        <div class="del-btn-row">
+            <button class="del-btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="del-btn-confirm" id="del-confirm-btn">Delete &amp; Restore Stock</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

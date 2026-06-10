@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Master Ledger</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.06);--green-ln:rgba(21,128,61,0.2);
+    --red:#b91c1c;--red-bg:rgba(185,28,28,0.06);--red-ln:rgba(185,28,28,0.18);
+    --blue:#1d4ed8;--blue-bg:rgba(29,78,216,0.06);--blue-ln:rgba(29,78,216,0.18);
+    --serif:'DM Serif Display',Georgia,serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;display:block;height:100vh;background:var(--cream);color:var(--ink);overflow:hidden;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-title{font-family:var(--serif);font-size:1rem;color:var(--ink);}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-sub{font-size:0.58rem;color:var(--muted2);margin-top:1px;}
+.h-right{display:flex;gap:10px;align-items:center;}
+#real-time-clock{font-family:var(--mono);font-size:0.63rem;color:var(--muted2);background:var(--cream2);padding:5px 11px;border-radius:4px;border:1px solid var(--rule);}
+.btn-csv{background:var(--white);border:1px solid var(--rule);border-radius:6px;padding:6px 13px;font-family:inherit;font-size:0.72rem;color:var(--ink3);cursor:pointer;transition:all 0.14s;}
+.btn-csv:hover{border-color:var(--gold-ln);color:var(--gold3);background:var(--gold-bg);}
+.btn-print-hdr{display:inline-flex;align-items:center;gap:5px;background:var(--gold-bg);border:1px solid var(--gold-ln);border-radius:6px;padding:6px 13px;font-family:inherit;font-size:0.72rem;color:var(--gold3);cursor:pointer;transition:all 0.14s;}
+.btn-print-hdr:hover{background:rgba(168,125,30,0.14);}
+.content{padding:16px 22px 20px;overflow-y:hidden;flex-grow:1;display:flex;flex-direction:column;gap:14px;}
+.summary-ribbon{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0;}
+.sum-card{background:var(--white);padding:13px 16px;border-radius:8px;border:1px solid var(--rule);box-shadow:var(--sh);position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.dr-card::before{background:var(--red);}
+.cr-card::before{background:var(--green);}
+.sum-card label{font-size:0.53rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:3px;}
+.sum-card span{font-family:var(--serif);font-size:1.2rem;display:block;letter-spacing:-0.3px;}
+.sum-card span.dr{color:var(--red);}
+.sum-card span.cr{color:var(--green);}
+.mini-stat{font-size:0.56rem;color:var(--muted2);margin-top:2px;}
+.table-card{background:var(--white);border-radius:10px;border:1px solid var(--rule);overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column;flex-grow:1;min-height:0;}
+.table-header{padding:12px 18px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
+.th-top{display:flex;justify-content:space-between;align-items:center;}
+.th-label{font-family:var(--serif);font-size:0.95rem;color:var(--ink);}
+.th-label em{color:var(--gold3);font-style:italic;}
+.filter-toggle{display:flex;background:var(--cream2);padding:3px;border-radius:6px;border:1px solid var(--rule);gap:2px;}
+.tgl-btn{border:none;padding:5px 13px;border-radius:4px;font-family:inherit;font-size:0.65rem;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--muted);text-transform:uppercase;}
+.tgl-btn.active{background:var(--white);color:var(--ink);box-shadow:var(--sh);}
+.filter-bar{display:flex;gap:10px;align-items:flex-end;background:var(--cream2);padding:10px 12px;border-radius:7px;border:1px solid var(--rule);}
+.fg{display:flex;flex-direction:column;gap:3px;}
+.fg label{font-size:0.52rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;}
+.fg input[type=date],.fg input[type=text]{height:32px;padding:0 9px;border:1px solid var(--rule);border-radius:5px;font-family:inherit;font-size:0.76rem;color:var(--ink);background:var(--white);outline:none;transition:all 0.14s;}
+.fg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);}
+.fg.grow{flex:1;}
+.btn-reset{height:32px;padding:0 13px;background:var(--white);border:1px solid var(--rule);border-radius:5px;font-family:inherit;font-size:0.7rem;cursor:pointer;color:var(--ink3);transition:all 0.14s;}
+.btn-reset:hover{border-color:var(--red-ln);color:var(--red);background:var(--red-bg);}
+.scroll-area{flex-grow:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.scroll-area::-webkit-scrollbar{width:3px;}.scroll-area::-webkit-scrollbar-thumb{background:var(--cream3);}
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{background:var(--cream2);padding:9px 16px;text-align:left;font-size:0.53rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:10;}
+td{padding:10px 16px;border-bottom:1px solid var(--rule2);font-size:0.77rem;transition:background 0.1s;}
+tr.row-paid td{background:rgba(21,128,61,0.025);}
+tr.row-credit td{background:rgba(185,28,28,0.025);}
+tr:hover td{filter:brightness(0.97);cursor:default;}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.57rem;text-transform:uppercase;letter-spacing:0.4px;border:1px solid transparent;}
+.badge-paid{background:var(--green-bg);color:var(--green);border-color:var(--green-ln);}
+.badge-credit{background:var(--red-bg);color:var(--red);border-color:var(--red-ln);}
+.badge-jama{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-ln);}
+.client-pill{background:var(--cream2);padding:3px 9px;border-radius:4px;font-size:0.68rem;border:1px solid var(--rule);display:inline-block;color:var(--ink3);}
+.num-text{font-family:var(--mono);font-size:0.73rem;}
+.text-dr{color:var(--red)!important;}
+.text-cr{color:var(--green)!important;}
+.vch-ref{color:var(--ink);font-size:0.77rem;}
+.vch-desc{font-size:0.67rem;color:var(--muted2);margin-top:1px;}
+</style>
+<style id="aurum-layout-fix">
+body{display:flex!important;height:100vh!important;overflow:hidden!important;width:100vw!important;}
+#sidebar-container{flex-shrink:0!important;width:252px!important;}
+body>main{flex:1!important;min-width:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;}
+body.sidebar-collapsed #sidebar-container{width:66px!important;}
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"><div style="width:100%;height:100%;display:flex;flex-direction:column;background:#fff;border-right:1px solid rgba(14,12,9,0.09);overflow:hidden;"><div id="sb-admin" style="display:none;width:100%;height:100%;flex-direction:column;"><div class="sb-logo"><div class="sb-logo-mark"><span>Au</span></div><div class="sb-logo-text"><div class="sb-logo-name">Aurum<em>OS</em></div><div class="sb-logo-sub">Jewelry ERP</div></div></div><div class="sb-version"><span class="sb-ver-label">Version</span><span class="sb-ver-pill" id="sb-ver-pill">v1.0</span></div><div class="sb-owner" style="position:relative;"><div id="sb-logout-pop" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:#0e0c09;border-radius:8px;padding:6px;box-shadow:0 8px 24px rgba(14,12,9,0.25);z-index:999;border:1px solid rgba(201,162,39,0.15);"><div style="padding:6px 10px 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;"><div id="sb-pop-name" style="font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Director</div><div style="font-size:0.57rem;color:rgba(255,255,255,0.35);margin-top:1px;">System Owner</div></div><button onclick="sbLogout()" style="width:100%;padding:8px 10px;background:transparent;border:none;border-radius:5px;font-family:inherit;font-size:0.73rem;cursor:pointer;display:flex;align-items:center;gap:8px;color:rgba(255,100,100,0.85);text-align:left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button></div><div id="sb-owner-row" onclick="sbToggleLogout()" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all 0.13s;border:1px solid transparent;"><div class="sb-owner-avatar" id="sb-owner-avatar">OS</div><div class="sb-owner-info"><div class="sb-owner-name" id="sb-owner-name">Director</div><div class="sb-owner-role">System Owner</div></div><svg id="sb-owner-chev" style="flex-shrink:0;color:#b0aa9e;transition:transform 0.2s;margin-left:auto;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></div></div><nav class="sb-nav"><div class="sb-section-label">Main</div><div class="sb-item" data-tip="Dashboard" onclick="sideNavigate('dashboard.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><span class="sb-label">Dashboard</span></div><div class="sb-item" data-tip="Inventory" onclick="sideNavigate('inventory.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><span class="sb-label">Inventory</span></div><div class="sb-item" data-tip="Create Bill" onclick="sideNavigate('billing.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div><span class="sb-label">Create Bill</span></div><div class="sb-item" data-tip="History" onclick="sideNavigate('history.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="sb-label">History</span></div><div class="sb-divider"></div><div class="sb-section-label">Finance</div><div class="sb-item" data-tip="Accounts" onclick="sideNavigate('accounts.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><span class="sb-label">Accounts</span></div><div class="sb-item active" data-tip="Ledger" onclick="sideNavigate('ledger.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><span class="sb-label">Ledger</span></div><div class="sb-item" data-tip="Staff" onclick="sideNavigate('staff.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="sb-label">Staff</span></div></nav><div class="sb-footer"><button class="sb-collapse-btn" onclick="toggleSidebar()"><span class="sb-collapse-icon">&#8592;</span><span class="sb-collapse-text">Collapse</span></button></div></div><div id="sb-staff" style="display:none;width:100%;height:100%;flex-direction:column;"><div class="sb-logo"><div class="sb-logo-mark"><span>Au</span></div><div class="sb-logo-text"><div class="sb-logo-name">Aurum<em>OS</em></div><div class="sb-logo-sub">Jewelry ERP</div></div></div><div class="sb-version"><span class="sb-ver-label">Version</span><span class="sb-ver-pill">v1.0</span></div><div class="sb-owner" style="position:relative;"><div id="sb-owner-row" onclick="sbToggleLogout()" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;"><div class="sb-owner-avatar">OS</div><div class="sb-owner-info"><div class="sb-owner-name">Director</div><div class="sb-owner-role">System Owner</div></div></div></div><nav class="sb-nav"><div class="sb-section-label">Main</div><div class="sb-item" data-tip="Create Bill" onclick="sideNavigate('billing.html')"><div class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div><span class="sb-label">Create Bill</span></div></nav><div class="sb-footer"><button class="sb-collapse-btn" onclick="toggleSidebar()"><span class="sb-collapse-icon">&#8592;</span><span class="sb-collapse-text">Collapse</span></button></div></div><script>
+(function(){
+  if(localStorage.getItem('sb_collapsed')==='1') document.body.classList.add('sidebar-collapsed');
+  var _urlRole=(location.search.match(/[?&]role=([^&]+)/)||[])[1]||'';
+  var _lsRole=''; try{_lsRole=localStorage.getItem('aurum_user_role')||'';}catch(e){}
+  var role=_urlRole||_lsRole||'admin';
+  console.log('[SIDEBAR] urlRole="'+_urlRole+'" lsRole="'+_lsRole+'" final="'+role+'"');
+  if(_urlRole){try{localStorage.setItem('aurum_user_role',_urlRole);}catch(e){}}
+  var admin=document.getElementById('sb-admin'), staff=document.getElementById('sb-staff');
+  if(role==='staff'){if(staff)staff.style.display='flex';if(admin)admin.style.display='none';}
+  else{if(admin)admin.style.display='flex';if(staff)staff.style.display='none';}
+  var _logT=setInterval(function(){if(window.pywebview&&window.pywebview.api&&window.pywebview.api.log_js){clearInterval(_logT);window.pywebview.api.log_js('SIDEBAR role="'+role+'"');}},100);
+  document.addEventListener('click',function(e){var pop=document.getElementById('sb-logout-pop'),row=document.getElementById('sb-owner-row');if(pop&&pop.style.display!=='none'&&!pop.contains(e.target)&&row&&!row.contains(e.target)){pop.style.display='none';var ch=document.getElementById('sb-owner-chev');if(ch)ch.style.transform='';}});
+  var _t=setInterval(function(){if(window.pywebview&&window.pywebview.api){clearInterval(_t);try{window.pywebview.api.get_dynamic_greeting().then(function(g){if(!g||g.status!=='success')return;var n=g.owner_title||'Director';['sb-owner-name','sb-pop-name'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText=n;});var av=document.getElementById('sb-owner-avatar');if(av)av.innerText=n.split(' ').filter(function(w){return w.length>0;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()||'OS';}).catch(function(){});if(window.pywebview.api.get_current_version){window.pywebview.api.get_current_version().then(function(v){var el=document.getElementById('sb-ver-pill');if(v&&el)el.innerText='v'+v;}).catch(function(){});}}catch(e){};}},200);
+})();
+function sbToggleLogout(){var pop=document.getElementById('sb-logout-pop'),ch=document.getElementById('sb-owner-chev'),open=!pop.style.display||pop.style.display==='none';pop.style.display=open?'block':'none';if(ch)ch.style.transform=open?'rotate(180deg)':'';}
+function sbLogout(){try{if(window.pywebview&&window.pywebview.api)window.pywebview.api.logout();}catch(e){}localStorage.removeItem('aurum_user_role');localStorage.removeItem('aurum_active_user');window.location.href='login.html';}
+</script></div></div>
+
+<main>
+<header>
+    <div>
+        <div class="h-title">Master <em>Ledger</em></div>
+        <div class="h-sub">Global Transaction Register</div>
+    </div>
+    <div class="h-right">
+        <div id="real-time-clock">-- | --</div>
+        <button class="btn-csv" onclick="exportToCSV()">Export CSV</button>
+        <button class="btn-print-hdr" onclick="printLedger()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Ledger
+        </button>
+    </div>
+</header>
+
+<div class="content">
+    <div class="summary-ribbon">
+        <div class="sum-card dr-card"><label>Metal DR</label><span id="total-m-dr" class="dr">0.000 g</span><div class="mini-stat">Market Udhar</div></div>
+        <div class="sum-card dr-card"><label>Cash DR</label><span id="total-c-dr" class="dr">Rs. 0.00</span><div class="mini-stat">Pending Payments</div></div>
+        <div class="sum-card cr-card"><label>Metal CR</label><span id="total-m-cr" class="cr">0.000 g</span><div class="mini-stat">Total Jama</div></div>
+        <div class="sum-card cr-card"><label>Cash CR</label><span id="total-c-cr" class="cr">Rs. 0.00</span><div class="mini-stat">Total Received</div></div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <div class="th-top">
+                <div class="th-label">Transaction <em>Stream</em></div>
+                <div class="filter-toggle">
+                    <button class="tgl-btn active" id="btn-all"    onclick="setFilter('all')">All</button>
+                    <button class="tgl-btn"        id="btn-paid"   onclick="setFilter('paid')">Paid</button>
+                    <button class="tgl-btn"        id="btn-credit" onclick="setFilter('credit')">Credit</button>
+                    <button class="tgl-btn"        id="btn-jama"   onclick="setFilter('jama')">Jama</button>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <div class="fg"><label>From</label><input type="date" id="date-from" onchange="filterLedger()"></div>
+                <div class="fg"><label>To</label><input type="date" id="date-to" onchange="filterLedger()"></div>
+                <div class="fg grow"><label>Search</label><input type="text" id="ledger-search" placeholder="Client, voucher or note..." oninput="filterLedger()"></div>
+                <button class="btn-reset" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+        <div class="scroll-area">
+            <table>
+                <thead><tr>
+                    <th width="110">Date</th>
+                    <th width="160">Account</th>
+                    <th>Reference &amp; Description</th>
+                    <th width="100" style="text-align:center;">Status</th>
+                    <th width="140" style="text-align:right;">Metal</th>
+                    <th width="155" style="text-align:right;">Cash</th>
+                </tr></thead>
+                <tbody id="master-ledger-body">
+                    <tr><td colspan="6" style="text-align:center;padding:36px;color:var(--muted2);">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</main>
+
+<script>
+'use strict';
+var masterData = [];
+var filteredData = [];
+var activeFilter = 'all';
+
+function hesc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function classify(e){
+    var mCr=parseFloat(e.metal_cr||0), cCr=parseFloat(e.cash_cr||0);
+    var mDr=parseFloat(e.metal_dr||0), cDr=parseFloat(e.cash_dr||0);
+    if(cCr>0) return 'paid';
+    if(mCr>0) return 'jama';
+    if(mDr>0||cDr>0) return 'credit';
+    return 'credit';
+}
+
+function fetchMasterLedger(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    window.pywebview.api.get_ledger_summary().then(function(s){
+        document.getElementById('total-m-dr').innerText = parseFloat(s.metal_dr||0).toFixed(3)+' g';
+        document.getElementById('total-c-dr').innerText = 'Rs. '+parseFloat(s.cash_dr||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('total-m-cr').innerText = parseFloat(s.metal_cr||0).toFixed(3)+' g';
+        document.getElementById('total-c-cr').innerText = 'Rs. '+parseFloat(s.cash_cr||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+    }).catch(function(){});
+    window.pywebview.api.get_full_ledger_stream().then(function(data){
+        masterData = data||[];
+        filterLedger();
+    }).catch(function(e){ console.error(e); });
+}
+
+function setFilter(type){
+    activeFilter = type;
+    document.querySelectorAll('.tgl-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('btn-'+type).classList.add('active');
+    filterLedger();
+}
+
+function resetFilters(){
+    document.getElementById('ledger-search').value='';
+    document.getElementById('date-from').value='';
+    document.getElementById('date-to').value='';
+    setFilter('all');
+}
+
+function filterLedger(){
+    var q     = document.getElementById('ledger-search').value.toLowerCase();
+    var dFrom = document.getElementById('date-from').value;
+    var dTo   = document.getElementById('date-to').value;
+    filteredData = masterData.filter(function(e){
+        var rt = classify(e);
+        var matchText = !q
+            || (e.client_name||'').toLowerCase().indexOf(q) > -1
+            || (e.vch_reference||'').toLowerCase().indexOf(q) > -1
+            || (e.description||'').toLowerCase().indexOf(q) > -1;
+        var matchType = activeFilter === 'all' || activeFilter === rt;
+        var matchDate = (!dFrom || e.date >= dFrom) && (!dTo || e.date <= dTo);
+        return matchText && matchType && matchDate;
+    });
+    renderTable(filteredData);
+}
+
+function renderTable(data){
+    var tbody = document.getElementById('master-ledger-body');
+    if(!data.length){
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted2);">No transactions found.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.map(function(e){
+        var mDr=parseFloat(e.metal_dr||0), mCr=parseFloat(e.metal_cr||0);
+        var cDr=parseFloat(e.cash_dr||0),  cCr=parseFloat(e.cash_cr||0);
+        var rt  = classify(e);
+        var rc  = rt==='paid'||rt==='jama' ? 'row-paid' : 'row-credit';
+        var badge = rt==='paid'
+            ? '<span class="status-badge badge-paid">Paid</span>'
+            : rt==='jama'
+            ? '<span class="status-badge badge-jama">Jama</span>'
+            : '<span class="status-badge badge-credit">Credit</span>';
+        var mTxt='--', mCls='';
+        if(mDr>0){ mTxt='+'+mDr.toFixed(3)+' g DR'; mCls='text-dr'; }
+        else if(mCr>0){ mTxt='-'+mCr.toFixed(3)+' g CR'; mCls='text-cr'; }
+        var cTxt='--', cCls='';
+        if(cDr>0){ cTxt='Rs.'+cDr.toLocaleString('en-IN',{minimumFractionDigits:2})+' DR'; cCls='text-dr'; }
+        else if(cCr>0){ cTxt='Rs.'+cCr.toLocaleString('en-IN',{minimumFractionDigits:2})+' CR'; cCls='text-cr'; }
+        return '<tr class="'+rc+'">'
+            +'<td style="font-family:var(--mono);font-size:0.7rem;color:var(--muted2);">'+(e.date||'--')+'</td>'
+            +'<td><span class="client-pill">'+hesc(e.client_name||'System')+'</span></td>'
+            +'<td><div class="vch-ref">'+hesc(e.vch_reference||'Manual')+'</div><div class="vch-desc">'+hesc(e.description||'')+'</div></td>'
+            +'<td style="text-align:center;">'+badge+'</td>'
+            +'<td style="text-align:right;" class="num-text '+mCls+'">'+mTxt+'</td>'
+            +'<td style="text-align:right;" class="num-text '+cCls+'">'+cTxt+'</td>'
+            +'</tr>';
+    }).join('');
+}
+
+function exportToCSV(){
+    if(!masterData.length) return;
+    var hdr = ['Date','Account','Reference','Description','Status','Metal DR','Metal CR','Cash DR','Cash CR'];
+    var rows = masterData.map(function(e){
+        return [e.date,e.client_name,e.vch_reference||'Manual',e.description,classify(e).toUpperCase(),e.metal_dr,e.metal_cr,e.cash_dr,e.cash_cr];
+    });
+    var csv = 'data:text/csv;charset=utf-8,'+hdr.join(',')+'\n'+rows.map(function(r){ return r.join(','); }).join('\n');
+    var a = document.createElement('a');
+    a.setAttribute('href', encodeURI(csv));
+    a.setAttribute('download', 'Master_Ledger_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── PRINT LEDGER ─────────────────────────────────────────────────
+function printLedger(){
+    var data = filteredData.length ? filteredData : masterData;
+    if(!data.length){ alert('No data to print.'); return; }
+
+    function build(biz){
+        var now   = new Date();
+        var dtStr = now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+        var tmStr = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        var from  = document.getElementById('date-from').value || 'All';
+        var to    = document.getElementById('date-to').value   || 'Today';
+        var filterLabel = activeFilter === 'all' ? 'All Transactions' : activeFilter.charAt(0).toUpperCase()+activeFilter.slice(1)+' Only';
+        var B = '1px solid rgba(14,12,9,0.08)';
+
+        var totMDr=0, totMCr=0, totCDr=0, totCCr=0;
+        data.forEach(function(e){
+            totMDr += parseFloat(e.metal_dr||0); totMCr += parseFloat(e.metal_cr||0);
+            totCDr += parseFloat(e.cash_dr||0);  totCCr += parseFloat(e.cash_cr||0);
+        });
+
+        var rows = '';
+        data.forEach(function(e, i){
+            var mDr=parseFloat(e.metal_dr||0), mCr=parseFloat(e.metal_cr||0);
+            var cDr=parseFloat(e.cash_dr||0),  cCr=parseFloat(e.cash_cr||0);
+            var rt  = classify(e);
+            var bg  = i%2===0 ? '#fff' : '#faf8f3';
+            var stc = rt==='paid' ? '#15803d' : rt==='jama' ? '#1d4ed8' : '#b91c1c';
+            var stbg= rt==='paid' ? 'rgba(21,128,61,0.08)' : rt==='jama' ? 'rgba(29,78,216,0.08)' : 'rgba(185,28,28,0.08)';
+            var stbd= rt==='paid' ? 'rgba(21,128,61,0.2)' : rt==='jama' ? 'rgba(29,78,216,0.2)' : 'rgba(185,28,28,0.18)';
+            var mTxt = mDr>0 ? '+'+mDr.toFixed(3)+' g Dr' : mCr>0 ? '-'+mCr.toFixed(3)+' g Cr' : '--';
+            var mCol = mDr>0 ? '#b91c1c' : mCr>0 ? '#15803d' : '#9e9890';
+            var cTxt = cDr>0 ? 'Rs.'+cDr.toLocaleString('en-IN',{minimumFractionDigits:2})+' Dr' : cCr>0 ? 'Rs.'+cCr.toLocaleString('en-IN',{minimumFractionDigits:2})+' Cr' : '--';
+            var cCol = cDr>0 ? '#b91c1c' : cCr>0 ? '#15803d' : '#9e9890';
+            rows += '<tr style="background:'+bg+';">'
+                +'<td style="padding:4px 6px;text-align:center;font-family:monospace;font-size:6pt;color:#9e9890;border-right:'+B+';border-bottom:'+B+';">'+(i+1)+'</td>'
+                +'<td style="padding:4px 7px;font-family:monospace;font-size:7pt;color:#5c5a52;border-right:'+B+';border-bottom:'+B+';">'+hesc(e.date||'--')+'</td>'
+                +'<td style="padding:4px 8px;border-right:'+B+';border-bottom:'+B+';"><span style="background:#f2efe7;padding:2px 7px;border-radius:3px;font-size:7pt;border:0.5px solid rgba(14,12,9,0.08);">'+hesc(e.client_name||'System')+'</span></td>'
+                +'<td style="padding:4px 8px;border-right:'+B+';border-bottom:'+B+';"><div style="font-size:7.5pt;color:#0e0c09;">'+hesc(e.vch_reference||'Manual')+'</div><div style="font-size:6pt;color:#9e9890;margin-top:1px;">'+hesc(e.description||'')+'</div></td>'
+                +'<td style="padding:4px 7px;text-align:center;border-right:'+B+';border-bottom:'+B+';"><span style="padding:2px 7px;border-radius:3px;font-size:6pt;text-transform:uppercase;letter-spacing:0.3px;background:'+stbg+';color:'+stc+';border:0.5px solid '+stbd+';">'+rt+'</span></td>'
+                +'<td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:'+mCol+';border-right:'+B+';border-bottom:'+B+';">'+mTxt+'</td>'
+                +'<td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:'+cCol+';border-bottom:'+B+';">'+cTxt+'</td>'
+                +'</tr>';
+        });
+
+        rows += '<tr style="background:#f2efe7;">'
+            +'<td colspan="4" style="padding:5px 8px;font-size:7.5pt;color:#8a6c0a;letter-spacing:0.5px;">TOTALS ('+data.length+' entries)</td>'
+            +'<td style="padding:5px 7px;border-right:1px solid rgba(14,12,9,0.08);"></td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;"><span style="color:#b91c1c;display:block;">'+totMDr.toFixed(3)+' g Dr</span><span style="color:#15803d;display:block;margin-top:2px;">'+totMCr.toFixed(3)+' g Cr</span></td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;"><span style="color:#b91c1c;display:block;">Rs.'+totCDr.toLocaleString('en-IN',{minimumFractionDigits:2})+'</span><span style="color:#15803d;display:block;margin-top:2px;">Rs.'+totCCr.toLocaleString('en-IN',{minimumFractionDigits:2})+'</span></td>'
+            +'</tr>';
+
+        var html = '<!DOCTYPE html><html><head>'
+            +'<meta charset="UTF-8"><title>AurumOS Master Ledger</title>'
+            +'<style>'
+            +'@page{size:A4 portrait;margin:0;}'
+            +'*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;}'
+            +'html,body{font-family:Arial,Helvetica,sans-serif;color:#0e0c09;background:#fff;}'
+            +'#page{width:210mm;display:flex;flex-direction:column;margin:0 auto;position:relative;}'
+            +'thead{display:table-header-group;}'
+            +'tr{page-break-inside:avoid;}'
+            +'table{page-break-inside:auto;}'
+            +'.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-family:Georgia,serif;font-size:72pt;color:rgba(168,125,30,0.05);white-space:nowrap;letter-spacing:4px;user-select:none;pointer-events:none;z-index:0;}'
+            +'.wm em{font-style:italic;}'
+            +'#content{padding:8mm 10mm 5mm;position:relative;z-index:1;}'
+            +'.top-bar{height:6px;background:linear-gradient(90deg,#8a6c0a,#a87d1e,#c9a227,#a87d1e,#8a6c0a);}'
+            +'.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:5mm 0 4mm;border-bottom:1.5px solid rgba(168,125,30,0.22);margin-bottom:4mm;}'
+            +'.brand{font-family:Georgia,serif;font-size:20pt;color:#0e0c09;line-height:1;}'
+            +'.brand em{color:#8a6c0a;font-style:italic;}'
+            +'.brand-sub{font-size:5.5pt;color:#9e9890;text-transform:uppercase;letter-spacing:2px;margin-top:3px;}'
+            +'.brand-acc{display:flex;align-items:center;gap:5px;margin-top:5px;}'
+            +'.brand-dash{height:2px;width:16px;background:linear-gradient(90deg,#a87d1e,#c9a227);border-radius:99px;}'
+            +'.brand-lbl{font-size:5.5pt;color:#a87d1e;text-transform:uppercase;letter-spacing:0.8px;}'
+            +'.rpt-r{text-align:right;}'
+            +'.biz{font-family:Georgia,serif;font-size:14pt;color:#0e0c09;}'
+            +'.rpt-title{font-family:Georgia,serif;font-size:11pt;color:#0e0c09;margin-top:4px;}'
+            +'.rpt-title em{color:#8a6c0a;font-style:italic;}'
+            +'.meta{font-size:6.5pt;color:#7a7268;margin-top:3px;line-height:1.6;}'
+            +'.badge{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.08);border:1px solid rgba(168,125,30,0.2);font-size:6pt;color:#8a6c0a;font-family:monospace;}'
+            +'.sums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4mm;}'
+            +'.sb{border:1px solid rgba(14,12,9,0.1);border-radius:5px;padding:6px 9px;}'
+            +'.sb.r{border-top:3px solid #b91c1c;background:#fff1f2;}'
+            +'.sb.g{border-top:3px solid #15803d;background:#f0fdf4;}'
+            +'.sl{font-size:5.5pt;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:3px;}'
+            +'.sb.r .sl{color:#f87171;}.sb.g .sl{color:#22c55e;}'
+            +'.sv{font-family:monospace;font-size:11pt;line-height:1;}'
+            +'.sb.r .sv{color:#b91c1c;}.sb.g .sv{color:#15803d;}'
+            +'.tbl{width:100%;border-collapse:collapse;border:1px solid rgba(14,12,9,0.1);}'
+            +'.tbl .hr th{padding:5px 7px;font-size:6pt;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-right:1px solid rgba(14,12,9,0.08);border-bottom:2px solid rgba(14,12,9,0.12);background:#faf8f3;color:#7a7268;}'
+            +'.tbl .hr th.tr{text-align:right;}'
+            +'.tbl td{vertical-align:top;}'
+            +'.footer{padding:4mm 0 0;}'
+            +'.sigs{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:4mm;}'
+            +'.sig{text-align:center;padding:0 10px;}'
+            +'.sigline{border-top:1px solid rgba(14,12,9,0.2);padding-top:4px;font-size:6pt;color:#7a7268;}'
+            +'.fbar{padding:3mm 0 0;border-top:1px solid rgba(168,125,30,0.18);display:flex;justify-content:space-between;align-items:flex-end;}'
+            +'.ftxt{font-size:5.5pt;color:#9e9890;line-height:1.8;}'
+            +'.fbrand{font-family:Georgia,serif;font-size:9pt;color:#0e0c09;text-align:right;}'
+            +'.fbrand em{color:#8a6c0a;font-style:italic;}'
+            +'.fbsub{font-size:5pt;color:#9e9890;letter-spacing:1px;text-transform:uppercase;text-align:right;margin-top:1px;}'
+            +'.bot-bar{height:5px;background:linear-gradient(90deg,#8a6c0a,#a87d1e,#c9a227,#a87d1e,#8a6c0a);margin-top:4mm;}'
+            +'</style></head><body>'
+
+            +'<div id="page">'
+            +'<div class="wm">Aurum<em>OS</em></div>'
+            +'<div class="top-bar"></div>'
+            +'<div id="content">'
+
+            +'<div class="hdr">'
+                +'<div>'
+                    +'<div class="brand">Aurum<em>OS</em></div>'
+                    +'<div class="brand-sub">Jewellery Business Management</div>'
+                    +'<div class="brand-acc"><div class="brand-dash"></div><span class="brand-lbl">Master Ledger</span></div>'
+                +'</div>'
+                +'<div class="rpt-r">'
+                    +(biz.name ? '<div class="biz">'+hesc(biz.name)+'</div>' : '')
+                    +(biz.city ? '<div class="meta">'+hesc(biz.city)+(biz.phone ? ' | '+hesc(biz.phone) : '')+'</div>' : '')
+                    +'<div class="rpt-title">Global Transaction <em>Ledger</em></div>'
+                    +'<div class="meta">Period: '+hesc(from)+' to '+hesc(to)+'<br>Printed: '+dtStr+' at '+tmStr+'</div>'
+                    +'<div class="badge">'+filterLabel+'</div>'
+                +'</div>'
+            +'</div>'
+
+            +'<div class="sums">'
+                +'<div class="sb r"><div class="sl">Metal DR</div><div class="sv">'+totMDr.toFixed(3)+' g</div></div>'
+                +'<div class="sb r"><div class="sl">Cash DR</div><div class="sv">Rs.'+totCDr.toLocaleString('en-IN',{minimumFractionDigits:2})+'</div></div>'
+                +'<div class="sb g"><div class="sl">Metal CR</div><div class="sv">'+totMCr.toFixed(3)+' g</div></div>'
+                +'<div class="sb g"><div class="sl">Cash CR</div><div class="sv">Rs.'+totCCr.toLocaleString('en-IN',{minimumFractionDigits:2})+'</div></div>'
+            +'</div>'
+
+            +'<table class="tbl"><thead>'
+            +'<tr class="hr">'
+                +'<th style="width:24px;text-align:center;">#</th>'
+                +'<th style="min-width:68px;">Date</th>'
+                +'<th style="min-width:88px;">Account</th>'
+                +'<th>Reference / Description</th>'
+                +'<th style="min-width:52px;text-align:center;">Status</th>'
+                +'<th class="tr" style="min-width:88px;">Metal</th>'
+                +'<th class="tr" style="min-width:108px;">Cash</th>'
+            +'</tr>'
+            +'</thead><tbody>'+rows+'</tbody></table>'
+
+            +'</div>'
+
+            +'<div style="padding:0 10mm;">'
+            +'<div class="footer">'
+                +'<div class="sigs">'
+                    +'<div class="sig"><div class="sigline">Prepared By</div></div>'
+                    +'<div class="sig"><div class="sigline">Checked By</div></div>'
+                    +'<div class="sig"><div class="sigline">Authorised Signatory</div></div>'
+                +'</div>'
+                +'<div class="fbar">'
+                    +'<div class="ftxt">'
+                        +'<div>System-generated ledger from AurumOS Jewellery Management.</div>'
+                        +'<div>Generated: '+dtStr+' at '+tmStr+'. No signature required unless stamped.</div>'
+                    +'</div>'
+                    +'<div>'
+                        +'<div class="fbrand">Aurum<em>OS</em></div>'
+                        +'<div class="fbsub">Jewellery Business Management</div>'
+                    +'</div>'
+                +'</div>'
+            +'</div>'
+            +'<div class="bot-bar"></div>'
+            +'</div>'
+
+            +'</div></body></html>';
+
+        if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_print_window){
+            window.pywebview.api.open_print_window(html).then(function(r){
+                if(r&&r.status!=='success') alert('Error: '+(r.message||'unknown'));
+            }).catch(function(e){ alert('Print error: '+e); });
+        } else {
+            var w=window.open('','_blank','width=900,height=750');
+            w.document.open(); w.document.write(html); w.document.close();
+        }
+    }
+
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.get_settings){
+        window.pywebview.api.get_settings().then(function(res){
+            var biz={name:'',city:'',phone:''};
+            if(res&&res.data){ var d=res.data; biz.name=d.business_name||d.owner_name||''; biz.city=d.city||''; biz.phone=d.owner_phone||''; }
+            build(biz);
+        }).catch(function(){ build({name:'',city:'',phone:''}); });
+    } else { build({name:'',city:'',phone:''}); }
+}
+
+window.onload = function(){
+    if(typeof waitForAPI === 'function'){ waitForAPI(function(){ initSidebar('ledger'); }); }
+    setInterval(function(){
+        var n = new Date();
+        document.getElementById('real-time-clock').innerText =
+            n.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' | '+n.toLocaleTimeString();
+    }, 1000);
+    var t = setInterval(function(){
+        if(window.pywebview&&window.pywebview.api){ clearInterval(t); fetchMasterLedger(); }
+    }, 100);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS Update</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    background:#faf8f3;
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+}
+
+/* ── UPDATE CARD ── */
+.card{
+    width:520px;max-width:100%;
+    background:#fff;
+    border:1px solid rgba(14,12,9,0.09);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 8px 32px rgba(14,12,9,0.1),0 2px 8px rgba(14,12,9,0.06);
+    position:relative;
+}
+
+/* Gold shimmer top bar */
+.card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,#a87d1e,#e8c04a,#a87d1e);
+    background-size:200%;
+    animation:goldShimmer 2.5s ease-in-out infinite;
+}
+@keyframes goldShimmer{0%{background-position:0%}100%{background-position:200%}}
+
+/* ── HEADER SECTION ── */
+.card-head{
+    padding:28px 32px 24px;
+    border-bottom:1px solid rgba(14,12,9,0.07);
+    background:linear-gradient(135deg,#faf8f3 0%,#fff 100%);
+}
+.head-row{display:flex;align-items:flex-start;gap:16px;}
+.update-icon{
+    width:56px;height:56px;border-radius:14px;
+    background:linear-gradient(135deg,#a87d1e,#c9a227);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.6rem;flex-shrink:0;
+    box-shadow:0 4px 12px rgba(168,125,30,0.3);
+    animation:iconPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes iconPop{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.head-text{flex:1;}
+.update-label{
+    font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;
+    color:#a87d1e;margin-bottom:5px;
+}
+.update-title{
+    font-family:'DM Serif Display',Georgia,serif;
+    font-size:1.5rem;color:#0e0c09;letter-spacing:-0.3px;line-height:1.1;
+}
+.update-title em{color:#a87d1e;font-style:italic;}
+.version-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.v-pill{
+    display:inline-flex;align-items:center;gap:5px;
+    font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:500;
+    padding:4px 10px;border-radius:4px;
+}
+.v-current{background:rgba(14,12,9,0.06);color:#5c5a52;border:1px solid rgba(14,12,9,0.09);}
+.v-arrow{color:#9e9890;font-size:0.7rem;}
+.v-new{background:rgba(168,125,30,0.1);color:#a87d1e;border:1px solid rgba(168,125,30,0.2);}
+.v-date{font-size:0.65rem;color:#9e9890;margin-left:auto;}
+
+/* ── CHANGELOG ── */
+.changelog{padding:20px 32px;border-bottom:1px solid rgba(14,12,9,0.07);}
+.section-label{
+    font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+    color:#9e9890;margin-bottom:12px;
+}
+.change-list{display:flex;flex-direction:column;gap:7px;}
+.change-item{
+    display:flex;align-items:flex-start;gap:10px;
+    font-size:0.8rem;font-weight:400;color:#2a2620;line-height:1.4;
+}
+.change-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#a87d1e;flex-shrink:0;margin-top:5px;
+}
+
+/* ── PROGRESS SECTION ── */
+.progress-section{
+    padding:20px 32px;border-bottom:1px solid rgba(14,12,9,0.07);
+    display:none;
+}
+.progress-section.visible{display:block;}
+.progress-status{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:10px;
+}
+.progress-msg{font-size:0.78rem;font-weight:500;color:#2a2620;}
+.progress-pct{
+    font-family:'DM Mono',monospace;font-size:0.72rem;
+    font-weight:500;color:#a87d1e;
+}
+.progress-track{
+    height:6px;background:rgba(14,12,9,0.07);
+    border-radius:99px;overflow:hidden;
+}
+.progress-fill{
+    height:100%;border-radius:99px;
+    background:linear-gradient(90deg,#a87d1e,#e8c04a);
+    width:0%;transition:width 0.3s ease;
+}
+.progress-steps{
+    display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;
+}
+.step-pill{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:0.62rem;font-weight:600;
+    padding:3px 10px;border-radius:99px;
+    border:1px solid rgba(14,12,9,0.09);
+    color:#9e9890;background:#faf8f3;
+    transition:all 0.3s;
+}
+.step-pill.active{background:rgba(168,125,30,0.1);color:#a87d1e;border-color:rgba(168,125,30,0.2);}
+.step-pill.done{background:rgba(21,128,61,0.08);color:#15803d;border-color:rgba(21,128,61,0.15);}
+.step-pill.done::before{content:'✓ ';}
+
+/* ── DONE STATE ── */
+.done-section{
+    padding:24px 32px;border-bottom:1px solid rgba(14,12,9,0.07);
+    display:none;text-align:center;
+}
+.done-section.visible{display:block;}
+.done-icon{font-size:2.5rem;margin-bottom:10px;}
+.done-title{font-family:'DM Serif Display',serif;font-size:1.2rem;color:#0e0c09;margin-bottom:5px;}
+.done-sub{font-size:0.78rem;color:#7a7268;}
+
+/* ── ACTIONS ── */
+.actions{padding:20px 32px;display:flex;gap:10px;}
+.btn-later{
+    flex:1;padding:12px;
+    border:1px solid rgba(14,12,9,0.12);border-radius:8px;
+    background:#fff;font-family:'DM Sans',sans-serif;
+    font-size:0.8rem;font-weight:600;color:#7a7268;
+    cursor:pointer;transition:all 0.15s;
+}
+.btn-later:hover{background:#faf8f3;color:#2a2620;}
+.btn-update{
+    flex:2;padding:12px;
+    border:none;border-radius:8px;
+    background:linear-gradient(135deg,#a87d1e,#c9a227);
+    font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:700;
+    color:#fff;cursor:pointer;transition:all 0.18s;
+    box-shadow:0 3px 10px rgba(168,125,30,0.3);
+    display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-update:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(168,125,30,0.4);}
+.btn-update:active{transform:translateY(0);}
+.btn-update:disabled{opacity:0.5;pointer-events:none;cursor:not-allowed;}
+.btn-restart{
+    flex:1;padding:12px;border:none;border-radius:8px;
+    background:#0e0c09;font-family:'DM Sans',sans-serif;
+    font-size:0.8rem;font-weight:700;color:#fff;
+    cursor:pointer;transition:all 0.18s;
+    display:none;
+}
+.btn-restart:hover{background:#2a2620;}
+
+/* ── SIZE BADGE ── */
+.size-badge{
+    font-size:0.62rem;font-weight:500;color:#9e9890;
+    display:flex;align-items:center;gap:4px;
+    margin-left:auto;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+    <!-- Header -->
+    <div class="card-head">
+        <div class="head-row">
+            <div class="update-icon">🆕</div>
+            <div class="head-text">
+                <div class="update-label">Software Update Available</div>
+                <div class="update-title">AurumOS <em id="new-version">1.0.0</em> is ready</div>
+                <div class="version-row">
+                    <span class="v-pill v-current" id="cur-ver">v1.0.0</span>
+                    <span class="v-arrow">→</span>
+                    <span class="v-pill v-new" id="new-ver">v1.0.0</span>
+                    <span class="v-date" id="rel-date">—</span>
+                </div>
+            </div>
+            <div class="size-badge" id="size-badge"></div>
+        </div>
+    </div>
+
+    <!-- Changelog -->
+    <div class="changelog">
+        <div class="section-label">What's new</div>
+        <div class="change-list" id="change-list">
+            <div class="change-item">
+                <div class="change-dot"></div>
+                <span>Loading changelog…</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress (hidden until download starts) -->
+    <div class="progress-section" id="progress-section">
+        <div class="progress-status">
+            <span class="progress-msg" id="progress-msg">Preparing…</span>
+            <span class="progress-pct" id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-steps">
+            <span class="step-pill" id="step-dl">📥 Download</span>
+            <span class="step-pill" id="step-ex">📦 Extract</span>
+            <span class="step-pill" id="step-in">⚙️ Install</span>
+            <span class="step-pill" id="step-dn">✅ Done</span>
+        </div>
+    </div>
+
+    <!-- Done (hidden until complete) -->
+    <div class="done-section" id="done-section">
+        <div class="done-icon">🎉</div>
+        <div class="done-title">Update installed successfully!</div>
+        <div class="done-sub">Restart AurumOS to use the new version.</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <button class="btn-later" id="btn-later" onclick="closeSelf()">Later</button>
+        <button class="btn-update" id="btn-update" onclick="startUpdate()">
+            <span>⬇</span> Download &amp; Install
+        </button>
+        <button class="btn-restart" id="btn-restart" onclick="restartApp()">
+            🔄 Restart Now
+        </button>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+var UPDATE_DATA = null;
+
+// ── Read data injected by Python ──
+window.onload = function(){
+    // Python injects window.__UPDATE_DATA__ before this page loads
+    var d = window.__UPDATE_DATA__;
+    if(!d){
+        // Fallback demo
+        d = {
+            version:'1.2.0', current:'1.0.0',
+            release_date:'2026-05-24', size_mb:'2.4',
+            download_url:'',
+            changelog:['New billing discount feature','Fixed TODAY filter in history','Opening stock ledger page','Beautiful delete confirmations']
+        };
+    }
+    UPDATE_DATA = d;
+    renderData(d);
+};
+
+function renderData(d){
+    document.getElementById('new-version').innerText = d.version;
+    document.getElementById('cur-ver').innerText     = 'v' + (d.current || '?');
+    document.getElementById('new-ver').innerText     = 'v' + d.version;
+    document.getElementById('rel-date').innerText    = d.release_date ? '· ' + d.release_date : '';
+
+    if(d.size_mb){
+        document.getElementById('size-badge').innerText = '📦 ' + d.size_mb + ' MB';
+    }
+
+    var cl = document.getElementById('change-list');
+    var items = Array.isArray(d.changelog) ? d.changelog : [];
+    if(items.length){
+        cl.innerHTML = items.map(function(item){
+            return '<div class="change-item"><div class="change-dot"></div><span>' + esc(item) + '</span></div>';
+        }).join('');
+    } else {
+        cl.innerHTML = '<div class="change-item"><div class="change-dot"></div><span>Bug fixes and improvements.</span></div>';
+    }
+}
+
+// ── Start download ──
+function startUpdate(){
+    if(!UPDATE_DATA || !UPDATE_DATA.download_url){
+        alert('No download URL available.');
+        return;
+    }
+
+    document.getElementById('btn-update').disabled = true;
+    document.getElementById('btn-later').style.display = 'none';
+    document.getElementById('progress-section').classList.add('visible');
+    document.getElementById('step-dl').classList.add('active');
+
+    // Listen for progress events from Python
+    window.addEventListener('aurum-update-progress', function(e){
+        var pct = e.detail.pct;
+        var msg = e.detail.status;
+        setProgress(pct, msg);
+    });
+
+    window.addEventListener('aurum-update-done', function(e){
+        if(e.detail.success){
+            setProgress(100, 'All files installed!');
+            document.getElementById('step-dn').classList.add('active','done');
+            setTimeout(showDone, 400);
+        } else {
+            document.getElementById('progress-msg').innerText = '❌ ' + e.detail.message;
+            document.getElementById('btn-update').disabled = false;
+            document.getElementById('btn-later').style.display = '';
+        }
+    });
+
+    // Call Python to start download
+    if(window.pywebview && window.pywebview.api){
+        window.pywebview.api.start_update(UPDATE_DATA.download_url);
+    }
+}
+
+function setProgress(pct, msg){
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-msg').innerText   = msg;
+    document.getElementById('progress-pct').innerText   = pct + '%';
+
+    // Step indicators
+    var dl = document.getElementById('step-dl');
+    var ex = document.getElementById('step-ex');
+    var ins= document.getElementById('step-in');
+
+    if(pct >= 68){ dl.classList.remove('active'); dl.classList.add('done'); ex.classList.add('active'); }
+    if(pct >= 78){ ex.classList.remove('active'); ex.classList.add('done'); ins.classList.add('active'); }
+    if(pct >= 98){ ins.classList.remove('active'); ins.classList.add('done'); }
+}
+
+function showDone(){
+    document.getElementById('progress-section').classList.remove('visible');
+    document.getElementById('done-section').classList.add('visible');
+    document.getElementById('btn-restart').style.display = 'block';
+    document.getElementById('btn-later').style.display   = 'block';
+    document.getElementById('btn-later').innerText       = 'Restart Later';
+}
+
+function restartApp(){
+    if(window.pywebview && window.pywebview.api){
+        window.pywebview.api.restart_app();
+    }
+}
+
+function closeSelf(){
+    if(window.pywebview){ window.close(); }
+}
+
+function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

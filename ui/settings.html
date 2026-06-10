@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Settings</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+  --gold-ln:rgba(168,125,30,0.18);--gold-bg:rgba(168,125,30,0.06);
+  --rule:rgba(14,12,9,0.08);--rule2:rgba(14,12,9,0.04);
+  --muted:#7a7268;--muted2:#9e9890;
+  --green:#15803d;--green-bg:rgba(21,128,61,0.07);
+  --red:#b91c1c;--red-bg:rgba(185,28,28,0.07);
+  --sh:0 1px 4px rgba(14,12,9,0.06),0 4px 12px rgba(14,12,9,0.04);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:"DM Mono",monospace;
+}
+*{box-sizing:border-box;}
+body{font-family:"DM Sans",system-ui,sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;}
+.wrap{display:flex;height:100vh;overflow:hidden;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* ── HEADER ── */
+header{
+  height:60px;flex-shrink:0;
+  background:var(--white);
+  border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:16px;
+  padding:0 32px;
+  position:relative;
+}
+header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;
+  border:1px solid var(--rule);background:var(--cream);font-size:0.72rem;color:var(--muted);
+  cursor:pointer;font-family:inherit;transition:all 0.13s;text-decoration:none;}
+.h-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.h-div{width:1px;height:22px;background:var(--rule);}
+.h-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);}
+.h-title em{color:var(--gold3);font-style:italic;}
+
+/* ── SCROLL AREA ── */
+.scroll{flex:1;overflow-y:auto;padding:32px;}
+
+/* ── TWO-COLUMN LAYOUT ── */
+.layout{display:grid;grid-template-columns:300px 1fr;gap:24px;max-width:900px;}
+
+/* ── LEFT COLUMN — Profile card ── */
+.profile-card{
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:var(--sh);
+  height:fit-content;
+  position:sticky;top:0;
+}
+.profile-banner{
+  height:80px;
+  background:linear-gradient(135deg,var(--ink) 0%,#1c1a15 60%,#2a2218 100%);
+  position:relative;overflow:hidden;
+}
+.profile-banner::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(-45deg,transparent,transparent 12px,rgba(168,125,30,0.04) 12px,rgba(168,125,30,0.04) 13px);
+}
+.profile-banner-bar{position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold3));}
+.profile-av-wrap{padding:0 20px;margin-top:-28px;position:relative;z-index:1;}
+.profile-av{
+  width:56px;height:56px;border-radius:13px;
+  background:var(--ink);
+  border:3px solid var(--white);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:1.3rem;color:var(--gold2);
+  font-style:italic;box-shadow:0 4px 16px rgba(14,12,9,0.2);
+}
+.profile-info{padding:12px 20px 20px;}
+.profile-name{font-family:var(--serif);font-size:1.1rem;color:var(--ink);margin-bottom:3px;}
+.profile-role{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);}
+.profile-divider{height:1px;background:var(--rule);margin:14px 0;}
+.profile-detail{display:flex;flex-direction:column;gap:10px;padding:0 20px 20px;}
+.pd-row{display:flex;align-items:center;gap:10px;}
+.pd-icon{width:28px;height:28px;border-radius:7px;background:var(--cream2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);}
+.pd-info{display:flex;flex-direction:column;gap:1px;}
+.pd-label{font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);}
+.pd-value{font-size:0.78rem;color:var(--ink);font-weight:400;}
+.pd-value.mono{font-family:var(--mono);font-size:0.72rem;color:var(--ink3);}
+.license-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;
+  background:var(--gold-bg);border:1px solid var(--gold-ln);border-radius:99px;
+  font-family:var(--mono);font-size:0.68rem;color:var(--gold3);}
+
+/* ── RIGHT COLUMN ── */
+.right-col{display:flex;flex-direction:column;gap:20px;}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:-4px;}
+.sec-dot{width:8px;height:8px;border-radius:50%;background:var(--gold-ln);border:2px solid var(--gold3);}
+.sec-ttl{font-size:0.55rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold3);}
+
+/* ── CARD ── */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:var(--sh);}
+.card-hdr{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule2);}
+.card-hdr-left{display:flex;align-items:center;gap:11px;}
+.card-icon{width:34px;height:34px;border-radius:9px;background:var(--gold-bg);border:1px solid var(--gold-ln);
+  display:flex;align-items:center;justify-content:center;color:var(--gold3);flex-shrink:0;}
+.card-title{font-size:0.88rem;font-weight:500;color:var(--ink);}
+.card-sub{font-size:0.62rem;color:var(--muted2);margin-top:1px;}
+.card-body{padding:20px;}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld.full{grid-column:1/-1;}
+.fld label{font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+.inp-wrap{position:relative;}
+.inp{width:100%;height:40px;padding:0 12px;border:1px solid var(--rule);border-radius:8px;
+  font-size:0.85rem;font-family:inherit;color:var(--ink);background:var(--cream);
+  outline:none;transition:all 0.14s;}
+.inp:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(201,162,39,0.09);}
+.inp.pw-inp{padding-right:40px;}
+.eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);
+  border:none;background:none;cursor:pointer;color:var(--muted2);font-size:0.85rem;
+  padding:2px;transition:color 0.13s;line-height:1;}
+.eye:hover{color:var(--gold3);}
+
+/* Strength */
+.strength{height:3px;background:var(--rule);border-radius:99px;overflow:hidden;margin-top:5px;display:none;}
+.strength.vis{display:block;}
+.sf{height:100%;width:0;border-radius:99px;transition:width .3s,background .3s;}
+
+/* Alert */
+.alert{font-size:0.72rem;padding:9px 13px;border-radius:8px;display:none;align-items:center;gap:8px;line-height:1.5;margin-top:2px;}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(185,28,28,0.15);display:flex;}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(21,128,61,0.2);display:flex;}
+
+/* Buttons */
+.btn-row{display:flex;gap:10px;margin-top:16px;}
+.btn{height:40px;padding:0 20px;border:none;border-radius:9px;font-family:inherit;font-size:0.78rem;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.btn-primary{background:var(--ink);color:#fff;}
+.btn-primary:hover:not(:disabled){background:var(--gold3);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+.btn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
+.btn-ghost:hover{background:var(--cream3);}
+.btn-sm{height:32px;padding:0 14px;font-size:0.72rem;font-weight:500;}
+.btn-outline{background:transparent;color:var(--gold3);border:1px solid var(--gold-ln);}
+.btn-outline:hover{background:var(--gold-bg);}
+
+/* System info table */
+.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.sys-row{display:flex;flex-direction:column;gap:4px;padding:12px 14px;background:var(--cream);border-radius:9px;border:1px solid var(--rule);}
+.sys-lbl{font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);}
+.sys-val{font-family:var(--mono);font-size:0.8rem;color:var(--ink);}
+.sys-val.green{color:var(--green);}
+.sys-val.muted{color:var(--muted);font-size:0.72rem;}
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div class="wrap">
+<div id="sidebar-container"></div>
+<main>
+
+<header>
+  <a class="h-back" onclick="history.back()" href="#">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Back
+  </a>
+  <div class="h-div"></div>
+  <div class="h-title">Settings <em>&amp; Profile</em></div>
+</header>
+
+<div class="scroll">
+<div class="layout">
+
+  <!-- ── LEFT: Profile card ── -->
+  <div class="profile-card">
+    <div class="profile-banner">
+      <div class="profile-banner-bar"></div>
+    </div>
+    <div class="profile-av-wrap">
+      <div class="profile-av" id="p-av">A</div>
+    </div>
+    <div class="profile-info">
+      <div class="profile-name" id="p-name">Loading…</div>
+      <div class="profile-role">Business Owner</div>
+    </div>
+    <div class="profile-divider"></div>
+    <div class="profile-detail">
+      <div class="pd-row">
+        <div class="pd-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div class="pd-info">
+          <div class="pd-label">Business</div>
+          <div class="pd-value" id="p-biz">—</div>
+        </div>
+      </div>
+      <div class="pd-row">
+        <div class="pd-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.15 6.15l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div class="pd-info">
+          <div class="pd-label">Phone</div>
+          <div class="pd-value mono" id="p-phone">—</div>
+        </div>
+      </div>
+      <div class="pd-row">
+        <div class="pd-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="pd-info">
+          <div class="pd-label">City</div>
+          <div class="pd-value" id="p-city">—</div>
+        </div>
+      </div>
+      <div class="pd-row">
+        <div class="pd-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="pd-info">
+          <div class="pd-label">Setup Date</div>
+          <div class="pd-value mono" id="p-date">—</div>
+        </div>
+      </div>
+      <div class="pd-row">
+        <div class="pd-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <div class="pd-info">
+          <div class="pd-label">License</div>
+          <div id="p-lic"><div class="pd-value mono" style="color:var(--muted2);">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Forms ── -->
+  <div class="right-col">
+
+    <!-- Edit Profile -->
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Business Profile</div></div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Edit Profile</div>
+            <div class="card-sub">Update your business information</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld">
+            <label>Business Name</label>
+            <input class="inp" id="e-biz" type="text" placeholder="Neelkanth Jewellers">
+          </div>
+          <div class="fld">
+            <label>Owner Name</label>
+            <input class="inp" id="e-owner" type="text" placeholder="Neelkanthbhai Shah">
+          </div>
+          <div class="fld">
+            <label>Phone</label>
+            <input class="inp" id="e-phone" type="text" placeholder="+91 98765 43210">
+          </div>
+          <div class="fld">
+            <label>City</label>
+            <input class="inp" id="e-city" type="text" placeholder="Rajkot">
+          </div>
+        </div>
+        <div class="alert" id="edit-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="save-btn" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Security</div></div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Change Password</div>
+            <div class="card-sub">Update your admin login password</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld full">
+            <label>Current Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="cur-pw" type="password" placeholder="Enter current password">
+              <button class="eye" onclick="toggleEye('cur-pw',this)" tabindex="-1">👁</button>
+            </div>
+          </div>
+          <div class="fld">
+            <label>New Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="new-pw" type="password" placeholder="Min 4 characters" oninput="strength(this.value)">
+              <button class="eye" onclick="toggleEye('new-pw',this)" tabindex="-1">👁</button>
+            </div>
+            <div class="strength" id="sw"><div class="sf" id="sf"></div></div>
+          </div>
+          <div class="fld">
+            <label>Confirm Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="conf-pw" type="password" placeholder="Re-enter new password">
+              <button class="eye" onclick="toggleEye('conf-pw',this)" tabindex="-1">👁</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert" id="pw-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="pw-btn" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">System</div></div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div>
+            <div class="card-title">System Information</div>
+            <div class="card-sub">AurumOS installation details</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="sys-grid">
+          <div class="sys-row">
+            <div class="sys-lbl">Version</div>
+            <div class="sys-val" id="sys-ver">—</div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-lbl">License Status</div>
+            <div class="sys-val green">● Active</div>
+          </div>
+          <div class="sys-row" style="grid-column:1/-1;">
+            <div class="sys-lbl">Machine ID</div>
+            <div class="sys-val muted" id="sys-mid">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /right-col -->
+</div><!-- /layout -->
+</div><!-- /scroll -->
+</main>
+</div>
+
+<script>
+'use strict';
+var DATA = {};
+
+// Boot
+(function boot(n){
+    if (window.pywebview && window.pywebview.api) { loadAll(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+})(60);
+
+function loadAll() {
+    var api = window.pywebview.api;
+    api.get_settings && api.get_settings().then(function(r) {
+        if (r && r.status === 'success') { DATA = r.data||{}; render(); }
+    }).catch(function(){});
+
+    api.get_current_version && api.get_current_version().then(function(v){
+        if (v) el('sys-ver').innerText = 'v' + v;
+    }).catch(function(){});
+
+    api.get_my_machine_id && api.get_my_machine_id().then(function(m){
+        if (m) el('sys-mid').innerText = m;
+    }).catch(function(){});
+}
+
+function render() {
+    var biz   = DATA.business_name || '—';
+    var owner = DATA.owner_name    || '—';
+    var phone = DATA.owner_phone   || '—';
+    var city  = DATA.city          || '—';
+    var date  = DATA.setup_date    || '—';
+    var lic   = DATA.license_key   || '';
+
+    // Profile card
+    el('p-av').innerText = biz.charAt(0).toUpperCase();
+    el('p-name').innerText  = owner;
+    el('p-biz').innerText   = biz;
+    el('p-phone').innerText = phone;
+    el('p-city').innerText  = city;
+    el('p-date').innerText  = date;
+    el('p-lic').innerHTML   = lic
+        ? '<div class="license-pill">&#9679; ' + h(lic) + '</div>'
+        : '<div class="pd-value" style="color:var(--muted2);">Not set</div>';
+
+    // Form fields
+    el('e-biz').value   = DATA.business_name || '';
+    el('e-owner').value = DATA.owner_name    || '';
+    el('e-phone').value = DATA.owner_phone   || '';
+    el('e-city').value  = DATA.city          || '';
+}
+
+// Save profile
+function saveProfile() {
+    var d = {
+        business_name: el('e-biz').value.trim(),
+        owner_name:    el('e-owner').value.trim(),
+        owner_phone:   el('e-phone').value.trim(),
+        city:          el('e-city').value.trim(),
+    };
+    if (!d.business_name || !d.owner_name) {
+        setAlert('edit-alert','Business name and owner name are required.','err'); return;
+    }
+    setBtn('save-btn','Saving…',true);
+    window.pywebview.api.update_settings(d).then(function(r) {
+        if (r && r.status === 'success') {
+            Object.assign(DATA, d); render();
+            setAlert('edit-alert','Saved successfully!','ok');
+        } else {
+            setAlert('edit-alert',(r&&r.message)||'Failed to save.','err');
+        }
+        setBtn('save-btn','Save Changes',false);
+    }).catch(function(e){ setAlert('edit-alert','Error: '+e,'err'); setBtn('save-btn','Save Changes',false); });
+}
+
+// Change password
+function changePassword() {
+    var cur  = el('cur-pw').value;
+    var np   = el('new-pw').value;
+    var conf = el('conf-pw').value;
+    if (!cur)          { setAlert('pw-alert','Enter your current password.','err'); return; }
+    if (np.length < 4) { setAlert('pw-alert','New password must be at least 4 characters.','err'); return; }
+    if (np !== conf)   { setAlert('pw-alert','Passwords do not match.','err'); return; }
+    setBtn('pw-btn','Updating…',true);
+    window.pywebview.api.change_owner_password(cur, np).then(function(r) {
+        if (r && r.status === 'success') {
+            setAlert('pw-alert','Password updated!','ok');
+            el('cur-pw').value = ''; el('new-pw').value = ''; el('conf-pw').value = '';
+            el('sw').classList.remove('vis');
+        } else {
+            setAlert('pw-alert',(r&&r.message)||'Failed.','err');
+        }
+        setBtn('pw-btn','Update Password',false);
+    }).catch(function(e){ setAlert('pw-alert','Error: '+e,'err'); setBtn('pw-btn','Update Password',false); });
+}
+
+// Strength
+function strength(v) {
+    var sw = el('sw'), fill = el('sf');
+    if (!v) { sw.classList.remove('vis'); return; }
+    sw.classList.add('vis');
+    var s = [v.length>=4,v.length>=8,/[A-Z]/.test(v),/[0-9]/.test(v),/[^A-Za-z0-9]/.test(v)].filter(Boolean).length;
+    fill.style.width = s*20+'%';
+    fill.style.background = s<=1?'#ef4444':s<=3?'#f59e0b':'#15803d';
+}
+
+// Helpers
+function el(id){ return document.getElementById(id); }
+function setAlert(id,msg,type){
+    var a=el(id); a.className='alert'+(type?' '+type:'');
+    a.innerHTML=msg?(type==='ok'?'<span>✓</span>':type==='err'?'<span>⚠</span>':'')+h(msg):'';
+}
+function setBtn(id,label,disabled){ var b=el(id); b.innerText=label; b.disabled=disabled; }
+function toggleEye(id,btn){ var i=el(id); i.type=i.type==='password'?'text':'password'; btn.innerText=i.type==='password'?'👁':'🙈'; }
+function h(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Enter key
+document.addEventListener('keydown',function(e){
+    if(e.key!=='Enter') return;
+    var a=document.activeElement;
+    if(!a) return;
+    if(['e-biz','e-owner','e-phone','e-city'].includes(a.id)){e.preventDefault();saveProfile();}
+    if(['cur-pw','new-pw','conf-pw'].includes(a.id)){e.preventDefault();changePassword();}
+});
+</script>
+</body>
+</html>

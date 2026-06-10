@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Sign In</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;
+    --ink:#0e0c09;--ink2:#2a2620;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
+    --rule:rgba(14,12,9,0.09);
+    --red:#b91c1c;--red-bg:#fef2f2;
+    --green:#15803d;--muted:#7a7268;--muted2:#9e9890;
+    --serif:"DM Serif Display",Georgia,serif;
+    --mono:"DM Mono",monospace;
+}
+body{
+    font-family:"DM Sans",system-ui,sans-serif;
+    background:var(--cream);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;overflow:hidden;
+}
+body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(168,125,30,0.025) 28px,rgba(168,125,30,0.025) 29px);
+}
+.particle{position:fixed;border-radius:50%;pointer-events:none;background:rgba(168,125,30,0.08);animation:float linear infinite;}
+@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:1;}90%{opacity:0.5;}100%{transform:translateY(-100px) rotate(720deg);opacity:0;}}
+
+/* Card */
+.card{width:380px;max-width:100%;background:#fff;border:1px solid var(--rule);border-radius:18px;overflow:hidden;box-shadow:0 12px 48px rgba(14,12,9,0.10);animation:ci .4s cubic-bezier(.34,1.56,.64,1) both;position:relative;z-index:1;}
+@keyframes ci{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+.bar{height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold3),var(--gold2),var(--gold));background-size:300%;animation:gs 3s ease infinite;}
+@keyframes gs{0%{background-position:0%}100%{background-position:300%}}
+
+/* Logo */
+.logo{padding:28px 32px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.lm{width:52px;height:52px;border-radius:14px;background:var(--ink);display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px rgba(14,12,9,0.2);}
+.lm span{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);font-style:italic;}
+.ln{font-family:var(--serif);font-size:1.4rem;color:var(--ink);letter-spacing:-.3px;}
+.ln em{color:var(--gold3);}
+.ls{font-size:.58rem;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:1.4px;margin-top:4px;}
+
+/* ── LAST LOGIN STRIP ── */
+.last-login{
+    margin:16px 32px 0;
+    background:var(--cream2);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    padding:10px 14px;
+    display:none;
+    align-items:center;
+    gap:12px;
+}
+.last-login.visible{display:flex;}
+.ll-avatar{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--gold-bg);border:1px solid var(--gold-ln);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:0.95rem;color:var(--gold3);
+    flex-shrink:0;
+}
+.ll-info{flex:1;min-width:0;}
+.ll-name{font-size:0.8rem;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ll-meta{font-size:0.6rem;color:var(--muted2);margin-top:2px;font-family:var(--mono);}
+.ll-badge{
+    font-size:0.52rem;font-weight:500;
+    background:rgba(21,128,61,0.08);
+    color:var(--green);
+    border:1px solid rgba(21,128,61,0.18);
+    padding:2px 7px;border-radius:99px;
+    white-space:nowrap;flex-shrink:0;
+}
+
+/* Form */
+.form{padding:16px 32px 24px;}
+.lbl{font-size:.55rem;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);display:block;margin-bottom:5px;}
+.pass-wrap{position:relative;margin-bottom:12px;}
+.inp{width:100%;height:42px;padding:0 42px 0 13px;background:var(--cream);border:1px solid var(--rule);border-radius:8px;font-family:var(--mono);font-size:.85rem;color:var(--ink);outline:none;transition:all .14s;}
+.inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,.12);background:#fff;}
+.inp:disabled{opacity:.45;cursor:not-allowed;}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;padding:4px;color:var(--muted2);transition:color 0.13s;font-size:0.9rem;}
+.eye-btn:hover{color:var(--gold3);}
+.strength-bar{height:2px;background:var(--rule);border-radius:99px;margin-top:5px;overflow:hidden;display:none;}
+.strength-bar.visible{display:block;}
+.strength-fill{height:100%;width:0%;border-radius:99px;transition:width 0.3s,background 0.3s;}
+
+/* Attempt dots */
+.ar{display:none;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:24px;}
+.al{font-size:.6rem;font-weight:500;color:var(--muted2);}
+.dots{display:flex;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--rule);background:#fff;transition:all .25s cubic-bezier(.34,1.56,.64,1);}
+.dot.used{background:var(--red);border-color:rgba(185,28,28,.3);box-shadow:0 0 0 3px rgba(185,28,28,.12);}
+.dot.warn{background:var(--gold2);border-color:var(--gold-ln);}
+
+/* Error */
+.em{display:none;background:var(--red-bg);border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:9px 12px;font-size:.73rem;font-weight:500;color:var(--red);margin-bottom:12px;}
+.em.on{display:block;}
+
+/* ── LOCKOUT PANEL — permanent, no countdown ── */
+.lkp{background:#fff8f8;border:1.5px solid rgba(185,28,28,.18);border-radius:12px;padding:24px 20px;text-align:center;margin-bottom:12px;display:none;}
+.lki{font-size:2.4rem;margin-bottom:10px;}
+.lkt{font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:4px;}
+.lks{font-size:.72rem;color:var(--muted);line-height:1.6;}
+/* Admin contact hint */
+.lk-admin{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:14px;padding:7px 14px;
+    background:rgba(14,12,9,0.04);border:1px solid var(--rule);
+    border-radius:8px;
+    font-size:0.62rem;color:var(--muted);
+}
+
+/* Button */
+.btn{width:100%;height:44px;background:var(--ink);color:#fff;border:none;border-radius:10px;font-family:"DM Sans",sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s;}
+.btn:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+/* Footer */
+.foot{padding:10px 32px 14px;display:flex;align-items:center;justify-content:space-between;}
+.sr{display:flex;align-items:center;gap:5px;font-size:.6rem;color:var(--muted2);}
+.sd{width:6px;height:6px;border-radius:50%;background:#d1d5db;}
+.sd.on{background:var(--green);animation:sp 2s ease infinite;}
+.sd.er{background:var(--red);}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:.35}}
+.vr{font-family:var(--mono);font-size:.56rem;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 8px;border-radius:99px;}
+
+/* Security badge */
+.sec-badge{text-align:center;padding:0 32px 16px;}
+.sb-inner{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:rgba(14,12,9,0.04);border:1px solid rgba(14,12,9,0.08);font-size:0.56rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:rgba(14,12,9,0.35);font-family:var(--mono);}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:sp 2.5s ease infinite;flex-shrink:0;}
+
+/* Temp password reveal popup */
+.tp-overlay{
+    position:fixed;inset:0;
+    background:rgba(14,12,9,0.55);
+    backdrop-filter:blur(10px);
+    display:none;align-items:center;justify-content:center;
+    z-index:9999;
+}
+.tp-overlay.open{display:flex;}
+.tp-box{
+    background:#fff;border-radius:16px;
+    width:340px;max-width:92vw;
+    overflow:hidden;
+    box-shadow:0 24px 60px rgba(14,12,9,0.22);
+    animation:ci 0.28s cubic-bezier(0.34,1.56,0.64,1);
+}
+.tp-bar{height:3px;background:linear-gradient(90deg,#15803d,#22c55e,#15803d);background-size:200%;animation:gs 2s ease infinite;}
+.tp-body{padding:28px 22px 22px;text-align:center;}
+.tp-icon{font-size:2rem;margin-bottom:12px;}
+.tp-title{font-family:var(--serif);font-size:1.05rem;color:#0e0c09;margin-bottom:6px;}
+.tp-sub{font-size:0.7rem;color:#7a7268;line-height:1.6;margin-bottom:18px;}
+/* Password display box */
+.tp-pass-box{
+    background:#f2efe7;
+    border:1.5px solid rgba(168,125,30,0.25);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:16px;
+}
+.tp-pass-label{font-size:0.52rem;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;color:#9e9890;margin-bottom:8px;}
+.tp-pass-val{
+    font-family:var(--mono);font-size:1.3rem;font-weight:500;
+    color:#0e0c09;letter-spacing:3px;
+    word-break:break-all;
+}
+.tp-note{font-size:0.58rem;color:#9e9890;margin-bottom:18px;line-height:1.5;}
+.tp-btn{
+    width:100%;height:42px;border:none;border-radius:9px;
+    background:#0e0c09;color:#fff;
+    font-family:"DM Sans",sans-serif;font-size:0.82rem;
+    cursor:pointer;transition:all 0.15s;
+}
+.tp-btn:hover{background:#15803d;}
+
+/* Shake */
+@keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-5px)}60%{transform:translateX(5px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+.shake{animation:shake .45s ease both;}
+
+
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+    <div class="bar"></div>
+
+    <div class="logo">
+        <div class="lm"><span>Au</span></div>
+        <div class="ln">Aurum<em>OS</em></div>
+        <div class="ls">Jewelry ERP · Secure Access</div>
+    </div>
+
+    <!-- Last login strip -->
+    <div class="last-login" id="last-login">
+        <div class="ll-avatar" id="ll-avatar">A</div>
+        <div class="ll-info">
+            <div class="ll-name" id="ll-name">—</div>
+            <div class="ll-meta" id="ll-meta">Last login —</div>
+        </div>
+        <div class="ll-badge">Last Session</div>
+    </div>
+
+    <div class="form" id="main-form">
+
+
+        <!-- Password -->
+        <div id="pass-mode">
+            <label class="lbl">Password</label>
+            <div class="pass-wrap">
+                <input type="password" id="inp" class="inp"
+                       placeholder="••••••••" autocomplete="current-password"
+                       oninput="onPassInput(this.value)"
+                       onkeydown="if(event.key==='Enter')login()">
+<!--                <button class="eye-btn" id="eye-btn" onclick="toggleEye()" type="button" tabindex="-1">-->
+<!--                    <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>-->
+<!--                </button>-->
+            </div>
+            <div class="strength-bar" id="strength-bar">
+                <div class="strength-fill" id="strength-fill"></div>
+            </div>
+        </div>
+
+
+        <br>
+        <div class="ar" id="ar">
+            <span class="al" id="al"></span>
+            <div class="dots">
+                <div class="dot" id="d1"></div>
+                <div class="dot" id="d2"></div>
+                <div class="dot" id="d3"></div>
+            </div>
+        </div>
+        <div class="em" id="em"></div>
+
+        <!-- Lockout panel — permanent until admin resets -->
+        <div class="lkp" id="lkp">
+            <div class="lki">🔒</div>
+            <div class="lkt">Account Locked</div>
+            <div class="lks">Too many incorrect attempts.<br>Access has been suspended.</div>
+            <div class="lk-admin">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Contact administrator to unlock
+            </div>
+        </div>
+
+        <button class="btn" id="btn" onclick="login()">
+            <span>→</span> Sign In
+        </button>
+    </div>
+
+    <div class="foot">
+        <div class="sr"><div class="sd" id="sd"></div><span id="st">Starting…</span></div>
+        <span class="vr" id="vr">AurumOS</span>
+    </div>
+
+    <div class="sec-badge">
+        <div class="sb-inner">
+            <div class="sb-dot"></div>
+            &#128737;&nbsp; Protected by BASTION&#8482;
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+var LOCKED   = false;
+var ATTEMPTS = 0;
+var MAX      = 3;
+var READY    = false;
+
+// ── Particles ──────────────────────────────────────────────────────
+(function() {
+    for (var i = 0; i < 8; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = 4 + Math.random() * 12;
+        p.style.cssText = [
+            'width:' + size + 'px',
+            'height:' + size + 'px',
+            'left:' + Math.random() * 100 + '%',
+            'animation-duration:' + (8 + Math.random() * 14) + 's',
+            'animation-delay:' + (Math.random() * 10) + 's',
+        ].join(';');
+        document.body.appendChild(p);
+    }
+})();
+
+// ── Last Login Display ─────────────────────────────────────────────
+function showLastLogin(data) {
+    if (!data || !data.username) return;
+
+    var strip  = document.getElementById('last-login');
+    var nameEl = document.getElementById('ll-name');
+    var metaEl = document.getElementById('ll-meta');
+
+    // Display ADMIN for owner, otherwise username
+    var role = (data.role || '').toLowerCase();
+    var displayName = data.username || 'Owner';
+
+    document.getElementById('ll-avatar').innerText = displayName.charAt(0).toUpperCase();
+    nameEl.innerText = displayName;
+
+    // FIX: Force Local Time Format
+    var d = new Date(data.time.replace(' ', 'T'));
+
+    // Check if date is valid
+    if (!isNaN(d.getTime())) {
+        var dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        var timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        var roleLabel = (role === 'admin') ? 'Admin' : 'Staff';
+        metaEl.innerText = roleLabel + ' · ' + dateStr + ' · ' + timeStr;
+    } else {
+        metaEl.innerText = "Last login: " + data.time;
+    }
+
+    strip.classList.add('visible');
+}
+
+// ── Show/hide password ─────────────────────────────────────────────
+function toggleEye() {
+    var inp = document.getElementById('inp');
+    var icon = document.getElementById('eye-icon');
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    icon.innerHTML = show
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+
+// ── Password strength ──────────────────────────────────────────────
+function onPassInput(val) {
+    var bar=document.getElementById('strength-bar'), fill=document.getElementById('strength-fill');
+    if (!val) { bar.classList.remove('visible'); return; }
+    bar.classList.add('visible');
+    var score=0;
+    if (val.length>=6) score++; if (val.length>=10) score++;
+    if (/[A-Z]/.test(val)) score++; if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    fill.style.width=Math.min(100,score*20)+'%';
+    fill.style.background=score<=1?'#ef4444':score<=3?'#f59e0b':'#15803d';
+}
+
+// ── Bridge polling ─────────────────────────────────────────────────
+var _pt = setInterval(function() {
+    try {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.verify_login) {
+            clearInterval(_pt); READY = true; onReady();
+        }
+    } catch(e) {}
+}, 100);
+
+setTimeout(function() {
+    if (!READY) { clearInterval(_pt); setSt('er','Timeout — restart app'); }
+}, 20000);
+
+function onReady() {
+    setSt('on','Ready');
+
+    // Version
+    try {
+        var vp = window.pywebview.api.get_current_version();
+        if (vp && typeof vp.then === 'function') {
+            vp.then(function(v){ try{ if(v) document.getElementById('vr').innerText='v'+v; }catch(e){} }).catch(function(){});
+        }
+    } catch(e) {}
+
+    // Last login — try API first, fallback to localStorage
+    try {
+        var llp = window.pywebview.api.get_last_login_info();
+        if (llp && typeof llp.then === 'function') {
+            llp.then(function(data) {
+                try {
+                    if (data && data.username) {
+                        showLastLogin(data);
+                        // also save to localStorage for offline fallback
+                        localStorage.setItem('aurum_last_login', JSON.stringify(data));
+                    } else {
+                        // fallback to localStorage
+                        var stored = localStorage.getItem('aurum_last_login');
+                        if (stored) showLastLogin(JSON.parse(stored));
+                    }
+                } catch(e) {}
+            }).catch(function() {
+                try {
+                    var stored = localStorage.getItem('aurum_last_login');
+                    if (stored) showLastLogin(JSON.parse(stored));
+                } catch(e2) {}
+            });
+        }
+    } catch(e) {
+        try {
+            var stored = localStorage.getItem('aurum_last_login');
+            if (stored) showLastLogin(JSON.parse(stored));
+        } catch(e2) {}
+    }
+
+    // Lockout state — permanent, no timer
+    try {
+        var lk = window.pywebview.api.get_lockout_status();
+        if (lk && typeof lk.then === 'function') {
+            lk.then(function(s) {
+                try {
+                    if (!s) return;
+                    ATTEMPTS = parseInt(s.attempts) || 0;
+                    if (s.locked) {
+                        dots(MAX); showAR(); applyLock();
+                    } else if (ATTEMPTS > 0) {
+                        dots(ATTEMPTS); showAR();
+                    }
+                } catch(e) {}
+            }).catch(function(){});
+        }
+    } catch(e) {}
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────────
+function login() {
+    if (LOCKED) return;
+    if (!READY || !window.pywebview || !window.pywebview.api) {
+        showErr('App not ready — please wait.'); return;
+    }
+    var pass = document.getElementById('inp').value;
+    if (!pass) { shake(); showErr('Please enter your password.'); return; }
+
+    var btn = document.getElementById('btn');
+    btn.disabled=true; btn.innerHTML='<span>⋯</span> Checking…'; hideErr();
+
+    try {
+        var result = window.pywebview.api.verify_login(pass);
+        if (result && typeof result.then === 'function') {
+            result.then(function(res){
+                btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+                handleResult(res);
+            }).catch(function(){
+                btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+                showErr('App error — please try again.');
+            });
+        } else if (result && typeof result==='object') {
+            btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+            handleResult(result);
+        } else {
+            window.__loginResult = function(res){
+                window.__loginResult=null;
+                btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+                handleResult(res);
+            };
+            setTimeout(function(){
+                if (window.__loginResult){
+                    window.__loginResult=null;
+                    btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+                    showErr('No response — please try again.');
+                }
+            }, 8000);
+        }
+    } catch(e) {
+        btn.disabled=false; btn.innerHTML='<span>→</span> Sign In';
+        showErr('Call failed — please try again.');
+    }
+}
+
+// ── Handle result ──────────────────────────────────────────────────
+function handleResult(res) {
+    if (!res) { showErr('No response — try again.'); return; }
+
+    if (res.status === 'success') {
+        var btn = document.getElementById('btn');
+        btn.innerHTML='<span>✓</span> Welcome!'; btn.style.background='#15803d';
+        // Save last login to localStorage
+        try {
+            localStorage.setItem('aurum_last_login', JSON.stringify({
+                username: res.username || 'Admin',
+                role:     res.role     || 'admin',
+                time:     new Date().toISOString()
+            }));
+        } catch(e) {}
+
+        var landing  = res.landing  || 'dashboard.html';
+        var role     = res.role     || 'admin';
+        var username = res.username || 'Admin';
+        try {
+            localStorage.setItem('aurum_user_role',   role);
+            localStorage.setItem('aurum_active_user', username);
+        } catch(e) {}
+        setTimeout(function(){
+            try {
+                var base = window.location.href.replace(/[^\\/\\\\]*$/, '');
+                window.location.href = base + landing + '?role=' + role;
+            } catch(e) {
+                try { window.pywebview.api.navigate(landing); } catch(e2) {}
+            }
+        }, 450);
+        return;
+    }
+
+    if (res.status === 'locked') {
+        ATTEMPTS=MAX; dots(MAX); showAR();
+        applyLock();
+        return;
+    }
+
+    ATTEMPTS = parseInt(res.attempts) || (ATTEMPTS+1);
+    dots(ATTEMPTS); showAR(); shake();
+    document.getElementById('inp').value=''; document.getElementById('inp').focus();
+    showErr(res.message || 'Wrong password.');
+}
+
+window.__loginResult = null;
+
+// ── Lock — PERMANENT (no countdown, no auto-unlock) ───────────────
+function applyLock() {
+    LOCKED = true;
+    // Hide password field and sign-in button — only lockout panel visible
+    document.getElementById('pass-mode').style.display = 'none';
+    document.getElementById('btn').style.display       = 'none';
+    document.getElementById('ar').style.display        = 'none';
+    document.getElementById('em').classList.remove('on');
+    document.getElementById('lkp').style.cssText       = 'display:block!important;';
+}
+
+// ── Called after client clicks OK on temp popup ────────────────────
+function revealTempField() {
+    // Show password field and button — hidden during lockout
+    document.getElementById('pass-mode').style.display = 'block';
+    document.getElementById('btn').style.display       = 'block';
+    // Pre-focus the input
+    setTimeout(function(){
+        var el = document.getElementById('inp');
+        if (el) { el.value = ''; el.focus(); }
+    }, 150);
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────
+function dots(n) {
+    [1,2,3].forEach(function(i) {
+        var d=document.getElementById('d'+i);
+        d.className='dot';
+        if (i<n) d.classList.add('used');
+        else if (i===n) d.classList.add(n<MAX?'warn':'used');
+    });
+    var left=MAX-n;
+    var al=document.getElementById('al');
+    if (n>=MAX){ al.innerText='Account locked'; al.style.color='var(--red)'; }
+    else { al.innerText=left+' attempt'+(left===1?'':'s')+' remaining'; al.style.color=left===1?'var(--red)':'var(--muted2)'; }
+}
+function showAR()   { document.getElementById('ar').style.display='flex'; }
+function showErr(m) { var e=document.getElementById('em'); e.innerText=m; e.classList.add('on'); }
+function hideErr()  { document.getElementById('em').classList.remove('on'); }
+function shake()    { var c=document.getElementById('card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+function setSt(s,t) {
+    var d=document.getElementById('sd');
+    d.className='sd'+(s==='on'?' on':s==='er'?' er':'');
+    document.getElementById('st').innerText=t;
+}
+
+// ── Remote Unlock (called by poller when admin resets password) ───
+window.remoteUnlock = function() {
+    LOCKED   = false;
+    ATTEMPTS = 0;
+    // Re-enable input and button
+    var inp = document.getElementById('inp');
+    if (inp) { inp.disabled = false; inp.value = ''; }
+    var btn = document.getElementById('btn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In'; btn.style.background = ''; }
+    // Hide lockout panel
+    var lkp = document.getElementById('lkp');
+    if (lkp) lkp.style.cssText = 'display:none!important;';
+    // Hide attempt dots
+    var ar = document.getElementById('ar');
+    if (ar) ar.style.display = 'none';
+    hideErr();
+    // Show success hint
+    showErr('Password reset by administrator. Please sign in.');
+    var em = document.getElementById('em');
+    if (em) { em.style.background = 'rgba(21,128,61,0.07)'; em.style.color = 'var(--green)'; em.style.borderColor = 'rgba(21,128,61,0.2)'; }
+    if (inp) setTimeout(function(){ inp.focus(); }, 200);
+};
+
+// ── Realtime temp password popup ─────────────────────────────────
+window.showTempPasswordUnlock = function(tempPass) {
+    // Show the temp password in the popup
+    var valEl = document.getElementById('tp-pass-val');
+    if (valEl) valEl.innerText = tempPass || '——';
+    document.getElementById('tp-overlay').classList.add('open');
+};
+
+function onTempPopupOK() {
+    // Close popup
+    document.getElementById('tp-overlay').classList.remove('open');
+    // Hide lockout panel
+    document.getElementById('lkp').style.cssText = 'display:none!important;';
+    // Reveal password field + sign-in button
+    LOCKED = false;
+    revealTempField();
+    // Show hint
+    var em = document.getElementById('em');
+    em.innerText = 'Enter the temporary password shown to you.';
+    em.classList.add('on');
+    em.style.background    = 'rgba(21,128,61,0.07)';
+    em.style.color         = 'var(--green)';
+    em.style.borderColor   = 'rgba(21,128,61,0.2)';
+}
+
+// ── Boot ───────────────────────────────────────────────────────────
+window.onload = function() {
+    // Show last login from localStorage immediately (before bridge ready)
+    try {
+        var stored = localStorage.getItem('aurum_last_login');
+        if (stored) showLastLogin(JSON.parse(stored));
+    } catch(e) {}
+    document.getElementById('inp').focus();
+};
+</script>
+
+
+<!-- Temp password popup — shown realtime when admin sends reset -->
+<div class="tp-overlay" id="tp-overlay">
+    <div class="tp-box">
+        <div class="tp-bar"></div>
+        <div class="tp-body">
+            <div class="tp-icon">🔓</div>
+            <div class="tp-title">Administrator Unlock</div>
+            <div class="tp-sub">
+                Your administrator has sent a temporary password.<br>
+                Note it down then click OK to proceed to login.
+            </div>
+            <div class="tp-pass-box">
+                <div class="tp-pass-label">Your Temporary Password</div>
+                <div class="tp-pass-val" id="tp-pass-val">——</div>
+            </div>
+            <div class="tp-note">
+                One-time use only · Expires in 60 minutes
+            </div>
+            <button class="tp-btn" onclick="onTempPopupOK()">
+                OK, I have noted it →
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
