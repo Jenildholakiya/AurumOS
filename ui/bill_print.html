@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Bill Print</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+@page { size: auto; margin: 5mm 4mm; }
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family:'Noto Sans Gujarati',Arial,sans-serif;
+    background:#d1d5db;
+    display:flex; flex-direction:column; align-items:center;
+    padding:14px; gap:10px; min-height:100vh;
+}
+
+.toolbar {
+    width:420px; background:#0f172a; border-radius:8px;
+    padding:8px 14px; display:flex; align-items:center; gap:8px;
+}
+.toolbar-title {
+    flex:1; font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem; font-weight:600; color:#b59410;
+    letter-spacing:1.2px; text-transform:uppercase;
+}
+.btn-p {
+    background:#b59410; color:#000; border:none;
+    padding:6px 16px; border-radius:5px;
+    font-weight:700; font-size:0.75rem; cursor:pointer;
+}
+.btn-p:hover { background:#d4ac15; }
+.btn-c {
+    background:transparent; color:#64748b;
+    border:1px solid #334155; padding:6px 10px;
+    border-radius:5px; font-weight:600; font-size:0.72rem; cursor:pointer;
+}
+.btn-c:hover { color:#e11d48; border-color:#e11d48; }
+
+.slip-wrap {
+    width:420px;
+    background:#fff;
+    box-shadow:0 2px 12px rgba(0,0,0,0.15);
+    border-radius:3px;
+}
+.copy-div {
+    background:#f1f5f9; text-align:center;
+    font-size:0.58rem; font-weight:600; color:#94a3b8;
+    letter-spacing:2px; text-transform:uppercase;
+    padding:4px; border-top:2px dashed #cbd5e1;
+}
+.slip { padding:3px 0; background:#fff; }
+
+.meta-row {
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; padding:4px 6px;
+    font-family:'JetBrains Mono',monospace; font-size:9pt;
+    border-bottom:1px solid #000;
+}
+.meta-group { display:flex; align-items:center; gap:8px; }
+.m-cust { font-weight:500; font-size:10pt; color:#000; font-family:'Noto Sans Gujarati',Arial,sans-serif; }
+.m-vch  { font-weight:700; font-size:10pt; color:#000; }
+.m-time,.m-date { font-weight:400; color:#555; font-size:9pt; }
+
+.bt { width:100%; border-collapse:collapse; table-layout:fixed; border:1.5px solid #000; }
+.bt thead th {
+    height:36px; padding:0; font-size:12.5pt; font-weight:800; color:#000;
+    text-align:center !important; background:#efefef; vertical-align:middle;
+    white-space:nowrap; font-family:'Noto Sans Gujarati',Arial,sans-serif;
+    border-bottom:1.5px solid #000; border-right:1px solid #000;
+}
+.bt thead th:last-child { border-right:none; }
+.bt td {
+    height:38px; padding:2px 4px; font-size:14pt; font-weight:800; color:#000;
+    text-align:center !important; vertical-align:middle;
+    font-family:'JetBrains Mono',monospace;
+    border-bottom:1px solid #000; border-right:1px solid #000;
+}
+.bt td:last-child { border-right:none; }
+.bt tbody tr:last-child td { border-bottom:none; }
+.cb { font-weight:400 !important; }
+
+.rt td {
+    height:40px !important; font-size:10.5pt !important; font-weight:600 !important;
+    text-align:center !important; background:#fff;
+    font-family:'JetBrains Mono',Arial,monospace;
+    border-top:1.5px solid #000 !important; border-bottom:1.5px solid #000 !important;
+    border-right:1px solid #000;
+}
+.rt td:last-child { border-right:none; }
+
+.rr td {
+    height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
+    text-align:center !important; background:#fff;
+    border-bottom:1px solid #000; border-right:1px solid #000;
+}
+.rr td:last-child { border-right:none; }
+
+.rd td {
+    height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
+    text-align:center !important; background:#fffbeb; color:#000;
+    border-top:1px dashed #000 !important; border-bottom:1px dashed #000 !important;
+    border-right:1px solid #000;
+}
+.rd td:last-child { border-right:none; }
+
+.rf td {
+    height:32px !important; font-size:9pt !important; font-weight:500 !important;
+    text-align:center !important; background:#fff;
+    border-top:none !important; border-bottom:none !important;
+    border-right:1px solid #000;
+}
+.rf td:last-child { border-right:none; }
+
+.rr .price-cell { font-size:10pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
+.rr td:first-child { font-size:10pt !important; font-weight:700 !important; }
+
+#mount  { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
+#status { font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#475569; padding:8px; text-align:center; }
+
+@media print {
+    body { background:#fff; padding:0; margin:0; display:block; }
+    .toolbar,.copy-div,#status { display:none !important; }
+    #mount { display:block !important; width:100% !important; }
+    .slip-wrap { width:450px !important; box-shadow:none !important; border-radius:0 !important; overflow:visible !important; margin:0 auto !important; }
+    /* page-break-after set inline per slip div */
+    .slip { padding:0; }
+    .bt thead th { height:28px; font-size:9.5pt; font-weight:400; }
+    .bt td        { height:26px; font-size:9.5pt; font-weight:400; }
+    .rt td        { height:30px !important; font-size:8.5pt !important; font-weight:800; }
+    .rf td        { height:28px !important; font-size:9.5pt !important; font-weight:800; }
+    .rr td        { height:24px !important; font-size:8.5pt !important; font-weight:800; }
+    .rd td        { height:24px !important; font-size:8.5pt !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+    <span class="toolbar-title">🖨 AurumOS Bill Print</span>
+    <span id="lbl-copies" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:500;color:#94a3b8;"></span>
+    <button class="btn-p" onclick="window.print()">Print</button>
+    <button class="btn-c" onclick="window.close()">Close</button>
+</div>
+
+<div id="status">Loading bill data...</div>
+<div id="mount"></div>
+
+<script>
+'use strict';
+
+window.onload = function() {
+    showStatus('Waiting for bridge...');
+    var attempts = 0;
+    var wait = setInterval(function() {
+        attempts++;
+        var vchId  = (window.__VCH_ID__ || '').toString().trim();
+        var copies = parseInt(window.__COPIES__ || 1);
+        if (!vchId || !window.pywebview || !window.pywebview.api) {
+            if (attempts >= 100) { clearInterval(wait); showStatus('ERROR: Bridge not ready.'); }
+            return;
+        }
+        clearInterval(wait);
+        showStatus('Fetching: ' + vchId);
+        window.pywebview.api.get_live_invoice_print_payload(vchId)
+            .then(function(res) {
+                if (res && res.status === 'success') { showStatus(''); doRender(res.bill, copies); }
+                else { showStatus('DB ERROR: ' + (res ? res.message : 'null')); }
+            })
+            .catch(function(e) { showStatus('API ERROR: ' + String(e)); });
+    }, 100);
+};
+
+function showStatus(msg) { var el=document.getElementById('status'); if(el) el.innerText=msg; }
+
+var _printed = false;
+
+function doRender(BILL, COPIES) {
+    var mount = document.getElementById('mount');
+    mount.innerHTML = '';
+    var names = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
+    document.getElementById('lbl-copies').innerText = COPIES===1 ? '1 Copy' : COPIES+' Copies';
+
+    for (var c = 0; c < COPIES; c++) {
+        if (c > 0) {
+            var dv = document.createElement('div');
+            dv.className = 'copy-div';
+            dv.innerText = '\u2014 ' + (names[c]||'COPY '+(c+1)) + ' \u2014';
+            mount.appendChild(dv);
+        }
+        var w = document.createElement('div');
+        w.className = 'slip-wrap';
+        w.innerHTML = buildSlip(BILL, COPIES > 1 ? names[c] : '');
+        mount.appendChild(w);
+    }
+
+    if (!_printed) {
+        _printed = true;
+        setTimeout(function() { window.print(); }, 700);
+    }
+}
+
+// ── DYNAMIC SPACER ────────────────────────────────────────────────────────
+// Shrinks automatically as rows fill the page. Minimum 4px so table stays intact.
+// extraRows = number of deduct/discount rows below Total1 (Coll.Fine, 995, Dhal, Disc)
+function buildSpacer(itemCount, extraRows) {
+    extraRows = extraRows || 0;
+    var PAPER_H  = 460;   // target slip height in px
+    var HEADER_H = 28;    // meta row
+    var TH_H     = 36;    // thead
+    var ROW_H    = 34;    // each item row
+    var TOTAL1_H = 40;    // first Total row
+    var RAT_H    = 30;    // Rat+ row
+    var EXTRA_H  = extraRows * 30; // deduct + discount rows
+    var TOTAL2_H = 40;    // Grand Total row
+    var FOOTER_H = 32;    // footer row
+    var BORDER_H = 12;    // border/padding buffer
+
+    var usedH = HEADER_H + TH_H + (itemCount * ROW_H)
+                + TOTAL1_H + RAT_H + EXTRA_H + TOTAL2_H + FOOTER_H + BORDER_H;
+
+    var spacerH = Math.max(PAPER_H - usedH, 4); // never below 4px
+
+    var cells = '';
+    for (var i = 0; i < 8; i++) {
+        cells += '<td style="height:' + spacerH + 'px;padding:0;'
+               + (i < 7 ? 'border-right:1px solid #000;' : '')
+               + 'border-bottom:1.5px solid #000;"></td>';
+    }
+    return '<tr>' + cells + '</tr>';
+}
+
+// ── MAIN SLIP BUILDER ─────────────────────────────────────────────────────
+function buildSlip(D, copyLabel) {
+    var isU   = D.is_uchak || false;
+    var vchRaw = (D.vch_id || '').toString();
+    var vch   = vchRaw.replace(/\D/g,'').padStart(3,'0');
+    var cust  = D.customer || '---';
+    var rate  = parseFloat(D.goldRate) || 0;
+    var items = D.items || [];
+
+    var now = new Date();
+    var T   = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+    var Dt  = '(' + now.toISOString().split('T')[0] + ')';
+
+    var discType  = D.discountType   || 'none';
+    var discTouch = parseFloat(D.discountTouch)  || 0;
+    var discFine  = parseFloat(D.discountFine)   || 0;
+    var discAmt   = parseFloat(D.discountAmount) || 0;
+
+    var meta = '<div class="meta-row">'
+        + '<span class="m-cust">' + h(cust) + '</span>'
+        + '<div class="meta-group">'
+            + '<span class="m-time">' + T + '</span>'
+            + '<span class="m-date">' + Dt + '</span>'
+            + '<span class="m-vch">'  + h(vch) + '</span>'
+        + '</div>'
+        + '</div>';
+
+    // ── UCHAK BILL ────────────────────────────────────────────────────────
+    if (isU) {
+        var tNang=0, tAmt=0, uRows='';
+        for (var i=0; i<items.length; i++) {
+            var it  = items[i];
+            var nng = parseInt(it.pcs||it.weight||1);
+            var pr  = parseFloat(it.price||it.rate||it.touch||0);
+            var amt = nng * pr;
+            tNang+=nng; tAmt+=amt;
+            var BB='border-bottom:1px solid #000;'; var BR='border-right:1px solid #000;';
+            uRows+='<tr>'
+                +'<td style="text-align:center !important;font-weight:400;font-family:\'JetBrains Mono\',monospace;font-size:9pt;'+BB+BR+'">'+h((it.it_code||it.name||'\u2014').replace(/\s+/g,''))+'</td>'
+                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+BR+'">'+nng+'</td>'
+                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+BR+'">'+pr.toFixed(2)+'</td>'
+                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+'">'+amt.toFixed(2)+'</td>'
+                +'</tr>';
+        }
+        var uDisc = (discType==='amount'&&discAmt>0)
+            ? '<tr class="rd"><td colspan="3">Discount</td><td style="font-weight:500;">-'+Math.round(discAmt).toLocaleString('en-IN')+'</td></tr>' : '';
+
+        var uFixed=28+36+34+16; var uRowH=34;
+        var uSpacerH=Math.min(Math.max(480-uFixed-(items.length*uRowH),10),200);
+        var uSpacer='<tr>'
+            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
+            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
+            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
+            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:none;"></td>'
+            +'</tr>';
+
+        return '<div class="slip">'+meta
+            +'<table style="width:100%;border-collapse:collapse;table-layout:fixed;border:1.5px solid #000;">'
+            +'<colgroup><col style="width:158px;"><col style="width:54px;"><col style="width:100px;"><col style="width:108px;"></colgroup>'
+            +'<thead><tr style="background:#efefef;">'
+            +_uth('વિગત','')+_uth('નંગ','')+_uth('ભાવ','')+_uth('રૂપિયા','border-right:none;')
+            +'</tr></thead>'
+            +'<tbody>'+uRows+uDisc+uSpacer
+            +'<tr>'
+            +'<td style="height:34px;font-size:9.5pt;font-weight:600;text-align:center !important;border-right:1px solid #000;">Total</td>'
+            +'<td style="height:34px;font-size:9.5pt;font-weight:500;text-align:center !important;border-right:1px solid #000;">'+tNang+'</td>'
+            +'<td style="height:34px;text-align:center !important;border-right:1px solid #000;"></td>'
+            +'<td style="height:34px;font-size:9.5pt;font-weight:600;text-align:center !important;border-right:none;">'+Math.round(tAmt).toLocaleString('en-IN')+'</td>'
+            +'</tr></tbody></table></div>';
+    }
+
+    // ── WEIGHT BILL — PAGINATED AT 10 ITEMS ──────────────────────────────
+    var MAX = 10; // items per page
+
+    // Grand totals across ALL items
+    var gTG=0, gTL=0, gTP=0, gTN=0, gTF=0;
+    for (var j=0; j<items.length; j++) {
+        var jt=items[j];
+        var jg=parseFloat(jt.weight||jt.gr_wt||0);
+        var jp=parseFloat(jt.para||jt.para_stone_wt||0);
+        var jl=parseFloat(jt.less||jt.ls_wt||0);
+        var jn=jg-jp-jl;
+        var jtc=parseFloat(jt.touch||0);
+        var jws=parseFloat(jt.wastage||0);
+        var jfn=parseFloat(jt.fine||((jn*(jtc+jws)/100)));
+        gTG+=jg; gTL+=jl; gTP+=jp; gTN+=jn; gTF+=jfn;
+    }
+
+    var colFn   = parseFloat(D.collectedFine) || 0;
+    var f995    = parseFloat(D.fine995)       || 0;
+    var fDhal   = parseFloat(D.fineDhal)      || 0;
+    var totAmt  = parseFloat(D.totalAmount)   || 0;
+    var remFn   = parseFloat(D.remainingFine) || 0;
+    var isCredit= D.is_credit || false;
+
+    var deduct = '';
+    if (colFn>0) deduct+='<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+colFn.toFixed(3)+'</td><td></td></tr>';
+    if (f995>0)  deduct+='<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+f995.toFixed(3)+'</td><td></td></tr>';
+    if (fDhal>0) deduct+='<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+fDhal.toFixed(3)+'</td><td></td></tr>';
+
+    var discRow='', discFineFinal=0;
+    if (discType==='touch' && discFine>0) {
+        discFineFinal=discFine;
+        discRow='<tr class="rd"><td colspan="5">Disc ('+discTouch+'%)</td><td></td><td class="cb">-'+discFine.toFixed(3)+'</td><td></td></tr>';
+    } else if (discType==='fine' && discFine>0) {
+        discFineFinal=discFine;
+        discRow='<tr class="rd"><td colspan="5">Fine Disc</td><td></td><td class="cb">-'+discFine.toFixed(3)+'</td><td></td></tr>';
+    } else if (discType==='amount' && discAmt>0) {
+        discRow='<tr class="rd"><td colspan="6">Discount</td><td></td><td class="cb price-cell">-&#x20B9;'+Math.round(discAmt).toLocaleString('en-IN')+'</td></tr>';
+    }
+
+    // Count extra rows for spacer calculation
+    var extraRows = (colFn>0?1:0) + (f995>0?1:0) + (fDhal>0?1:0) + (discRow?1:0);
+
+    var tableHead = '<colgroup>'
+        +'<col style="width:50px;"><col style="width:56px;"><col style="width:38px;"><col style="width:38px;"><col style="width:56px;"><col style="width:34px;"><col style="width:64px;"><col style="width:90px;">'
+        +'</colgroup>'
+        +'<thead><tr>'
+        +'<th>વિગત</th><th>ગ્રોસ</th><th>લેસ</th><th>પારા</th><th>વજન</th><th>ટચ</th><th>ફાઇન</th><th>ભાવ</th>'
+        +'</tr></thead>';
+
+    // Split into pages of MAX items each
+    var pages = [];
+    for (var s=0; s<items.length; s+=MAX) { pages.push(items.slice(s,s+MAX)); }
+    if (!pages.length) pages = [[]];
+
+    var html = '';
+
+    for (var pg=0; pg<pages.length; pg++) {
+        var pageItems = pages[pg];
+        var isLast = (pg === pages.length - 1);
+
+        var wRows = '';
+        var pTG=0, pTN=0, pTF=0; // page subtotals (for continuation pages)
+
+        for (var i=0; i<pageItems.length; i++) {
+            var it  = pageItems[i];
+            var g   = parseFloat(it.weight||it.gr_wt||0);
+            var p   = parseFloat(it.para||it.para_stone_wt||0);
+            var l   = parseFloat(it.less||it.ls_wt||0);
+            var n   = g - p - l;
+            var tc  = parseFloat(it.touch||0);
+            var ws  = parseFloat(it.wastage||0);
+            var fn  = parseFloat(it.fine||((n*(tc+ws)/100)));
+            pTG+=g; pTN+=n; pTF+=fn;
+
+            var vib = ws>0 ? (tc+'+'+ws) : String(tc);
+            wRows += '<tr>'
+                +'<td class="cb">'+h(vib)+'</td>'
+                +'<td class="cb">'+g.toFixed(3)+'</td>'
+                +'<td>'+(l>0?l.toFixed(3):'0')+'</td>'
+                +'<td>'+(p>0?p.toFixed(3):'0')+'</td>'
+                +'<td class="cb">'+n.toFixed(3)+'</td>'
+                +'<td class="cb">'+(tc+ws).toFixed(0)+'</td>'
+                +'<td class="cb">'+fn.toFixed(3)+'</td>'
+                +'<td></td>'
+                +'</tr>';
+        }
+
+        if (!isLast) {
+            // ── Overflow page: items + page subtotal + "continued" note ──
+            // No footer, no spacer — page break forces next page
+            var subRow = '<tr class="rt">'
+                +'<td class="cb" colspan="2" style="font-size:8pt;">Sub Total</td>'
+                +'<td></td><td></td>'
+                +'<td class="cb">'+pTN.toFixed(3)+'</td>'
+                +'<td></td>'
+                +'<td class="cb">'+pTF.toFixed(3)+'</td>'
+                +'<td></td>'
+                +'</tr>'
+                +'<tr class="rr"><td colspan="8" style="font-size:8pt;font-weight:600;text-align:center!important;letter-spacing:1px;">... Continued on next page ...</td></tr>';
+
+            html += '<div class="slip" style="page-break-after:always;">'
+                + meta
+                + '<table class="bt">'+tableHead+'<tbody>'+wRows+subRow+'</tbody></table></div>';
+
+        } else {
+            // ── Last (or only) page: grand total + dynamic spacer + footer ──
+            var totRow1 = '<tr class="rt">'
+                +'<td class="cb">Total</td>'
+                +'<td class="cb">'+gTG.toFixed(3)+'</td>'
+                +'<td></td><td></td>'
+                +'<td class="cb">'+gTN.toFixed(3)+'</td>'
+                +'<td></td>'
+                +'<td class="cb">'+gTF.toFixed(3)+'</td>'
+                +'<td></td>'
+                +'</tr>';
+
+            var ratRow = '<tr class="rr">'
+                +'<td class="cb">Rat+</td>'
+                +'<td></td><td></td><td></td><td></td><td></td><td></td>'
+                +'<td class="cb price-cell">'+(rate>0 ? '&#x20B9;'+Math.round(rate).toLocaleString('en-IN') : '')+'</td>'
+                +'</tr>';
+
+            var totRow2 = '<tr class="rt">'
+                +'<td class="cb">Total</td>'
+                +'<td></td><td></td><td></td><td></td><td></td><td></td>'
+                +'<td class="cb price-cell" style="font-size:9pt;">&#x20B9;'+Math.round(totAmt).toLocaleString('en-IN')+'</td>'
+                +'</tr>';
+
+            var footRow = '<tr class="rf">'
+                +'<td class="cb">P.Wt</td>'
+                +'<td class="cb">1</td>'
+                +'<td class="cb">Qty</td>'
+                +'<td class="cb">1</td>'
+                +'<td class="cb" style="font-family:\'Noto Sans Gujarati\',Arial,sans-serif;">બાકી</td>'
+                +'<td class="cb" colspan="3">0.000</td>'
+                +'</tr>';
+
+            // Dynamic spacer: pass last-page item count + extra rows
+            var spacer = buildSpacer(pageItems.length, extraRows);
+
+            html += '<div class="slip">'
+                + meta
+                + '<table class="bt">'+tableHead
+                + '<tbody>'+wRows+totRow1+ratRow+deduct+discRow+totRow2+spacer+footRow+'</tbody>'
+                + '</table></div>';
+        }
+    }
+
+    return html;
+}
+
+function _uth(label, extra) {
+    return '<th style="height:28px;font-size:8pt;font-weight:600;'
+        +'text-align:center !important;border-bottom:1.5px solid #000;'
+        +'border-right:1px solid #000;font-family:\'Noto Sans Gujarati\',Arial,sans-serif;'
+        +extra+'">'+label+'</th>';
+}
+
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

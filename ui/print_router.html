@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AurumOS | Terminal Print Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: #ffffff; padding: 20px; color: #000000; }
+
+        .print-slip { width: 800px; margin: 0 auto; padding: 10px; position: relative; }
+        .slip-meta-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+
+        .slip-table-matrix { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #000000; }
+        .slip-table-matrix th { height: 38px; border-bottom: 2px solid #000000; border-right: 1.5px solid #000000; font-size: 0.95rem; font-weight: 800; text-align: center; }
+        .slip-table-matrix th:last-child { border-right: none; }
+        .slip-table-matrix td { height: 36px; padding: 4px 8px; font-size: 0.92rem; font-weight: 600; border-bottom: 1.5px solid #000000; border-right: 1.5px solid #000000; vertical-align: middle; }
+        .slip-table-matrix td:last-child { border-right: none; }
+
+        .cell-center { text-align: center; }
+        .cell-num { font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+        tr.double-break-row td { border-top: 2px solid #000000; border-bottom: 2px solid #000000; font-weight: 800 !important; }
+        tr.footer-metrics-panel td { height: 40px; font-weight: 800 !important; border-bottom: none; border-top: 2px solid #000000; }
+        .metric-lbl { font-size: 0.82rem; text-transform: uppercase; text-align: center; }
+        .handwritten-notation-box { font-size: 0.9rem; font-weight: 700; color: #1d4ed8; font-style: italic; line-height: 1.3; padding: 4px 8px; }
+
+        @media print {
+            body { padding: 0; }
+            .print-slip { width: 100%; border: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-slip">
+        <div class="slip-meta-header">
+            <span id="lbl-time">--:--:-- PM</span>
+            <span id="lbl-vch">VCH-000</span>
+        </div>
+
+        <table class="slip-table-matrix">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">વિગત</th>
+                    <th style="width: 11%;">ગ્રોસ</th>
+                    <th style="width: 11%;">લેસ</th>
+                    <th style="width: 11%;">પેરા</th>
+                    <th style="width: 12%;">વજન</th>
+                    <th style="width: 11%;">ટચ</th>
+                    <th style="width: 11%;">ફાઇન</th>
+                    <th style="width: 13%;">ભાવ</th>
+                </tr>
+            </thead>
+            <tbody id="print-rows-mount">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        window.onload = () => {
+            const now = new Date();
+            document.getElementById('lbl-time').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+
+            // Extract matrix storage query strings passed by billing controller window
+            const urlParams = new URLSearchParams(window.location.search);
+            const rawData = urlParams.get('payload');
+            if (!rawData) return;
+
+            const data = JSON.parse(decodeURIComponent(rawData));
+            document.getElementById('lbl-vch').innerText = `${data.vch_id} (${now.toLocaleDateString('en-GB')})`;
+
+            const tbody = document.getElementById('print-rows-mount');
+            let tGross = 0, tLess = 0, tPara = 0, tNet = 0, tFine = 0;
+
+            let html = data.items.map(i => {
+                let gross = parseFloat(i.weight || 0);
+                let less = parseFloat(i.less || 0);
+                let para = parseFloat(i.para || 0);
+                let touch = parseFloat(i.touch || 0);
+                let net = gross - less - para;
+                let fine = parseFloat(i.fine || 0);
+
+                tGross += gross; tLess += less; tPara += para; tNet += net; tFine += fine;
+
+                return `<tr>
+                    <td class="cell-center">${i.it_code || i.code}</td>
+                    <td class="cell-num">${gross.toFixed(3)}</td>
+                    <td class="cell-num">${less.toFixed(3)}</td>
+                    <td class="cell-num">${para.toFixed(3)}</td>
+                    <td class="cell-num">${net.toFixed(3)}</td>
+                    <td class="cell-num">${touch.toFixed(2)}</td>
+                    <td class="cell-num">${fine.toFixed(3)}</td>
+                    <td></td>
+                </tr>`;
+            }).join('');
+
+            let cashVal = data.totalAmount || 0;
+
+            html += `
+                <tr class="double-break-row">
+                    <td class="cell-center">Total</td>
+                    <td class="cell-num">${tGross.toFixed(3)}</td>
+                    <td class="cell-num">${tLess.toFixed(3)}</td>
+                    <td class="cell-num">${tPara.toFixed(3)}</td>
+                    <td class="cell-num">${tNet.toFixed(3)}</td>
+                    <td class="cell-center">-</td>
+                    <td class="cell-num">${tFine.toFixed(3)}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="cell-center">+</td class="cell-num"><td>${tNet.toFixed(3)}</td><td>0.000</td><td>0.000</td><td class="cell-num">${tNet.toFixed(3)}</td><td></td><td class="cell-num">${tNet.toFixed(3)}</td><td></td>
+                </tr>
+                <tr>
+                    <td class="cell-text">Rat+</td><td></td><td></td><td></td><td></td><td></td><td class="cell-num">${(tFine - tNet).toFixed(3)}</td><td class="cell-num">${parseFloat(data.goldRate || 0).toFixed(2)}</td>
+                </tr>
+                <tr class="double-break-row">
+                    <td class="cell-center">Total</td><td class="cell-num">${tNet.toFixed(3)}</td><td>0.000</td><td>0.000</td><td class="cell-num">${tNet.toFixed(3)}</td><td class="cell-center">-</td><td class="cell-num">${tFine.toFixed(3)}</td><td class="cell-num" style="font-weight:800;">₹ ${Math.round(cashVal).toLocaleString('en-IN')}</td>
+                </tr>
+                <tr><td colspan="7"></td><td rowspan="2" class="handwritten-notation-box">620<br>પરત</td></tr>
+                <tr><td colspan="7">&nbsp;</td></tr>
+                <tr class="footer-metrics-panel">
+                    <td class="metric-lbl">P. Wt.</td><td class="cell-num">${tGross.toFixed(3)}</td>
+                    <td class="metric-lbl">Qty</td><td class="cell-center">${data.items.length}</td>
+                    <td class="metric-lbl">બાકી</td><td class="cell-num" colspan="2" style="text-align:left; padding-left:15px;">0.000</td>
+                    <td></td>
+                </tr>
+            `;
+            tbody.innerHTML = html;
+
+            // Execute automated system print dialog directly
+            setTimeout(() => { window.print(); window.close(); }, 300);
+        };
+    </script>
+</body>
+</html>

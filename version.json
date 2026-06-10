@@ -1,0 +1,248 @@
+{
+  "version": "1.1.1",
+  "release_date": "2026-06-10",
+  "changelog": [
+    "fix: update always shows correctly on client PCs",
+    "fix: scale weight reading fixed",
+    "fix: tag right wing QR clipping"
+  ],
+  "file_count": 39,
+  "size_mb": 2.56,
+  "download_url": "",
+  "files": [
+    {
+      "path": "AurumOS.ico",
+      "sha256": "2e10b10af7266794a203f0fc346b5085cb715db80ca806d6e0d412a9f2e182cc",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/AurumOS.ico",
+      "size_bytes": 370070
+    },
+    {
+      "path": "core/print_bridge.py",
+      "sha256": "ff70383740011aae5a1e8058b0e2985d0b127390ad62a1bc36acc695f9fe73f0",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/core/print_bridge.py",
+      "size_bytes": 1070
+    },
+    {
+      "path": "core/security_lock.py",
+      "sha256": "50ea03cdedc2898907c33a9fa9020fe55ffaa802a07e012a139bda3edd019d36",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/core/security_lock.py",
+      "size_bytes": 612
+    },
+    {
+      "path": "core/tag_engine.py",
+      "sha256": "b8238fad60c87b7003ef2489e372b6104b5db8c277c85091e16b5a8b6288adff",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/core/tag_engine.py",
+      "size_bytes": 14880
+    },
+    {
+      "path": "create_fonts_css.py",
+      "sha256": "173afd6bdeef3a8cdf88fd393439e6fe6e434535413e4fa5f716b3d8f57f845c",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/create_fonts_css.py",
+      "size_bytes": 3603
+    },
+    {
+      "path": "fonts/JetBrainsMono-ExtraBold.ttf",
+      "sha256": "4d65f6acd792c4b2007058d05d960671be218b61136050e157aea2f95bf05193",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/fonts/JetBrainsMono-ExtraBold.ttf",
+      "size_bytes": 114800
+    },
+    {
+      "path": "fonts/NotoSansGujarati-Bold.ttf",
+      "sha256": "d5aee2fbe1dec84e8e54ec72dfda1d138f1401ddf18f06bbd11ea8b64f8b45b2",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/fonts/NotoSansGujarati-Bold.ttf",
+      "size_bytes": 175324
+    },
+    {
+      "path": "hook_webview.py",
+      "sha256": "aaf29d743b6d62dcdb45770acf41828dfa790bcde5488808904ca3be0abb1f13",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/hook_webview.py",
+      "size_bytes": 174
+    },
+    {
+      "path": "hook_win32.py",
+      "sha256": "fea93c5079543ad0c7982cd938b7989b63042f53f3d857cbdccd1ff3bafddfac",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/hook_win32.py",
+      "size_bytes": 164
+    },
+    {
+      "path": "main.py",
+      "sha256": "4459e01abcc7dfc0a4d5ea4e25cfdd6cc2b74e06000256be35d3f035aca8aa12",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/main.py",
+      "size_bytes": 111879
+    },
+    {
+      "path": "obfuscate_free.py",
+      "sha256": "48675fb09b24a8f0ecf4e6b3e74a2de62d4c33b07bb14e0135efd1be13d71c76",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/obfuscate_free.py",
+      "size_bytes": 5180
+    },
+    {
+      "path": "rthook_fix_http.py",
+      "sha256": "5a559e6c4c7e66f01a81dd6dcf2bbcf0152fe74769681c93af82f5fa64b8ae77",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/rthook_fix_http.py",
+      "size_bytes": 707
+    },
+    {
+      "path": "rthook_serial.py",
+      "sha256": "fdd8bdee4f04cd050593b7679354858158b0502e02a1544f6b6510a7ca1ce6ab",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/rthook_serial.py",
+      "size_bytes": 691
+    },
+    {
+      "path": "ui/accounts.html",
+      "sha256": "beeb10bd2d8c464d248aa6317b50c5848c5317df3196fbe7a8bf6fb775ded302",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/accounts.html",
+      "size_bytes": 29776
+    },
+    {
+      "path": "ui/bill_print.html",
+      "sha256": "91515f4980d0c010d271eced2a29a8ee45ea5d1f8b89ec5c6290bc0c2f8127cb",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/bill_print.html",
+      "size_bytes": 21268
+    },
+    {
+      "path": "ui/billing.html",
+      "sha256": "1ae60be575601d33d36e81b447a589058b6a12e00c8b0555d58506ae268c7fce",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/billing.html",
+      "size_bytes": 107406
+    },
+    {
+      "path": "ui/chart.min.js",
+      "sha256": "0e2326c6868072bec1592760c6729043caeea2960a2b46cee6a2192aac6abff0",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/chart.min.js",
+      "size_bytes": 205222
+    },
+    {
+      "path": "ui/client_ledger.html",
+      "sha256": "9684fb71d11a37a3a7096401eeb8622eb15796c8e079049fe8d585c14e0ef928",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/client_ledger.html",
+      "size_bytes": 19029
+    },
+    {
+      "path": "ui/create_item.html",
+      "sha256": "a8cbe8f718cfb109b55d4ee703afe60c46860f6b659f03fef83f744ff5f0aab2",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/create_item.html",
+      "size_bytes": 38241
+    },
+    {
+      "path": "ui/dashboard.html",
+      "sha256": "8f9c9520724421ae4efd179468d1763c87048479e57c14c66cef0ce56a0d6544",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/dashboard.html",
+      "size_bytes": 36877
+    },
+    {
+      "path": "ui/fonts.css",
+      "sha256": "29a55eb74fc96b80d623d4cb3b1b6c4d0e3905a3463087fab4e1a460d8d70fed",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/fonts.css",
+      "size_bytes": 852837
+    },
+    {
+      "path": "ui/full_report.html",
+      "sha256": "e2e1c0183641d5905f4a5e333060c4a25e4c6f74c22c6d5df41ce287c8bf41ed",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/full_report.html",
+      "size_bytes": 53478
+    },
+    {
+      "path": "ui/history.html",
+      "sha256": "772351ffa1d159762b27314d4c316a55f7e40df2fcb05ca8e4ecc196d5a89777",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/history.html",
+      "size_bytes": 64756
+    },
+    {
+      "path": "ui/inventory.html",
+      "sha256": "eec7d45c1a37dd9f8d33ae3016ac816c24ecc87c3d2ca6609bb10339496d4f03",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/inventory.html",
+      "size_bytes": 55196
+    },
+    {
+      "path": "ui/katti_entry.html",
+      "sha256": "a2ce9fd27b7f97c6433615e67b755f66d0b61fc04f4c19e2b8fa4ebd6bc10c35",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/katti_entry.html",
+      "size_bytes": 37834
+    },
+    {
+      "path": "ui/ledger.html",
+      "sha256": "889ba20e338549e0d1458566758afed9838732b006d150b2460834c160eb73c3",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/ledger.html",
+      "size_bytes": 40011
+    },
+    {
+      "path": "ui/login.html",
+      "sha256": "709740bc05293bcd8c594fbf6aa74c324dcae80f7f27a4d25cf7dad699ba02c4",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/login.html",
+      "size_bytes": 28360
+    },
+    {
+      "path": "ui/opening_stock.html",
+      "sha256": "df6260cf3654bef2af03d00c8d96bf6e15f7421f776363a8bc7d6d53975502ee",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/opening_stock.html",
+      "size_bytes": 41336
+    },
+    {
+      "path": "ui/print_router.html",
+      "sha256": "af972522d4932c008b88c05c5ca9391133a441a9d0818100fa602b7d14b60fda",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/print_router.html",
+      "size_bytes": 7199
+    },
+    {
+      "path": "ui/revoked.html",
+      "sha256": "0b95d3cbced43980d37bd4a4887f7d3b49e3abbe82e38602c598328fe6d3e148",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/revoked.html",
+      "size_bytes": 26743
+    },
+    {
+      "path": "ui/scale_bridge.js",
+      "sha256": "4589d1c4e5fdde3faa404ad0d1fb7cd2e7250eb9a38d6502c9d6e03f6935a6d8",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/scale_bridge.js",
+      "size_bytes": 3240
+    },
+    {
+      "path": "ui/settings.html",
+      "sha256": "caea925bcfee2f0f592fe66d43de01f565e5303b77dff81a1971826607cb87a6",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/settings.html",
+      "size_bytes": 22011
+    },
+    {
+      "path": "ui/setup.html",
+      "sha256": "4b216953a6a679a0f3686d9a9f1aa0589d714800d8f8aefaca979486b1312aac",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/setup.html",
+      "size_bytes": 29150
+    },
+    {
+      "path": "ui/sidebar.css",
+      "sha256": "864b1354791219cd5184a794bf04742978cc5609d1fbbaa50e134f75c824cc22",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/sidebar.css",
+      "size_bytes": 10532
+    },
+    {
+      "path": "ui/sidebar.js",
+      "sha256": "34827844d1fa6246abd4cdaadd13b11189cfbe769e220c014f00d72c22021f30",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/sidebar.js",
+      "size_bytes": 14235
+    },
+    {
+      "path": "ui/staff.html",
+      "sha256": "da22c4584235888ed9e32010d27782944e4320344462fe4e0ac27932342396a1",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/staff.html",
+      "size_bytes": 25363
+    },
+    {
+      "path": "ui/stock_ledger.html",
+      "sha256": "20cc2a330a5349e8784079b135fa2ef55abe55c6391a749f2ab75a9f57f25788",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/stock_ledger.html",
+      "size_bytes": 84176
+    },
+    {
+      "path": "ui/uchak_stock_entry.html",
+      "sha256": "7cffae09fc5499e5d4ba6097430bf0d99bb1a209c12bd4010470d71a0a2b272c",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/uchak_stock_entry.html",
+      "size_bytes": 22796
+    },
+    {
+      "path": "ui/update_notify.html",
+      "sha256": "b9522c8cca094e204d7e20df81d7dfd710782e7908083e9dc7c26fdb7203a298",
+      "url": "https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/ui/update_notify.html",
+      "size_bytes": 13245
+    }
+  ]
+}

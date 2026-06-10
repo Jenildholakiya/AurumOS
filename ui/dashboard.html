@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Dashboard</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<script>
+(function(){
+    var s=document.createElement('script');s.src='chart.min.js';
+    s.onerror=function(){
+        var s2=document.createElement('script');
+        s2.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+})();
+</script>
+<style>
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#ffffff;
+    --ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--teal:#0d9488;--blue:#1d4ed8;--red:#b91c1c;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+    --sh2:0 4px 16px rgba(0,0,0,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);display:block;height:100vh;overflow:hidden;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:0.95rem;color:var(--ink);}
+.h-brand em{color:var(--gold3);font-style:italic;}
+.h-mid{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;}
+.h-clock{font-family:var(--mono);font-size:0.65rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:4px;border:1px solid var(--rule);}
+.h-right{display:flex;align-items:center;gap:10px;}
+.h-uname{font-size:0.73rem;font-weight:600;color:var(--ink);text-align:right;}
+.h-urole{font-size:0.57rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;}
+.h-avatar{width:32px;height:32px;border-radius:6px;background:var(--ink);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#fff;}
+.page{padding:22px 28px 28px;overflow-y:auto;height:calc(100vh - 58px);scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.page::-webkit-scrollbar{width:3px;}
+.page::-webkit-scrollbar-thumb{background:var(--cream3);}
+
+/* ── UPDATE BANNER ── */
+#update-banner{display:none;position:relative;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid rgba(201,162,39,0.3);background:linear-gradient(135deg,#0e0c09 0%,#1c1a15 50%,#0e0c09 100%);animation:bannerIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;}
+#update-banner.visible{display:block;}
+@keyframes bannerIn{from{opacity:0;transform:translateY(-12px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+#update-banner::before{content:'';position:absolute;top:0;left:-100%;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,#c9a227 40%,#f0d060 50%,#c9a227 60%,transparent 100%);animation:shimmerLine 2.5s ease-in-out infinite;}
+@keyframes shimmerLine{0%{left:-100%}100%{left:100%}}
+.ub-inner{display:flex;align-items:center;gap:16px;padding:14px 18px;}
+.ub-icon{width:38px;height:38px;border-radius:9px;background:rgba(201,162,39,0.15);border:1px solid rgba(201,162,39,0.3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.ub-text{flex:1;min-width:0;}
+.ub-title{font-family:var(--serif);font-size:0.95rem;color:#fff;margin-bottom:2px;}
+.ub-title em{color:#c9a227;font-style:italic;}
+.ub-sub{font-size:0.68rem;color:rgba(255,255,255,0.45);}
+.ub-changelog{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
+.ub-tag{font-size:0.6rem;padding:2px 8px;border-radius:4px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.2);color:rgba(201,162,39,0.8);}
+.ub-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ub-btn-update{display:flex;align-items:center;gap:6px;padding:8px 18px;background:linear-gradient(135deg,#a87d1e,#c9a227);color:#0e0c09;border:none;border-radius:7px;font-family:var(--sans);font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.ub-btn-update:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(201,162,39,0.45);}
+.ub-btn-update:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.ub-btn-close{width:28px;height:28px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);border-radius:6px;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;transition:all 0.13s;}
+.ub-btn-close:hover{background:rgba(185,28,28,0.2);color:#f87171;border-color:rgba(185,28,28,0.3);}
+#update-progress-wrap{display:none;padding:0 18px 14px;}
+#update-progress-wrap.visible{display:block;}
+.uprog-bar-bg{height:4px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:6px;}
+.uprog-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#a87d1e,#c9a227,#f0d060);background-size:200% auto;animation:progressShimmer 1.5s linear infinite;transition:width 0.4s ease;width:0%;}
+@keyframes progressShimmer{0%{background-position:0% center}100%{background-position:200% center}}
+.uprog-status{font-size:0.62rem;color:rgba(255,255,255,0.4);font-family:var(--mono);}
+.ub-done{padding:10px 18px 14px;display:none;align-items:center;gap:10px;}
+.ub-done.visible{display:flex;}
+.ub-done-text{font-size:0.76rem;color:#4ade80;font-weight:600;}
+.ub-btn-restart{margin-left:auto;padding:7px 16px;background:#15803d;color:#fff;border:none;border-radius:6px;font-family:var(--sans);font-size:0.73rem;font-weight:700;cursor:pointer;}
+
+/* ── WELCOME ── */
+.welcome{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.w-biz-tag{font-size:0.55rem;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--gold3);margin-bottom:5px;display:none;}
+.w-greeting{font-family:var(--serif);font-size:1.55rem;font-weight:400;color:var(--ink);line-height:1.15;}
+.w-greeting em{color:var(--gold3);font-style:italic;}
+.w-sub{font-size:0.7rem;color:var(--muted);margin-top:5px;}
+.live-badge{display:flex;align-items:center;gap:6px;background:rgba(21,128,61,0.07);border:1px solid rgba(21,128,61,0.18);padding:6px 14px;border-radius:6px;font-size:0.62rem;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+
+/* ── KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh);transition:box-shadow 0.18s,transform 0.18s;}
+.kpi:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:8px 8px 0 0;}
+.kpi-gold::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.kpi-teal::before{background:linear-gradient(90deg,var(--teal),#2dd4bf);}
+.kpi-blue::before{background:linear-gradient(90deg,var(--blue),#60a5fa);}
+.kpi-green::before{background:linear-gradient(90deg,var(--green),#22c55e);}
+.kpi-ink::before{background:linear-gradient(90deg,var(--ink2),var(--ink3));}
+.kpi-lbl{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);margin-bottom:9px;}
+.kpi-val{font-family:var(--serif);font-size:1.5rem;color:var(--ink);letter-spacing:-0.4px;line-height:1;}
+.kpi-val.gold{color:var(--gold3);}
+.kpi-val.teal{color:var(--teal);}
+.kpi-val.green{color:var(--green);}
+.kpi-sub{font-size:0.6rem;color:var(--muted2);margin-top:5px;}
+
+/* ── SECTIONS ── */
+.sec{display:flex;align-items:center;gap:12px;margin:6px 0 14px;}
+.sec-text{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted2);white-space:nowrap;}
+.sec::before,.sec::after{content:'';flex:1;height:1px;background:var(--rule);}
+.sec::before{max-width:20px;}
+
+/* ── CHARTS ── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.panel-dark{background:var(--ink2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:20px 22px;}
+.panel-light{background:var(--white);border:1px solid rgba(168,125,30,0.12);border-radius:12px;padding:20px 22px;box-shadow:0 2px 12px rgba(168,125,30,0.06);}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.panel-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.panel-dark .panel-title{color:rgba(255,255,255,0.45);}
+.panel-light .panel-title{color:var(--ink3);}
+.chart-wrap{position:relative;height:190px;width:100%;background:linear-gradient(160deg,#faf8f3 0%,#f5f1e8 100%);border-radius:10px;border:1px solid rgba(168,125,30,0.10);padding:4px;}
+.panel-dark .chart-wrap{background:transparent;border:none;padding:0;}
+.legend{display:flex;gap:12px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.58rem;font-weight:500;}
+.panel-dark .leg{color:rgba(255,255,255,0.4);}
+.panel-light .leg{color:var(--muted2);}
+.leg-sq{width:10px;height:3px;border-radius:99px;}
+
+/* ── BOTTOM ── */
+.bottom-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+.tbl-wrap{overflow:hidden;border-radius:10px;background:var(--white);border:1px solid var(--rule);box-shadow:var(--sh);}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.tbl-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);padding:0 16px 8px;border-bottom:1px solid var(--rule);text-align:left;}
+th:not(:first-child){text-align:right;}
+td{padding:10px 16px;font-size:0.77rem;font-weight:500;color:var(--ink);border-bottom:1px solid var(--rule2);}
+tr:last-child td{border-bottom:none;}
+td:not(:first-child){text-align:right;}
+.b-danger{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fef2f2;color:var(--red);border:1px solid rgba(185,28,28,0.15);}
+.b-warn{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.15);}
+.b-danger::before,.b-warn::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;}
+.audit-wrap{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+.audit-list{padding:4px 0;}
+.audit-item{display:flex;gap:10px;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--rule2);}
+.audit-item:last-child{border-bottom:none;}
+.audit-time{font-family:var(--mono);font-size:0.6rem;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
+.audit-msg{font-size:0.72rem;color:var(--muted);line-height:1.5;}
+.empty-cell{text-align:center;padding:20px;font-size:0.75rem;color:var(--muted2);}
+
+/* ── BASTION ── */
+.bastion-header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:5px;background:rgba(21,128,61,0.07);border:1px solid rgba(21,128,61,0.18);font-family:var(--mono);font-size:0.58rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#15803d;}
+.bhb-dot{width:5px;height:5px;border-radius:50%;background:#15803d;animation:bfb-blink 2.5s ease-in-out infinite;}
+@keyframes bfb-blink{0%,100%{opacity:1}50%{opacity:0.25}}
+
+/* ── UPDATE BUTTON ── */
+.btn-update{
+    display:inline-flex;align-items:center;gap:6px;
+    height:30px;padding:0 14px;
+    border-radius:6px;border:1px solid var(--gold-ln);
+    background:var(--gold-bg);color:var(--gold3);
+    font-size:0.62rem;font-weight:600;cursor:pointer;
+    font-family:var(--sans);transition:all 0.18s;white-space:nowrap;
+}
+.btn-update:hover{background:rgba(168,125,30,0.14);border-color:rgba(168,125,30,0.35);transform:translateY(-1px);}
+.btn-update.upd-ok{background:rgba(21,128,61,0.07);border-color:rgba(21,128,61,0.25);color:var(--green);}
+.btn-update.upd-ready{background:rgba(21,128,61,0.12);border-color:rgba(21,128,61,0.3);color:var(--green);}
+
+/* Layout fix */
+body{display:flex!important;height:100vh!important;overflow:hidden!important;}
+#sidebar-container{flex-shrink:0!important;}
+body>main{flex:1!important;min-width:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;}
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div id="sidebar-container"></div>
+
+<main>
+<header>
+    <div class="h-brand">Aurum<em>OS</em></div>
+    <div class="h-mid">
+        <span class="bastion-header-badge"><span class="bhb-dot"></span>BASTION&#8482;</span>
+        <div class="h-clock" id="clock">—</div>
+        <!-- ── UPDATE BUTTON ── -->
+        <button id="check-update-btn" class="btn-update" onclick="manualCheckUpdate()" title="Check for AurumOS updates">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span id="upd-btn-label">Check Update</span>
+        </button>
+    </div>
+    <div class="h-right">
+        <div>
+            <div class="h-uname" id="h-uname">Director</div>
+            <div class="h-urole">System Owner</div>
+        </div>
+        <div class="h-avatar" id="h-avatar">OS</div>
+    </div>
+    <script>
+    (function(){
+        try{
+            var n=localStorage.getItem('aurum_owner_name')||'Director';
+            document.getElementById('h-uname').innerText=n;
+            var ini=n.split(' ').filter(function(w){return w;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()||'OS';
+            document.getElementById('h-avatar').innerText=ini;
+            // Instant business name from cache
+            var biz=localStorage.getItem('aurum_biz_name');
+            if(biz){ try{
+                var wStr=document.getElementById('welcome-str');
+                if(wStr) wStr.innerHTML='Hello, <em id="welcome-name">'+biz+'</em>';
+                var subBiz=document.getElementById('w-sub-biz');
+                var ownerName=localStorage.getItem('aurum_owner_name')||'';
+                if(subBiz) subBiz.innerText=ownerName;
+            }catch(e){} }
+        }catch(e){}
+    })();
+    </script>
+</header>
+
+<div class="page">
+
+    <!-- UPDATE BANNER -->
+    <div id="update-banner">
+        <div class="ub-inner">
+            <div class="ub-icon">&#11088;</div>
+            <div class="ub-text">
+                <div class="ub-title">AurumOS <em id="ub-version">v1.0.1</em> is available</div>
+                <div class="ub-sub" id="ub-sub">A new version is ready.</div>
+                <div class="ub-changelog" id="ub-changelog"></div>
+            </div>
+            <div class="ub-actions">
+                <button class="ub-btn-update" id="ub-update-btn" onclick="startUpdate()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Update Now
+                </button>
+                <button class="ub-btn-close" onclick="dismissBanner()">&#10005;</button>
+            </div>
+        </div>
+        <div id="update-progress-wrap">
+            <div class="uprog-bar-bg"><div class="uprog-bar-fill" id="uprog-fill"></div></div>
+            <div class="uprog-status" id="uprog-status">Starting download...</div>
+        </div>
+        <div class="ub-done" id="ub-done">
+            <div class="ub-done-icon">&#10003;</div>
+            <div class="ub-done-text" id="ub-done-msg">Update ready! Click Restart.</div>
+            <button class="ub-btn-restart" onclick="restartApp()">Restart Now</button>
+        </div>
+    </div>
+
+    <!-- ── WELCOME with Jewellers Name ── -->
+    <div class="welcome">
+        <div>
+            <!-- Business/Jewellers name tag — shown when loaded -->
+<div class="w-greeting" id="welcome-str">
+                Good morning, <em id="welcome-name">Director</em>
+            </div>
+            <div class="w-sub">
+                <span id="w-sub-tail">Your jewelry enterprise is synchronized and ready</span>
+            </div>
+        </div>
+        <div class="live-badge"><div class="live-dot"></div><span id="sync-status">Node Active</span></div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+        <div class="kpi kpi-gold"><div class="kpi-lbl">Today's Revenue</div><div class="kpi-val gold" id="k-revenue">Rs. 0.00</div><div class="kpi-sub">Accumulated sales</div></div>
+        <div class="kpi kpi-teal"><div class="kpi-lbl">Fine Collected</div><div class="kpi-val teal" id="k-fine">0.000 g</div><div class="kpi-sub">All-time metal</div></div>
+        <div class="kpi kpi-blue"><div class="kpi-lbl">Stock Units</div><div class="kpi-val" id="k-units">0</div><div class="kpi-sub">Tracked inventory</div></div>
+        <div class="kpi kpi-green"><div class="kpi-lbl">Net Metal Weight</div><div class="kpi-val green" id="k-weight">0.000 g</div><div class="kpi-sub">Active vault</div></div>
+        <div class="kpi kpi-ink"><div class="kpi-lbl">System Status</div><div class="kpi-val" style="font-family:var(--sans);font-size:0.9rem;font-weight:700;" id="k-status">Operational</div><div class="kpi-sub" id="k-huid">100% Verified</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="sec"><span class="sec-text">Analytics</span></div>
+    <div class="chart-row">
+        <div class="panel-dark">
+            <div class="panel-head">
+                <span class="panel-title">Revenue &amp; Fine — 7 Days</span>
+                <div class="legend">
+                    <div class="leg"><div class="leg-sq" style="background:#a87d1e;"></div>Revenue</div>
+                    <div class="leg"><div class="leg-sq" style="background:#15803d;"></div>Fine (g)</div>
+                </div>
+            </div>
+            <div class="chart-wrap" style="background:transparent;border:none;padding:0;"><canvas id="revChart"></canvas></div>
+        </div>
+        <div class="panel-light">
+            <div class="panel-head">
+                <span class="panel-title">Stock by Touch %</span>
+                <div class="legend"><div class="leg"><div class="leg-sq" style="background:var(--gold);"></div>Weight (g)</div></div>
+            </div>
+            <div class="chart-wrap"><canvas id="invChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="sec"><span class="sec-text">Risk &amp; Operations</span></div>
+    <div class="bottom-row">
+        <div class="tbl-wrap">
+            <div class="tbl-head"><span class="tbl-title">High-Risk Credit Monitor</span></div>
+            <table>
+                <thead><tr><th>Client</th><th>Outstanding</th><th>Assessment</th></tr></thead>
+                <tbody id="risk-body"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="audit-wrap">
+            <div class="tbl-head"><span class="tbl-title">Operational Audit Log</span></div>
+            <div class="audit-list" id="audit-list">
+                <div class="audit-item"><span class="audit-time">--:--</span><span class="audit-msg">Loading...</span></div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /page -->
+</main>
+
+<script>
+'use strict';
+
+// ── CLOCK ────────────────────────────────────────────────────────
+function tick(){
+    var n=new Date();
+    document.getElementById('clock').innerText=n.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
+}
+tick(); setInterval(tick,1000);
+
+// ── CHARTS ───────────────────────────────────────────────────────
+var revChart=null, invChart=null;
+
+function buildRevChart(labels,revenue,fine){
+    if(typeof Chart==='undefined'){setTimeout(function(){buildRevChart(labels,revenue,fine);},200);return;}
+    var ctx=document.getElementById('revChart').getContext('2d');
+    if(revChart)revChart.destroy();
+    var g=ctx.createLinearGradient(0,0,0,190);
+    g.addColorStop(0,'rgba(168,125,30,0.22)');
+    g.addColorStop(0.5,'rgba(168,125,30,0.08)');
+    g.addColorStop(1,'rgba(250,248,243,0)');
+    var g2=ctx.createLinearGradient(0,0,0,190);
+    g2.addColorStop(0,'rgba(21,128,61,0.15)');
+    g2.addColorStop(0.5,'rgba(21,128,61,0.05)');
+    g2.addColorStop(1,'rgba(250,248,243,0)');
+    var hasFine=fine&&fine.some(function(v){return parseFloat(v||0)>0;});
+    revChart=new Chart(ctx,{
+        type:'line',
+        data:{labels:labels,datasets:[
+            {label:'Revenue',data:revenue,borderColor:'#8a6c0a',backgroundColor:g,borderWidth:2.5,tension:0.4,fill:true,yAxisID:'y',
+             pointRadius:revenue.map(function(v){return parseFloat(v||0)>0?5:2;}),pointBackgroundColor:'#faf8f3',pointBorderColor:'#8a6c0a',pointBorderWidth:2,pointHoverRadius:7},
+            {label:'Fine (g)',data:fine,borderColor:'#15803d',backgroundColor:g2,borderWidth:2,borderDash:[4,3],tension:0.4,fill:true,yAxisID:'y1',
+             pointRadius:fine.map(function(v){return parseFloat(v||0)>0?4:2;}),pointBackgroundColor:'#15803d',pointBorderColor:'#faf8f3',pointBorderWidth:2,pointHoverRadius:6}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+            plugins:{
+                legend:{display:true,position:'top',align:'end',labels:{color:'rgba(255,255,255,0.4)',font:{size:10},boxWidth:8,boxHeight:8,padding:14,usePointStyle:true,pointStyle:'circle'}},
+                tooltip:{backgroundColor:'#faf8f3',borderColor:'rgba(168,125,30,0.30)',borderWidth:1.5,padding:14,cornerRadius:10,titleColor:'#0e0c09',bodyColor:'#5c5a52',
+                    callbacks:{label:function(c){if(c.datasetIndex===0)return ' Rs. '+parseFloat(c.raw||0).toLocaleString('en-IN',{minimumFractionDigits:2});return ' '+parseFloat(c.raw||0).toFixed(3)+' g';}}}
+            },
+            scales:{
+                y:{position:'left',beginAtZero:true,grid:{color:'rgba(168,125,30,0.08)'},border:{display:false},
+                   ticks:{color:'#9e9890',font:{size:10},maxTicksLimit:5,callback:function(v){if(v>=100000)return 'Rs.'+(v/100000).toFixed(1)+'L';if(v>=1000)return 'Rs.'+(v/1000).toFixed(0)+'K';return 'Rs.'+v;}}},
+                y1:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},
+                    ticks:{color:'rgba(21,128,61,0.7)',font:{size:10},maxTicksLimit:5,callback:function(v){return v.toFixed(1)+'g';}}},
+                x:{grid:{color:'rgba(168,125,30,0.07)'},border:{display:false},ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}}}
+            }
+        }
+    });
+}
+
+function buildInvChart(labels,weights){
+    if(typeof Chart==='undefined'){setTimeout(function(){buildInvChart(labels,weights);},200);return;}
+    var ctx=document.getElementById('invChart').getContext('2d');
+    if(invChart)invChart.destroy();
+    var noData=!labels||!labels.length||!weights||weights.every(function(w){return parseFloat(w||0)===0;});
+    var pal=['rgba(168,125,30,0.75)','rgba(21,128,61,0.70)','rgba(138,108,10,0.75)','rgba(180,83,9,0.65)','rgba(29,127,173,0.65)','rgba(201,162,39,0.70)','rgba(100,116,139,0.60)','rgba(14,12,9,0.50)'];
+    invChart=new Chart(ctx,{
+        type:'bar',
+        data:{labels:noData?['No stock data']:labels,datasets:[{label:'Weight (g)',data:noData?[0]:weights,
+            backgroundColor:noData?['rgba(168,125,30,0.15)']:labels.map(function(_,i){return pal[i%pal.length];}),borderRadius:7,borderSkipped:false,borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{
+                    backgroundColor:'#0e0c09',
+                    borderColor:'rgba(201,162,39,0.3)',
+                    borderWidth:1,
+                    padding:12,
+                    cornerRadius:9,
+                    titleColor:'#c9a227',
+                    bodyColor:'rgba(255,255,255,0.7)',
+                    callbacks:{
+                        title:function(items){return 'Touch ' + (items[0]?items[0].label:'');},
+                        label:function(c){
+                            return ' Stock: ' + parseFloat(c.raw||0).toFixed(3) + ' g';
+                        }
+                    }
+                }},
+            scales:{
+                y:{beginAtZero:true,grid:{color:'rgba(168,125,30,0.08)',drawBorder:false},border:{display:false},ticks:{color:'#7a7268',font:{size:10},maxTicksLimit:5,callback:function(v){return v.toFixed(1)+'g';}}},
+                x:{grid:{display:false},border:{display:false},ticks:{color:'#5c5a52',font:{size:9,weight:'500'},maxRotation:40}}
+            }
+        }
+    });
+}
+
+// Init charts empty
+(function(){var _t=0;function _i(){_t++;if(typeof Chart!=='undefined'){buildRevChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]);buildInvChart([],[]);}else if(_t<100){setTimeout(_i,100);}} _i();})();
+
+// ── UPDATE BANNER ─────────────────────────────────────────────────
+var _updateUrl='';
+
+function showUpdateBanner(info){
+    _updateUrl=info.download_url||'';
+    document.getElementById('ub-version').innerText='v'+info.version;
+    document.getElementById('ub-sub').innerText='Released '+(info.release_date||'');
+    var cl=document.getElementById('ub-changelog');cl.innerHTML='';
+    (info.changelog||[]).slice(0,4).forEach(function(item){
+        var t=document.createElement('span');t.className='ub-tag';t.innerText=item;cl.appendChild(t);
+    });
+    document.getElementById('update-banner').classList.add('visible');
+}
+
+function dismissBanner(){
+    var b=document.getElementById('update-banner');
+    b.style.transition='opacity 0.3s,transform 0.3s';
+    b.style.opacity='0';b.style.transform='translateY(-8px)';
+    setTimeout(function(){b.classList.remove('visible');b.style='';},300);
+}
+
+function startUpdate(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    var fill=document.getElementById('uprog-fill'),status=document.getElementById('uprog-status');
+    var wrap=document.getElementById('update-progress-wrap'),done=document.getElementById('ub-done');
+    var btn=document.getElementById('ub-update-btn');
+    if(wrap)wrap.classList.add('visible');if(done)done.classList.remove('visible');
+    if(btn)btn.disabled=true;if(fill)fill.style.width='5%';if(status)status.innerText='Preparing...';
+    window.pywebview.api.check_for_update().then(function(info){
+        if(!info||!info.available){if(status)status.innerText='No update available.';return;}
+        window.pywebview.api.start_update_with_info(info).then(function(res){
+            if(res&&res.status==='started'){if(fill)fill.style.width='10%';if(status)status.innerText='Downloading...';_pollProgress();}
+            else if(res&&res.status==='nothing_to_do'){if(status)status.innerText='Already up to date.';}
+            else{if(status)status.innerText='Error: '+(res&&res.message||'unknown');}
+        }).catch(function(e){if(status)status.innerText='Error: '+e;});
+    }).catch(function(e){if(status)status.innerText='Check failed: '+e;});
+}
+
+function _pollProgress(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    window.pywebview.api.get_update_progress().then(function(state){
+        if(!state){setTimeout(_pollProgress,500);return;}
+        var fill=document.getElementById('uprog-fill'),status=document.getElementById('uprog-status');
+        var wrap=document.getElementById('update-progress-wrap'),done=document.getElementById('ub-done');
+        if(fill&&state.pct)fill.style.width=Math.max(state.pct,5)+'%';
+        if(status&&state.msg)status.innerText=state.msg;
+        if(state.done){
+            if(state.ok){if(fill)fill.style.width='100%';if(wrap)wrap.classList.remove('visible');if(done){done.classList.add('visible');}}
+            else{if(fill)fill.style.background='#dc2626';if(status)status.innerText='Failed: '+(state.msg||'error');}
+            return;
+        }
+        setTimeout(_pollProgress,500);
+    }).catch(function(){setTimeout(_pollProgress,1000);});
+}
+
+function restartApp(){if(window.pywebview&&window.pywebview.api)window.pywebview.api.restart_app();}
+window.__showUpdate=function(data){if(data&&data.available)showUpdateBanner(data);};
+window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.detail.available)showUpdateBanner(e.detail);});
+
+// ── MANUAL UPDATE CHECK ───────────────────────────────────────────
+function manualCheckUpdate(){
+    var btn=document.getElementById('check-update-btn');
+    var lbl=document.getElementById('upd-btn-label');
+    if(lbl) lbl.innerText='Checking…';
+    btn.disabled=true;
+    var VERSION_URL='https://raw.githubusercontent.com/Jenildholakiya/AurumOS/main/version.json';
+    var CURRENT_VER='1.0.0';
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.get_current_version){
+        window.pywebview.api.get_current_version().then(function(v){
+            CURRENT_VER=v||'1.0.0'; _doXhrCheck(VERSION_URL,CURRENT_VER,btn,lbl);
+        }).catch(function(){ _doXhrCheck(VERSION_URL,CURRENT_VER,btn,lbl); });
+        return;
+    }
+    _doXhrCheck(VERSION_URL,CURRENT_VER,btn,lbl);
+}
+
+function _doXhrCheck(versionUrl,currentVer,btn,lbl){
+    function ver(s){return(s||'0.0.0').split('.').map(Number);}
+    function isNewer(r,l){var a=ver(r),b=ver(l);for(var i=0;i<3;i++){if((a[i]||0)>(b[i]||0))return true;if((a[i]||0)<(b[i]||0))return false;}return false;}
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',versionUrl+'?_='+Date.now(),true);xhr.timeout=12000;
+    xhr.onload=function(){
+        btn.disabled=false;
+        if(xhr.status===200){
+            try{
+                var info=JSON.parse(xhr.responseText);
+                var remote=info.version||'0.0.0';
+                if(isNewer(remote,currentVer)){
+                    btn.classList.add('upd-ready');
+                    if(lbl) lbl.innerText='v'+remote+' Ready!';
+                    info.available=true; showUpdateBanner(info);
+                } else {
+                    btn.classList.add('upd-ok');
+                    if(lbl) lbl.innerText='✓ '+currentVer+' Latest';
+                    setTimeout(function(){btn.className='btn-update';if(lbl)lbl.innerText='Check Update';},3000);
+                }
+            }catch(e){if(lbl)lbl.innerText='Check Update';}
+        } else {
+            if(lbl) lbl.innerText='✕ Error';
+            setTimeout(function(){if(lbl)lbl.innerText='Check Update';btn.disabled=false;},2000);
+        }
+    };
+    xhr.onerror=xhr.ontimeout=function(){
+        btn.disabled=false;if(lbl)lbl.innerText='No Internet';
+        setTimeout(function(){if(lbl)lbl.innerText='Check Update';},2000);
+    };
+    xhr.send();
+}
+
+// ── DASHBOARD DATA ────────────────────────────────────────────────
+function loadDashboard(){
+    if(!window.pywebview||!window.pywebview.api||
+       typeof window.pywebview.api.get_dynamic_greeting!=='function'){
+        setTimeout(loadDashboard,200);return;
+    }
+    if(typeof Chart==='undefined'){setTimeout(loadDashboard,100);return;}
+    var api=window.pywebview.api;
+
+    api.get_dynamic_greeting().then(function(g){
+        if(!g) return;
+        var nm  = g.owner_title   || 'Director';
+        var biz = g.business_name || '';
+
+        // Header
+        document.getElementById('h-uname').innerText = nm;
+        var ini = nm.split(' ').filter(function(w){return w;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+        document.getElementById('h-avatar').innerText = ini||'OS';
+
+        // Welcome greeting — show business name, not owner name
+        var displayName = biz || nm;
+        document.getElementById('welcome-str').innerHTML = (g.greeting_prefix||'Hello')+', <em id="welcome-name">'+displayName+'</em>';
+
+        // Owner name in header only
+        // Sub line shows owner name
+        var subBiz = document.getElementById('w-sub-biz');
+        if(subBiz) subBiz.innerText = nm;  // "Neelkanthbhai Shah"
+
+        // Hide the separate biz tag since it's now in the greeting
+        var bizTag = document.getElementById('w-biz-tag');
+        if(bizTag) bizTag.style.display = 'none';
+
+        try{
+            localStorage.setItem('aurum_owner_name', nm);
+            if(biz) localStorage.setItem('aurum_biz_name', biz);
+        }catch(e){}
+    }).catch(function(){});
+
+    api.get_live_command_metrics().then(function(s){
+        if(!s) return;
+        document.getElementById('k-revenue').innerHTML='Rs. '+parseFloat(s.accumulated_sales||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-fine').innerText=parseFloat(s.total_fine_collected||0).toFixed(3)+' g';
+        document.getElementById('k-units').innerText=s.tracked_units||0;
+        document.getElementById('k-weight').innerText=parseFloat(s.metallic_weight||0).toFixed(3)+' g';
+        document.getElementById('k-status').innerText=s.sync_node||'Operational';
+        document.getElementById('k-huid').innerText=s.huid_status||'100% Verified';
+        document.getElementById('sync-status').innerText='Node: '+(s.sync_node||'Active');
+        if(s.chart) buildRevChart(s.chart.labels||[],s.chart.revenue||[],s.chart.fine||[]);
+        if(s.inventory_chart) buildInvChart(s.inventory_chart.labels||[],s.inventory_chart.weights||[]);
+        var rb=document.getElementById('risk-body');
+        if(s.risk_monitor&&s.risk_monitor.length){
+            rb.innerHTML=s.risk_monitor.map(function(c){
+                var bc=c.status_class==='status-danger'?'b-danger':'b-warn';
+                return '<tr><td style="font-weight:600;">'+c.account_name+'</td>'
+                    +'<td style="color:var(--red);font-family:var(--mono);">Rs.'+parseFloat(c.outstanding).toLocaleString('en-IN',{maximumFractionDigits:0})+'</td>'
+                    +'<td><span class="'+bc+'">'+c.badge_label+'</span></td></tr>';
+            }).join('');
+        } else {
+            rb.innerHTML='<tr><td colspan="3" class="empty-cell">No high-risk accounts.</td></tr>';
+        }
+        var al=document.getElementById('audit-list');
+        if(s.audit_logs&&s.audit_logs.length){
+            al.innerHTML=s.audit_logs.map(function(l){
+                return '<div class="audit-item"><span class="audit-time">'+l.time+'</span><span class="audit-msg">'+l.msg+'</span></div>';
+            }).join('');
+        }
+    }).catch(function(e){console.error('Dashboard error:',e);});
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+initSidebar('dashboard');
+
+(function(){
+    var _a=0;
+    function _try(){
+        _a++;
+        var bridgeOk=window.pywebview&&window.pywebview.api&&
+                     typeof window.pywebview.api.get_live_command_metrics==='function';
+        var chartOk=typeof Chart!=='undefined';
+        if(bridgeOk&&chartOk){ loadDashboard(); }
+        else if(_a<300){ setTimeout(_try,50); }
+    }
+    _try();
+})();
+</script>
+</body>
+</html>

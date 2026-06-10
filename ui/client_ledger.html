@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Client Ledger</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.2);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.06);
+    --red:#b91c1c;--red-bg:rgba(185,28,28,0.06);
+    --serif:'DM Serif Display',Georgia,serif;
+    --mono:'DM Mono',monospace;
+    --sh:0 1px 3px rgba(14,12,9,0.07),0 1px 2px rgba(14,12,9,0.04);
+    --sh2:0 4px 16px rgba(14,12,9,0.09);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);color:var(--ink);overflow-x:hidden;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* Header */
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;padding:0 24px;justify-content:space-between;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.btn-back{display:flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-weight:600;font-size:0.72rem;padding:6px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--cream);transition:all 0.14s;}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn-export{background:var(--white);border:1px solid var(--rule);border-radius:6px;padding:6px 14px;display:flex;align-items:center;gap:7px;font-weight:600;font-size:0.72rem;color:var(--ink3);cursor:pointer;transition:all 0.14s;}
+.btn-export:hover{border-color:var(--gold-ln);color:var(--gold3);background:var(--gold-bg);}
+.hdr-brand{font-family:var(--serif);font-size:0.9rem;color:var(--ink);}
+.hdr-brand em{color:var(--gold3);font-style:italic;}
+
+/* Scroll area */
+.page{flex:1;overflow-y:auto;padding:18px 24px 28px;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.page::-webkit-scrollbar{width:3px;}.page::-webkit-scrollbar-thumb{background:var(--cream3);}
+
+/* Info ribbon */
+.info-ribbon{background:var(--white);border-radius:10px;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--rule);box-shadow:var(--sh);margin-bottom:14px;position:relative;overflow:hidden;}
+.info-ribbon::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.client-meta{display:flex;align-items:center;gap:14px;}
+.avatar{width:40px;height:40px;background:var(--ink);color:var(--gold2);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;flex-shrink:0;}
+.c-title h1{font-family:var(--serif);font-size:1.2rem;font-weight:400;letter-spacing:-0.3px;color:var(--ink);}
+.c-title span{font-size:0.58rem;font-weight:500;color:var(--muted2);font-family:var(--mono);}
+.bal-group{text-align:right;min-width:160px;display:flex;flex-direction:column;gap:3px;}
+.bal-label{font-size:0.52rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;}
+.bal-val{font-family:var(--mono);font-size:1.2rem;font-weight:600;color:var(--ink);letter-spacing:-0.5px;line-height:1.2;}
+.bal-limit{font-size:0.58rem;font-weight:500;color:var(--gold3);}
+.breach-alert{color:var(--red)!important;}
+.prog-bar{width:100%;height:4px;background:var(--cream3);border-radius:99px;overflow:hidden;margin-top:3px;}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:99px;transition:width 0.5s cubic-bezier(0.16,1,0.3,1);}
+.prog-fill.breached{background:linear-gradient(90deg,var(--red),#dc2626)!important;}
+.bal-wrap{display:flex;gap:40px;}
+
+/* Action bar */
+.action-bar{background:var(--white);border-radius:10px;padding:14px 18px;display:grid;grid-template-columns:160px 1fr 1.6fr 100px;gap:14px;align-items:flex-end;margin-bottom:14px;border:1px solid var(--rule);box-shadow:var(--sh);}
+.inp-wrap label{font-size:0.52rem;font-weight:600;color:var(--muted2);text-transform:uppercase;margin-bottom:4px;display:block;letter-spacing:0.8px;}
+.inp-wrap select,.inp-wrap input{width:100%;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;font-weight:500;color:var(--ink);background:var(--cream);outline:none;transition:all 0.14s;font-family:inherit;}
+.inp-wrap select:focus,.inp-wrap input:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(201,162,39,0.1);}
+.btn-post{height:34px;background:var(--ink);color:#fff;border:none;border-radius:6px;font-family:inherit;font-weight:600;font-size:0.74rem;cursor:pointer;transition:all 0.15s;width:100%;}
+.btn-post:hover{background:var(--ink2);transform:translateY(-1px);}
+
+/* Table */
+.table-card{background:var(--white);border-radius:10px;border:1px solid var(--rule);overflow:hidden;box-shadow:var(--sh);}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--cream2);padding:9px 16px;text-align:left;font-size:0.53rem;font-weight:600;color:var(--muted2);text-transform:uppercase;border-bottom:1px solid var(--rule);letter-spacing:0.7px;}
+td{padding:10px 16px;border-bottom:1px solid var(--rule2);font-size:0.77rem;font-weight:500;vertical-align:middle;}
+tr.row-jama td{background:rgba(21,128,61,0.02);}
+tr.row-sale td{background:rgba(185,28,28,0.02);}
+tr:hover td{background:rgba(168,125,30,0.025)!important;}
+.badge{padding:2px 8px;border-radius:4px;font-size:0.57rem;font-weight:600;display:inline-block;text-transform:uppercase;letter-spacing:0.5px;border:1px solid transparent;}
+.jama{background:var(--green-bg);color:var(--green);border-color:rgba(21,128,61,0.2);}
+.sale{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.num-text{font-family:var(--mono);font-size:0.75rem;}
+.running-bal{font-size:0.58rem;color:var(--muted2);display:inline-block;margin-top:2px;font-family:var(--mono);background:var(--cream2);padding:1px 6px;border-radius:3px;border:1px solid var(--rule2);}
+.type-dr{color:var(--red);}
+.type-cr{color:var(--green);}
+.btn-del{width:26px;height:26px;border-radius:5px;border:1px solid var(--rule);background:var(--cream);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all 0.13s;}
+.btn-del:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(14,12,9,0.45);backdrop-filter:blur(6px);z-index:10000;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal-content{background:var(--white);width:360px;padding:24px;border-radius:12px;box-shadow:var(--sh2);border:1px solid var(--rule);text-align:center;animation:mp 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes mp{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-icon{width:46px;height:46px;background:var(--red-bg);color:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 14px;border:1px solid rgba(185,28,28,0.15);}
+.modal-title{font-family:var(--serif);font-size:1rem;color:var(--ink);margin-bottom:6px;}
+.modal-msg{font-size:0.75rem;color:var(--muted);line-height:1.5;margin-bottom:18px;}
+.modal-actions{display:flex;gap:10px;}
+.m-btn{flex:1;height:38px;border-radius:6px;font-family:inherit;font-weight:600;font-size:0.76rem;cursor:pointer;border:none;transition:all 0.14s;}
+.btn-cancel{background:var(--cream2);color:var(--ink3);border:1px solid var(--rule);}
+.btn-cancel:hover{background:var(--cream3);}
+.btn-confirm{background:var(--red);color:#fff;}
+.btn-confirm:hover{background:#991b1b;transform:translateY(-1px);}
+
+@media print{
+    header,.action-bar,.btn-export,.btn-back,#sidebar-container,.action-col,.modal-overlay,.prog-bar{display:none!important;}
+    body{background:white!important;overflow:auto!important;height:auto!important;}
+    .page{overflow:visible!important;padding:0!important;}
+    .table-card,.info-ribbon{border:1px solid #000!important;box-shadow:none!important;border-radius:0!important;}
+    th{background:#f8fafc!important;color:#000!important;}
+    td{color:#000!important;background:transparent!important;}
+}
+</style>
+<link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+
+
+<div class="modal-overlay" id="delete-modal">
+    <div class="modal-content">
+        <div class="modal-icon">x</div>
+        <div class="modal-title">Delete Entry?</div>
+        <div class="modal-msg">Permanently remove this ledger record? This cannot be undone.</div>
+        <div class="modal-actions">
+            <button class="m-btn btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button class="m-btn btn-confirm" id="confirm-delete-btn">Remove</button>
+        </div>
+    </div>
+</div>
+
+<header>
+    <a href="accounts.html" class="btn-back">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Accounts
+    </a>
+    <div class="hdr-brand">Aurum<em>OS</em></div>
+    <button class="btn-export" onclick="exportStatement()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Export
+    </button>
+</header>
+
+<div class="page">
+
+    <div class="info-ribbon">
+        <div class="client-meta">
+            <div class="avatar" id="avatar">??</div>
+            <div class="c-title">
+                <h1 id="c-name">--</h1>
+                <span id="c-uid">UID: CL-000</span>
+            </div>
+        </div>
+        <div class="bal-wrap">
+            <div class="bal-group">
+                <span class="bal-label">Metal Outstanding</span>
+                <span class="bal-val" id="m-val">0.000 g</span>
+                <div class="prog-bar"><div class="prog-fill" id="m-prog"></div></div>
+                <span class="bal-limit" id="m-limit">Limit: 0.000 g</span>
+            </div>
+            <div class="bal-group">
+                <span class="bal-label">Cash Outstanding</span>
+                <span class="bal-val" id="c-val">Rs. 0.00</span>
+                <div class="prog-bar"><div class="prog-fill" id="c-prog"></div></div>
+                <span class="bal-limit" id="c-limit">Limit: Rs. 0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="inp-wrap">
+            <label>Entry Type</label>
+            <select id="entry-type" onchange="onTypeChange()">
+                <option value="metal">Metal Jama</option>
+                <option value="cash">Cash Jama</option>
+            </select>
+        </div>
+        <div class="inp-wrap">
+            <label id="val-label">Weight (g)</label>
+            <input type="number" id="j-val" placeholder="0.000" step="0.001" data-next="j-desc">
+        </div>
+        <div class="inp-wrap">
+            <label>Description / Note</label>
+            <input type="text" id="j-desc" placeholder="e.g. Old gold received" data-next="btn-post">
+        </div>
+        <button class="btn-post" id="btn-post" onclick="postEntry()">Record</button>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead><tr>
+                <th width="120">Date</th>
+                <th width="80">Type</th>
+                <th>Reference &amp; Description</th>
+                <th style="text-align:right;" width="180">Metal (Dr/Cr)</th>
+                <th style="text-align:right;" width="190">Cash (Dr/Cr)</th>
+                <th width="60" class="action-col" style="text-align:center;">-</th>
+            </tr></thead>
+            <tbody id="ledger-body">
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted2);">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+var params     = new URLSearchParams(window.location.search);
+var clientName = params.get('name');
+var pendingId  = null;
+
+function onTypeChange() {
+    var t = document.getElementById('entry-type').value;
+    document.getElementById('val-label').innerText = t==='metal' ? 'Weight (g)' : 'Amount (Rs.)';
+    document.getElementById('j-val').placeholder   = t==='metal' ? '0.000' : '0.00';
+}
+
+function getInitials(n){ return n?n.split(' ').map(function(x){return x[0];}).join('').toUpperCase().substring(0,2):'??'; }
+
+function exportStatement(){
+    var orig=document.title;
+    document.title='Statement_'+clientName.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
+    window.print(); document.title=orig;
+}
+
+async function loadData(){
+    if(!window.pywebview?.api||!clientName) return;
+    var allClients = await window.pywebview.api.get_client_list();
+    var idx        = allClients.findIndex(function(c){return c.name===clientName;});
+    var client     = allClients[idx];
+    var displayId  = (idx+1).toString().padStart(3,'0');
+    var bal        = await window.pywebview.api.get_client_balances(clientName);
+    var history    = await window.pywebview.api.get_ledger_statement(clientName);
+
+    document.getElementById('c-name').innerText = clientName;
+    document.getElementById('c-uid').innerText  = 'UID: CL-'+displayId;
+    document.getElementById('avatar').innerText = getInitials(clientName);
+
+    var mLim = parseFloat(client?.metal_limit)||0;
+    var cLim = parseFloat(client?.cash_limit) ||0;
+    document.getElementById('m-limit').innerText = 'Limit: '+mLim.toFixed(3)+' g';
+    document.getElementById('c-limit').innerText = 'Limit: Rs. '+cLim.toLocaleString('en-IN');
+
+    // Metal balance + progress
+    document.getElementById('m-val').innerText = bal.metal.toFixed(3)+' g';
+    var mProg = document.getElementById('m-prog');
+    mProg.style.width = mLim>0 ? Math.min(100,(bal.metal/mLim)*100)+'%' : '0%';
+    document.getElementById('m-val').className = 'bal-val'+(bal.metal>mLim&&mLim>0?' breach-alert':'');
+    mLim>0&&bal.metal>mLim ? mProg.classList.add('breached') : mProg.classList.remove('breached');
+
+    // Cash balance + progress
+    document.getElementById('c-val').innerText = 'Rs. '+bal.cash.toLocaleString('en-IN',{minimumFractionDigits:2});
+    var cProg = document.getElementById('c-prog');
+    cProg.style.width = cLim>0 ? Math.min(100,(bal.cash/cLim)*100)+'%' : '0%';
+    document.getElementById('c-val').className = 'bal-val'+(bal.cash>cLim&&cLim>0?' breach-alert':'');
+    cLim>0&&bal.cash>cLim ? cProg.classList.add('breached') : cProg.classList.remove('breached');
+
+    // Build running balance
+    var rMetal=0, rCash=0;
+    history.forEach(function(e){
+        rMetal += parseFloat(e.metal_dr||0)-parseFloat(e.metal_cr||0);
+        rCash  += parseFloat(e.cash_dr ||0)-parseFloat(e.cash_cr ||0);
+        e.rM=rMetal; e.rC=rCash;
+    });
+
+    var tbody = document.getElementById('ledger-body');
+    tbody.innerHTML='';
+    if(!history.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted2);">No transactions yet.</td></tr>'; return; }
+
+    history.slice().reverse().forEach(function(e){
+        var isJama = e.metal_cr>0||e.cash_cr>0;
+        var mTxt   = e.metal_dr>0 ? '+'+e.metal_dr.toFixed(3)+' DR' : (e.metal_cr>0 ? '-'+e.metal_cr.toFixed(3)+' CR' : '0.000');
+        var cTxt   = e.cash_dr>0  ? 'Rs.'+e.cash_dr.toLocaleString('en-IN')+' DR' : (e.cash_cr>0 ? 'Rs.'+e.cash_cr.toLocaleString('en-IN')+' CR' : 'Rs.0');
+        var mCls   = e.metal_dr>0?'type-dr':(e.metal_cr>0?'type-cr':'');
+        var cCls   = e.cash_dr>0 ?'type-dr':(e.cash_cr>0 ?'type-cr':'');
+        tbody.innerHTML +=
+            '<tr class="'+(isJama?'row-jama':'row-sale')+'">'
+            +'<td class="num-text" style="color:var(--muted2);font-size:0.72rem;">'+e.date+'</td>'
+            +'<td><span class="badge '+(isJama?'jama':'sale')+'">'+(isJama?'Jama':'Sale')+'</span></td>'
+            +'<td><div style="font-weight:600;">'+(e.vch_reference||'Manual')+'</div>'
+            +'<div style="font-size:0.68rem;color:var(--muted2);">'+e.description+'</div></td>'
+            +'<td style="text-align:right;"><div class="num-text '+mCls+'">'+mTxt+'</div>'
+            +'<span class="running-bal">Bal: '+e.rM.toFixed(3)+'g</span></td>'
+            +'<td style="text-align:right;"><div class="num-text '+cCls+'">'+cTxt+'</div>'
+            +'<span class="running-bal">Bal: Rs.'+e.rC.toLocaleString('en-IN')+'</span></td>'
+            +'<td class="action-col" style="text-align:center;"><button class="btn-del" onclick="openDel('+e.id+')">x</button></td>'
+            +'</tr>';
+    });
+}
+
+async function postEntry(){
+    var val  = parseFloat(document.getElementById('j-val').value)||0;
+    var desc = document.getElementById('j-desc').value||'Manual Update';
+    var type = document.getElementById('entry-type').value;
+    if(val<=0) return;
+    var res = await window.pywebview.api.post_to_ledger({
+        client_name:clientName, desc:desc,
+        metal_cr: type==='metal'?val:0,
+        cash_cr:  type==='cash' ?val:0
+    });
+    if(res.status==='success'){
+        document.getElementById('j-val').value='';
+        document.getElementById('j-desc').value='';
+        loadData();
+        document.getElementById('j-val').focus();
+    }
+}
+
+function openDel(id){ pendingId=id; document.getElementById('delete-modal').classList.add('active'); }
+function closeDeleteModal(){ document.getElementById('delete-modal').classList.remove('active'); pendingId=null; }
+
+document.getElementById('confirm-delete-btn').onclick = async function(){
+    if(!pendingId||!window.pywebview?.api) return;
+    var res = await window.pywebview.api.delete_master_entry('client_ledger',pendingId);
+    if(res.status==='success'){ closeDeleteModal(); loadData(); }
+};
+
+document.addEventListener('keydown',function(e){
+    if(e.key!=='Enter') return;
+    var a=document.activeElement,nid=a.dataset.next;
+    if(!nid) return; e.preventDefault();
+    var n=document.getElementById(nid);
+    if(n) n.tagName==='BUTTON'?n.click():n.focus();
+});
+document.addEventListener('wheel',function(){ if(document.activeElement.type==='number') document.activeElement.blur(); });
+
+window.onload=function(){
+    var t=setInterval(function(){if(window.pywebview?.api){loadData();clearInterval(t);}},100);
+};
+</script>
+</body>
+</html>

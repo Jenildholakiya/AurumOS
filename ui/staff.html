@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Staff</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+  --gold-ln:rgba(168,125,30,0.20);--gold-bg:rgba(168,125,30,0.07);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+  --muted:#7a7268;--muted2:#9e9890;
+  --green:#15803d;--green-bg:rgba(21,128,61,0.07);
+  --red:#b91c1c;--red-bg:rgba(185,28,28,0.07);
+  --sh:0 1px 4px rgba(14,12,9,0.07);
+  --sh2:0 8px 32px rgba(14,12,9,0.12);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:"DM Mono",monospace;
+}
+body{font-family:"DM Sans",system-ui,sans-serif;background:var(--cream);color:var(--ink);}
+
+/* Layout */
+.page-wrap{display:flex;height:100vh;overflow:hidden;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* Header */
+header{
+  height:58px;background:var(--white);
+  border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;position:relative;
+}
+header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);}
+.h-title em{color:var(--gold3);font-style:italic;}
+.btn-add{
+  display:inline-flex;align-items:center;gap:7px;
+  height:36px;padding:0 18px;
+  background:var(--ink);color:#fff;
+  border:none;border-radius:8px;
+  font-family:inherit;font-size:0.76rem;font-weight:500;
+  cursor:pointer;transition:all 0.15s;
+}
+.btn-add:hover{background:var(--gold3);}
+
+/* Page content */
+.content{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:16px;}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.stat-card{
+  background:var(--white);border:1px solid var(--rule);
+  border-radius:10px;padding:16px 18px;box-shadow:var(--sh);
+  position:relative;overflow:hidden;
+}
+.stat-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.gold::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.stat-card.grn::before{background:linear-gradient(90deg,#15803d,#22c55e);}
+.stat-card.slate::before{background:linear-gradient(90deg,#334155,#64748b);}
+.stat-lbl{font-size:0.52rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:8px;}
+.stat-val{font-family:var(--serif);font-size:2rem;color:var(--ink);line-height:1;}
+.stat-val.green{color:var(--green);}
+.stat-val.gold{color:var(--gold3);}
+
+/* Card */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:var(--sh);}
+.card-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px;background:var(--cream2);
+  border-bottom:1px solid var(--rule);
+}
+.card-ttl{font-size:0.55rem;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;}
+.search-inp{
+  height:32px;padding:0 11px;
+  border:1px solid var(--rule);border-radius:7px;
+  font-size:0.76rem;font-family:inherit;
+  outline:none;background:var(--cream);color:var(--ink);
+  width:180px;transition:all 0.13s;
+}
+.search-inp:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(201,162,39,0.08);}
+
+/* Table */
+table{width:100%;border-collapse:collapse;}
+th{
+  padding:10px 16px;text-align:left;
+  font-size:0.52rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.8px;
+  color:var(--muted2);border-bottom:1px solid var(--rule);
+  white-space:nowrap;
+}
+td{padding:12px 16px;font-size:0.82rem;color:var(--ink);border-bottom:1px solid var(--rule2);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr.staff-row:hover td{background:var(--gold-bg);}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:0.58rem;font-weight:600;}
+.badge-admin{background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);}
+.badge-staff{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
+.badge-active{background:var(--green-bg);color:var(--green);border:1px solid rgba(21,128,61,0.18);}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;}
+
+/* Avatar */
+.avatar{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--gold-bg);border:1px solid var(--gold-ln);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:0.85rem;color:var(--gold3);
+  text-transform:uppercase;flex-shrink:0;
+}
+.avatar.admin-av{background:var(--ink);color:var(--gold2);}
+
+/* Action buttons */
+.act-wrap{display:flex;align-items:center;gap:4px;justify-content:flex-end;}
+.act-btn{
+  border:none;background:none;cursor:pointer;
+  padding:5px 10px;border-radius:6px;
+  font-size:0.72rem;font-weight:500;
+  transition:all 0.12s;font-family:inherit;
+}
+.act-pw{color:var(--gold3);}
+.act-pw:hover{background:var(--gold-bg);}
+.act-del{color:var(--muted2);}
+.act-del:hover{background:var(--red-bg);color:var(--red);}
+.owner-tag{font-size:0.6rem;color:var(--muted2);font-style:italic;}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--muted2);font-size:0.8rem;line-height:1.8;}
+
+/* ── MODALS ─────────────────────────────────────────────────────── */
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(14,12,9,0.45);
+  backdrop-filter:blur(6px);
+  z-index:9999;display:none;
+  align-items:center;justify-content:center;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--white);border-radius:16px;
+  width:400px;max-width:94vw;
+  box-shadow:var(--sh2);
+  overflow:hidden;
+  animation:pop .22s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{transform:scale(.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+.modal-bar{height:2px;background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold3));}
+.modal-bar.red{background:linear-gradient(90deg,var(--red),#ef4444);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 0;}
+.modal-ttl{font-family:var(--serif);font-size:1.1rem;color:var(--ink);}
+.modal-ttl em{color:var(--gold3);font-style:italic;}
+.modal-x{border:none;background:none;cursor:pointer;color:var(--muted2);font-size:1rem;padding:4px;border-radius:5px;line-height:1;transition:color 0.13s;}
+.modal-x:hover{color:var(--red);}
+.modal-body{padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;}
+
+/* For label */
+.for-badge{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 13px;background:var(--cream2);
+  border:1px solid var(--rule);border-radius:8px;
+}
+.for-av{width:28px;height:28px;border-radius:6px;background:var(--gold-bg);border:1px solid var(--gold-ln);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:0.75rem;color:var(--gold3);text-transform:uppercase;}
+.for-name{font-size:0.8rem;font-weight:500;color:var(--ink);}
+.for-role{font-size:0.6rem;color:var(--muted2);}
+
+/* Fields */
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+.fld-wrap{position:relative;}
+.fld input{
+  width:100%;height:42px;padding:0 42px 0 13px;
+  border:1px solid var(--rule);border-radius:9px;
+  font-size:0.85rem;font-family:var(--mono);
+  color:var(--ink);background:var(--cream);
+  outline:none;transition:all 0.13s;
+}
+.fld input:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(201,162,39,0.08);}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--muted2);font-size:0.85rem;padding:2px;transition:color 0.13s;}
+.eye:hover{color:var(--gold3);}
+
+/* Strength bar */
+.strength-wrap{height:3px;background:var(--rule);border-radius:99px;overflow:hidden;display:none;}
+.strength-wrap.vis{display:block;}
+.strength-fill{height:100%;width:0;border-radius:99px;transition:width .3s,background .3s;}
+
+/* Alert */
+.alert{font-size:0.72rem;padding:9px 12px;border-radius:8px;display:none;line-height:1.5;}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(185,28,28,0.15);display:block;}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(21,128,61,0.18);display:block;}
+
+/* Footer */
+.modal-foot{display:flex;gap:8px;}
+.btn-save{flex:1;height:42px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.btn-save:hover:not(:disabled){background:var(--gold3);}
+.btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-ghost{height:42px;padding:0 16px;background:var(--cream2);color:var(--muted);border:1px solid var(--rule);border-radius:9px;font-family:inherit;font-size:0.8rem;cursor:pointer;transition:all 0.13s;}
+.btn-ghost:hover{background:var(--cream3);}
+.btn-danger{flex:1;height:42px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.btn-danger:hover{background:#991b1b;}
+
+/* Confirm */
+.confirm-body{padding:28px 24px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;}
+.confirm-icon{font-size:2.8rem;}
+.confirm-txt{font-size:0.82rem;color:var(--muted);line-height:1.7;}
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+<div class="page-wrap">
+<div id="sidebar-container"></div>
+
+<main>
+
+<!-- ── ADD STAFF MODAL ── -->
+<div class="overlay" id="add-ov">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div class="modal-ttl">Add <em>Staff</em></div>
+      <button class="modal-x" onclick="closeModal('add-ov')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fld">
+        <label>Username *</label>
+        <div class="fld-wrap">
+          <input id="au" type="text" placeholder="e.g. ravi_sales" autocomplete="off">
+        </div>
+      </div>
+      <div class="fld">
+        <label>Password *</label>
+        <div class="fld-wrap">
+          <input id="ap" type="password" placeholder="Min 4 characters" oninput="strength('ap','asb','asf')">
+          <button class="eye" onclick="toggleEye('ap',this)" tabindex="-1">👁</button>
+        </div>
+        <div class="strength-wrap" id="asw"><div class="strength-fill" id="asf"></div></div>
+      </div>
+      <div class="fld">
+        <label>Confirm Password *</label>
+        <div class="fld-wrap">
+          <input id="ap2" type="password" placeholder="Re-enter password">
+          <button class="eye" onclick="toggleEye('ap2',this)" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <div class="alert" id="add-alert"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('add-ov')">Cancel</button>
+        <button class="btn-save" id="add-btn" onclick="doAdd()">Add Staff Member</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHANGE PASSWORD MODAL ── -->
+<div class="overlay" id="pw-ov">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div class="modal-ttl">Change <em>Password</em></div>
+      <button class="modal-x" onclick="closeModal('pw-ov')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="for-badge">
+        <div class="for-av" id="pw-av">?</div>
+        <div>
+          <div class="for-name" id="pw-name">—</div>
+          <div class="for-role" id="pw-role">Staff</div>
+        </div>
+      </div>
+      <div class="fld">
+        <label>New Password *</label>
+        <div class="fld-wrap">
+          <input id="np" type="password" placeholder="Min 4 characters" oninput="strength('np','nsb','nsf')">
+          <button class="eye" onclick="toggleEye('np',this)" tabindex="-1">👁</button>
+        </div>
+        <div class="strength-wrap" id="nsw"><div class="strength-fill" id="nsf"></div></div>
+      </div>
+      <div class="fld">
+        <label>Confirm Password *</label>
+        <div class="fld-wrap">
+          <input id="np2" type="password" placeholder="Re-enter password">
+          <button class="eye" onclick="toggleEye('np2',this)" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <div class="alert" id="pw-alert"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('pw-ov')">Cancel</button>
+        <button class="btn-save" id="pw-btn" onclick="doPw()">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE CONFIRM MODAL ── -->
+<div class="overlay" id="del-ov">
+  <div class="modal">
+    <div class="modal-bar red"></div>
+    <div class="confirm-body">
+      <div class="confirm-icon">🗑</div>
+      <div class="modal-ttl">Remove Staff</div>
+      <div class="confirm-txt" id="del-txt">Are you sure?</div>
+      <div class="modal-foot" style="width:100%;">
+        <button class="btn-ghost" onclick="closeModal('del-ov')">Cancel</button>
+        <button class="btn-danger" onclick="doDelete()">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="h-title">Staff <em>Management</em></div>
+  <button class="btn-add" onclick="openAdd()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Staff
+  </button>
+</header>
+
+<div class="content">
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card gold">
+      <div class="stat-lbl">Total Staff</div>
+      <div class="stat-val" id="st-total">—</div>
+    </div>
+    <div class="stat-card grn">
+      <div class="stat-lbl">Active</div>
+      <div class="stat-val green" id="st-active">—</div>
+    </div>
+    <div class="stat-card slate">
+      <div class="stat-lbl">Admins</div>
+      <div class="stat-val gold" id="st-admin">—</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl">All Members</span>
+      <input class="search-inp" placeholder="Search…" oninput="render(this.value)">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:44px;">#</th>
+          <th>Member</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th style="text-align:right;padding-right:20px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="5" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</main>
+</div>
+
+<script>
+'use strict';
+var LIST     = [];
+var editId   = null;
+var deleteId = null;
+
+// ── BOOT ─────────────────────────────────────────────────────────
+(function boot(n){
+    if (window.pywebview && window.pywebview.api) { load(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+    else document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty">Bridge not ready.</td></tr>';
+})(50);
+
+// ── LOAD ─────────────────────────────────────────────────────────
+function load() {
+    window.pywebview.api.get_all_staff().then(function(data) {
+        LIST = Array.isArray(data) ? data : [];
+        stats(); render('');
+    }).catch(function(e) {
+        document.getElementById('tbody').innerHTML =
+            '<tr><td colspan="5" class="empty">Error loading staff: ' + e + '</td></tr>';
+    });
+}
+
+function stats() {
+    document.getElementById('st-total').innerText  = LIST.length;
+    document.getElementById('st-active').innerText = LIST.length;
+    document.getElementById('st-admin').innerText  = LIST.filter(function(s){ return s.role === 'admin'; }).length;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(q) {
+    var tbody = document.getElementById('tbody');
+    var rows  = LIST;
+    if (q) {
+        var lq = q.toLowerCase();
+        rows = rows.filter(function(s){ return (s.username||'').toLowerCase().includes(lq) || (s.role||'').toLowerCase().includes(lq); });
+    }
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">' + (q ? 'No results.' : 'No staff yet. Add your first member.') + '</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(function(s, i) {
+        var isOwner = s.id === 1;
+        var initial = (s.username || '?').charAt(0).toUpperCase();
+        var avCls   = isOwner ? 'avatar admin-av' : 'avatar';
+        var roleBadge = isOwner
+            ? '<span class="badge badge-admin"><span class="dot"></span>Admin</span>'
+            : '<span class="badge badge-staff">Staff</span>';
+        var safeIdx = i; // use index to look up from LIST
+        var actions = isOwner
+            ? '<span class="owner-tag">Owner account</span>'
+            : '<div class="act-wrap">'
+              + '<button class="act-btn act-pw" data-idx="' + i + '" onclick="openPwByIdx(this)">&#128274; Change PW</button>'
+              + '<button class="act-btn act-del" data-idx="' + i + '" onclick="openDelByIdx(this)">&#10005; Remove</button>'
+              + '</div>';
+        return '<tr class="staff-row">'
+            + '<td style="color:var(--muted2);font-size:0.72rem;">' + (i+1) + '</td>'
+            + '<td><div style="display:flex;align-items:center;gap:10px;">'
+              + '<div class="' + avCls + '">' + h(initial) + '</div>'
+              + '<span style="font-family:var(--mono);font-weight:500;">' + h(s.username||'') + '</span>'
+              + '</div></td>'
+            + '<td>' + roleBadge + '</td>'
+            + '<td><span class="badge badge-active"><span class="dot"></span>Active</span></td>'
+            + '<td style="text-align:right;padding-right:12px;">' + actions + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+// ── ADD ───────────────────────────────────────────────────────────
+function openAdd() {
+    document.getElementById('au').value  = '';
+    document.getElementById('ap').value  = '';
+    document.getElementById('ap2').value = '';
+    msg('add-alert','','');
+    document.getElementById('asw').classList.remove('vis');
+    document.getElementById('add-ov').classList.add('open');
+    setTimeout(function(){ document.getElementById('au').focus(); }, 80);
+}
+
+function doAdd() {
+    var user  = document.getElementById('au').value.trim();
+    var pass  = document.getElementById('ap').value;
+    var pass2 = document.getElementById('ap2').value;
+    if (!user)           { msg('add-alert','Username is required.','err'); return; }
+    if (pass.length < 4) { msg('add-alert','Password must be at least 4 characters.','err'); return; }
+    if (pass !== pass2)  { msg('add-alert','Passwords do not match.','err'); return; }
+    setBtn('add-btn', 'Adding…', true);
+    window.pywebview.api.add_staff(user, pass).then(function(r) {
+        if (r && r.status === 'success') {
+            msg('add-alert','Staff member added successfully!','ok');
+            setTimeout(function(){ closeModal('add-ov'); load(); }, 800);
+        } else {
+            msg('add-alert',(r && r.message) || 'Failed to add.','err');
+            setBtn('add-btn','Add Staff Member',false);
+        }
+    }).catch(function(e){ msg('add-alert','Error: '+e,'err'); setBtn('add-btn','Add Staff Member',false); });
+}
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────
+function openPwByIdx(btn) {
+    var rows = LIST.filter(function(s){ return s.id !== 1; });
+    // We need to map rendered index back — simpler: find from all LIST
+    var idx = parseInt(btn.getAttribute('data-idx'));
+    var visible = LIST; // unfiltered for index match
+    var s = visible[idx];
+    if (!s) return;
+    openPw(s.id, s.username, s.role);
+}
+
+function openDelByIdx(btn) {
+    var idx = parseInt(btn.getAttribute('data-idx'));
+    var s = LIST[idx];
+    if (!s) return;
+    openDel(s.id, s.username);
+}
+
+function openPw(id, name, role) {
+    editId = id;
+    document.getElementById('pw-av').innerText   = (name||'?').charAt(0).toUpperCase();
+    document.getElementById('pw-name').innerText = name || '—';
+    document.getElementById('pw-role').innerText = (role||'staff').charAt(0).toUpperCase() + (role||'staff').slice(1);
+    document.getElementById('np').value  = '';
+    document.getElementById('np2').value = '';
+    msg('pw-alert','','');
+    document.getElementById('nsw').classList.remove('vis');
+    document.getElementById('pw-ov').classList.add('open');
+    setTimeout(function(){ document.getElementById('np').focus(); }, 80);
+}
+
+function doPw() {
+    var pass  = document.getElementById('np').value;
+    var pass2 = document.getElementById('np2').value;
+    if (pass.length < 4) { msg('pw-alert','Password must be at least 4 characters.','err'); return; }
+    if (pass !== pass2)  { msg('pw-alert','Passwords do not match.','err'); return; }
+    if (!editId)         { msg('pw-alert','No staff selected.','err'); return; }
+    setBtn('pw-btn','Updating…',true);
+    window.pywebview.api.update_staff_password(editId, pass).then(function(r) {
+        if (r && r.status === 'success') {
+            msg('pw-alert','Password updated!','ok');
+            setTimeout(function(){ closeModal('pw-ov'); }, 900);
+        } else {
+            msg('pw-alert',(r && r.message)||'Failed to update.','err');
+            setBtn('pw-btn','Update Password',false);
+        }
+    }).catch(function(e){ msg('pw-alert','Error: '+e,'err'); setBtn('pw-btn','Update Password',false); });
+}
+
+// ── DELETE ────────────────────────────────────────────────────────
+function openDel(id, name) {
+    deleteId = id;
+    document.getElementById('del-txt').innerHTML =
+        'Remove <strong style="font-family:var(--mono);">' + h(name) + '</strong> from staff?<br>This action cannot be undone.';
+    document.getElementById('del-ov').classList.add('open');
+}
+
+function doDelete() {
+    if (!deleteId) return;
+    window.pywebview.api.delete_staff(deleteId).then(function() {
+        closeModal('del-ov');
+        load();
+    }).catch(function(){ closeModal('del-ov'); load(); });
+    deleteId = null;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function msg(id, txt, type) {
+    var el = document.getElementById(id);
+    el.innerText  = txt;
+    el.className  = 'alert' + (type ? ' '+type : '');
+}
+
+function setBtn(id, label, disabled) {
+    var btn = document.getElementById(id);
+    btn.innerText = label;
+    btn.disabled  = disabled;
+}
+
+function toggleEye(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.innerText = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function strength(inputId, wrapId, fillId) {
+    var val  = document.getElementById(inputId).value;
+    var wrap = document.getElementById(wrapId);
+    var fill = document.getElementById(fillId);
+    if (!val) { wrap.classList.remove('vis'); return; }
+    wrap.classList.add('vis');
+    var score = 0;
+    if (val.length >= 4) score++;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    fill.style.width    = Math.min(100, score * 20) + '%';
+    fill.style.background = score <= 1 ? '#ef4444' : score <= 3 ? '#f59e0b' : '#15803d';
+}
+
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── KEYBOARD ─────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        ['add-ov','pw-ov','del-ov'].forEach(function(id){ closeModal(id); });
+    }
+    if (e.key === 'Enter') {
+        if (document.getElementById('add-ov').classList.contains('open')) { e.preventDefault(); doAdd(); }
+        else if (document.getElementById('pw-ov').classList.contains('open')) { e.preventDefault(); doPw(); }
+    }
+});
+</script>
+</body>
+</html>

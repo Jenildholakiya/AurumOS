@@ -1,0 +1,41 @@
+# ── AurumOS .gitignore ──────────────────────────────────────────
+
+# Logs (runtime output)
+logs/
+*.log
+
+# PyInstaller build output
+build/
+machine.lock
+
+# Temp/preview files
+ui/temp/
+*.png
+!ui/**/*.png
+
+# License & security files
+.license_key
+.revoked
+.lockout_state
+aurum_config.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.orig
+
+# PyArmor output
+.pyarmor_output/
+pyarmor_runtime_000000/
+
+# IDE files
+.idea/
+.vscode/
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db

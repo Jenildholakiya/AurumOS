@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AurumOS | Opening Stock Ledger</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+    --cream:#faf8f3; --cream2:#f2efe7; --cream3:#e8e3d8;
+    --ink:#0e0c09; --ink2:#2a2620; --ink3:#5c5a52;
+    --gold:#a87d1e; --gold2:#c9a227; --gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07); --gold-line:rgba(168,125,30,0.22);
+    --rule:rgba(14,12,9,0.09); --rule2:rgba(14,12,9,0.05);
+    --red:#b91c1c; --red-bg:#fef2f2;
+    --green:#15803d; --green-bg:#f0fdf4;
+    --blue:#1d4ed8; --blue-bg:#eff6ff;
+    --muted:#7a7268; --muted2:#9e9890;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono','JetBrains Mono',monospace;
+    --r:6px;
+    --sh:0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
+    --sh2:0 8px 24px rgba(0,0,0,0.1),0 2px 6px rgba(0,0,0,0.06);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+main{width:100%;display:flex;flex-direction:column;overflow:hidden;flex:1;}
+header{
+    height:60px;background:#fff;border-bottom:1px solid var(--rule);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;flex-shrink:0;position:relative;
+}
+header::after{content:'';position:absolute;bottom:0;left:32px;right:32px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.35;}
+.h-left{display:flex;align-items:center;gap:14px;}
+.back-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 14px;border-radius:var(--r);
+    border:1px solid var(--rule);background:var(--cream);
+    font-size:0.72rem;font-weight:600;color:var(--ink3);
+    cursor:pointer;text-decoration:none;transition:all 0.15s;
+}
+.back-btn:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.h-title{font-family:var(--serif);font-size:1.15rem;color:var(--ink);letter-spacing:-0.2px;}
+.h-title em{color:var(--gold3);font-style:italic;}
+.h-stats{display:flex;gap:0;}
+.h-stat{padding:0 20px;border-left:1px solid var(--rule);text-align:right;}
+.h-stat:last-child{padding-right:0;}
+.h-stat-val{font-family:var(--serif);font-size:1.15rem;color:var(--ink);letter-spacing:-0.3px;}
+.h-stat-lbl{font-size:0.58rem;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:0.9px;margin-top:1px;}
+.content{padding:24px 32px 32px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.content::-webkit-scrollbar{width:3px;}
+.content::-webkit-scrollbar-thumb{background:var(--cream3);}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.ph-title{font-family:var(--serif);font-size:1.7rem;font-weight:400;letter-spacing:-0.4px;line-height:1;}
+.ph-title em{color:var(--gold3);font-style:italic;}
+.ph-sub{font-size:0.75rem;font-weight:300;color:var(--muted);margin-top:5px;}
+
+/* MODE TOGGLE */
+.mode-toggle{display:flex;background:var(--cream2);border:1px solid var(--rule);border-radius:7px;padding:3px;gap:2px;}
+.mode-btn{padding:7px 20px;border-radius:5px;border:none;font-family:var(--sans);font-size:0.74rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.15s;display:flex;align-items:center;gap:6px;}
+.mode-btn.active{background:#fff;color:var(--ink);box-shadow:var(--sh);}
+.mode-btn.active.wt{color:var(--gold3);}
+.mode-btn.active.pc{color:var(--blue);}
+.mode-dot{width:7px;height:7px;border-radius:50%;}
+.mode-btn.wt .mode-dot{background:var(--gold2);}
+.mode-btn.pc .mode-dot{background:var(--blue);}
+
+.form-card{background:#fff;border:1px solid var(--rule);border-radius:var(--r);margin-bottom:18px;overflow:hidden;box-shadow:var(--sh);}
+.form-head{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.form-head-bar{width:3px;height:14px;border-radius:99px;flex-shrink:0;background:var(--gold2);transition:background 0.2s;}
+.form-head-bar.pc{background:var(--blue);}
+.form-head-title{font-size:0.67rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink2);}
+.form-head-hint{font-size:0.62rem;font-weight:400;color:var(--muted2);margin-left:auto;}
+.form-head-hint span{color:var(--red);}
+.form-body{padding:16px 20px;}
+
+/* WEIGHT FORM ROW */
+.form-row-wt{
+    display:grid;
+    grid-template-columns: 1.3fr 0.9fr 0.9fr 0.5fr 1fr 0.9fr 0.9fr 1fr 110px;
+    gap:10px;align-items:end;
+}
+/* PCS FORM ROW */
+.form-row-pc{
+    display:grid;
+    grid-template-columns:1fr 1.4fr 0.7fr 0.7fr 0.9fr 110px;
+    gap:10px;align-items:end;
+}
+
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
+.fg label span{color:var(--red);}
+.fg input{
+    height:38px;padding:0 11px;
+    background:var(--cream);border:1px solid var(--rule);
+    border-radius:var(--r);font-family:var(--mono);font-size:0.8rem;
+    color:var(--ink);outline:none;width:100%;
+    transition:border-color 0.14s,box-shadow 0.14s,background 0.14s;
+}
+.fg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.12);background:#fff;}
+.fg input.pc-focus:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(29,78,216,0.1);}
+.fg input[readonly]{background:var(--cream2);color:var(--gold3);cursor:default;font-weight:500;}
+.fg input.it-f{text-transform:uppercase;font-weight:600;letter-spacing:0.5px;}
+.fg input::placeholder{color:var(--muted2);opacity:0.6;}
+
+.btn-add{
+    height:38px;padding:0 16px;background:var(--ink);color:#fff;
+    border:none;border-radius:var(--r);font-family:var(--sans);
+    font-size:0.76rem;font-weight:600;cursor:pointer;
+    transition:all 0.16s;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.btn-add:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.14);}
+.btn-add.pc-mode{background:var(--blue);}
+.btn-add.pc-mode:hover{background:#1e40af;}
+
+.filter-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.srch{position:relative;flex:1;}
+.srch input{
+    width:100%;height:34px;padding:0 12px 0 32px;
+    background:#fff;border:1px solid var(--rule);border-radius:var(--r);
+    font-family:var(--sans);font-size:0.78rem;color:var(--ink);outline:none;
+    transition:border-color 0.14s;
+}
+.srch input:focus{border-color:var(--gold2);}
+.count-tag{font-size:0.68rem;font-weight:500;color:var(--muted);background:var(--cream2);padding:5px 12px;border-radius:var(--r);border:1px solid var(--rule);white-space:nowrap;}
+.count-tag strong{color:var(--gold3);}
+.table-card{background:#fff;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);}
+table{width:100%;border-collapse:collapse;font-size:0.77rem;}
+thead tr{background:var(--cream);border-bottom:1px solid var(--rule);}
+th{padding:10px 16px;font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);text-align:center;white-space:nowrap;}
+th:first-child{text-align:left;}
+td{padding:11px 16px;border-bottom:1px solid var(--rule2);color:var(--ink);vertical-align:middle;text-align:center;white-space:nowrap;}
+td:first-child{text-align:left;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(168,125,30,0.025);}
+.it-tag{display:inline-flex;align-items:center;background:var(--gold-bg);border:1px solid var(--gold-line);color:var(--gold3);font-family:var(--mono);font-size:0.7rem;font-weight:500;padding:3px 9px;border-radius:4px;letter-spacing:0.4px;}
+.num{font-family:var(--mono);font-size:0.74rem;}
+.num-gr{color:var(--ink2);}
+.num-ls{color:var(--red);}
+.num-nt{color:var(--green);font-weight:600;}
+.num-tc{color:#1d4ed8;}
+.num-pc{color:var(--blue);font-weight:600;}
+
+/* TYPE BADGE */
+.type-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.6rem;font-weight:600;letter-spacing:0.5px;}
+.type-badge.wt{background:var(--gold-bg);border:1px solid var(--gold-line);color:var(--gold3);}
+.type-badge.pc{background:var(--blue-bg);border:1px solid rgba(29,78,216,0.18);color:var(--blue);}
+
+.act-wrap{display:flex;gap:5px;justify-content:center;}
+.act-btn{width:28px;height:28px;border-radius:5px;border:1px solid var(--rule);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.78rem;transition:all 0.13s;color:var(--ink3);}
+.act-btn:hover{border-color:var(--gold-line);background:var(--gold-bg);color:var(--gold3);}
+.act-btn.del:hover{border-color:rgba(185,28,28,0.18);background:var(--red-bg);color:var(--red);}
+.empty-row td{text-align:center;padding:44px;color:var(--muted2);font-size:0.8rem;}
+.sk{height:13px;border-radius:3px;background:linear-gradient(90deg,var(--cream2) 0%,var(--cream) 50%,var(--cream2) 100%);background-size:200%;animation:sk 1.4s ease-in-out infinite;}
+@keyframes sk{0%{background-position:0%}100%{background-position:200%}}
+
+/* EDIT MODAL */
+#edit-modal{position:fixed;inset:0;background:rgba(14,12,9,0.45);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9000;opacity:0;pointer-events:none;transition:opacity 0.18s;}
+#edit-modal.open{opacity:1;pointer-events:all;}
+.modal-box{background:#fff;border-radius:12px;width:560px;max-width:94vw;box-shadow:var(--sh2);transform:translateY(10px) scale(0.98);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1);overflow:hidden;}
+#edit-modal.open .modal-box{transform:translateY(0) scale(1);}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.mh-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);}
+.mh-close{width:26px;height:26px;border-radius:5px;border:1px solid var(--rule);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;color:var(--muted);transition:all 0.13s;}
+.mh-close:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.18);}
+.mb{padding:18px 22px;}
+.m-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;}
+.mfg{display:flex;flex-direction:column;gap:4px;}
+.mfg label{font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
+.mfg input{height:36px;padding:0 10px;background:var(--cream);border:1px solid var(--rule);border-radius:var(--r);font-family:var(--mono);font-size:0.78rem;color:var(--ink);outline:none;transition:border-color 0.13s;}
+.mfg input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.1);}
+.mfg input[readonly]{background:var(--cream2);color:var(--gold3);}
+.mf{display:flex;gap:10px;justify-content:flex-end;}
+.btn-mcancel{padding:9px 18px;border:1px solid var(--rule);border-radius:var(--r);background:#fff;font-family:var(--sans);font-size:0.76rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.13s;}
+.btn-mcancel:hover{background:var(--cream2);}
+.btn-msave{padding:9px 22px;border:none;border-radius:var(--r);background:var(--ink);font-family:var(--sans);font-size:0.76rem;font-weight:600;color:#fff;cursor:pointer;transition:all 0.13s;}
+.btn-msave:hover{background:var(--ink2);transform:translateY(-1px);}
+
+/* DELETE MODAL */
+#del-modal{position:fixed;inset:0;background:rgba(14,12,9,0.45);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9100;opacity:0;pointer-events:none;transition:opacity 0.18s;}
+#del-modal.open{opacity:1;pointer-events:all;}
+.del-box{background:#fff;border-radius:12px;width:380px;max-width:94vw;box-shadow:var(--sh2);transform:translateY(10px) scale(0.98);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1);overflow:hidden;position:relative;}
+#del-modal.open .del-box{transform:translateY(0) scale(1);}
+.del-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f87171,#ef4444);background-size:200%;animation:dsh 2s linear infinite;}
+@keyframes dsh{0%{background-position:0%}100%{background-position:200%}}
+.del-inner{padding:26px 26px 22px;}
+.del-icon{width:48px;height:48px;border-radius:12px;background:var(--red-bg);border:1.5px solid rgba(185,28,28,0.14);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:14px;}
+.del-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:5px;}
+.del-sub{font-size:0.76rem;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+.del-pill{display:inline-flex;align-items:center;background:var(--red-bg);border:1px solid rgba(185,28,28,0.18);color:var(--red);font-family:var(--mono);font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:4px;margin-bottom:14px;}
+.del-warn{background:#fffbeb;border:1px solid rgba(245,158,11,0.18);border-radius:6px;padding:9px 11px;font-size:0.7rem;color:#92400e;font-weight:500;line-height:1.5;margin-bottom:18px;}
+.del-btns{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.btn-dc{padding:10px;border:1px solid var(--rule);border-radius:var(--r);background:#fff;font-family:var(--sans);font-size:0.76rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.13s;}
+.btn-dc:hover{background:var(--cream2);}
+.btn-dd{padding:10px;border:none;border-radius:var(--r);background:linear-gradient(135deg,#ef4444,#dc2626);font-family:var(--sans);font-size:0.76rem;font-weight:700;color:#fff;cursor:pointer;transition:all 0.16s;box-shadow:0 3px 10px rgba(239,68,68,0.28);}
+.btn-dd:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(239,68,68,0.38);}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:7px;font-size:0.78rem;font-weight:600;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,0.13);white-space:nowrap;transition:opacity 0.3s;font-family:var(--sans);}
+.t-ok{background:var(--ink);color:#fff;}
+.t-err{background:#ef4444;color:#fff;}
+.btn-save-top{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;background:var(--ink);color:#fff;border:none;border-radius:var(--r);font-family:var(--sans);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.18s;white-space:nowrap;box-shadow:0 2px 8px rgba(14,12,9,0.15);}
+.btn-save-top:hover{background:var(--gold3);transform:translateY(-1px);}
+.btn-save-top.saving{opacity:0.6;pointer-events:none;}
+</style>
+</head>
+<body>
+<script src="sidebar.js"></script>
+
+<main>
+<header>
+    <div class="h-left">
+        <a href="inventory.html" class="back-btn">← Back</a>
+        <div class="h-title">Opening <em>Stock Ledger</em></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+        <div class="h-stats">
+            <div class="h-stat"><div class="h-stat-val" id="h-grwt">0.000</div><div class="h-stat-lbl">Total Gross Wt</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="h-ntwt">0.000</div><div class="h-stat-lbl">Total Net Wt</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="h-pcs">0</div><div class="h-stat-lbl">Total Pcs</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="h-count">0</div><div class="h-stat-lbl">Entries</div></div>
+        </div>
+        <button class="btn-save-top" id="top-save-btn" onclick="triggerSave()">
+            <span>＋</span> Save Entry
+        </button>
+    </div>
+</header>
+
+<div class="content">
+    <div class="page-head">
+        <div>
+            <div class="ph-title">Opening <em>Stock Entry</em></div>
+            <div class="ph-sub">Register initial vault assets — weight-based (Katti/bulk) or piece-based (Ring, Chain, Bangles).</div>
+        </div>
+        <!-- MODE TOGGLE -->
+        <div class="mode-toggle">
+            <button class="mode-btn wt active" id="btn-wt" onclick="setMode('weight')">
+                <span class="mode-dot"></span> Weight Mode
+            </button>
+            <button class="mode-btn pc" id="btn-pc" onclick="setMode('pcs')">
+                <span class="mode-dot"></span> Pcs Mode
+            </button>
+        </div>
+    </div>
+
+    <!-- WEIGHT FORM -->
+    <div class="form-card" id="form-wt">
+        <div class="form-head">
+            <div class="form-head-bar" id="fbar"></div>
+            <span class="form-head-title" id="form-title">New Weight Entry</span>
+            <span class="form-head-hint">Fields marked <span>*</span> are required · Net Wt auto-calculates</span>
+        </div>
+        <div class="form-body" id="form-body-wt">
+            <div class="form-row-wt">
+                <div class="fg"><label>IT Code <span>*</span></label><input type="text" id="f-itcode" class="it-f" placeholder="KT-68" maxlength="20" autocomplete="off"></div>
+                <div class="fg"><label>GR WT (g) <span>*</span></label><input type="number" id="f-grwt" step="0.001" placeholder="0.000" oninput="calcNt()"></div>
+                <div class="fg"><label>LS WT (g)</label><input type="number" id="f-lswt" step="0.001" placeholder="0.000" oninput="calcNt()"></div>
+                <div class="fg"><label>NT WT (g)</label><input type="number" id="f-ntwt" step="0.001" placeholder="auto" readonly tabindex="-1"></div>
+                <div class="fg"><label>PCS</label><input type="number" id="f-pcs" step="1" min="1" placeholder="1"></div>
+                <div class="fg"><label>Touch % <span>*</span></label><input type="number" id="f-touch" step="0.5" placeholder="76" oninput="calcAmt()"></div>
+                <div class="fg"><label>Wastage %</label><input type="number" id="f-wastage" step="0.5" placeholder="0" oninput="calcAmt()"></div>
+                <div class="fg"><label>Net Amt</label><input type="number" id="f-netamt" step="0.01" placeholder="auto" readonly tabindex="-1"></div>
+                <button class="btn-add" id="add-btn" onclick="addStock()"><span>＋</span> Save</button>
+            </div>
+        </div>
+        <!-- PCS FORM (hidden by default) -->
+        <div class="form-body" id="form-body-pc" style="display:none;">
+            <div class="form-row-pc">
+                <div class="fg"><label>IT Code <span>*</span></label><input type="text" id="p-itcode" class="it-f pc-focus" placeholder="RNG-22" maxlength="20" autocomplete="off"></div>
+                <div class="fg"><label>Item Name <span>*</span></label><input type="text" id="p-itname" class="pc-focus" placeholder="Gold Ring 22K"></div>
+                <div class="fg"><label>Pcs <span>*</span></label><input type="number" id="p-pcs" class="pc-focus" step="1" min="1" placeholder="1"></div>
+                <div class="fg"><label>NT WT (g) <span>*</span></label><input type="number" id="p-ntwt" class="pc-focus" step="0.001" placeholder="0.000"></div>
+                <div class="fg"><label>Touch % <span>*</span></label><input type="number" id="p-touch" class="pc-focus" step="0.5" placeholder="91"></div>
+                <button class="btn-add pc-mode" id="add-btn-pc" onclick="addStockPcs()"><span>＋</span> Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-row">
+        <div class="srch">
+            <span class="srch-ico">🔍</span>
+            <input type="text" placeholder="Search IT Code or Item Name…" oninput="applyFilter(this.value)">
+        </div>
+        <div class="count-tag">Showing <strong id="f-count">0</strong> of <strong id="t-count">0</strong></div>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr>
+                    <th>IT Code</th>
+                    <th>Item Name</th>
+                    <th>Type</th>
+                    <th>Pcs</th>
+                    <th>GR WT</th>
+                    <th>LS WT</th>
+                    <th>NT WT</th>
+                    <th>Touch %</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="stock-tbody">
+                <tr><td colspan="10"><div class="sk" style="width:80%;margin:12px auto;"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</main>
+
+<!-- EDIT MODAL -->
+<div id="edit-modal">
+    <div class="modal-box">
+        <div class="mh"><span class="mh-title" id="edit-modal-title">Edit Stock Entry</span><div class="mh-close" onclick="closeEdit()">✕</div></div>
+        <div class="mb">
+            <!-- Weight edit fields -->
+            <div id="edit-wt-fields">
+                <div class="m-grid">
+                    <div class="mfg"><label>IT Code</label><input type="text" id="e-itcode" class="it-f"></div>
+                    <div class="mfg"><label>GR WT (g)</label><input type="number" id="e-grwt" step="0.001" oninput="calcEditNt()"></div>
+                    <div class="mfg"><label>LS WT (g)</label><input type="number" id="e-lswt" step="0.001" oninput="calcEditNt()"></div>
+                    <div class="mfg"><label>NT WT (g)</label><input type="number" id="e-ntwt" step="0.001" readonly></div>
+                    <div class="mfg"><label>PCS</label><input type="number" id="e-pcs" step="1" min="1"></div>
+                    <div class="mfg"><label>Touch %</label><input type="number" id="e-touch" step="0.5" oninput="calcEditAmt()"></div>
+                    <div class="mfg"><label>Wastage %</label><input type="number" id="e-wastage" step="0.5" oninput="calcEditAmt()"></div>
+                    <div class="mfg" style="grid-column:span 3;"><label>Net Amt</label><input type="number" id="e-netamt" readonly></div>
+                </div>
+            </div>
+            <!-- Pcs edit fields -->
+            <div id="edit-pc-fields" style="display:none;">
+                <div class="m-grid">
+                    <div class="mfg"><label>IT Code</label><input type="text" id="ep-itcode" class="it-f"></div>
+                    <div class="mfg" style="grid-column:span 2;"><label>Item Name</label><input type="text" id="ep-itname"></div>
+                    <div class="mfg"><label>Pcs</label><input type="number" id="ep-pcs" step="1" min="1"></div>
+                    <div class="mfg"><label>NT WT (g)</label><input type="number" id="ep-ntwt" step="0.001"></div>
+                    <div class="mfg"><label>Touch %</label><input type="number" id="ep-touch" step="0.5"></div>
+                </div>
+            </div>
+            <div class="mf">
+                <button class="btn-mcancel" onclick="closeEdit()">Cancel</button>
+                <button class="btn-msave" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div id="del-modal">
+    <div class="del-box">
+        <div class="del-inner">
+            <div class="del-icon">🗑️</div>
+            <div class="del-title">Delete this entry?</div>
+            <div class="del-sub">You are about to permanently remove stock entry</div>
+            <div class="del-pill" id="del-label">—</div>
+            <div class="del-warn">⚠️ This removes the record from inventory. Any stock already billed against this entry will not be affected.</div>
+            <div class="del-btns">
+                <button class="btn-dc" onclick="closeDel()">Cancel</button>
+                <button class="btn-dd" id="del-confirm">Delete Entry</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+var stocks = [], filtered = [], editId = null, editMode = 'weight', delId = null;
+var goldRate = 0;
+var currentMode = 'weight'; // 'weight' or 'pcs'
+
+// ── MODE SWITCH ──────────────────────────────────────────────────
+function setMode(m) {
+    currentMode = m;
+    var isWt = m === 'weight';
+
+    document.getElementById('btn-wt').classList.toggle('active', isWt);
+    document.getElementById('btn-pc').classList.toggle('active', !isWt);
+
+    document.getElementById('form-body-wt').style.display = isWt ? '' : 'none';
+    document.getElementById('form-body-pc').style.display = isWt ? 'none' : '';
+
+    var bar = document.getElementById('fbar');
+    bar.className = 'form-head-bar' + (isWt ? '' : ' pc');
+    document.getElementById('form-title').innerText = isWt ? 'New Weight Entry' : 'New Pcs Entry';
+
+    // Focus first field of active mode
+    setTimeout(function() {
+        var f = isWt ? 'f-itcode' : 'p-itcode';
+        document.getElementById(f).focus();
+    }, 50);
+}
+
+// ── WEIGHT CALCULATIONS ──────────────────────────────────────────
+function calcNt() {
+    var gr = parseFloat(document.getElementById('f-grwt').value) || 0;
+    var ls = parseFloat(document.getElementById('f-lswt').value) || 0;
+    var nt = Math.max(0, +(gr - ls).toFixed(3));
+    document.getElementById('f-ntwt').value = nt || ''; calcAmt();
+}
+function calcAmt() {
+    var nt = parseFloat(document.getElementById('f-ntwt').value) || 0;
+    var tc = parseFloat(document.getElementById('f-touch').value) || 0;
+    var ws = parseFloat(document.getElementById('f-wastage').value) || 0;
+    var amt = nt * (tc + ws) / 100 * goldRate;
+    document.getElementById('f-netamt').value = (amt > 0) ? +amt.toFixed(2) : '';
+}
+function calcEditNt() {
+    var gr = parseFloat(document.getElementById('e-grwt').value) || 0;
+    var ls = parseFloat(document.getElementById('e-lswt').value) || 0;
+    var nt = Math.max(0, +(gr - ls).toFixed(3));
+    document.getElementById('e-ntwt').value = nt || ''; calcEditAmt();
+}
+function calcEditAmt() {
+    var nt = parseFloat(document.getElementById('e-ntwt').value) || 0;
+    var tc = parseFloat(document.getElementById('e-touch').value) || 0;
+    var ws = parseFloat(document.getElementById('e-wastage').value) || 0;
+    var amt = nt * (tc + ws) / 100 * goldRate;
+    document.getElementById('e-netamt').value = (amt > 0) ? +amt.toFixed(2) : '';
+}
+
+// ── SAVE WEIGHT ENTRY ────────────────────────────────────────────
+function triggerSave() {
+    if (currentMode === 'pcs') { addStockPcs(); return; }
+    var code = document.getElementById('f-itcode').value.trim();
+    var gr   = document.getElementById('f-grwt').value;
+    var tc   = document.getElementById('f-touch').value;
+    if (!code) { shake('f-itcode'); toast('IT Code is required', 'err'); return; }
+    if (!gr)   { shake('f-grwt');  toast('Gross Weight required', 'err'); return; }
+    if (!tc)   { shake('f-touch'); toast('Touch % required', 'err'); return; }
+    var btn = document.getElementById('top-save-btn');
+    btn.classList.add('saving'); btn.innerHTML = '<span>⋯</span> Saving...';
+    addStock().then(function() {
+        btn.classList.remove('saving'); btn.innerHTML = '<span>＋</span> Save Entry';
+    }).catch(function() {
+        btn.classList.remove('saving'); btn.innerHTML = '<span>＋</span> Save Entry';
+    });
+}
+
+async function addStock() {
+    var code = (document.getElementById('f-itcode').value || '').trim().toUpperCase();
+    var gr   = parseFloat(document.getElementById('f-grwt').value) || 0;
+    var ls   = parseFloat(document.getElementById('f-lswt').value) || 0;
+    var nt   = parseFloat(document.getElementById('f-ntwt').value) || 0;
+    var tc   = parseFloat(document.getElementById('f-touch').value) || 0;
+    var ws   = parseFloat(document.getElementById('f-wastage').value) || 0;
+    if (!code) { shake('f-itcode'); toast('IT Code is required', 'err'); return; }
+    if (gr <= 0) { shake('f-grwt'); toast('Gross Weight must be > 0', 'err'); return; }
+    if (tc <= 0) { shake('f-touch'); toast('Touch % is required', 'err'); return; }
+    var btn = document.getElementById('add-btn');
+    btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
+    try {
+        // WEIGHT opening: gr_wt > 0, pcs = 0, tag_id = OPENING-WT-...
+        var payload = {
+            it_code: code, it_name: code,
+            gr_wt: gr, ls_wt: ls, nt_wt: nt,
+            touch: tc, wastage: ws,
+            pcs: parseInt(document.getElementById('f-pcs').value) || 1,                                          // ← always 0 for weight
+            tag_id: 'OPENING-WT-' + code + '-' + Date.now()  // ← WT prefix
+        };
+        var res = await window.pywebview.api.add_stock_entry(payload);
+        var ok = (res === true || res === 'true' || (res && res.status === 'success') || (res && res.status === true));
+        if (ok) {
+            toast('✓ ' + code + ' — ' + gr.toFixed(3) + 'g saved (Weight)', 'ok');
+            ['f-itcode','f-grwt','f-lswt','f-ntwt','f-touch','f-wastage','f-netamt'].forEach(function(id) {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('f-itcode').focus();
+            loadData();
+        } else { toast('Save failed: ' + ((res && res.message) || 'Unknown error'), 'err'); }
+    } catch(e) { toast('Error: ' + e, 'err'); }
+    btn.style.opacity = ''; btn.style.pointerEvents = '';
+}
+
+// ── SAVE PCS ENTRY ───────────────────────────────────────────────
+async function addStockPcs() {
+    var code = (document.getElementById('p-itcode').value || '').trim().toUpperCase();
+    var name = (document.getElementById('p-itname').value || '').trim();
+    var pcs  = parseInt(document.getElementById('p-pcs').value) || 0;
+    var nt   = parseFloat(document.getElementById('p-ntwt').value) || 0;
+    var tc   = parseFloat(document.getElementById('p-touch').value) || 0;
+    if (!code) { shake('p-itcode'); toast('IT Code is required', 'err'); return; }
+    if (!name) { shake('p-itname'); toast('Item Name is required', 'err'); return; }
+    if (pcs <= 0) { shake('p-pcs'); toast('Pcs must be > 0', 'err'); return; }
+    if (nt <= 0)  { shake('p-ntwt'); toast('Net Weight is required', 'err'); return; }
+    if (tc <= 0)  { shake('p-touch'); toast('Touch % is required', 'err'); return; }
+    var btn = document.getElementById('add-btn-pc');
+    btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
+    try {
+        // PCS opening: gr_wt = 0, pcs > 0, tag_id = OPENING-PC-...
+        var payload = {
+            it_code: code, it_name: name,
+            gr_wt: 0, ls_wt: 0, nt_wt: nt,
+            touch: tc, wastage: 0,
+            pcs: pcs,                                         // ← pcs > 0
+            tag_id: 'OPENING-PC-' + code + '-' + Date.now()  // ← PC prefix
+        };
+        var res = await window.pywebview.api.add_stock_entry(payload);
+        var ok = (res === true || res === 'true' || (res && res.status === 'success') || (res && res.status === true));
+        if (ok) {
+            toast('✓ ' + code + ' — ' + pcs + ' pcs saved (Pieces)', 'ok');
+            ['p-itcode','p-itname','p-pcs','p-ntwt','p-touch'].forEach(function(id) {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('p-itcode').focus();
+            loadData();
+        } else { toast('Save failed: ' + ((res && res.message) || 'Unknown error'), 'err'); }
+    } catch(e) { toast('Error: ' + e, 'err'); }
+    btn.style.opacity = ''; btn.style.pointerEvents = '';
+}
+
+// ── LOAD DATA ────────────────────────────────────────────────────
+async function loadData() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadData, 300); return; }
+    try {
+        var d = await window.pywebview.api.get_opening_stock();
+        stocks = Array.isArray(d) ? d : [];
+        applyFilter(document.querySelector('.srch input') ? document.querySelector('.srch input').value : '');
+        updateStats();
+    } catch(e) { console.error(e); }
+}
+
+function updateStats() {
+    var tgr = 0, tnt = 0, tpc = 0;
+    stocks.forEach(function(r) {
+        tgr += parseFloat(r.gr_wt || 0);
+        tnt += parseFloat(r.nt_wt || 0);
+        tpc += parseInt(r.pcs || 0);
+    });
+    document.getElementById('h-grwt').innerText = tgr.toFixed(3);
+    document.getElementById('h-ntwt').innerText = tnt.toFixed(3);
+    document.getElementById('h-pcs').innerText  = tpc;
+    document.getElementById('h-count').innerText = stocks.length;
+}
+
+function applyFilter(q) {
+    q = (q || '').toLowerCase().trim();
+    filtered = stocks.filter(function(r) {
+        return !q ||
+            (r.it_code || '').toLowerCase().includes(q) ||
+            (r.it_name || '').toLowerCase().includes(q);
+    });
+    document.getElementById('f-count').innerText = filtered.length;
+    document.getElementById('t-count').innerText = stocks.length;
+    render();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────────
+function render() {
+    var tb = document.getElementById('stock-tbody');
+    if (!filtered.length) {
+        tb.innerHTML = '<tr class="empty-row"><td colspan="10">📭 No entries found</td></tr>';
+        return;
+    }
+    tb.innerHTML = filtered.map(function(r) {
+        var gr  = parseFloat(r.gr_wt || 0);
+        var ls  = parseFloat(r.ls_wt || 0);
+        var nt  = parseFloat(r.nt_wt || 0);
+        var tc  = parseFloat(r.touch || 0);
+        var pcs = parseInt(r.pcs || 0);
+
+        // Detect type by tag_id prefix OR by gr_wt/pcs values
+        var tag = (r.tag_id || '');
+        var isPcs = tag.includes('OPENING-PC-') || (pcs > 0 && gr === 0);
+
+        var typeBadge = isPcs
+            ? '<span class="type-badge pc">⬡ Pcs</span>'
+            : '<span class="type-badge wt">⬡ Wt</span>';
+
+        var pcsCell = '<span class="num num-pc">'+pcs+'</span>';
+        var grCell   = !isPcs ? '<span class="num num-gr">' + gr.toFixed(3) + '</span>' : '<span style="color:var(--muted2)">—</span>';
+        var lsCell   = (!isPcs && ls > 0) ? '<span class="num num-ls">' + ls.toFixed(3) + '</span>' : '<span style="color:var(--muted2)">—</span>';
+        var ntCell   = '<span class="num num-nt">' + nt.toFixed(3) + '</span>';
+
+        return '<tr>'
+            + '<td><span class="it-tag">' + h(r.it_code || '—') + '</span></td>'
+            + '<td style="color:var(--ink3);font-size:0.75rem;">' + h(r.it_name || '—') + '</td>'
+            + '<td>' + typeBadge + '</td>'
+            + '<td>' + pcsCell + '</td>'
+            + '<td>' + grCell + '</td>'
+            + '<td>' + lsCell + '</td>'
+            + '<td>' + ntCell + '</td>'
+            + '<td><span class="num num-tc">' + tc.toFixed(0) + '%</span></td>'
+            + '<td style="color:var(--muted2);font-size:0.7rem;">' + (r.entry_date || '—') + '</td>'
+            + '<td><div class="act-wrap">'
+            + '<div class="act-btn" title="Edit" onclick="openEdit(' + r.id + ')">✎</div>'
+            + '<div class="act-btn del" title="Delete" onclick="openDel(' + r.id + ',\'' + h(r.it_code || '—') + '\')">🗑</div>'
+            + '</div></td></tr>';
+    }).join('');
+}
+
+// ── EDIT ─────────────────────────────────────────────────────────
+function openEdit(id) {
+    var r = stocks.find(function(s) { return s.id === id; });
+    if (!r) return;
+    editId = id;
+    var tag = (r.tag_id || '');
+    var isPcs = tag.includes('OPENING-PC-') || (parseInt(r.pcs || 0) > 0 && parseFloat(r.gr_wt || 0) === 0);
+    editMode = isPcs ? 'pcs' : 'weight';
+
+    document.getElementById('edit-modal-title').innerText = isPcs ? 'Edit Pcs Entry' : 'Edit Weight Entry';
+    document.getElementById('edit-wt-fields').style.display = isPcs ? 'none' : '';
+    document.getElementById('edit-pc-fields').style.display = isPcs ? '' : 'none';
+
+    if (isPcs) {
+        document.getElementById('ep-itcode').value = r.it_code || '';
+        document.getElementById('ep-itname').value = r.it_name || '';
+        document.getElementById('ep-pcs').value    = parseInt(r.pcs || 0);
+        document.getElementById('ep-ntwt').value   = parseFloat(r.nt_wt || 0).toFixed(3);
+        document.getElementById('ep-touch').value  = parseFloat(r.touch || 0).toFixed(1);
+    } else {
+        document.getElementById('e-itcode').value  = r.it_code || '';
+        document.getElementById('e-grwt').value    = parseFloat(r.gr_wt || 0).toFixed(3);
+        document.getElementById('e-lswt').value    = parseFloat(r.ls_wt || 0).toFixed(3);
+        document.getElementById('e-ntwt').value    = parseFloat(r.nt_wt || 0).toFixed(3);
+        document.getElementById('e-pcs').value = parseInt(r.pcs || 1);
+        document.getElementById('e-touch').value   = parseFloat(r.touch || 0).toFixed(1);
+        document.getElementById('e-wastage').value = parseFloat(r.wastage || 0).toFixed(1);
+        calcEditAmt();
+    }
+    document.getElementById('edit-modal').classList.add('open');
+}
+function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); editId = null; }
+
+async function saveEdit() {
+    if (!editId) return;
+    var data;
+    if (editMode === 'pcs') {
+        data = {
+            it_code: (document.getElementById('ep-itcode').value || '').trim().toUpperCase(),
+            it_name: (document.getElementById('ep-itname').value || '').trim(),
+            pcs:     parseInt(document.getElementById('ep-pcs').value) || 0,
+            nt_wt:   parseFloat(document.getElementById('ep-ntwt').value) || 0,
+            touch:   parseFloat(document.getElementById('ep-touch').value) || 0,
+            gr_wt: 0, ls_wt: 0, wastage: 0,
+        };
+    } else {
+        data = {
+            it_code:  (document.getElementById('e-itcode').value || '').trim().toUpperCase(),
+            gr_wt:    parseFloat(document.getElementById('e-grwt').value) || 0,
+            ls_wt:    parseFloat(document.getElementById('e-lswt').value) || 0,
+            nt_wt:    parseFloat(document.getElementById('e-ntwt').value) || 0,
+            touch:    parseFloat(document.getElementById('e-touch').value) || 0,
+            wastage:  parseFloat(document.getElementById('e-wastage').value) || 0,
+            pcs: parseInt(document.getElementById('e-pcs').value) || 1,
+        };
+    }
+    var res = await window.pywebview.api.update_stock_entry(editId, data);
+    var ok = (res === true || res === 'true' || (res && res.status === 'success'));
+    if (ok) { toast('✓ Entry updated', 'ok'); closeEdit(); loadData(); }
+    else { toast('Update failed: ' + ((res && res.message) || 'error'), 'err'); }
+}
+
+// ── DELETE ───────────────────────────────────────────────────────
+function openDel(id, label) {
+    delId = id;
+    document.getElementById('del-label').innerText = label + ' (ID: ' + id + ')';
+    document.getElementById('del-confirm').onclick = confirmDel;
+    document.getElementById('del-modal').classList.add('open');
+}
+function closeDel() { document.getElementById('del-modal').classList.remove('open'); delId = null; }
+
+async function confirmDel() {
+    if (!delId) return;
+    var res = await window.pywebview.api.delete_stock_entry(delId);
+    closeDel();
+    var ok = (res === true || res === 'true' || (res && res.status === 'success'));
+    if (ok) { toast('✓ Entry deleted', 'ok'); loadData(); }
+    else { toast('Delete failed: ' + ((res && res.message) || 'error'), 'err'); }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function h(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function shake(id) {
+    var el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)'; el.style.boxShadow = '0 0 0 3px rgba(185,28,28,0.12)';
+    setTimeout(function() { el.style.borderColor = ''; el.style.boxShadow = ''; }, 1200);
+}
+function toast(msg, type) {
+    var t = document.createElement('div');
+    t.className = 'toast ' + (type === 'ok' ? 't-ok' : 't-err');
+    t.innerText = msg; document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 2400);
+}
+
+document.getElementById('edit-modal').addEventListener('click', function(e) { if (e.target === this) closeEdit(); });
+document.getElementById('del-modal').addEventListener('click',  function(e) { if (e.target === this) closeDel(); });
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeEdit(); closeDel(); return; }
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        if (document.getElementById('edit-modal').classList.contains('open')) { saveEdit(); return; }
+    }
+});
+
+waitForAPI(function() { loadData(); });
+</script>
+</body>
+</html>
