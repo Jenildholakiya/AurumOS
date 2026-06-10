@@ -54,7 +54,7 @@ body {
 .meta-row {
     display:flex; align-items:center; justify-content:space-between;
     width:100%; padding:4px 6px;
-    font-family:'JetBrains Mono',monospace; font-size:9pt;
+    font-family: Arial, sans-serif; font-size:9pt;
     border-bottom:1px solid #000;
 }
 .meta-group { display:flex; align-items:center; gap:8px; }
@@ -73,7 +73,7 @@ body {
 .bt td {
     height:38px; padding:2px 4px; font-size:14pt; font-weight:800; color:#000;
     text-align:center !important; vertical-align:middle;
-    font-family:'JetBrains Mono',monospace;
+    font-family: Arial, sans-serif;
     border-bottom:1px solid #000; border-right:1px solid #000;
 }
 .bt td:last-child { border-right:none; }
@@ -92,7 +92,7 @@ body {
 .rr td {
     height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
     text-align:center !important; background:#fff;
-    border-bottom:1px solid #000; border-right:1px solid #000;
+    border-bottom: none; border-right:1px solid #000;
 }
 .rr td:last-child { border-right:none; }
 
@@ -112,7 +112,7 @@ body {
 }
 .rf td:last-child { border-right:none; }
 
-.rr .price-cell { font-size:10pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
+.rr .price-cell { font-size:9pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
 .rr td:first-child { font-size:10pt !important; font-weight:700 !important; }
 
 #mount  { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
@@ -326,9 +326,10 @@ function buildSlip(D, copyLabel) {
     var isCredit= D.is_credit || false;
 
     var deduct = '';
-    if (colFn>0) deduct+='<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+colFn.toFixed(3)+'</td><td></td></tr>';
-    if (f995>0)  deduct+='<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+f995.toFixed(3)+'</td><td></td></tr>';
-    if (fDhal>0) deduct+='<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+fDhal.toFixed(3)+'</td><td></td></tr>';
+    var valStyle = 'style="font-size: 9pt !important; font-weight: 500 !important;"';
+    if (colFn) deduct += '<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+colFn.toFixed(3)+'</td><td></td></tr>';
+    if (f995)  deduct += '<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+f995.toFixed(3)+'</td><td></td></tr>';
+    if (fDhal) deduct += '<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+fDhal.toFixed(3)+'</td><td></td></tr>';
 
     var discRow='', discFineFinal=0;
     if (discType==='touch' && discFine>0) {
@@ -348,7 +349,7 @@ function buildSlip(D, copyLabel) {
         +'<col style="width:50px;"><col style="width:56px;"><col style="width:38px;"><col style="width:38px;"><col style="width:56px;"><col style="width:34px;"><col style="width:64px;"><col style="width:90px;">'
         +'</colgroup>'
         +'<thead><tr>'
-        +'<th>વિગત</th><th>ગ્રોસ</th><th>લેસ</th><th>પારા</th><th>વજન</th><th>ટચ</th><th>ફાઇન</th><th>ભાવ</th>'
+        +'<th>વિગત</th><th>ગ્રોસ</th><th>લેસ</th><th>આઇટમ</th><th>વજન</th><th>ટચ</th><th>ફાઇન</th><th>ભાવ</th>'
         +'</tr></thead>';
 
     // Split into pages of MAX items each
@@ -378,15 +379,15 @@ function buildSlip(D, copyLabel) {
 
             var vib = ws>0 ? (tc+'+'+ws) : String(tc);
             wRows += '<tr>'
-                +'<td class="cb">'+h(vib)+'</td>'
-                +'<td class="cb">'+g.toFixed(3)+'</td>'
-                +'<td>'+(l>0?l.toFixed(3):'0')+'</td>'
-                +'<td>'+(p>0?p.toFixed(3):'0')+'</td>'
-                +'<td class="cb">'+n.toFixed(3)+'</td>'
-                +'<td class="cb">'+(tc+ws).toFixed(0)+'</td>'
-                +'<td class="cb">'+fn.toFixed(3)+'</td>'
-                +'<td></td>'
-                +'</tr>';
+            +'<td class="cb">'+h(vib)+'</td>'
+            +'<td class="cb">'+g.toFixed(3)+'</td>'
+            +'<td>'+(l>0?l.toFixed(3):'0')+'</td>'
+            +'<td>'+(p>0?p.toFixed(3):'0')+'</td>'
+            +'<td class="cb">'+n.toFixed(3)+'</td>'
+            +'<td class="cb">'+(tc+ws).toFixed(0)+'</td>'
+            +'<td class="cb">'+fn.toFixed(3)+'</td>'
+            +'<td></td>'
+            +'</tr>';
         }
 
         if (!isLast) {
