@@ -1584,8 +1584,16 @@ function renderTable(){
         var tw=0,tpp=0,tl=0,tf=0;
         currentItems.forEach(function(item,i){
             tw+=item.weight;tpp+=(item.para||0);tl+=(item.less||0);tf+=item.fine;
+
+            // --- NEW LOGIC: Dynamic Touch Display ---
+            var baseTouch = parseFloat(item.touch) || 0;
+            var wastage = parseFloat(item.wastage) || 0;
+            var touchDisplay = (baseTouch + wastage).toFixed(1);
+
             var dispCode=_isTouchCode(item.code)?'<span style="color:var(--accent);font-weight:700;">'+parseFloat(item.code)+'%</span>':item.code;
-            tbody.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+dispCode+'</td><td>'+item.weight.toFixed(3)+'</td><td>'+(item.para||0).toFixed(3)+'</td><td>'+(item.ls_wt||item.less||0).toFixed(3)+'</td><td>'+item.touch.toFixed(1)+'</td><td>'+item.fine.toFixed(3)+'</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';
+
+            // --- UPDATED ROW: Using touchDisplay instead of item.touch ---
+            tbody.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+dispCode+'</td><td>'+item.weight.toFixed(3)+'</td><td>'+(item.para||0).toFixed(3)+'</td><td>'+(item.ls_wt||item.less||0).toFixed(3)+'</td><td>'+touchDisplay+'</td><td>'+item.fine.toFixed(3)+'</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';
         });
         var twc=document.getElementById('total-wt-cell');if(twc)twc.innerText=tw.toFixed(3);
         var tpc2=document.getElementById('total-para-cell');if(tpc2)tpc2.innerText=tpp.toFixed(3);
@@ -1599,39 +1607,41 @@ function renderTable(){
 function removeItem(i){currentItems.splice(i,1);renderTable();}
 
 async function handleTagScan(tagId){
-    if(document.getElementById('uchak-toggle').checked)return;
-    if(!window.pywebview||!window.pywebview.api)return;
+    if(document.getElementById('uchak-toggle').checked) return;
+    if(!window.pywebview||!window.pywebview.api) return;
     try{
-        var item=await window.pywebview.api.get_product_by_tag(tagId);
+        var item = await window.pywebview.api.get_product_by_tag(tagId);
         if(item){
-            if(item.is_tagged===0||item.is_tagged===false){
-                showError('Tag '+tagId+' is not registered yet.','Tag Error');
+            if(item.is_tagged === 0 || item.is_tagged === false){
+                showError('Tag '+tagId+' is not registered yet.', 'Tag Error');
                 return;
             }
 
             function parseExpr(val){
-                var s=String(val||'').replace(/\s/g,'');
-                if(s.indexOf('+')!==-1){
-                    var p=s.split('+');
-                    return (parseFloat(p[0])||0)+(parseFloat(p[1])||0);
+                var s = String(val||'').replace(/\s/g,'');
+                if(s.indexOf('+') !== -1){
+                    var p = s.split('+');
+                    return (parseFloat(p[0])||0) + (parseFloat(p[1])||0);
                 }
                 return parseFloat(s)||0;
             }
 
-            var ovTouch=document.getElementById('v-overall-touch').value.trim();
-            var ovWast =document.getElementById('v-overall-wastage').value.trim();
+            var ovTouch = document.getElementById('v-overall-touch').value.trim();
+            var ovWast  = document.getElementById('v-overall-wastage').value.trim();
 
-            var dbW  = parseFloat(item.gr_wt||0);
-            var dbP  = parseFloat(item.para_stone_wt||0);
-            var dbL  = parseFloat(item.ls_wt||0);
+            var dbW = parseFloat(item.gr_wt||0);
+            var dbP = parseFloat(item.para_stone_wt||0);
+            var dbL = parseFloat(item.ls_wt||0);'<td>'+(parseFloat(item.touch) + parseFloat(item.wastage)).toFixed(1)+'</td>'
 
-            var fT = ovTouch ? parseExpr(ovTouch) : parseFloat(item.touch  ||0);
+            // Calculate distinct values
+            var fT = ovTouch ? parseExpr(ovTouch) : parseFloat(item.touch||0);
             var fW = ovWast  ? parseExpr(ovWast)  : parseFloat(item.wastage||0);
 
-            // Fine calculation mate combined use karo (76+5 = 81)
+            // Use the sum for calculation
             var combinedTouch = fT + fW;
             var fine = parseFloat(((dbW - dbP - dbL) * (combinedTouch) / 100).toFixed(3));
 
+            // STORE SEPARATELY SO RENDERER CAN DISPLAY BREAKDOWN
             currentItems.push({
                 tag_id  : item.tag_id   || '',
                 it_code : item.it_code  || '',
@@ -1641,19 +1651,19 @@ async function handleTagScan(tagId){
                 less    : dbL,
                 ls_wt   : dbL,
                 pkg_wt  : parseFloat(item.pkg_wt||0),
-                touch   : fT + fW,           // <--- FAKT ORIGINAL TOUCH SAVE KARO
-                wastage : 0,           // <--- FAKT WASTAGE SAVE KARO
-                fine    : fine          // <--- FINE CALCULATED CHE E J RAHESHE
+                touch   : fT,            // Store base touch (76)
+                wastage : fW,            // Store wastage (5)
+                fine    : fine           // Store calculated fine
             });
 
             renderTable();
 
-            document.getElementById('v-overall-touch').value='';
-            document.getElementById('v-overall-wastage').value='';
+            document.getElementById('v-overall-touch').value = '';
+            document.getElementById('v-overall-wastage').value = '';
         } else {
-            showError('ID '+tagId+' not found.','Tag Missing');
+            showError('ID '+tagId+' not found.', 'Tag Missing');
         }
-    }catch(err){ console.error('handleTagScan error:',err); }
+    } catch(err){ console.error('handleTagScan error:', err); }
 }
 
 function handleBilling(){

@@ -539,32 +539,65 @@ class AurumAPI:
         LOG("[API] AurumAPI initialized")
 
     def ensure_backup_structure(self):
-        """
-        Ensures the secret folder and backup destination exist.
-        """
-        import ctypes
-        secret_dir = r"C:\ProgramData\System32Helper"
-
-        # 1. Ensure the directory exists
+        secret_dir = r"C:\ProgramData\AurumOS"
         try:
+            # 1. Create the directory
             if not os.path.exists(secret_dir):
                 os.makedirs(secret_dir, exist_ok=True)
-                # Set Hidden/System attributes to the folder
-                ctypes.windll.kernel32.SetFileAttributesW(secret_dir, 0x02 | 0x04)
-                LOG(f"[INIT] Created and hid directory: {secret_dir}")
-        except Exception as e:
-            ERR(f"[INIT] Failed to create backup folder: {e}")
+                LOG(f"[BACKUP] Created directory: {secret_dir}")
 
-        # 2. Ensure an empty placeholder file exists
-        dst_file = os.path.join(secret_dir, "sys_data.bin")
-        if not os.path.exists(dst_file):
+            # 2. Hide the folder safely
+            import subprocess
+            # Use shell=True to ensure the attrib command executes correctly in all environments
+            # and capture errors so we know if it actually worked
+            result = subprocess.run(['attrib', '+H', secret_dir], capture_output=True, text=True)
+
+            if result.returncode == 0:
+                LOG(f"[BACKUP] Backup dir hidden: {secret_dir}")
+            else:
+                # This will tell us if it failed because of permissions
+                ERR(f"[BACKUP] Failed to hide folder: {result.stderr}")
+
+        except Exception as e:
+            ERR(f"[BACKUP] Dir setup failed: {e}")
+
+    def pre_init_recovery(self, db_path):
+        import sqlite3, shutil, os
+        secret_dir = r"C:\ProgramData\AurumOS"
+        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
+
+        needs_restore = False
+
+        if not os.path.exists(db_path):
+            LOG("[RECOVERY] DB missing — restoring from backup")
+            needs_restore = True
+        else:
             try:
-                with open(dst_file, 'wb') as f:
-                    f.write(b'INIT')
-                ctypes.windll.kernel32.SetFileAttributesW(dst_file, 0x02 | 0x04)
-                LOG("[INIT] Created and hid backup placeholder file")
+                with sqlite3.connect(db_path) as conn:
+                    result = conn.execute("PRAGMA integrity_check").fetchone()
+                    if result[0] != 'ok':
+                        needs_restore = True
+                        LOG("[RECOVERY] Integrity check failed — restoring")
+            except Exception:
+                needs_restore = True
+                LOG("[RECOVERY] DB unreadable — restoring")
+
+        if needs_restore and os.path.exists(backup_path):
+            try:
+                for ext in ['', '-wal', '-shm']:
+                    p = db_path + ext
+                    if os.path.exists(p):
+                        os.remove(p)
+                for ext in ['', '-wal', '-shm']:
+                    src = backup_path + ext
+                    dst = db_path + ext
+                    if os.path.exists(src):
+                        shutil.copy2(src, dst)
+                LOG("[RECOVERY] DB restored from backup successfully")
             except Exception as e:
-                ERR(f"[INIT] Could not create initial backup file: {e}")
+                ERR(f"[RECOVERY] Restore failed: {e}")
+        elif needs_restore:
+            LOG("[RECOVERY] No backup available — starting fresh")
 
     def set_window(self, window):
         self._window = window

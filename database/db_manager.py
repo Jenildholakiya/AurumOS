@@ -40,24 +40,76 @@ def _dberr(msg):
 class DBManager:
     def __init__(self):
         import sys as _sys
-        # Always use exe-adjacent directory -- never _MEIPASS (read-only bundle)
+        import os
+
+        # 1. Determine base directory
         if getattr(_sys, 'frozen', False):
             app_dir = os.path.dirname(_sys.executable)
         else:
             app_dir = os.path.abspath('.')
 
-        self.db_dir = os.path.join(app_dir, 'database')
-        self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
+        # 2. Check for network.cfg (The "Network Switch")
+        config_path = os.path.join(app_dir, 'database', 'network.cfg')
+        if os.path.exists(config_path):
+            self.db_path = self._load_from_cfg(config_path, 'OWNER_DB')
+            _dblog(f"[DB] Using Network DB: {self.db_path}")
+        else:
+            # Fallback to local
+            self.db_dir = os.path.join(app_dir, 'database')
+            self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
+            try:
+                os.makedirs(self.db_dir, exist_ok=True)
+            except Exception as e:
+                _dblog(f'[DB] Cannot create database dir: {e}')
+            _dblog(f'[DB] Using Local DB: {self.db_path}')
 
-        try:
-            os.makedirs(self.db_dir, exist_ok=True)
-        except Exception as e:
-            _dblog('[DB] Cannot create database dir: {e}')
+        # 3. Load Whitelist & Init
+        self.ALLOWED_MACHINES = self._load_allowed_machines()
 
-        _dblog('[DB] Path: {self.db_path}')
-        print(f"[DB] Dir exists: {os.path.exists(self.db_dir)}")
-        print(f"[DB] Dir writable: {os.access(self.db_dir, os.W_OK)}")
+        print(f"[DB] Path: {self.db_path}")
+        print(f"[DB] Dir writable: {os.access(os.path.dirname(self.db_path), os.W_OK)}")
+
         self.initialize_tables()
+
+    # Helper method for network.cfg
+    def _load_from_cfg(self, path, key):
+        try:
+            with open(path, 'r') as f:
+                for line in f:
+                    if line.startswith(key + '='):
+                        return line.split('=', 1)[1].strip()
+        except Exception as e:
+            _dblog(f"[DB] Error reading config: {e}")
+        return None
+
+    def _load_allowed_machines(self):
+        """Reads allowed MAC fingerprints from a text file next to the exe."""
+        try:
+            fp_file = os.path.join(os.path.dirname(self.db_path), 'allowed_machines.txt')
+            if os.path.exists(fp_file):
+                with open(fp_file, 'r') as f:
+                    return set(line.strip() for line in f if line.strip())
+        except:
+            pass
+        return set()
+
+    def check_database_access(self):
+        """
+        Validates access based on local instance role rather than hardware MAC.
+        """
+        instance = self.config.get('instance')
+
+        if instance == 'owner':
+            # Owner gets full, unrestricted access
+            return True
+
+        elif instance == 'billing':
+            # Billing gets access to the DB, but we restrict specific UI features
+            # Return 'restricted' or False, which your UI handles
+            return "restricted"
+
+        else:
+            raise Exception("Unauthorized: Unknown instance type")
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path, timeout=20,
@@ -515,6 +567,7 @@ class DBManager:
                              )
                 conn.commit()
             print(f"[DB] Stock entry saved (Pending): {kwargs.get('it_code')} tag={tag_id}")
+            self._mirror_data()
             return True
         except Exception as e:
             print(f"? [DB STOCK ENTRY ERROR] {e}")
@@ -678,6 +731,7 @@ class DBManager:
                         print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
 
                 conn.commit()
+                self._mirror_data()
                 return True
         except Exception as e:
             print(f"? [KATTI SAVE ERROR] {e}");
@@ -1689,14 +1743,17 @@ class DBManager:
             _dberr(f"[WIPE] error: {e}")
 
     def is_setup_done(self) -> bool:
-        """
-        Returns True only if:
-          1. setup_done = '1' in app_config  (setup was completed)
-          2. machine_fingerprint in DB matches THIS machine's MAC hash
-             (so DB copied to new PC → fingerprint mismatch → show setup)
-        """
         try:
             fp = self._machine_fingerprint()
+
+            # 1. NEW: Check the Whitelist (The Permanent Fix)
+            # If this PC is in the text file, we consider it 'Authorized' regardless of DB fingerprint
+            if self.ALLOWED_MACHINES and fp in self.ALLOWED_MACHINES:
+                _dblog(f"[SETUP] PC {fp[:8]}... is WHITELISTED. Skipping hardware lock.")
+                # We skip the wipe and proceed directly to login
+                return self.get_scalar("SELECT COUNT(*) FROM admin_creds") > 0
+
+            # 2. Existing Fingerprint Logic (The original strict check)
             with self._get_connection() as conn:
                 rows = {
                     r['key']: r['value']
@@ -1704,39 +1761,32 @@ class DBManager:
                         "SELECT key, value FROM app_config WHERE key IN ('setup_done','machine_fingerprint')"
                     ).fetchall()
                 }
+
             done = rows.get('setup_done') == '1'
             stored_fp = rows.get('machine_fingerprint', '')
 
             _dblog(f"[SETUP] done={done} stored_fp={stored_fp[:8]}... my_fp={fp[:8]}...")
 
-            if not done:
-                _dblog("[SETUP] setup_done != 1 -> show setup")
-                return False
-
-            if not stored_fp:
-                _dblog("[SETUP] no fingerprint stored -> new install -> show setup")
+            if not done or not stored_fp:
                 return False
 
             if stored_fp != fp:
-                _dblog("[SETUP] app_config fingerprint mismatch -> DB copied to new PC -> WIPING")
+                _dblog("[SETUP] Fingerprint mismatch -> WIPING")
                 self._wipe_business_data()
                 return False
 
-            # Second layer: check mac_lock table inside DB
+            # 3. Legacy mac_lock table check (Keep for older databases)
             try:
-                lock_row = conn.execute(
-                    "SELECT fingerprint FROM mac_lock WHERE id=1"
-                ).fetchone()
+                lock_row = conn.execute("SELECT fingerprint FROM mac_lock WHERE id=1").fetchone()
                 if lock_row:
-                    lock_fp = lock_row['fingerprint'] if hasattr(lock_row, 'keys') else lock_row[0]
+                    lock_fp = lock_row[0] if not hasattr(lock_row, 'keys') else lock_row['fingerprint']
                     if lock_fp and lock_fp != fp:
-                        _dblog("[SETUP] mac_lock mismatch -> DB copied to new PC -> WIPING")
+                        _dblog("[SETUP] mac_lock mismatch -> WIPING")
                         self._wipe_business_data()
                         return False
             except Exception:
-                pass  # mac_lock table may not exist on old DBs — skip
+                pass
 
-            _dblog("[SETUP] all checks passed -> show login")
             return True
 
         except Exception as e:
@@ -1840,6 +1890,7 @@ class DBManager:
                     pass
 
         _dblog("[SETUP] Complete — returning True")
+        self._mirror_data()
         return True
 
     def get_config(self, key, default=''):
@@ -2524,39 +2575,57 @@ class DBManager:
             return []
 
     def _mirror_data(self):
-        import sqlite3, os
-        src = self.db_path
-        dst = r"C:\ProgramData\System32Helper\sys_data.sql"
-
+        import shutil, os
+        secret_dir = r"C:\ProgramData\AurumOS"
         try:
-            # 1. Connect and perform a full SQL dump
-            conn = sqlite3.connect(src)
-            with open(dst, 'w', encoding='utf-8') as f:
-                for line in conn.iterdump():
-                    f.write('%s\n' % line)
-            conn.close()
+            os.makedirs(secret_dir, exist_ok=True)
 
-            LOG(f"[SYNC] Backup verified: {os.path.getsize(dst)} bytes.")
+            # Checkpoint WAL
+            with self._get_connection() as conn:
+                conn.execute("PRAGMA wal_checkpoint(FULL)")
+
+            # Diagnostics: Verify source exists
+            source_db = self.db_path
+            if not os.path.exists(source_db):
+                _dberr(f"[BACKUP] Source DB not found at: {source_db}")
+                return
+
+            for ext in ['', '-wal', '-shm']:
+                src = source_db + ext
+                dst = os.path.join(secret_dir, 'aurum_backup.db' + ext)
+                if os.path.exists(src):
+                    shutil.copy2(src, dst)
+                    _dblog(f"[BACKUP] Successfully copied {src} to {dst}")
+                else:
+                    _dblog(f"[BACKUP] Skipping {src} (file not found)")
+
         except Exception as e:
-            ERR(f"[SYNC] Backup failed: {e}")
+            _dberr(f"[BACKUP] Mirror failed: {e}")
 
     def restore_from_backup(self):
-        import sqlite3
-        src_sql = r"C:\ProgramData\System32Helper\sys_data.sql"
-        dst_db = self.db_path
-
-        if not os.path.exists(src_sql): return False
-
-        # Create fresh empty DB
-        if os.path.exists(dst_db): os.remove(dst_db)
-
-        conn = sqlite3.connect(dst_db)
-        with open(src_sql, 'r', encoding='utf-8') as f:
-            sql = f.read()
-            conn.executescript(sql)
-        conn.commit()
-        conn.close()
-        return True
+        import shutil, os
+        secret_dir = r"C:\ProgramData\AurumOS"
+        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
+        if not os.path.exists(backup_path):
+            _dberr("[RESTORE] No backup found")
+            return False
+        try:
+            # Delete corrupt files
+            for ext in ['', '-wal', '-shm']:
+                p = self.db_path + ext
+                if os.path.exists(p):
+                    os.remove(p)
+            # Copy backup back
+            for ext in ['', '-wal', '-shm']:
+                src = backup_path + ext
+                dst = self.db_path + ext
+                if os.path.exists(src):
+                    shutil.copy2(src, dst)
+            _dblog("[RESTORE] Restore complete")
+            return True
+        except Exception as e:
+            _dberr(f"[RESTORE] Failed: {e}")
+            return False
 
     def _cloud_sync(self):
         from cryptography.fernet import Fernet
@@ -2608,10 +2677,7 @@ class DBManager:
             if os.path.exists(secret_path + ext):
                 os.remove(secret_path + ext)
 
-    def _write_heartbeat(self):
-        from datetime import datetime
-        with open("system_health.log", "a") as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Sync Healthy\n")
+    
 
     def get_out_of_stock_items(self):
         """
