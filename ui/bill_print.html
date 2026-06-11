@@ -54,7 +54,7 @@ body {
 .meta-row {
     display:flex; align-items:center; justify-content:space-between;
     width:100%; padding:4px 6px;
-    font-family: Arial, sans-serif; font-size:9pt;
+    font-family: Arial, sans-serif !important; font-size:9pt;
     border-bottom:1px solid #000;
 }
 .meta-group { display:flex; align-items:center; gap:8px; }
@@ -73,7 +73,7 @@ body {
 .bt td {
     height:38px; padding:2px 4px; font-size:14pt; font-weight:800; color:#000;
     text-align:center !important; vertical-align:middle;
-    font-family: Arial, sans-serif;
+    font-family: Arial, sans-serif !important;
     border-bottom:1px solid #000; border-right:1px solid #000;
 }
 .bt td:last-child { border-right:none; }
@@ -83,7 +83,7 @@ body {
 .rt td {
     height:40px !important; font-size:10.5pt !important; font-weight:600 !important;
     text-align:center !important; background:#fff;
-    font-family:'JetBrains Mono',Arial,monospace;
+    font-family: Arial, sans-serif !important;
     border-top:1.5px solid #000 !important; border-bottom:1.5px solid #000 !important;
     border-right:1px solid #000;
 }
@@ -92,7 +92,7 @@ body {
 .rr td {
     height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
     text-align:center !important; background:#fff;
-    border-bottom: none; border-right:1px solid #000;
+    border-bottom:1px solid #000; border-right:1px solid #000;
 }
 .rr td:last-child { border-right:none; }
 
@@ -112,7 +112,7 @@ body {
 }
 .rf td:last-child { border-right:none; }
 
-.rr .price-cell { font-size:9pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
+.rr .price-cell { font-size:10pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
 .rr td:first-child { font-size:10pt !important; font-weight:700 !important; }
 
 #mount  { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
@@ -302,7 +302,7 @@ function buildSlip(D, copyLabel) {
     }
 
     // ── WEIGHT BILL — PAGINATED AT 10 ITEMS ──────────────────────────────
-    var MAX = 10; // items per page
+    var MAX = 7; // items per page
 
     // Grand totals across ALL items
     var gTG=0, gTL=0, gTP=0, gTN=0, gTF=0;
@@ -326,10 +326,9 @@ function buildSlip(D, copyLabel) {
     var isCredit= D.is_credit || false;
 
     var deduct = '';
-    var valStyle = 'style="font-size: 9pt !important; font-weight: 500 !important;"';
-    if (colFn) deduct += '<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+colFn.toFixed(3)+'</td><td></td></tr>';
-    if (f995)  deduct += '<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+f995.toFixed(3)+'</td><td></td></tr>';
-    if (fDhal) deduct += '<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td '+valStyle+'>-'+fDhal.toFixed(3)+'</td><td></td></tr>';
+    if (colFn>0) deduct+='<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+colFn.toFixed(3)+'</td><td></td></tr>';
+    if (f995>0)  deduct+='<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+f995.toFixed(3)+'</td><td></td></tr>';
+    if (fDhal>0) deduct+='<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+fDhal.toFixed(3)+'</td><td></td></tr>';
 
     var discRow='', discFineFinal=0;
     if (discType==='touch' && discFine>0) {
@@ -409,6 +408,8 @@ function buildSlip(D, copyLabel) {
 
         } else {
             // ── Last (or only) page: grand total + dynamic spacer + footer ──
+            var netFine = gTF - colFn - discFineFinal - f995 - fDhal;
+
             var totRow1 = '<tr class="rt">'
                 +'<td class="cb">Total</td>'
                 +'<td class="cb">'+gTG.toFixed(3)+'</td>'
@@ -427,8 +428,9 @@ function buildSlip(D, copyLabel) {
 
             var totRow2 = '<tr class="rt">'
                 +'<td class="cb">Total</td>'
-                +'<td></td><td></td><td></td><td></td><td></td><td></td>'
-                +'<td class="cb price-cell" style="font-size:9pt;">&#x20B9;'+Math.round(totAmt).toLocaleString('en-IN')+'</td>'
+                +'<td colspan="5"></td>'
+                +'<td class="cb" style="font-size:10pt;">'+netFine.toFixed(3)+'</td>'
+                +'<td class="cb price-cell" style="font-size:10pt;">&#x20B9;'+Math.round(totAmt).toLocaleString('en-IN')+'</td>'
                 +'</tr>';
 
             var footRow = '<tr class="rf">'

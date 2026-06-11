@@ -2272,6 +2272,11 @@ def run_aur_os():
     def _on_start(w):
         w.maximize()
         LOG("[STARTUP] Window started and maximized")
+        try:
+            api.db._mirror_data()
+            LOG("[TEST] Manual backup test triggered")
+        except Exception as e:
+            ERR(f"[TEST] Backup test failed: {e}")
 
         # ── Auto-connect scale from saved config ──────────────────
         def _auto_connect_scale():

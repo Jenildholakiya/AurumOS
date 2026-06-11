@@ -1728,7 +1728,7 @@ class DBManager:
                 conn.execute("UPDATE app_config SET value = '' WHERE key = 'machine_fingerprint'")
 
                 # 4. Clear Business Profile
-                conn.execute("UPDATE business_profile SET owner_name='', business_name='', city='' WHERE id=1")
+                conn.execute("UPDATE business_profile SET owner_name='', biz_name='', city='' WHERE id=1")
 
                 conn.commit()
 
@@ -1776,16 +1776,7 @@ class DBManager:
                 return False
 
             # 3. Legacy mac_lock table check (Keep for older databases)
-            try:
-                lock_row = conn.execute("SELECT fingerprint FROM mac_lock WHERE id=1").fetchone()
-                if lock_row:
-                    lock_fp = lock_row[0] if not hasattr(lock_row, 'keys') else lock_row['fingerprint']
-                    if lock_fp and lock_fp != fp:
-                        _dblog("[SETUP] mac_lock mismatch -> WIPING")
-                        self._wipe_business_data()
-                        return False
-            except Exception:
-                pass
+            pass
 
             return True
 
@@ -2575,32 +2566,43 @@ class DBManager:
             return []
 
     def _mirror_data(self):
-        import shutil, os
+        import shutil, os, sqlite3
         secret_dir = r"C:\ProgramData\AurumOS"
+        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
         try:
             os.makedirs(secret_dir, exist_ok=True)
 
-            # Checkpoint WAL
-            with self._get_connection() as conn:
-                conn.execute("PRAGMA wal_checkpoint(FULL)")
+            # Step 1: Force WAL checkpoint so all data is in main .db file
+            try:
+                conn = sqlite3.connect(self.db_path, timeout=5)
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                conn.close()
+            except Exception as ce:
+                _dblog(f"[BACKUP] Checkpoint warning: {ce}")
 
-            # Diagnostics: Verify source exists
-            source_db = self.db_path
-            if not os.path.exists(source_db):
-                _dberr(f"[BACKUP] Source DB not found at: {source_db}")
+            # Step 2: Copy main DB file
+            if os.path.exists(self.db_path):
+                shutil.copy2(self.db_path, backup_path)
+                size = os.path.getsize(backup_path)
+                _dblog(f"[BACKUP] Success: {size} bytes → {backup_path}")
+            else:
+                _dberr("[BACKUP] Source DB not found — skipping")
                 return
 
-            for ext in ['', '-wal', '-shm']:
-                src = source_db + ext
-                dst = os.path.join(secret_dir, 'aurum_backup.db' + ext)
+            # Step 3: Copy WAL and SHM if they exist
+            for ext in ['-wal', '-shm']:
+                src = self.db_path + ext
+                dst = backup_path + ext
                 if os.path.exists(src):
                     shutil.copy2(src, dst)
-                    _dblog(f"[BACKUP] Successfully copied {src} to {dst}")
+                    _dblog(f"[BACKUP] Copied {ext}: OK")
                 else:
-                    _dblog(f"[BACKUP] Skipping {src} (file not found)")
+                    # Remove old WAL/SHM from backup if not needed
+                    if os.path.exists(dst):
+                        os.remove(dst)
 
         except Exception as e:
-            _dberr(f"[BACKUP] Mirror failed: {e}")
+            _dberr(f"[BACKUP] Failed: {e}")
 
     def restore_from_backup(self):
         import shutil, os
