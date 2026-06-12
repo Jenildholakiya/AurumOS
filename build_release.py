@@ -1,184 +1,193 @@
 # -*- coding: utf-8 -*-
 """
 AurumOS Release Builder
-========================
-Run on DEV machine before every push.
+=======================
+Run this BEFORE building the EXE to:
+  1. Bump version in updater.py (CURRENT_VERSION)
+  2. Generate version.json with correct download URL
+  3. Git commit + push everything
+  4. Then run build.py to create the EXE
 
-STEPS EVERY RELEASE:
-  1. Edit your files
-  2. Bump NEW_VERSION below  (e.g. 1.0.7 → 1.0.8)
-  3. Bump CURRENT_VERSION in updater.py to same value
-  4. python build_release.py
-  5. git add -A && git commit -m "v1.0.8" && git push
-  Done. Clients auto-update next time they open AurumOS.
+Correct workflow:
+  1. python build_release.py    <- sets version everywhere + pushes
+  2. python build.py            <- builds EXE with new version baked in
+  3. Upload dist/AurumOS.exe as GitHub release asset named AurumOS.exe
+  4. Done — clients get update automatically
 """
 
-import os, json, hashlib, sys
-from pathlib import Path
+import os, sys, re, json, subprocess
 from datetime import date
+from pathlib import Path
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  !! EDIT THESE BEFORE EVERY RELEASE !!
-# ══════════════════════════════════════════════════════════════════════════════
-NEW_VERSION  = "1.1.1"
+# ── CONFIGURE HERE BEFORE RUNNING ─────────────────────────────────────────────
+NEW_VERSION  = "1.1.1"          # X.Y.Z  — bump this each release
 RELEASE_DATE = str(date.today())
+
 CHANGELOG = [
-    "fix: update always shows correctly on client PCs",
-    "fix: scale weight reading fixed",
-    "fix: tag right wing QR clipping",
+    "Stock Med: full physical audit and period reset",
+    "Opening stock: permanently fixed, never subtracts on sale",
+    "Scale: stable detection on all COM ports and baud rates",
+    "Katti: edit and delete vouchers",
+    "MAC lock: DB auto-wipes on new PC",
+    "Permanent account lock after 3 failed logins with unlock key",
+    "Inventory: correct Net Weight KPI",
+    "Full Report: Opening never deducted from closing",
+    "Updater: version detection fixed for EXE mode",
 ]
+
 GITHUB_OWNER  = "Jenildholakiya"
 GITHUB_REPO   = "AurumOS"
-GITHUB_BRANCH = "main"
-# ══════════════════════════════════════════════════════════════════════════════
+# Download URL points to the GitHub release asset
+DOWNLOAD_URL  = (
+    f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}"
+    f"/releases/download/v{NEW_VERSION}/AurumOS.exe"
+)
+# ──────────────────────────────────────────────────────────────────────────────
 
-EXCLUDE_DIRS = {
-    "database", "logs", "backups",
-    ".git", ".idea", ".vscode", ".venv", "venv",
-    "__pycache__", "node_modules",
-    "build", "dist", "temp", "ui/temp",
-    ".pyarmor_output", "pyarmor_runtime_000000",
-}
-EXCLUDE_FILES = {
-    ".env", "config.json", "aurum_config.json",
-    "build_release.py", "build.py", "AurumOS.spec",
-    "updater.py",          # NEVER include — contains baked CURRENT_VERSION
-    "version.json",        # never update itself
-    "version.lock",        # client-specific
-    "debug_db.py", "tag_layout_test.py",
-    "requirements.txt",
-}
-EXCLUDE_EXTS = {".pyc", ".pyo", ".db", ".log", ".bak", ".tmp", ".spec", ".sqlite"}
-BINARY_EXTS  = {
-    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".bmp", ".webp",
-    ".ttf", ".otf", ".woff", ".woff2",
-    ".pdf", ".zip", ".gz", ".exe", ".dll", ".pyd", ".so",
-}
-
-RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_OWNER}/{GITHUB_REPO}/{GITHUB_BRANCH}"
-ROOT     = Path(os.path.abspath("."))
+ROOT = Path(__file__).parent.resolve()
 
 
-def sha256_file(path: Path) -> str:
-    data = path.read_bytes()
-    if path.suffix.lower() not in BINARY_EXTS:
-        data = data.replace(b"\r\n", b"\n")
-    return hashlib.sha256(data).hexdigest()
+def bump_updater_version():
+    """
+    Replace CURRENT_VERSION in updater.py so the new EXE knows its own version.
+    This is the CRITICAL step — without it the EXE always thinks it's old.
+    """
+    path = ROOT / "updater.py"
+    if not path.exists():
+        print(f"[!] updater.py not found at {path}")
+        return False
+
+    text = path.read_text(encoding="utf-8")
+
+    # Replace CURRENT_VERSION = 'X.Y.Z'  (handles single or double quotes)
+    new_text, count = re.subn(
+        r"^(CURRENT_VERSION\s*=\s*)['\"][\d.]+['\"]",
+        f"CURRENT_VERSION = '{NEW_VERSION}'",
+        text,
+        flags=re.MULTILINE
+    )
+    if count == 0:
+        print("[!] CURRENT_VERSION not found in updater.py")
+        return False
+
+    path.write_text(new_text, encoding="utf-8")
+    print(f"[OK] updater.py CURRENT_VERSION -> {NEW_VERSION}")
+    return True
 
 
-def should_exclude(rel: str) -> bool:
-    rel_fwd = rel.replace("\\", "/")
-    name    = Path(rel_fwd).name
-    ext     = Path(rel_fwd).suffix.lower()
-
-    if ext     in EXCLUDE_EXTS:  return True
-    if name    in EXCLUDE_FILES: return True
-    if name.startswith("."):     return True
-    if "ui/temp" in rel_fwd:     return True
-
-    for exc in EXCLUDE_DIRS:
-        exc_fwd = exc.replace("\\", "/")
-        if rel_fwd == exc_fwd or rel_fwd.startswith(exc_fwd + "/"):
-            return True
-    for part in Path(rel_fwd).parts[:-1]:
-        if part in EXCLUDE_DIRS:
-            return True
-    return False
-
-
-def check_version_sync():
-    upd = ROOT / "updater.py"
-    if not upd.exists():
-        return
-    for line in upd.read_text(encoding="utf-8").splitlines():
-        if "CURRENT_VERSION" in line and "=" in line and not line.strip().startswith("#"):
-            try:
-                val = line.split("=")[1].strip().strip("\"'")
-                if val != NEW_VERSION:
-                    print(f"\n  !! MISMATCH: updater.py CURRENT_VERSION={val!r}"
-                          f"  but NEW_VERSION={NEW_VERSION!r}")
-                    print(f"  Edit updater.py → CURRENT_VERSION = '{NEW_VERSION}'\n")
-                    if input("  Continue anyway? (y/n): ").strip().lower() != 'y':
-                        sys.exit(1)
-                else:
-                    print(f"  OK version sync: {val!r}")
-            except Exception:
-                pass
-            break
-
-
-def main():
-    print(f"\n{'='*56}")
-    print(f"  AurumOS Release Builder — v{NEW_VERSION}")
-    print(f"{'='*56}\n")
-
-    check_version_sync()
-
-    prev_hashes = {}
-    vj = ROOT / "version.json"
-    if vj.exists():
-        try:
-            old = json.loads(vj.read_text(encoding="utf-8"))
-            prev_hashes = {e["path"]: e["sha256"] for e in old.get("files", [])}
-            print(f"  Previous: v{old.get('version','?')}"
-                  f" ({len(prev_hashes)} files)\n")
-        except Exception:
-            pass
-
-    files = []
-    total_bytes = 0
-    new_count = changed_count = 0
-
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file():
-            continue
-        rel = str(path.relative_to(ROOT)).replace("\\", "/")
-        if should_exclude(rel):
-            continue
-
-        h    = sha256_file(path)
-        size = path.stat().st_size
-        total_bytes += size
-
-        files.append({
-            "path":       rel,
-            "sha256":     h,
-            "url":        f"{RAW_BASE}/{rel}",
-            "size_bytes": size,
-        })
-
-        if rel not in prev_hashes:
-            print(f"  [NEW]     {rel}")
-            new_count += 1
-        elif prev_hashes[rel] != h:
-            print(f"  [CHANGED] {rel}")
-            changed_count += 1
-
-    print(f"\n  {'─'*50}")
-    print(f"  Files   : {len(files)} total")
-    print(f"  New     : {new_count}")
-    print(f"  Changed : {changed_count}")
-    print(f"  Size    : {total_bytes // 1024:,} KB")
-    print(f"  {'─'*50}\n")
-
-    out = {
+def write_version_json():
+    """Write version.json to repo root — GitHub serves this to clients."""
+    data = {
         "version":      NEW_VERSION,
         "release_date": RELEASE_DATE,
+        "min_version":  "1.0.0",
         "changelog":    CHANGELOG,
-        "file_count":   len(files),
-        "size_mb":      round(total_bytes / 1024 / 1024, 2),
-        "download_url": "",   # leave empty for delta update
-        "files":        files,
+        "download_url": DOWNLOAD_URL,
+        "files":        []
     }
+    path = ROOT / "version.json"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[OK] version.json written -> v{NEW_VERSION}")
+    return True
 
-    vj.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print(f"  version.json written ✓")
-    print(f"\n  Next:")
-    print(f"    git add -A")
-    print(f"    git commit -m \"v{NEW_VERSION}\"")
-    print(f"    git push\n")
+def bump_version_info_txt():
+    """Update version_info.txt for PyInstaller (Windows EXE properties)."""
+    path = ROOT / "version_info.txt"
+    if not path.exists():
+        print("[SKIP] version_info.txt not found")
+        return
+
+    parts = NEW_VERSION.split(".")
+    while len(parts) < 4:
+        parts.append("0")
+    v_tuple = ", ".join(parts[:4])
+    v_str   = NEW_VERSION
+
+    text = path.read_text(encoding="utf-8")
+
+    # filevers and prodvers tuples
+    text = re.sub(
+        r"filevers=\(\d+,\s*\d+,\s*\d+,\s*\d+\)",
+        f"filevers=({v_tuple})",
+        text
+    )
+    text = re.sub(
+        r"prodvers=\(\d+,\s*\d+,\s*\d+,\s*\d+\)",
+        f"prodvers=({v_tuple})",
+        text
+    )
+    # String version values
+    text = re.sub(
+        r"(u'FileVersion',\s*u')[^']+(')",
+        f"\\g<1>{v_str}\\2",
+        text
+    )
+    text = re.sub(
+        r"(u'ProductVersion',\s*u')[^']+(')",
+        f"\\g<1>{v_str}\\2",
+        text
+    )
+
+    path.write_text(text, encoding="utf-8")
+    print(f"[OK] version_info.txt -> {v_str}")
+
+
+def git_commit_push():
+    """Commit and push version files to GitHub."""
+    files = ["version.json", "updater.py", "version_info.txt"]
+    existing = [f for f in files if (ROOT / f).exists()]
+
+    try:
+        subprocess.run(
+            ["git", "add"] + existing,
+            cwd=str(ROOT), check=True
+        )
+        subprocess.run(
+            ["git", "commit", "-m", f"release: v{NEW_VERSION}"],
+            cwd=str(ROOT), check=True
+        )
+        subprocess.run(
+            ["git", "push"],
+            cwd=str(ROOT), check=True
+        )
+        print(f"[OK] Pushed v{NEW_VERSION} to GitHub")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[!] Git error: {e}")
+        print("    Run manually: git add version.json updater.py && git commit -m 'release: vX.Y.Z' && git push")
+        return False
+
+
+def print_next_steps():
+    print()
+    print("=" * 60)
+    print(f"  v{NEW_VERSION} release prepared")
+    print("=" * 60)
+    print()
+    print("NEXT STEPS:")
+    print(f"  1. python build.py          <- build EXE with v{NEW_VERSION} baked in")
+    print(f"  2. Go to GitHub -> Releases -> Create release tag v{NEW_VERSION}")
+    print(f"  3. Upload dist/AurumOS.exe as release asset")
+    print(f"  4. Clients with old version will see update automatically")
+    print()
+    print(f"  Download URL: {DOWNLOAD_URL}")
+    print()
 
 
 if __name__ == "__main__":
-    main()
+    print(f"\nAurumOS Release Builder -> v{NEW_VERSION}")
+    print("-" * 40)
+
+    ok1 = bump_updater_version()
+    ok2 = write_version_json()
+    bump_version_info_txt()
+
+    if ok1 and ok2:
+        ans = input("\nPush to GitHub now? (y/n): ").strip().lower()
+        if ans == 'y':
+            git_commit_push()
+        else:
+            print("[SKIP] Git push skipped — run manually when ready")
+
+    print_next_steps()

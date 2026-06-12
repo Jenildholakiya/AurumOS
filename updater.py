@@ -1,4 +1,238 @@
-import marshal,zlib,base64
-exec(marshal.loads(zlib.decompress(base64.b85decode(
-    'c-qx`eNbChmgjqV@97&!Na7pp2N+|;w(v*d4`SnB5QfA7H{dvSr=t;i50EV+@}6WHHFnY2YyutE8anAk?j#$!x~G~{ytVu>v*n$gn#otEr?zIcq!t<E7kaiko!Z^h{;|Z)ZfD3pd(M6O!YCv?TQyaqIQQQ7?&rJro^yWZ+;jOoRq)eg;`=Ys6g5u?)CEeQ1x=8?K$BQ=K|^BZ0z+c<0!w1<0!L!)1ucnn7xW}HkeCS?$4nPYG$pVX%mR0zM9^Na2)YYaK`)lPMhOPdLPG0n)En9hHqi!8#y2z<N=GTd^fUT`9bz-Y4v0%2b_$vi`a+pt5lzDy!TJJwp&Zf`khVd(QYaNG;JIp;73}a_ohj#lbWJAhgmkS?M(UJ9x=yHoI+dAvTA>QwZOgP-4e9L~O5FZ-W^yj@!Y-la1^Pn0;1X(~PMz2QWgDU1wimbyJB00`iPU8U9_ls;^||ph!1GSwA*=x{H$v%V17)Cu-NFuNZ<o;Y0(HS9?1b<kp&7#66B^f^=qnsW8QY^$bgXZH?-YX(AAfdS@I^$4=RcWxl|SR@f3m&T(>us_^*n7n{w;q-<6yUk@9XvOPkIKs`#Sl-?)E{x{q(u^^8@_3zWyf$T8*E)I`z-+&&cx)Js~;b3kF4jzbr~}ARKDo12W(1dCJqzOQKKUho$fs-*L9TAHLHIZwGq%dig+zkBmaO;XqJyLo=K5Wj-7VPVi9~8urP&j}Q9f$X*QiVd!qi=fC7OLd7#uAS?wU6MR?_U|NU665nuT)ECK)h8M!3toG#(2E<T=AN5@p8(N_%&+m6<i@Aeg|0SN^bp_grh#}rLjEf{f?gTGK{eDrFhoeD0N><NBDj#t3ohNzU__)^}4h;uJ;F~ft;mtHkiXC+G4g1{iUjwiHc12)XBJfF}3I0?d(j6Uwc?ya?S;P+wiC3Uw+#Hz&jYxr!5ophaUpt83F(&##vibpg`7TM6N3&hSu6prDx$cgUF0%6g|1!N{8TCVQjq{(p{z|67cJk$!e6_(1b2JKrgbxVj8dl5r!;&QWBM^^``y{cT!P8g^v!mk?Sj@r^W>=Db;J5V%)xCvvWuDZIgg5P<A>SqF3wD|3X%A^G6vi4b$78;Tf0VRl?Cv|q5BBl>p3|Q80S~_`v)qBuNDw*>jEQ^rgS;FO$7R<)7e#$bs)LQ|5dslHJ~F>+C=d+7sNJKHvEUx~!a&G9KCy=vBYrpTRoJOLA$}+t2nycJR)c&pEkn_<ahT9^xrsZ@H|&SSInqET8|$eHAz_XD>X3R5PI|5`Z1V7U1U3h36Wq##l#w)p;Sm`}1Vk}D5g82^85L=sAAyha2?D>jz2F7xtucu5FUF(tD3V2oO4+gqlabjsL%vW5_OUM-3B!s9{IFXlfMCNRU^kzkFz9vB3VX&E8I5uK-SD4cd0Y&^SVqG^-=)BWPtj!<x5DCt#u`Q=k#V`TrA6{xaYN^$(IH??63{;Ii-;S>*0N5w#7bJS)N)Y{huWOb(>miGi9sNT*ID<_*f@kjFbLsDU>L%HAKzabAAv9&!8hXq2}AfMLf*sz<Lexh5l0}pA`aoxmGJQJx|T!-pmkvg%86G+tT`d9>)i5l!9YZ8v*QRLCv=(g7=fArLG(d%8Q<yLmt}ug5Z8^E85jwLB}nJjeBGpSH}W~_=FFV9<#Ex!ZhLU?6jlhx5rxHNR#<Fb;Yb-phlCm(mlZuU>>GmOiplF8pYZ$qqoUWlUh2b!y#;->8PtITB|``;k`MEfFbt!|5lEF#Mygf|M#jda8b~TyNsL6LkpDq^#2`LOQ;3fubT%Wx<Wg)lg$U^F%zJ5XM4NqoQBQ69T{LZemv8B!d2{aDnZ85YzM*C7=63><t(}dpQImkqVlavU%Ed*Gz^e`HS`I`|s9cR8mn6&(=uwVJmjjo9SU`FKGY8orMP#?41yLOnLtX2%J7z9y#if^UIuzZA81Y3SlETOnvZ4vYB98+FDLNq_g?wY8VuTIokHP{6MMdWuk}((Q3>RF+5%cS{p4MkFyU453?KAn^rr5Kx(~JFjvA)y}_0GWm@)HnDQJ<QupPKBi9*pZ3nwCwwzF;VW>85T*chfp!eVuvJa?7%;Z~nBzdh^`Oxtrb@Z+swCQh#5^nzd7%Yevd!n{_8me1hfg<NOuhC2I^p(TId$h7AR~B#R}l(UbH=uE^?UVyP4Ib;VZjHk)0$i-xbSe@!!~ks2n8?k|Cx)V!_9^ka*Z<lbv1HGsr5+4gB_QZs-k6~9A&jg2^RJG3m9D$mu{3x<MSUzyv7)kXGZU6Ea%Yw6;)EqDFaE!P+MUgM@+&rNcI33t6<#_*bUQoH49+@54FHWnFkQ#LiJ-PDI}Qg^Yr$Y@G(>*v~H{q#_K_t)pc+UO<UBxqSxIKF2JMv{5=t#?V=x7a0n3U-O*!Cg{pe_!0Yxy4Bh*}a;=-Br-8E#KlqX(JV}WOH^<Qq?u4prme+**Jppl%ToBTxVwK8&9jLEA$oWDs!H?LO;+Fi>0yWugS06(3AD+db;tw2m5i^qkjd(2=3`85(M=IF^6-B4$*PC2h}xy6wq!c0;mSza1QtrjU=y=s2IJ7nt?nxt7!}Y;uIs^P0GVAS4Ig@xnriOO-ctg6%<E&{)rr#&J^9Gcob18vS<lDZ@5sAkkt>Vug@uR>U?Yov+L_gr9srb{63<&;ruoDf~W_AE;o)c2>WXQ*f+utiKG;%^kBmTrRQ}@f(SsJfxcufQITMJ)ImX^E(G>&(vF0ivv-|~Muztud5c!`VhGR;VB>Y`v(E^-pK)h{9kJ%`o;}mqKIrNHUVZ^{i%pbPT&z|;)|fB2VHt^bD@syWYUQOv&~KM?7-<cuK4wt?4HWbR0h`564uF=?G00!`1*0P0)!+AI;VPc%_Vj!BOX9@w=1m)+nLpk0WX~YKKi2e(Bknv2<E_sZgT0c?FC1<3aTsF0RByOgd*NtE)z+e@5%FXzfr1RGMt1vT)!}uHWV$L8jU*Crt!TxofCOd5fZci{fIk#YhHB#qN0wIM#-%_gq8L0^{UT8n6rBoK4-%*$A&`-dV$h1gqZk~+;5Y_t1dYJtg+S*7Gy;%Br$P@=(GP>(1FD6naQ<KzfTj^iO(cVG859QaDk4<>C567M(4vIULOMYj6ov@mP#9=gVWjXC8F_C`EtMX_Qe`8>$W?k44NQnqKBN()+^?p%vNf%qJGyGEPgxtM*|f=e^U;|{ZyZnCob#4B%c5@9lCtevu^md<4y9~IrrYmYZL<UO=jYBRw(noszg+gns;w+hdEy=Vj+`j(ShjVhD=KI8YsM<>@W=Y{ReSlT*78^7c=v+1Y~2Gm2r$p7nNv6WX8K<5c(eCb@3MLKr=^bhin)sU?Q`1~9I4VKz(Ee<Gz&P$Q4z0B+8Yx)4<+q~rgdqP{bt)t+p?)9ZLgYdnQQrZ<HE?#_N44B(;aDh+5GOg-D%t4eMaN3{0~d{%;?J(*Ep)gwx)&PX3tE|jVJC}?Xz-x|Bo)OIxFH#y#1E;l_yr5O-W}{%Go?i-*q_SjyJ1rRV5l9S$b}{>gcMoDpA}1PW?NMM73wx*|o+pWp%5S52Y&itW+LORvx}XzjG>4d3d?<H1twiH{1P%h2o3}<5SD*IT-GjU!0;TbJ;zLhB?-kBy0zl+LsO{EQeS0M}Dn8^3@sx8DD*IfU0eRGG%q?%Gz{I?QHiN2M=F;q0Q7iOzQ4ms$X&>ERU?{4<+@7NZrHh@>y8V7u)N)wo~smb=pojsb3zdImJ>RmeP>^aJ%6Y&3w4a(shja@E8Z_U$KT$rOdBNG?4o%8;$8w2GdT%sYjS!)mcvMV}7-dgS4W{Y#TpaAYZjv`1x0K27XciKk2-1p3H-SEx-<_1jV7J2I^;ow@gnk5yNIUVF1xu6innm>osPQxmZ#J901_Btt|ux#T1wvAS;WM<{+QF7}Us%?1GZcA|;tT%z?5M1t5cZ4L~gcJ8S_oF#uqwEC38U0T}0N87J9|fT1AI^dN8oFhN~oud@@38W(^Gb1xA^(kUVr4ib$30}l#^nmq3vINQ<T85n5g&t>pHj72Fq7(0?L)6w5E*wfK|n)meg_w~2(9pPwD;6vdE0TJQ`sRaDLB42aRCjqzO(ah1xyGo=U96~<^r!jaE1H!LOR|1hyuN)m74qTO<!q<;yc`xeIW8upp#;D{;y_nMnfs2#8m_CQ43^|2OF+{|%aiYLUgd=iUCYoWOMe&X_Of+*S{&z&p`<QjET1sb|Uk<KV_@sqTSsJEJrA?NbM`w;E%9<A|mQDN9R_CX-hLml`RL`2m#+CinS-0YJC7rItohj%3X+v6Hx}vX5>TBcY7Oy1qwafa$Ye@GirkbRwX4zD?YPKNrnhh+Q`BlB~reVe~>x!R81roW!?!{A!N0&P9RNXNpES<}GPulAEa@FL#N3mQP;Tzq5Q~Ebd!g6|9|0Jo=yl7bXe!_BaS^w~=)%n$$0Sd0mxZVD;ec#Ew)O&jk9ktARhiW@2nD;9<NN-R;xhw~Go_@egp($pZkZlpJNC_qf`vVc(=KNyDh8$lp7E#Gcw&XR`MN5%7rC(o1U@ucr_2eJj*8ubd3P=8n>|61LixtIGq6d|{t^0FnqYtC;K?+|)+qM)2k|WrCRFp(M8fe*rhHVj|;czG-w-Adf9}HX;-6|kd^xh{uJ!jen23#6xC&3s57lvg56<y{$&QWxrN}zE?#XrXh<)JAZP?8R?c{m6p$Pz0H7YqXeE&xUdhg>v)Kwcprsg@R%*vyDl5NYDzrEz%m=eTkHm1;`SS#HR)-EnbQx8t_%&zPkP%ex)}T=A+re|_$H%D!{OzBg&#yJCMNX@4YTKdi!pV>8EAOm#_9UCOjQ(Re6nI+S))&$rFBtvFmshb!gSoiOiCTg#^{t0wEKnt9!vZr(a)U0{GvQ>LaB)83?MZ_3n?U|Xb<51L@uECsA?K>@k_{U3|%|BKqM-{04$qBZ_VinvBk7B%fn(!>~{`3BjiA&PUcaoCDU?G45N#}>4Rl6k9sw?qE7q?8=3GM9Fd5i<jS{LDGFq%F2r8YQ!VL6u4k7jvke5W#2;@Q-0|DJz#07UbGxDM)A}BeX);0;}l8!~oI&XnsHpgk1D^T;+vFg~Mw5WHuv@3Md2%6Jz65c=gvvAq#{;RtbeXzO386>Zo{~dDDE$oN_cx>(nR9ElbMLyyDoCbnKbdXQ*JITYWM)Zl0Jqv23bMJ8Gu;R&CB#2j-uidpho$`)<lszhZMGZLXAU_cWI_*^s7gw8h0YgSUb!+x8{5?MrPtur&PZZO77%%IVWcM-1u=KyfRk=A@}PWpX807a<?%Jkn569Qh+6QVj)EB+xHVe=MFXjwQ1-J9Fi-Zw4qpSo#8l#UN6eU~<@q?cFe3Tn+?C_YXku1i-3!7})o$NM`wgPtw`u|1CXF)6|VpmYSgcJ#&SAi^iiI2DC|+M$x$UDfCrYLspoq@4DgGh!_&Dj!SK^3IrSOV?-&J+uXT~|B4Hal<_~QFQ=$qJ5MaouMWgZ=buVCPy8d<F3*=$&??Jj)D4>pT%5v1qT@j^kE=k{9S2ob#Yi++pF)<*;wYr&A^EqMbAoKNH4Vd60c3z4e?G8S`m?8g@yt)3`Ps88O-GYWNAEPIn%b6~CsNiE3H=EbfzVvlU27#ODpl(;QvLIXTdBV=v}>7nIT}J0wnd1vfY0@7iZR)J51fYNH$<_Szto9~D}7)6Ec^hFYA8vh7w|(0CSB2I?KIMh@R-8vGL@iA)>-Y#$6ntNkG{4$X=+NaO`C;4&JKTresBZ-OFyqs&uR#4+5#d;kLGRlMU|effj74|Te0z+qN+$)ouJQ(QDQ|VLTN$|q+7j-boDvXHS`u*y7q2RYk-rIV^MD;d`S!`l*{sMO*t8+jz&J*u0BDQ@T^B+fHkXB#3+n^ctm0G^iW}-1DR2oxVqg;UaX~dEX~5372I)unxQN+SF&oc|C5X*R^ytUD&apjuvUJW!Q&(A&DNRL8^=HZ%(u?9#{F-O-5Ogu7avP)JDzg1O?Rdt<H+2Rc<<uLl%r+3<F3`7uBe_hqT*rs@(V6wb|^{f&1qA~8VAXB8IkPsCl8)HOucv5(7`b8YiI~Ja7iXh6DKLvI1tHYp;8L!x8`*XaLgQ?OJ;$|Kan!Dz#bzMjc0|uF@5G7uEnK^8PCe1w6}c(;ik6Tk4Cwemdq!wl(a`9qhTo!^P!;*xUBU7bFE@N)ic<A_M~^P?+H&Y6wvxe3kp5Dkt=vdMV|oro)m}2|AlL`m#k5`s{ZFKiTVSHii3A9C-q%Z?Z44E(%YMU9$a`fQTOmPJ>8PjSEo(pscyn86ecPK6&?C$grkuSyv>lEr*||3Mifl}WMPZYuC5r3<qafxad$hXTwP-f)Hk$hDr&Bv^JgfJP}f)hi(4sJoPnBTi}IG7GJ~gIG99u{a>aN`{$vZJ=1wTH6@=8~PX+~T-t;l4%keMWYpkG$-9`z9YHFitWm4zY2$)0V4KfG@_JjDlqCrkVqX8y=Zj+zA$|AE@<a7`?5`Rq}sVgwo=!=~;zJ|t{4WoM=_Q5s%b^R6k8+zr7_FA{0S2Oh5P^{Oyaj2lb9R=+;HndYRsV`n9$8RmF87am*)bbE&cp3V6i<W)@uLC&4F=O7|vrg}c;-=$=CL*HDfAZoi|5-QI=eh?6&+su#D<3oTijgZ}2`xpo&hV8Ga?b3*fXkt10%1i9)D;X2q2BpiRFpvh?N<|oZWSG5hsS}%>rP@fJ$(v`W`2bu<|suET$>zo5KEE51fe8HI#3Ka3=c_~`=cSGU-gMa9~4D@w*R#H4B*8F(m-YY2I&^^v!9UGyf8in#--4b!VE=+70y2z4PBD{4HhBhrXn_bqZdIwnG^~2-+Nf@VLEGPGTLssXWT1BK566^9Jfc8qHl*2Mm}Y1o9aNr(!tdd$IWMFo?R(vOqMh*bSzaQN*YroN7pEWq4LgmGWPLT_M)l0JY8A!ruLQ=@J-1qcekQ8?W{`M9P@@bL%eC(#;+MDM+FEHXT|)nxnr+@#8@?#&OZLSyzuaA6N{zsvBgK1<U0rNoLsuPbTMIXUpAivk@5!z^z;Yp?j8nTec`0c8BM%CX{tww^6;vqI(~Lx|1S>x^w7et#fHU!MNgvUK+1A3p+ET5s;N{h&L>Sg7C(r^&o4api>p7qx^OX3vp;1ykkB9aDg!PtJ5jfH(YH8|&qK6%a9ze_U8?V}Q16zuH+N{5_l_9g;e8F)VbZ;?V=!$Zp{34K$GpG0rc=v&pyeU`!OqIgHs*siGo*iMw0J6+UsiIECZJ%0xXVGn!A%gbKx<*PU}bdC8sC!nXIshZF_&q{4p6F?Z5-jJCf93@nHRH*<-zn;@Q-Lv_RShp#98pJ283GPHq8=iH}{~m`#iAmYntnt2}X?zSc@)-$gSHakMcg%50@VluSQz=j{ehKpS<{^(_MThERFes0a+B>{F4EhoC9LXR$d$%k4*4*q8A!*6B%D(ypO#ar5WTmrFottkNOTga%fkKakcWjpyLxyA|p8$R0&c>$_=S7?qpAId;fW_=jlOYKI1{3UnGXHQDjG2wJF6gDqa-=BgmLayI?rI;Yb&rRua}hSO(!dE_GWKaE3z6DE(zN(8IXpSrsd?2F|`}b<B3Y99yyONLqKKtUIS!R9e`VTUSiANmK2LsUc}<NSSurej;f)jBpR=ctN*VhH$TQ)mnb@`posXkg_(eSobEadsEhyguVrowpyes`(0}(Au$bfgcjrag&hm!3-aRr#m0oiy{vCpwU&Oh#zFSFjFRp7_CxJQsdtYWPBt^|v3d;6r6(Jh_Zm1zBP$GUAe@{D*-QurGzEGK)t>pr?VKZ+PU?GQL{}(!xRgJzk?9*{AmtghfOw$p@r;4$|7SGpBt6NZK}s$wPKuMPpotY|KQNZ#>R2XNK)mbpGZKz{u*;<-J5Krw+;%qaz!N=ZaMO8u5zY>v+khbBk%(eA)89Af=@|5MDn`{$4qv-C>92{R53}zLDh!@))8h&=?hQV8+EL;KRd`$iP23+51?j)QyK>xcKTv@$=o39NJug48V&0xKZ(m>+{3-K8Q=V1pcHAPB(+paN+Gg6~jUSn|-37@3JEQUoEoG^=M=_93r!Cf-BQql}2UaZGlNPlF%R{8zY{w6e#UELz*`2J}z1XqT_*TzHHHWYb9n=K9#$2kZ-bMNDhnh{Qw<ga|Z_@=^gxkvU3JYb}%6^msv6_e}znO|bVu2BIz&Xc7ty|ec^DXAj5FfNwZP~)tfOCNx$wAy}TwYbr)zglk`xpn?UL>wy`l7991zon4i)BUf(IGF}i(%3rnF;{8Av=DFzHu;8l?VHi1~f2abHAo%W4`B0hY6XSozz{dDYAO{0_9<ZMfHWn8j`aB#+vZV6hJWpVaXd@fkMEc6P;`zwa|{t3Kqc{0QFO_;k(H8%?idOH>nd!U)K^D$Zv4$G8Xh{pEMRZi#1+1PGsT&N$2R5-pE-h$cbe)AztD=ugVA%TGG21=(1uVR-2b$Pi359#sac>e_&UP<@dJnu`-vN?+QzPA{nE>ATLjZ{BFhIyX*@D(G9k15LnIMWjj`M8P74rh@E@=AhsgX->SN?f7BNm5rsn8>B+$IQi56)TSnjZK0W{efMw~2*z(K74lam@p;as7jocA0x}}g~AHwPg`ypQkD*8A;ctJhQeJgjQYs$cE$#+Fz1EJw?-oTd`XZA1&zC|4{fP46e3BnOoIcq9J;8{j!^N))DOI~Qvn{oKP3$J$~FC3y(LroLsT(wj#SGkrBFIyg+W<V0(jLpR2jc-15>!F2nscI0W?rHYZQs?X-v84wVD^g|qQ>6!1N{=K<kEBXlr?sm#$FkFva_&yq_N>?rBy9&$wuh&=-`bq>`Z;~PVxb{rYntX(9oqqX>(h4Uv~EpHmDk*(Si{a~PugBF@0xSPyB1ES?9D6omZZI9iCyxi?5)!scOB)g?_Fe;tM@F9u3F1xM;9D(p_H|0vFtxoy;Zez<W7Ie^;pXKSlU*B=K6T_BU{s&0oq-&0A8Ox`@<6e_7l#1OJz&CrO2JGJ4X^7Pbci>m(3T_<u%i%KG#yViuj?0vp+eJc5YuNOE{Vn=4KdP^|o|HUAm%nwYn}o^4gwsS#`Q{`{yM(n{kcO8H`_kVIy`W4NRa4D(V*;2}{$mekaT!ffLSk85PmzI}Uc9px!@p2*MBcmST9q;Nh8H>Mfoc=9e`br2T9$TQQ!`zeK%6zodDInWv_iX=++CO%JmI{Q~+H=fuQCO>w!Lx14Ns*gz9W9YwixT6Jr@BH>O|??e%&!l4O192EG+2Y9^I0hH;+yLC_)Ro+M#uTbGdlYrm7!KjR~2|4wB6#PGC=cyU`DlKbhYJ`|$C0n7sFvHF;0)1QaHk%t3HKUO%dGqs(2Fqm4&Lp3aj2Z|F<rKc3Kw}%>FrdNfRja)Ba#zd_xOEg62aH*z2shf+yaHYn^a>f(8~_A4*3CQu@*rebk|91XVPc9oo9`utv2X|~gha&z3BVpBk|@h6Fqwj1_83BnhGGr5ioTGL^~%T}kzkpABvG^*ehGNRR`+XL<AQyfyKAzonrq^og-4fk?=<|q*>ks~YSmm7-?M01I`@(J`0uRcw{#0!qWRH}DvwQHAxL8oO@k5QlLGw82Qv}sbuo$|GK%T|OogHy992yT1Z%;^{uY_aCm8$=ga3xX@3T%Ne*(V@cX1Z`4he7i^x^Q)_xr0U>JM5ScN}Piv#hYrB<qZKE;^T4_X_)Pl709i_K=E)*kX9-A09Z5F2D!~Z?C9M>E8rli*5bF{c=tFHEnPOFj!|O@PYtoslA<(=72TWNi8{I0L1WZ4?qBE=x-Yee76imJ-iCBzyx9e>ES%Cn#>(_Tr*9YfSMcyW-deqmN%Gu{ZK_gzP0eef@IL3qq$MA70{3w-W$n#y--^Ce!{%T(cB1S&6ze#lUjljGzBQZjOYOCs;NQ;@Yu<mK`cXFnHzRta<kMg?nUvQbCC@U=K+BrssP_z6i=Z2>N9d$@<xUXbgFBIjOWw=IpPgp>Wb;R05pgKsL8R0JO;>L5<cD6@kDD5i^NKEKIG_D9gr`%WBWHdjkWS!?LDVGop{sn9K7@JSs!a`u0G~cZzS`>nZ6%%E+eka#5@q&mMNNd7S3Od4NkaSMipq>$f1ot&z{;V+}I^NlsBoaxT@Yy6!qbpwr-YIHq!bk27iwMUfNRO#jUJDuP}lfA!tL<Wkw;JH^PpLp8uO{@I7P%|EM~?SZiLsKGh9^)n0XvGIEY-E^Tq#49o=L+67I@(zs&TowV#;>|AP0Sq_0RmC5AdQp(aW&8%s32FI$SF797Eu<US8cc$&t@qsz_bO$PQkIy{5Vy;b^YZnHWIuqvFW%E&d-8a)0@BGMIzh;FFKi@{_ZL9X?MSaS?e_D6fWGBer5V86__ML>i|0DCjr})aVY(8~2%S`*1D+khM`|os?IbEDhY-{_-c4F$vmtWLVHuw;Y!I3GsSh>`=RF-Hyyj*$YH)cB`0E1&)Mm^zOuAS;IYTh>*I`(kyJ1iZ|-22TOr2U0_$C~APPN1Ea=-g!}21GtBFevghDArkl%Tt$OgKxnGzQmEzK#>K$nt4wy!`EqN*K`G1VNt(R!F;=9lP(Dwmte_p!6F*oWTBR#7p$Z#@SI{+IiXar3l704lnLcRg-|(Z0B%+_se`ck4Nj;LYK6MY6C-RJF&FSbW6{1%#g1Tv?E-(h{z3h=aF!->*P!xtK!HZVOy;&hXe{);&G5?|LQ?_1)J$j^3y!;qR;A7HOVBrq@Jr1#?RD*hMvV)&<<6Kp$1REKgLgpiipIDkk}KdtgfV8Bh2&Q6W^8gqAeaol;>WPdX2`f_G?Qp4-GHHB+|(wEXzmhF)+r%-SUir`0><PK!cH=FzYOl-2qKErZh%z<hzE0jfUKfHg*<mn<#$VK;{ywgAC>N0V<>aQm!CRne{F8KB_zxZ>xApPV6aj*4K>V9=o;oT6!9^8c5V>h!OXbb?$7=#D*(D;rTMAL@ZHbQ**sQ$hD;t-%1@lzt(Y@zgQz-r0Y++Jl7|CVW7h0dN&vlh`!{AUD2Rv>79pl7F~$s!iT=?rA08f#l|=%PpvY(cE=A@qQp9#eeDbABc)g>gi*M<9GFt$f<y!{%w%)U+`2%e`_s6O;=dOH9gg?l)gu+9B*)EX+F|PHBFA#}6j*SIDut8%zd_&KZ?Wa7w?N54m@wviw8=ygKb`m5E?3@-Tx*?Y|c?{$%$|G`w6cjIuL4H5Kt6&WKH;#ed$&Z9VB;r6^F@rxmKEbz~=Nn>71K+StH^lZsgBu$obCZ#iJNa?EmIN_KW@vwi-|yP+$p;?zWYsRnH$dw#BY=0lq3QbYz6OQ!$^JlqNJ3mO(xd#DfXlqCA8$m}<HdE5uKnr_TomJ=>VPC2j8!2qk!w@#jfLDUlcGoeY81(;fbGjUbzjYT&M7*Ow^&O0->PRtI1qvngvcqI)qBR%+u755%Bz9}ki54xNM2A4@G|xP-C#Ud9qQEUzK~0N>~yf}h+~}|wpr%t45U;+{3j0z;(y2n*O0mn(S*8w&(?gwGF;>5Mv5~|*C$Hqm)V9j4a-?qtyS^H1$o)Jdzw{q8xoeC%WU(i)&A<SSK3n6hN*61tDiqTcY4t>dphMjoU$I7I+eDTC#oJwS|5TWYg%C|l59nsU1sZkiy3H>pXyFq%Wi&u=KE>ABT=>|tv`^~?^qZ~>j%^NuC&oHdusM*ykkKhk1dua^t;pgM<G9Lbk06K`*_@!(DMs>)*QxK?S0B<(@k}(l~Y{F3R{_EE8~tgt8Y~=oLcIMSEs7lme~`lRkiV_U#okeZ?-+jmfvL!(~Svh%QCy~ZdQmN{m9meLi}JxhqnS6m^&5sB$^H_J-6gfG`21~A6?a3h#qfUm(dFN<C2b@)cZRPojT_I7E7mw`9Q-#dV|KR&&u$Br|K>R8c9{gcU#*2PjQUMo7X2adD&geQx<ibNos`29|aV1u`0+da%L9OZ75+YUP9ms%GkH;<B!h0t$kaYl|{s%#7Nw#in(Cv3M4nPm7{?`7u-pqTzd7OzbmHmj|qg6Yg+t+E)EoZ{Btn?_=khO5m_;iJ8j-!K}H=}K(dAiI1`D1$Bg{s7XCgv;VQwqvV~4p#LLPkM~6VfAz)UxGvpZG-qG&?KH$Z_1JcpgJJ5I9qu4q<gY6yNo=)$X{yw~+qEr@?%DnTQ>hC*yM$vV8o&rXAT49k(!nlH>I1X|a`KJp6I*y`(e!xSpl(0IYt!MrMfm97;{uIl_RaZe{RlGiFtext(YqGpLG(R#oG9Q`?EetG|yV6$YDw|Q_(+2x&XS^|?-}b4we8ucanq8}yXil1&KWFHYUF3C3(%kYnrzzRDrl%YgtCmXjS_yEO6>ELcTAxe&pE47ty<bUjwpr(V^;~tl<JIk}toEhuA9PQD=U+cTOav}EX2bCZ{A6ib&~wd2f3}TeeWoX_$i47$?NM}I02zL-S6v6<21ksx{~3c)oSOfR(_v9vF5DT93+boCp)T`Mb)L{6gM~-ctL{}&Amew{cdpmdub47V{hl*@N=fG7WPf{aN4H||_P3w&o@^iRNJ*^zpD_3UgZD5XJEc7*NS-B9U??08stVe8PP(AiC-LbdZg$d-F~H@LCJDC6yI82_tHj=nc3xtNQFSpQ2XL+5qErWF;-;%VHWn75L9tERMI%kXHn<Go8bj0c=WH#_0!E~bA5-wp^f6`mm@564vVBaIeM~uiLsjC1#_B0++TJi_PTOmyOlf=NR0-O3kK8dYU4Q30?|lEAvBbb&;_Ogj(4TM!Q-*Z;_Sx?)lq4MP1ZBI&vR2KM>7H3vqM0(>voTH$yhS&S%GsS$)-{Wcu8()#ryyE$w$hHce4m17Ek;++WeW$_D2NsxzK_w`F&({cR=~3R)|^KAAxuNGR?X5?(;fFIh}JALy>oV8je=;wL83+HeT>%h7TPj9aG!$c^9IUR^YXPR^L;H#mwaw<&<AHb)+mS;8cDPmy^qn_9usY!b*@nm#T)Nqv{q}NOK0UZ3Zi)AK1QGOJ85U!f1iSAt)Hfj9#21V^gd&v58tb;qaUO1Jw`XtkKR8+m(n(}F8>cnBxCv'
-))))
+# -*- coding: utf-8 -*-
+"""
+AurumOS Updater
+===============
+CURRENT_VERSION is bumped automatically by build_release.py before each build.
+The EXE freezes this value — so the EXE always knows its own version.
+
+update flow:
+  1. check_for_update()  -- fetch version.json from GitHub, compare
+  2. download_and_install(url)  -- download new EXE, write bat, relaunch
+"""
+
+import os, sys, json, ssl, threading, tempfile, subprocess
+import urllib.request, urllib.error
+from pathlib import Path
+
+# ── VERSION — bumped by build_release.py before every build ──────────────────
+CURRENT_VERSION = '1.1.1'   # DO NOT change manually — use build_release.py
+
+# ── GITHUB ────────────────────────────────────────────────────────────────────
+GITHUB_OWNER     = "Jenildholakiya"
+GITHUB_REPO      = "AurumOS"
+GITHUB_BRANCH    = "main"
+VERSION_JSON_URL = (
+    f"https://raw.githubusercontent.com/{GITHUB_OWNER}"
+    f"/{GITHUB_REPO}/{GITHUB_BRANCH}/version.json"
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def get_app_dir() -> Path:
+    """
+    Returns the folder where AurumOS.exe lives.
+
+    EXE mode: sys.executable = E:/AurumOs_Client/dist/AurumOS.exe
+              -> returns E:/AurumOs_Client/dist/
+
+    Dev mode: returns cwd
+    """
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent.resolve()
+    return Path(os.path.abspath('.')).resolve()
+
+
+def get_exe_path() -> Path:
+    """Returns the actual running EXE path."""
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve()
+    # Dev mode — no real exe
+    return Path(sys.executable).resolve()
+
+
+def get_current_version() -> str:
+    """
+    Returns the version this EXE was built with.
+    Always reads CURRENT_VERSION constant — hardcoded at build time.
+    Never reads from files (files are unreliable in EXE mode).
+    """
+    return str(CURRENT_VERSION).strip()
+
+
+def _parse_version(v: str):
+    """Parse '1.0.9' -> (1, 0, 9) for comparison."""
+    try:
+        parts = str(v).strip().lstrip('v').split('.')
+        return tuple(int(x) for x in parts[:3])
+    except Exception:
+        return (0, 0, 0)
+
+
+def is_newer(remote: str, local: str) -> bool:
+    """Returns True if remote version is newer than local."""
+    return _parse_version(remote) > _parse_version(local)
+
+
+def _fetch_url(url: str, timeout: int = 10) -> bytes:
+    """
+    Fetch URL bytes. Works in EXE mode:
+    - Disables SSL verification (PyInstaller doesn't bundle certs)
+    - Adds User-Agent (GitHub rejects default urllib agent)
+    - Loads GitHub token from aurum_config.json if available
+    """
+    # Load token if available
+    token = ""
+    try:
+        cfg = get_app_dir() / "aurum_config.json"
+        if cfg.exists():
+            data = json.loads(cfg.read_text(encoding="utf-8"))
+            token = data.get("github_token", "")
+    except Exception:
+        pass
+
+    # Build request
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", f"AurumOS/{CURRENT_VERSION}")
+    req.add_header("Accept", "application/json")
+    if token:
+        req.add_header("Authorization", f"token {token}")
+
+    # SSL context — disable verify (certs not bundled in EXE)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode    = ssl.CERT_NONE
+
+    resp = urllib.request.urlopen(req, context=ctx, timeout=timeout)
+    return resp.read()
+
+
+def check_for_update(timeout: int = 10) -> dict:
+    """
+    Fetch version.json from GitHub and compare with CURRENT_VERSION.
+
+    Returns dict:
+      available     : bool
+      version       : str  (remote version)
+      current       : str  (this EXE's version)
+      changelog     : list
+      release_date  : str
+      download_url  : str
+    OR None on network error.
+    """
+    local = get_current_version()
+    print(f"[UPDATER] Local version: {local}")
+    print(f"[UPDATER] Fetching: {VERSION_JSON_URL}")
+
+    try:
+        raw  = _fetch_url(VERSION_JSON_URL, timeout=timeout)
+        info = json.loads(raw.decode("utf-8"))
+
+        remote  = str(info.get("version", "0.0.0")).strip()
+        update  = is_newer(remote, local)
+
+        print(f"[UPDATER] Remote version: {remote}  update_available={update}")
+
+        return {
+            "available":    update,
+            "version":      remote,
+            "current":      local,
+            "changelog":    info.get("changelog", []),
+            "release_date": info.get("release_date", ""),
+            "download_url": info.get("download_url", ""),
+            "min_version":  info.get("min_version", "1.0.0"),
+        }
+
+    except Exception as e:
+        err = str(e).encode("ascii", errors="replace").decode("ascii")
+        print(f"[UPDATER] check_for_update error: {err}")
+        return None
+
+
+def download_and_install(download_url: str,
+                         on_progress=None,
+                         on_done=None):
+    """
+    Download new EXE to temp folder.
+    Write a .bat file that:
+      1. Waits for AurumOS.exe to close
+      2. Copies new EXE over old EXE
+      3. Relaunches AurumOS.exe
+    Then launches the bat and exits this process.
+
+    on_progress(pct, message) — called with 0-100
+    on_done(success, message) — called when done or failed
+    """
+
+    def _run():
+        try:
+            exe_path = get_exe_path()
+            url      = (download_url or "").strip()
+
+            if not url:
+                if on_done: on_done(False, "No download URL in version.json")
+                return
+
+            # ── Download ───────────────────────────────────────────────
+            if on_progress: on_progress(5, "Connecting...")
+            print(f"[UPDATER] Downloading: {url}")
+
+            try:
+                data = _fetch_url(url, timeout=180)
+                print(f"[UPDATER] Downloaded {len(data):,} bytes")
+            except Exception as de:
+                msg = str(de).encode("ascii", errors="replace").decode("ascii")
+                print(f"[UPDATER] Download failed: {msg}")
+                if on_done: on_done(False, f"Download failed: {msg}")
+                return
+
+            if on_progress: on_progress(80, "Preparing installer...")
+
+            # ── Save to temp ───────────────────────────────────────────
+            tmp_dir = Path(tempfile.mkdtemp(prefix="aurumos_upd_"))
+            new_exe = tmp_dir / "AurumOS_new.exe"
+            new_exe.write_bytes(data)
+            print(f"[UPDATER] New EXE saved: {new_exe}")
+
+            # ── Write bat ──────────────────────────────────────────────
+            bat_path = tmp_dir / "aurumos_update.bat"
+            bat_lines = [
+                "@echo off",
+                "title AurumOS Updater",
+                "echo Waiting for AurumOS to close...",
+                "taskkill /F /IM AurumOS.exe /T >NUL 2>&1",
+                "timeout /t 3 /nobreak >NUL",
+                ":wait",
+                'tasklist /FI "IMAGENAME eq AurumOS.exe" 2>NUL | find /I "AurumOS.exe" >NUL',
+                "if not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto wait)",
+                "echo Installing update...",
+                f'copy /Y "{new_exe}" "{exe_path}"',
+                "if errorlevel 1 (echo FAILED to replace EXE & pause & exit /b 1)",
+                "echo Update installed successfully!",
+                "timeout /t 2 /nobreak >NUL",
+                f'start "" "{exe_path}"',
+                'del "%~f0"',
+            ]
+            bat_path.write_text("\r\n".join(bat_lines), encoding="ascii")
+            print(f"[UPDATER] Bat written: {bat_path}")
+
+            if on_progress: on_progress(95, "Launching installer...")
+
+            # ── Launch bat and exit ────────────────────────────────────
+            subprocess.Popen(
+                ['cmd.exe', '/c', str(bat_path)],
+                creationflags=subprocess.CREATE_NEW_CONSOLE,
+                close_fds=True
+            )
+            print("[UPDATER] Updater launched — exiting app")
+            if on_done: on_done(True, "Update started. App will restart.")
+
+            # Give on_done callback time to run before exit
+            threading.Timer(1.5, lambda: os._exit(0)).start()
+
+        except Exception as e:
+            msg = str(e).encode("ascii", errors="replace").decode("ascii")
+            print(f"[UPDATER] download_and_install error: {msg}")
+            if on_done: on_done(False, msg)
+
+    threading.Thread(target=_run, daemon=True).start()
