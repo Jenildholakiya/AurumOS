@@ -15,7 +15,7 @@ import urllib.request, urllib.error
 from pathlib import Path
 
 # ── VERSION — bumped by build_release.py before every build ──────────────────
-CURRENT_VERSION = '1.1.1'   # DO NOT change manually — use build_release.py
+CURRENT_VERSION = '1.1.2'   # DO NOT change manually — use build_release.py
 
 # ── GITHUB ────────────────────────────────────────────────────────────────────
 GITHUB_OWNER     = "Jenildholakiya"
