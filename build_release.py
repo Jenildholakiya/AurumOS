@@ -20,7 +20,7 @@ from datetime import date
 from pathlib import Path
 
 # ── CONFIGURE HERE BEFORE RUNNING ─────────────────────────────────────────────
-NEW_VERSION  = "1.1.1"          # X.Y.Z  — bump this each release
+NEW_VERSION  = "1.1.2"          # X.Y.Z  — bump this each release
 RELEASE_DATE = str(date.today())
 
 CHANGELOG = [

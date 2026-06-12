@@ -3,15 +3,15 @@
   "release_date": "2026-06-12",
   "min_version": "1.0.0",
   "changelog": [
-    "Stock Med: full physical audit and period reset",
-    "Opening stock: permanently fixed, never subtracts on sale",
-    "Scale: stable detection on all COM ports and baud rates",
-    "Katti: edit and delete vouchers",
-    "MAC lock: DB auto-wipes on new PC",
-    "Permanent account lock after 3 failed logins with unlock key",
-    "Inventory: correct Net Weight KPI",
-    "Full Report: Opening never deducted from closing",
-    "Updater: version detection fixed for EXE mode"
+    "Scale: stable weight detection fixed on all client PC COM ports",
+    "Opening stock: permanently fixed across full report and inventory",
+    "Katti sale: correctly deducts from stock on billing",
+    "Stock Med: physical audit variance report and period reset",
+    "Account lock: permanent lock after 3 failed logins with offline unlock key",
+    "Updater: EXE mode version detection and SSL fixed",
+    "Closing balance: Opening + Inward - Outward formula corrected",
+    "Untagged items: false count fixed in inventory dashboard",
+    "MAC lock: DB auto-wipes when copied to new PC"
   ],
   "download_url": "https://github.com/Jenildholakiya/AurumOS/releases/download/v1.1.2/AurumOS.exe",
   "files": []
