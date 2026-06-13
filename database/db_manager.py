@@ -34,82 +34,30 @@ def _dberr(msg):
         safe = str(msg).encode('ascii', errors='replace').decode('ascii')
         print(f"[DB_ERR] {safe}", flush=True)
     except Exception:
-        passtime
+        pass
 
 
 class DBManager:
     def __init__(self):
         import sys as _sys
-        import os
-
-        # 1. Determine base directory
+        # Always use exe-adjacent directory -- never _MEIPASS (read-only bundle)
         if getattr(_sys, 'frozen', False):
             app_dir = os.path.dirname(_sys.executable)
         else:
             app_dir = os.path.abspath('.')
 
-        # 2. Check for network.cfg (The "Network Switch")
-        config_path = os.path.join(app_dir, 'database', 'network.cfg')
-        if os.path.exists(config_path):
-            self.db_path = self._load_from_cfg(config_path, 'OWNER_DB')
-            _dblog(f"[DB] Using Network DB: {self.db_path}")
-        else:
-            # Fallback to local
-            self.db_dir = os.path.join(app_dir, 'database')
-            self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
-            try:
-                os.makedirs(self.db_dir, exist_ok=True)
-            except Exception as e:
-                _dblog(f'[DB] Cannot create database dir: {e}')
-            _dblog(f'[DB] Using Local DB: {self.db_path}')
+        self.db_dir = os.path.join(app_dir, 'database')
+        self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
 
-        # 3. Load Whitelist & Init
-        self.ALLOWED_MACHINES = self._load_allowed_machines()
-
-        print(f"[DB] Path: {self.db_path}")
-        print(f"[DB] Dir writable: {os.access(os.path.dirname(self.db_path), os.W_OK)}")
-
-        self.initialize_tables()
-
-    # Helper method for network.cfg
-    def _load_from_cfg(self, path, key):
         try:
-            with open(path, 'r') as f:
-                for line in f:
-                    if line.startswith(key + '='):
-                        return line.split('=', 1)[1].strip()
+            os.makedirs(self.db_dir, exist_ok=True)
         except Exception as e:
-            _dblog(f"[DB] Error reading config: {e}")
-        return None
+            _dblog('[DB] Cannot create database dir: {e}')
 
-    def _load_allowed_machines(self):
-        """Reads allowed MAC fingerprints from a text file next to the exe."""
-        try:
-            fp_file = os.path.join(os.path.dirname(self.db_path), 'allowed_machines.txt')
-            if os.path.exists(fp_file):
-                with open(fp_file, 'r') as f:
-                    return set(line.strip() for line in f if line.strip())
-        except:
-            pass
-        return set()
-
-    def check_database_access(self):
-        """
-        Validates access based on local instance role rather than hardware MAC.
-        """
-        instance = self.config.get('instance')
-
-        if instance == 'owner':
-            # Owner gets full, unrestricted access
-            return True
-
-        elif instance == 'billing':
-            # Billing gets access to the DB, but we restrict specific UI features
-            # Return 'restricted' or False, which your UI handles
-            return "restricted"
-
-        else:
-            raise Exception("Unauthorized: Unknown instance type")
+        _dblog('[DB] Path: {self.db_path}')
+        print(f"[DB] Dir exists: {os.path.exists(self.db_dir)}")
+        print(f"[DB] Dir writable: {os.access(self.db_dir, os.W_OK)}")
+        self.initialize_tables()
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path, timeout=20,
@@ -277,7 +225,7 @@ class DBManager:
                         action     TEXT    NOT NULL,
                         detail     TEXT    DEFAULT '',
                         category   TEXT    DEFAULT 'general'
-                    );
+                    )
                 """)
             return True
         except Exception as e:
@@ -344,7 +292,8 @@ class DBManager:
                     (str(username).strip(), pw_hash, str(password).strip())
                 ).fetchone()
                 if row:
-                    return {"authenticated": True, "role": "admin" if row["id"] == 1 else "staff"}
+                    return {"authenticated": True, "role": "admin" if row["id"] == 1 else "staff",
+                            "username": row["username"]}
                 return {"authenticated": False, "role": "visitor"}
         except Exception as e:
             _dblog('[DB AUTH ERROR] {e}')
@@ -361,13 +310,12 @@ class DBManager:
                     (pw_hash, str(password).strip())
                 ).fetchone()
                 if row:
-                    _dblog("[DB AUTH] Matched username='{row['username']}'")
-                    return {"authenticated": True,
-                            "role": "admin" if row["id"] == 1 else "staff",
+                    _dblog(f"[DB AUTH] Matched username={row['username']!r}")
+                    return {"authenticated": True, "role": "admin" if row["id"] == 1 else "staff",
                             "username": row["username"]}
                 return {"authenticated": False, "role": "visitor"}
         except Exception as e:
-            _dblog('[DB AUTH FALLBACK ERROR] {e}')
+            _dblog(f'[DB AUTH FALLBACK ERROR] {e}')
             return {"authenticated": False, "role": "visitor"}
 
     def complete_initial_setup(self, biz_name, username, password, owner_name=None):
@@ -536,7 +484,7 @@ class DBManager:
                 exists = self.get_scalar(
                     "SELECT COUNT(*) FROM stock_inventory WHERE tag_id=?", (tag_id,))
                 if exists:
-                    _dblog(f"[DB] tag_id '{tag_id}' already exists -- generating new unique ID")
+                    _dblog("[DB] tag_id '{tag_id}' already exists -- generating new unique ID")
                     tag_id = ''
 
             if not tag_id:
@@ -566,28 +514,10 @@ class DBManager:
                               str(kwargs.get('huid') or '-'))
                              )
                 conn.commit()
-            print(f"[DB] Stock entry saved (Pending): {kwargs.get('it_code')} tag={tag_id}")
-            self._mirror_data()
+            print(f"[DB] Stock entry saved: {kwargs.get('it_code')} tag={tag_id}")
             return True
         except Exception as e:
             print(f"? [DB STOCK ENTRY ERROR] {e}")
-            return False
-
-    def finalize_tag(self, tag_id, net_wt):
-        """
-        Call this ONLY when the user clicks 'Print' or 'Finalize'
-        on the tagging screen.
-        """
-        try:
-            with self._get_connection() as conn:
-                conn.execute(
-                    "UPDATE stock_inventory SET is_tagged=1, nt_wt=? WHERE tag_id=?",
-                    (float(net_wt), str(tag_id))
-                )
-                conn.commit()
-            return True
-        except Exception as e:
-            print(f"[DB] Finalize Tag Error: {e}")
             return False
 
     def update_stock_entry(self, entry_id, data):
@@ -659,6 +589,10 @@ class DBManager:
             return "0001"
 
     def save_katti_batch(self, vch_id, total_wt, total_packets, note="", items=None, box_id=None):
+        # Layer 10: verify session token before katti write
+        if not self._verify_session_token():
+            _dberr("[KATTI] Session token invalid — save BLOCKED")
+            return False
         items = items or []
         try:
             safe_vch_id = str(vch_id).strip().zfill(4)
@@ -731,7 +665,6 @@ class DBManager:
                         print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
 
                 conn.commit()
-                self._mirror_data()
                 return True
         except Exception as e:
             print(f"? [KATTI SAVE ERROR] {e}");
@@ -1000,8 +933,8 @@ class DBManager:
                            WHERE ABS(touch - ?) < 0.01
                              AND (tag_id IS NULL OR tag_id=''
                                   OR tag_id='N/A'
-                                  OR tag_id LIKE 'KATTI-%')
-                             AND tag_id NOT LIKE 'OPENING-%'
+                                  OR tag_id LIKE 'KATTI-%'
+                                  OR tag_id LIKE 'OPENING-%')
                              AND gr_wt > 0""",
                         (touch_val,)
                     ).fetchone()
@@ -1106,8 +1039,8 @@ class DBManager:
                                    WHERE touch=?
                                      AND (tag_id IS NULL OR tag_id=''
                                           OR tag_id='N/A'
-                                          OR tag_id LIKE 'KATTI-%')
-                                     AND tag_id NOT LIKE 'OPENING-%'
+                                          OR tag_id LIKE 'KATTI-%'
+                                          OR tag_id LIKE 'OPENING-%')
                                      AND gr_wt > 0
                                    ORDER BY id ASC""",
                                 (touch_val,)
@@ -1211,6 +1144,14 @@ class DBManager:
 
     def record_sale(self, vch_id, customer, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0):
+        # Layer 10: verify session token before any sale write
+        if not self._verify_session_token():
+            _dberr("[SALE] Session token invalid — sale BLOCKED")
+            return False
+        # Layer 10: Session token check
+        if not self._verify_session_token():
+            _dberr("[SALE] Session invalid — BLOCKED")
+            return False
         try:
             safe_vch_id = str(vch_id).strip()
             with self._get_connection() as conn:
@@ -1221,12 +1162,10 @@ class DBManager:
                                                                                                   list) else False
                 except:
                     is_uchak = False
-
                 resolved = (
                     'UCHAK_UNPAID' if (status == 'CREDIT' and is_uchak) else
                     'UCHAK_PAID' if (status == 'PAID' and is_uchak) else status
                 )
-
                 conn.execute(
                     """INSERT OR REPLACE INTO sales_history
                            (vch_id,customer,status,ledger_fine,collected_fine,fine_995,fine_dhal,
@@ -1246,35 +1185,28 @@ class DBManager:
                      float(disc_fine or 0.0),
                      float(disc_amount or 0.0))
                 )
-
                 # Remove katti/weight items from stock_inventory on sale
+                # NEVER touch OPENING- rows — they are permanent reference stock
                 try:
                     parsed_items = json.loads(items_json) if items_json else []
                 except Exception:
                     parsed_items = []
-
                 for it in parsed_items:
                     tid = str(it.get('tag_id') or '').strip()
-                    if not tid or tid.startswith('OPENING-'):
+                    if not tid:
                         continue
+                    if tid.startswith('OPENING-'):
+                        continue  # PERMANENT — never delete opening stock rows
                     if tid.startswith('KATTI-') or tid.startswith('B-'):
                         conn.execute(
                             "DELETE FROM stock_inventory WHERE TRIM(tag_id)=TRIM(?) AND tag_id NOT LIKE 'OPENING-%'",
                             (tid,)
                         )
-                        LOG(f"[SALE] Removed katti stock: {tid}")
-
-                # Commit the transaction to the disk
+                        _dblog(f"[SALE] Removed katti stock: {tid}")
                 conn.commit()
-
-            # --- TRIGGER BACKUP IMMEDIATELY AFTER COMMIT ---
-            # This function handles the PRAGMA wal_checkpoint(FULL) and the file copy
-            self._mirror_data()
-            LOG(f"[SALE] Sale {safe_vch_id} recorded and backed up.")
-
             return True
         except Exception as e:
-            print(f"? [DB RECORD SALE ERROR] {e}")
+            print(f"? [DB RECORD SALE ERROR] {e}");
             return False
 
     def get_bill_details(self, vch_id):
@@ -1693,67 +1625,114 @@ class DBManager:
     @staticmethod
     def _machine_fingerprint() -> str:
         """
-        100% reliable machine identifier — uses MAC address hash.
-        Same result every call on same PC. No file dependency.
+        Hardware DNA — combines 5 hardware identifiers.
+        MAC + CPU + Disk + BIOS + Motherboard serial numbers.
+        Changing any ONE component breaks the fingerprint.
+        MAC spoof, VM clone, DB copy — all fail.
+        Falls back gracefully if WMIC unavailable.
         """
-        import uuid as _uuid, hashlib as _hl
+        import uuid as _uuid, hashlib as _hl, subprocess as _sp
+
+        def _wmic(query):
+            try:
+                out = _sp.check_output(
+                    'wmic ' + query + ' get /value',
+                    shell=True, timeout=4,
+                    stderr=_sp.DEVNULL,
+                    creationflags=0x08000000  # CREATE_NO_WINDOW
+                ).decode('ascii', errors='ignore')
+                vals = [
+                    l.split('=', 1)[1].strip()
+                    for l in out.splitlines()
+                    if '=' in l and l.split('=', 1)[1].strip()
+                       and l.split('=', 1)[1].strip() not in ('', 'None', 'To Be Filled By O.E.M.')
+                ]
+                return vals[0] if vals else ''
+            except Exception:
+                return ''
+
         mac = str(_uuid.getnode())
-        return _hl.sha256(mac.encode('utf-8')).hexdigest()[:24]
+        cpu_id = _wmic('cpu get ProcessorId')
+        disk_id = _wmic('diskdrive get SerialNumber')
+        bios_id = _wmic('bios get SerialNumber')
+        board_id = _wmic('baseboard get SerialNumber')
+
+        raw = '|'.join([mac, cpu_id, disk_id, bios_id, board_id])
+        _dblog(
+            f"[DNA] components: mac={mac[:6]}.. cpu={cpu_id[:6]}.. disk={disk_id[:6]}.. bios={bios_id[:6]}.. board={board_id[:6]}..")
+        return _hl.sha256(raw.encode('utf-8')).hexdigest()[:24]
 
     def _wipe_business_data(self):
-        """Wipes ALL business data and forces SQLite connection cleanup."""
-        _dblog("[WIPE] MAC mismatch — initiating deep wipe")
+        """
+        Called when DB is detected on a new/different PC.
+        Wipes ALL business data but keeps app structure intact.
+        After wipe: DB is fresh — new PC must go through setup again.
+        """
+        _dblog("[WIPE] MAC mismatch — wiping business data for new PC")
         try:
-            # 1. Force close the connection
-            # If we don't do this, SQLite keeps the file locked and the wipe fails partially
-            import gc
-            gc.collect()
-
             with self._get_connection() as conn:
-                # 2. Clear all sensitive tables
+                # ── Wipe all transaction & stock tables ──
                 tables = [
-                    'stock_inventory', 'katti_vouchers', 'katti_voucher_items',
-                    'sales_history', 'credit_ledger', 'uchak_inward_vouchers',
-                    'uchak_inward_items', 'audit_log', 'login_log', 'clients_master'
+                    'stock_inventory',
+                    'katti_vouchers',
+                    'katti_voucher_items',
+                    'sales_history',
+                    'credit_ledger',
+                    'uchak_inward_vouchers',
+                    'uchak_inward_items',
+                    'clients_master',
+                    'audit_log',
+                    'login_log',
+                    'mac_lock',
                 ]
                 for t in tables:
                     try:
                         conn.execute(f"DELETE FROM {t}")
-                        _dblog(f"[WIPE] cleared table: {t}")
-                    except Exception as e:
-                        _dblog(f"[WIPE] failed to clear {t}: {e}")
+                        _dblog(f"[WIPE] cleared {t}")
+                    except Exception:
+                        pass  # table may not exist — skip
 
-                # 3. Reset Config
-                conn.execute("UPDATE app_config SET value = '0' WHERE key = 'setup_done'")
-                conn.execute("UPDATE app_config SET value = '' WHERE key = 'machine_fingerprint'")
+                # ── Reset app_config: clear setup, fingerprint, owner ──
+                conn.execute("""
+                    UPDATE app_config
+                    SET value = '0'
+                    WHERE key = 'setup_done'
+                """)
+                conn.execute("""
+                    UPDATE app_config
+                    SET value = ''
+                    WHERE key = 'machine_fingerprint'
+                """)
+                # Clear business_profile sensitive data
+                try:
+                    conn.execute("""
+                        UPDATE business_profile
+                        SET owner_name='', business_name='', city='',
+                            owner_phone='', license_key=''
+                        WHERE id=1
+                    """)
+                except Exception:
+                    pass
 
-                # 4. Clear Business Profile
-                conn.execute("UPDATE business_profile SET owner_name='', biz_name='', city='' WHERE id=1")
-
+                # Clear mac_lock so new PC can claim this DB
+                try:
+                    conn.execute("DELETE FROM mac_lock")
+                except Exception:
+                    pass
                 conn.commit()
-
-            # 5. Delete WAL/SHM files to ensure no ghost data persists
-            for ext in ['-wal', '-shm']:
-                if os.path.exists(self.db_path + ext):
-                    os.remove(self.db_path + ext)
-                    _dblog(f"[WIPE] Removed ghost file: {self.db_path + ext}")
-
-            _dblog("[WIPE] complete — DB is fresh for new PC setup")
+                _dblog("[WIPE] complete — DB is fresh for new PC setup")
         except Exception as e:
             _dberr(f"[WIPE] error: {e}")
 
     def is_setup_done(self) -> bool:
+        """
+        Returns True only if:
+          1. setup_done = '1' in app_config  (setup was completed)
+          2. machine_fingerprint in DB matches THIS machine's MAC hash
+             (so DB copied to new PC → fingerprint mismatch → show setup)
+        """
         try:
             fp = self._machine_fingerprint()
-
-            # 1. NEW: Check the Whitelist (The Permanent Fix)
-            # If this PC is in the text file, we consider it 'Authorized' regardless of DB fingerprint
-            if self.ALLOWED_MACHINES and fp in self.ALLOWED_MACHINES:
-                _dblog(f"[SETUP] PC {fp[:8]}... is WHITELISTED. Skipping hardware lock.")
-                # We skip the wipe and proceed directly to login
-                return self.get_scalar("SELECT COUNT(*) FROM admin_creds") > 0
-
-            # 2. Existing Fingerprint Logic (The original strict check)
             with self._get_connection() as conn:
                 rows = {
                     r['key']: r['value']
@@ -1761,23 +1740,39 @@ class DBManager:
                         "SELECT key, value FROM app_config WHERE key IN ('setup_done','machine_fingerprint')"
                     ).fetchall()
                 }
-
             done = rows.get('setup_done') == '1'
             stored_fp = rows.get('machine_fingerprint', '')
 
             _dblog(f"[SETUP] done={done} stored_fp={stored_fp[:8]}... my_fp={fp[:8]}...")
 
-            if not done or not stored_fp:
+            if not done:
+                _dblog("[SETUP] setup_done != 1 -> show setup")
+                return False
+
+            if not stored_fp:
+                _dblog("[SETUP] no fingerprint stored -> new install -> show setup")
                 return False
 
             if stored_fp != fp:
-                _dblog("[SETUP] Fingerprint mismatch -> WIPING")
+                _dblog("[SETUP] app_config fingerprint mismatch -> DB copied to new PC -> WIPING")
                 self._wipe_business_data()
                 return False
 
-            # 3. Legacy mac_lock table check (Keep for older databases)
-            pass
+            # Second layer: check mac_lock table inside DB
+            try:
+                lock_row = conn.execute(
+                    "SELECT fingerprint FROM mac_lock WHERE id=1"
+                ).fetchone()
+                if lock_row:
+                    lock_fp = lock_row['fingerprint'] if hasattr(lock_row, 'keys') else lock_row[0]
+                    if lock_fp and lock_fp != fp:
+                        _dblog("[SETUP] mac_lock mismatch -> DB copied to new PC -> WIPING")
+                        self._wipe_business_data()
+                        return False
+            except Exception:
+                pass  # mac_lock table may not exist on old DBs — skip
 
+            _dblog("[SETUP] all checks passed -> show login")
             return True
 
         except Exception as e:
@@ -1881,7 +1876,6 @@ class DBManager:
                     pass
 
         _dblog("[SETUP] Complete — returning True")
-        self._mirror_data()
         return True
 
     def get_config(self, key, default=''):
@@ -1953,15 +1947,16 @@ class DBManager:
         """Alias used by inventory.html -- returns live reduced stock values."""
         try:
             with self._get_connection() as conn:
-                # FIX 1: Enforce is_tagged=1 and use nt_wt for Net Weight
+                # Tagged pieces
                 showroom = conn.execute("""
-                    SELECT COUNT(*) as p, COALESCE(SUM(nt_wt),0) as w 
-                    FROM stock_inventory
-                    WHERE is_tagged = 1 
+                    SELECT COUNT(*) as p, COALESCE(SUM(nt_wt),0) as w FROM stock_inventory
+                    WHERE tag_id IS NOT NULL
+                      AND tag_id NOT IN ('N/A','','---','undefined','-')
                       AND tag_id NOT LIKE 'KATTI-%'
+                      AND is_tagged=1
                 """).fetchone()
 
-                # Uchak piece stock -- unchanged
+                # Uchak piece stock -- exclude weight-based rows (gr_wt > 0)
                 uchak = conn.execute("""
                     SELECT COALESCE(SUM(pcs),0) as p FROM stock_inventory
                     WHERE (tag_id='N/A' OR tag_id IS NULL OR tag_id='')
@@ -1969,19 +1964,20 @@ class DBManager:
                       AND (gr_wt IS NULL OR gr_wt = 0)
                 """).fetchone()
 
-                # FIX 2: weight_stock uses gr_wt (as these are bulk entries)
+                # ? LIVE weight from stock_inventory (reduced after sales)
                 weight_stock = conn.execute("""
                     SELECT COALESCE(SUM(gr_wt),0) as w FROM stock_inventory
-                    WHERE (tag_id LIKE 'KATTI-%' OR tag_id IN ('','N/A'))
+                    WHERE (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%')
+                      AND tag_id NOT LIKE 'OPENING-%'
                       AND gr_wt > 0
                 """).fetchone()
 
-                # Katti packets -- unchanged
+                # Katti packets (voucher count -- does not reduce)
                 katti = conn.execute(
                     "SELECT COALESCE(SUM(total_packets),0) as p FROM katti_vouchers"
                 ).fetchone()
 
-                # Untagged physical items -- logic remains as corrected
+                # Untagged physical items (real tag_id, not yet printed/tagged)
                 untagged = conn.execute("""
                     SELECT COUNT(*) as p FROM stock_inventory
                     WHERE is_tagged = 0
@@ -1989,12 +1985,13 @@ class DBManager:
                       AND tag_id NOT IN ('N/A','','---','-','undefined','null')
                       AND tag_id NOT LIKE 'KATTI-%'
                       AND tag_id NOT LIKE 'OPENING-%'
+                      AND gr_wt = 0
                 """).fetchone()
 
                 profile = conn.execute("SELECT owner_name FROM business_profile WHERE id=1").fetchone()
                 owner = profile['owner_name'] if (profile and profile['owner_name']) else None
 
-                # Net weight calculation
+                # Net weight = tagged showroom + katti remaining (NOT opening — opening is fixed reference)
                 total_w = (showroom['w'] or 0) + (weight_stock['w'] or 0)
 
                 return {
@@ -2195,93 +2192,150 @@ class DBManager:
             with self._get_connection() as conn:
                 results = []
 
-                # -- OPENING: weight mode only ----------------------------------
-                # CHANGE 1: Was one block running for both modes with tag_id LIKE 'OPENING-%'
-                # Now split into two mode-specific blocks:
-                # Weight opening → OPENING-WT-% rows (gr_wt > 0, pcs = 0)
-                # Pcs opening    → OPENING-PC-% rows (pcs > 0, gr_wt = 0)
-                # Also supports legacy OPENING-% rows (old entries before prefix update)
-                # by checking gr_wt/pcs values as fallback discriminator
+                # -- OPENING ------------------------------------------------
+                # Weight mode → KATTI-% rows (bulk weight, no piece tag)
+                # Pcs mode    → tagged items (Ring, Chain etc, is_tagged=1)
+                # Opening stock = OPENING-% rows only (entered via opening_stock.html)
+                # These are permanent carry-forward values — never change
+                opn_sql = """
+                    SELECT gr_wt, nt_wt, ls_wt, touch, huid, pcs,
+                           it_code, it_name, tag_id,
+                           entry_date AS vch_dt
+                    FROM stock_inventory
+                    WHERE tag_id LIKE 'OPENING-%'
+                      AND touch IS NOT NULL AND touch > 0
+                      AND gr_wt > 0
+                """
+
+                # OPENING is PERMANENT — never subtract sales from it
+                # Sales reduce INWARD stock, not the opening balance
+                opn_rows = conn.execute(opn_sql).fetchall()
+                opn_by_touch = {}
+                for r in opn_rows:
+                    r = dict(r)
+                    tv = round(float(r.get('touch') or 0), 2)
+                    if not all_touch and round(tv, 2) != round(touch_val, 2):
+                        continue
+                    opn_by_touch.setdefault(tv, {'wt': 0.0, 'nt': 0.0, 'pcs': 0, 'r': r})
+                    opn_by_touch[tv]['wt'] += float(r.get('gr_wt') or 0)
+                    opn_by_touch[tv]['nt'] += float(r.get('nt_wt') or r.get('gr_wt') or 0)
+                    opn_by_touch[tv]['pcs'] += int(r.get('pcs') or 0)
+
+                for tv, opn in opn_by_touch.items():
+                    r = opn['r']
+                    results.append({
+                        'txn_type': 'OPENING',
+                        'touch_val': tv,
+                        'book_name': 'Opening Stock',
+                        'vch_no': r.get('tag_id', ''),
+                        'vch_dt': r.get('vch_dt', ''),
+                        'ac_name': 'Opening Balance',
+                        'as_type': 'Opening A/c',
+                        'sign': 'Dr',
+                        'tag_no': r.get('tag_id', ''),
+                        'huid': r.get('huid') or '--',
+                        'it_code': r.get('it_code', ''),
+                        'gr_name': 'Opening',
+                        'primary_val': '',
+                        'it_name': r.get('it_name', ''),
+                        'variety': 'Opening',
+                        'carat': '',
+                        'pcs': opn['pcs'],
+                        'gr_wt': round(opn['wt'], 3),
+                        'ls_wt': float(r.get('ls_wt') or 0),
+                        'in_net_wt': round(opn['nt'], 3),
+                        'out_net_wt': 0.0,
+                        'bal_wt': round(opn['nt'], 3),
+                    })
+
+                # -- INWARD: weight mode ------------------------------------
+                # Source 1: katti_voucher_items (katti terminal entries)
+                # Source 2: stock_inventory NULL/N/A rows (stock ledger entries)
+                # OPENING- rows handled above -- never included here
                 if mode == 'weight':
-                    opn_rows = conn.execute("""
-                        SELECT gr_wt, nt_wt, ls_wt, touch, huid, pcs,
-                               it_code, it_name, tag_id,
+                    # Source 1 -- katti_voucher_items
+                    inward = conn.execute("""
+                        SELECT kvi.it_code, kvi.it_name, kvi.nt_wt AS gr_wt,
+                               kvi.touch, kvi.huid, kvi.pcs,
+                               kv.vch_id, kv.date AS vch_dt
+                        FROM katti_voucher_items kvi
+                        JOIN katti_vouchers kv ON kvi.vch_id = kv.vch_id
+                    """).fetchall()
+
+                    for r in inward:
+                        r = dict(r)
+                        tv = float(r.get('touch') or 0)
+                        if not all_touch and round(tv, 2) != round(touch_val, 2): continue
+                        vdt = r.get('vch_dt', '')
+                        if from_date and vdt < from_date: continue
+                        if to_date and vdt > to_date:   continue
+                        wt = float(r.get('gr_wt') or 0)
+                        results.append({
+                            'txn_type': 'IN', 'touch_val': tv,
+                            'book_name': 'Katti Inward', 'vch_no': r.get('vch_id', ''),
+                            'vch_dt': vdt, 'ac_name': 'Stock Inward', 'as_type': 'Katti A/c',
+                            'sign': 'Dr', 'tag_no': 'N/A', 'huid': r.get('huid') or '--',
+                            'it_code': r.get('it_code', ''), 'gr_name': 'Weight Gold',
+                            'primary_val': r.get('vch_id', ''), 'it_name': r.get('it_name', ''),
+                            'variety': 'Katti',
+                            'carat': '22K' if tv >= 91 else ('18K' if tv >= 75 else 'Katti'),
+                            'pcs': int(r.get('pcs') or 1), 'gr_wt': wt, 'ls_wt': 0.0,
+                            'in_net_wt': wt, 'out_net_wt': 0.0, 'bal_wt': wt,
+                        })
+
+                    # Source 2 -- stock_inventory NULL/N/A rows (stock ledger weight entries)
+                    # These are weight-based entries NOT from katti terminal
+                    # EXCLUDE OPENING- (those go to Opening column)
+                    # EXCLUDE KATTI- (those are duplicates of katti_voucher_items above)
+                    weight_stock = conn.execute("""
+                        SELECT id, it_code, it_name, tag_id,
+                               gr_wt, ls_wt, nt_wt, touch, huid, pcs,
                                entry_date AS vch_dt
                         FROM stock_inventory
                         WHERE (
-                            tag_id LIKE 'OPENING-WT-%'
-                            OR (
-                                tag_id LIKE 'OPENING-%'
-                                AND tag_id NOT LIKE 'OPENING-WT-%'
-                                AND tag_id NOT LIKE 'OPENING-PC-%'
-                                AND gr_wt > 0
-                                AND (pcs IS NULL OR pcs = 0)
-                            )
+                            tag_id IS NULL OR
+                            tag_id = '' OR
+                            tag_id = 'N/A' OR
+                            tag_id = '---' OR
+                            tag_id = '-'
                         )
-                        AND touch IS NOT NULL AND touch > 0
+                        AND tag_id NOT LIKE 'KATTI-%'
+                        AND tag_id NOT LIKE 'OPENING-%'
                         AND gr_wt > 0
                     """).fetchall()
 
-                    opn_by_touch = {}
-                    for r in opn_rows:
+                    for r in weight_stock:
                         r = dict(r)
-                        tv = round(float(r.get('touch') or 0), 2)
-                        if not all_touch and round(tv, 2) != round(touch_val, 2):
-                            continue
-                        opn_by_touch.setdefault(tv, {'wt': 0.0, 'nt': 0.0, 'pcs': 0, 'r': r})
-                        opn_by_touch[tv]['wt'] += float(r.get('gr_wt') or 0)
-                        opn_by_touch[tv]['nt'] += float(r.get('nt_wt') or r.get('gr_wt') or 0)
-                        opn_by_touch[tv]['pcs'] += int(r.get('pcs') or 0)
-
-                    for tv, opn in opn_by_touch.items():
-                        r = opn['r']
+                        tv = float(r.get('touch') or 0)
+                        if not all_touch and round(tv, 2) != round(touch_val, 2): continue
+                        vdt = r.get('vch_dt', '')
+                        if from_date and vdt < from_date: continue
+                        if to_date and vdt > to_date:   continue
+                        wt = float(r.get('gr_wt') or 0)
+                        nt = float(r.get('nt_wt') or wt)
                         results.append({
-                            'txn_type': 'OPENING',
-                            'touch_val': tv,
-                            'book_name': 'Opening Stock',
-                            'vch_no': r.get('tag_id', ''),
-                            'vch_dt': r.get('vch_dt', ''),
-                            'ac_name': 'Opening Balance',
-                            'as_type': 'Opening A/c',
-                            'sign': 'Dr',
-                            'tag_no': r.get('tag_id', ''),
+                            'txn_type': 'IN', 'touch_val': tv,
+                            'book_name': 'Stock Ledger', 'vch_no': str(r.get('id', '')),
+                            'vch_dt': vdt, 'ac_name': 'Stock Inward', 'as_type': 'Weight Stock',
+                            'sign': 'Dr', 'tag_no': r.get('tag_id') or 'N/A',
                             'huid': r.get('huid') or '--',
-                            'it_code': r.get('it_code', ''),
-                            'gr_name': 'Opening',
-                            'primary_val': '',
-                            'it_name': r.get('it_name', ''),
-                            'variety': 'Opening',
-                            'carat': '',
-                            'pcs': opn['pcs'],
-                            'gr_wt': round(opn['wt'], 3),
-                            'ls_wt': float(r.get('ls_wt') or 0),
-                            'in_net_wt': round(opn['nt'], 3),
-                            'out_net_wt': 0.0,
-                            'bal_wt': round(opn['nt'], 3),
+                            'it_code': r.get('it_code', ''), 'gr_name': 'Weight Gold',
+                            'primary_val': '', 'it_name': r.get('it_name', ''),
+                            'variety': 'Weight',
+                            'carat': '22K' if tv >= 91 else ('18K' if tv >= 75 else 'Weight'),
+                            'pcs': int(r.get('pcs') or 1), 'gr_wt': wt, 'ls_wt': float(r.get('ls_wt') or 0),
+                            'in_net_wt': nt, 'out_net_wt': 0.0, 'bal_wt': nt,
                         })
-
-                # -- OPENING: pcs mode only ------------------------------------
-                # CHANGE 2: Was fetching OPENING-% OR KATTI-% with pcs > 0 (wrong — katti rows
-                # are inward not opening). Now fetches ONLY OPENING-PC-% rows (pcs > 0, gr_wt = 0)
-                # plus legacy OPENING-% rows that have pcs > 0 and gr_wt = 0 as fallback
+                # -- OPENING: pcs mode --------------------------------------
                 if mode == 'pcs':
                     opn_pcs_rows = conn.execute("""
                         SELECT id, it_code, it_name, tag_id,
                                gr_wt, ls_wt, nt_wt, touch, huid, pcs,
                                entry_date AS vch_dt
                         FROM stock_inventory
-                        WHERE (
-                            tag_id LIKE 'OPENING-PC-%'
-                            OR (
-                                tag_id LIKE 'OPENING-%'
-                                AND tag_id NOT LIKE 'OPENING-WT-%'
-                                AND tag_id NOT LIKE 'OPENING-PC-%'
-                                AND pcs > 0
-                                AND (gr_wt IS NULL OR gr_wt = 0)
-                            )
-                        )
-                        AND touch IS NOT NULL AND touch > 0
-                        AND pcs > 0
+                        WHERE touch IS NOT NULL AND touch > 0
+                          AND pcs > 0
+                          AND (tag_id LIKE 'OPENING-%' OR tag_id LIKE 'KATTI-%')
                     """).fetchall()
 
                     for r in opn_pcs_rows:
@@ -2289,7 +2343,7 @@ class DBManager:
                         tv = float(r.get('touch') or 0)
                         pcs = int(r.get('pcs') or 0)
                         if not all_touch and round(tv, 2) != round(touch_val, 2): continue
-                        if pcs <= 0: continue
+                        if pcs <= 0: continue  # extra safety check
                         wt = float(r.get('gr_wt') or 0)
                         nt = float(r.get('nt_wt') or wt)
                         results.append({
@@ -2307,88 +2361,14 @@ class DBManager:
                             'in_net_wt': nt, 'out_net_wt': 0.0, 'bal_wt': nt,
                         })
 
-                # -- INWARD: weight mode ------------------------------------
-                # CHANGE 3: No change here — weight inward logic unchanged
-                if mode == 'weight':
-                    # Source 1 -- katti_voucher_items
-                    inward = conn.execute("""
-                        SELECT kvi.it_code, kvi.it_name, kvi.nt_wt AS gr_wt,
-                               kvi.touch, kvi.huid, kvi.pcs,
-                               kv.vch_id, kv.date AS vch_dt
-                        FROM katti_voucher_items kvi
-                        JOIN katti_vouchers kv ON kvi.vch_id = kv.vch_id
-                    """).fetchall()
-
-                    for r in inward:
-                        r = dict(r)
-                        tv = float(r.get('touch') or 0)
-                        if not all_touch and round(tv, 2) != round(touch_val, 2): continue
-                        vdt = r.get('vch_dt', '')
-                        if from_date and vdt < from_date: continue
-                        if to_date and vdt > to_date: continue
-                        wt = float(r.get('gr_wt') or 0)
-                        results.append({
-                            'txn_type': 'IN', 'touch_val': tv,
-                            'book_name': 'Katti Inward', 'vch_no': r.get('vch_id', ''),
-                            'vch_dt': vdt, 'ac_name': 'Stock Inward', 'as_type': 'Katti A/c',
-                            'sign': 'Dr', 'tag_no': 'N/A', 'huid': r.get('huid') or '--',
-                            'it_code': r.get('it_code', ''), 'gr_name': 'Weight Gold',
-                            'primary_val': r.get('vch_id', ''), 'it_name': r.get('it_name', ''),
-                            'variety': 'Katti',
-                            'carat': '22K' if tv >= 91 else ('18K' if tv >= 75 else 'Katti'),
-                            'pcs': int(r.get('pcs') or 1), 'gr_wt': wt, 'ls_wt': 0.0,
-                            'in_net_wt': wt, 'out_net_wt': 0.0, 'bal_wt': wt,
-                        })
-
-                    # Source 2 -- stock_inventory NULL/N/A rows
-                    # CHANGE 4: Added AND tag_id NOT LIKE 'OPENING-WT-%' and NOT LIKE 'OPENING-PC-%'
-                    # to make absolutely sure no opening rows leak into inward
-                    weight_stock = conn.execute("""
-                        SELECT id, it_code, it_name, tag_id,
-                               gr_wt, ls_wt, nt_wt, touch, huid, pcs,
-                               entry_date AS vch_dt
-                        FROM stock_inventory
-                        WHERE (
-                            tag_id IS NULL OR
-                            tag_id = '' OR
-                            tag_id = 'N/A' OR
-                            tag_id = '---' OR
-                            tag_id = '-'
-                        )
-                        AND tag_id NOT LIKE 'KATTI-%'
-                        AND tag_id NOT LIKE 'OPENING-%'
-                        AND tag_id NOT LIKE 'OPENING-WT-%'
-                        AND tag_id NOT LIKE 'OPENING-PC-%'
-                        AND gr_wt > 0
-                    """).fetchall()
-
-                    for r in weight_stock:
-                        r = dict(r)
-                        tv = float(r.get('touch') or 0)
-                        if not all_touch and round(tv, 2) != round(touch_val, 2): continue
-                        vdt = r.get('vch_dt', '')
-                        if from_date and vdt < from_date: continue
-                        if to_date and vdt > to_date: continue
-                        wt = float(r.get('gr_wt') or 0)
-                        nt = float(r.get('nt_wt') or wt)
-                        results.append({
-                            'txn_type': 'IN', 'touch_val': tv,
-                            'book_name': 'Stock Ledger', 'vch_no': str(r.get('id', '')),
-                            'vch_dt': vdt, 'ac_name': 'Stock Inward', 'as_type': 'Weight Stock',
-                            'sign': 'Dr', 'tag_no': r.get('tag_id') or 'N/A',
-                            'huid': r.get('huid') or '--',
-                            'it_code': r.get('it_code', ''), 'gr_name': 'Weight Gold',
-                            'primary_val': '', 'it_name': r.get('it_name', ''),
-                            'variety': 'Weight',
-                            'carat': '22K' if tv >= 91 else ('18K' if tv >= 75 else 'Weight'),
-                            'pcs': int(r.get('pcs') or 1), 'gr_wt': wt, 'ls_wt': float(r.get('ls_wt') or 0),
-                            'in_net_wt': nt, 'out_net_wt': 0.0, 'bal_wt': nt,
-                        })
-
-                # -- INWARD: pcs mode ------------------------------------------
-                # CHANGE 5: No logic change — but added NOT LIKE 'OPENING-WT-%' and
-                # NOT LIKE 'OPENING-PC-%' guards to current_stock query for safety
                 if mode == 'pcs':
+                    # ? FIX: PCS Inward = current stock + sold items (reconstructed from sales_history)
+                    # Sold items are DELETED from stock_inventory after sale, so we rebuild from sales
+
+                    # Step 1 -- Current remaining stock (not yet sold)
+                    # EXCLUDE: KATTI- (counted in katti_voucher_items as Inward)
+                    # EXCLUDE: OPENING- (counted in get_opening_stock as Opening)
+                    # EXCLUDE: NULL/N/A/--- (weight-based, not PCS goods)
                     current_stock = conn.execute("""
                         SELECT it_code, it_name, tag_id, gr_wt, nt_wt, ls_wt,
                                touch, huid, pcs, entry_date AS vch_dt, vch_reference
@@ -2397,8 +2377,6 @@ class DBManager:
                           AND tag_id NOT IN ('N/A','','---','-')
                           AND tag_id NOT LIKE 'KATTI-%'
                           AND tag_id NOT LIKE 'OPENING-%'
-                          AND tag_id NOT LIKE 'OPENING-WT-%'
-                          AND tag_id NOT LIKE 'OPENING-PC-%'
                     """).fetchall()
 
                     for r in current_stock:
@@ -2407,7 +2385,7 @@ class DBManager:
                         if not all_touch and round(tv, 2) != round(touch_val, 2): continue
                         vdt = r.get('vch_dt', '')
                         if from_date and vdt < from_date: continue
-                        if to_date and vdt > to_date: continue
+                        if to_date and vdt > to_date:   continue
                         nt = float(r.get('nt_wt') or 0)
                         results.append({
                             'txn_type': 'IN', 'touch_val': tv,
@@ -2423,13 +2401,13 @@ class DBManager:
                             'in_net_wt': nt, 'out_net_wt': 0.0, 'bal_wt': nt,
                         })
 
-                    # Step 2 -- Already sold tagged pieces (reconstructed from sales_history)
-                    # CHANGE 6: No logic change here
+                    # Step 2 -- Already sold tagged pieces (deleted from stock after sale)
+                    # Reconstruct from sales_history items where tag_id is a real physical tag
                     sold_sales = conn.execute(
                         "SELECT vch_id, customer, date, items FROM sales_history ORDER BY id ASC"
                     ).fetchall()
 
-                    seen_tags = set()
+                    seen_tags = set()  # avoid duplicate inward entries
                     for sale in sold_sales:
                         svdt = sale['date'] or ''
                         try:
@@ -2438,6 +2416,7 @@ class DBManager:
                             continue
                         for item in sitems:
                             tag_id = str(item.get('tag_id') or '').strip()
+                            # Only real physical tags (not weight/katti)
                             if not tag_id or tag_id in ('', 'N/A') or tag_id.startswith('KATTI-') or len(tag_id) < 8:
                                 continue
                             if tag_id in seen_tags: continue
@@ -2446,7 +2425,7 @@ class DBManager:
                             tv = float(item.get('touch') or 0)
                             if not all_touch and round(tv, 2) != round(touch_val, 2): continue
                             if from_date and svdt < from_date: continue
-                            if to_date and svdt > to_date: continue
+                            if to_date and svdt > to_date:   continue
 
                             wt = float(item.get('weight') or item.get('gr_wt') or 0)
                             ls = float(item.get('less') or item.get('ls_wt') or 0)
@@ -2465,8 +2444,7 @@ class DBManager:
                                 'in_net_wt': wt, 'out_net_wt': 0.0, 'bal_wt': wt,
                             })
 
-                # -- OUTWARD: sales_history ------------------------------------
-                # CHANGE 7: No change here — outward logic unchanged
+                # -- OUTWARD: sales_history ----------------------------------
                 sales = conn.execute(
                     "SELECT vch_id, customer, date, items FROM sales_history ORDER BY id ASC"
                 ).fetchall()
@@ -2474,7 +2452,7 @@ class DBManager:
                 for sale in sales:
                     vdt = sale['date'] or ''
                     if from_date and vdt < from_date: continue
-                    if to_date and vdt > to_date: continue
+                    if to_date and vdt > to_date:   continue
                     try:
                         items = json.loads(sale['items'] or '[]')
                     except:
@@ -2485,6 +2463,7 @@ class DBManager:
                         if not all_touch and round(tv, 2) != round(touch_val, 2): continue
 
                         tag_id = str(item.get('tag_id') or '').strip()
+                        # Weight item if: no tag, N/A, KATTI- prefix, B-NNN bin format, or not a real SKU tag
                         is_weight = (
                                 not tag_id
                                 or tag_id in ('', 'N/A', '---', 'undefined', '-')
@@ -2494,7 +2473,7 @@ class DBManager:
                                 or (len(tag_id) < 8 and not any(c.isalpha() and c.isupper() for c in tag_id[2:]))
                         )
                         if mode == 'weight' and not is_weight: continue
-                        if mode == 'pcs' and is_weight: continue
+                        if mode == 'pcs' and is_weight:     continue
 
                         wt = float(item.get('weight') or item.get('gr_wt') or 0)
                         results.append({
@@ -2516,7 +2495,7 @@ class DBManager:
                 return results
 
         except Exception as e:
-            print(f"? [TOUCH LEDGER DETAILS ERROR] {e}")
+            print(f"? [TOUCH LEDGER DETAILS ERROR] {e}");
             return []
 
     def get_low_stock_items(self, threshold=10.0):
@@ -2564,122 +2543,6 @@ class DBManager:
         except Exception as e:
             print(f"[UCHAK LOW STOCK ERROR] {e}");
             return []
-
-    def _mirror_data(self):
-        import shutil, os, sqlite3
-        secret_dir = r"C:\ProgramData\AurumOS"
-        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
-        try:
-            os.makedirs(secret_dir, exist_ok=True)
-
-            # Step 1: Force WAL checkpoint so all data is in main .db file
-            try:
-                conn = sqlite3.connect(self.db_path, timeout=5)
-                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                conn.close()
-            except Exception as ce:
-                _dblog(f"[BACKUP] Checkpoint warning: {ce}")
-
-            # Step 2: Copy main DB file
-            if os.path.exists(self.db_path):
-                shutil.copy2(self.db_path, backup_path)
-                size = os.path.getsize(backup_path)
-                _dblog(f"[BACKUP] Success: {size} bytes → {backup_path}")
-            else:
-                _dberr("[BACKUP] Source DB not found — skipping")
-                return
-
-            # Step 3: Copy WAL and SHM if they exist
-            for ext in ['-wal', '-shm']:
-                src = self.db_path + ext
-                dst = backup_path + ext
-                if os.path.exists(src):
-                    shutil.copy2(src, dst)
-                    _dblog(f"[BACKUP] Copied {ext}: OK")
-                else:
-                    # Remove old WAL/SHM from backup if not needed
-                    if os.path.exists(dst):
-                        os.remove(dst)
-
-        except Exception as e:
-            _dberr(f"[BACKUP] Failed: {e}")
-
-    def restore_from_backup(self):
-        import shutil, os
-        secret_dir = r"C:\ProgramData\AurumOS"
-        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
-        if not os.path.exists(backup_path):
-            _dberr("[RESTORE] No backup found")
-            return False
-        try:
-            # Delete corrupt files
-            for ext in ['', '-wal', '-shm']:
-                p = self.db_path + ext
-                if os.path.exists(p):
-                    os.remove(p)
-            # Copy backup back
-            for ext in ['', '-wal', '-shm']:
-                src = backup_path + ext
-                dst = self.db_path + ext
-                if os.path.exists(src):
-                    shutil.copy2(src, dst)
-            _dblog("[RESTORE] Restore complete")
-            return True
-        except Exception as e:
-            _dberr(f"[RESTORE] Failed: {e}")
-            return False
-
-    def _cloud_sync(self):
-        from cryptography.fernet import Fernet
-        import os
-
-        # 1. Use an Environment Variable or a hidden file for the key
-        # Never hardcode keys in your .py files!
-        secret_key = os.environ.get('AURUM_ENCRYPTION_KEY', b'YOUR_SECRET_ENCRYPTION_KEY_HERE')
-        f = Fernet(secret_key)
-
-        # 2. Add a check to prevent syncing if the DB is tiny (corrupted)
-        if os.path.getsize(self.db_path) < 1024:
-            _dberr("[CLOUD] Sync aborted: DB is suspiciously small.")
-            return
-
-        try:
-            # Read the current DB
-            with open(self.db_path, 'rb') as file:
-                data = file.read()
-
-            # Encrypt and save
-            encrypted_data = f.encrypt(data)
-
-            # Ensure path exists before writing
-            sync_path = r"C:\Users\YourUser\Dropbox\vault.bin"
-            os.makedirs(os.path.dirname(sync_path), exist_ok=True)
-
-            with open(sync_path, 'wb') as file:
-                file.write(encrypted_data)
-
-            _dblog("[CLOUD] Sync complete.")
-        except Exception as e:
-            _dberr(f"[CLOUD] Sync failed: {e}")
-
-    def panic_mode_wipe(self):
-        """4. Hard Wipe: Securely overwrite and delete all DB files."""
-        import os
-        _dblog("[PANIC] Security wipe initiated.")
-        for path in [self.db_path, self.db_path + '-wal', self.db_path + '-shm']:
-            if os.path.exists(path):
-                with open(path, "ba+", buffering=0) as f:
-                    size = f.tell()
-                    f.seek(0)
-                    f.write(os.urandom(size))
-                os.remove(path)
-        # Also wipe the mirror
-        secret_path = r"C:\ProgramData\Intel\Logs\cache_sys"
-        for ext in ['', '-wal', '-shm']:
-            if os.path.exists(secret_path + ext):
-                os.remove(secret_path + ext)
-
-    
 
     def get_out_of_stock_items(self):
         """
@@ -2739,3 +2602,339 @@ class DBManager:
         except Exception as e:
             print(f"? [OUT OF STOCK ERROR] {e}");
             return []
+
+    def get_lock_status(self):
+        """Returns lock status + lock code (first 8 chars of machine fingerprint)."""
+        try:
+            with self._get_connection() as conn:
+                rows = {r['key']: r['value'] for r in conn.execute(
+                    "SELECT key,value FROM app_config WHERE key IN "
+                    "('account_locked','locked_at','login_attempts')"
+                ).fetchall()}
+            locked = rows.get('account_locked', '0') == '1'
+            attempts = int(rows.get('login_attempts', '0'))
+            lock_code = self._machine_fingerprint()[:8].upper()
+            return {
+                'locked': locked,
+                'attempts': attempts,
+                'lock_code': lock_code,
+                'locked_at': rows.get('locked_at', '')
+            }
+        except Exception as e:
+            _dberr(f"[LOCK] get_lock_status: {e}")
+            return {'locked': False, 'attempts': 0, 'lock_code': '', 'locked_at': ''}
+
+    def record_failed_attempt(self):
+        """Increment login_attempts. Lock account permanently after 3 failures."""
+        try:
+            from datetime import datetime as _dt
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key='login_attempts'"
+                ).fetchone()
+                attempts = int(row['value']) + 1 if row else 1
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('login_attempts',?)",
+                    (str(attempts),)
+                )
+                if attempts >= 3:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES('account_locked','1')"
+                    )
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES('locked_at',?)",
+                        (_dt.now().strftime('%Y-%m-%d %H:%M:%S'),)
+                    )
+                    _dblog(f"[LOCK] Account LOCKED after {attempts} attempts")
+                conn.commit()
+            return {'attempts': attempts, 'locked': attempts >= 3}
+        except Exception as e:
+            _dberr(f"[LOCK] record_failed_attempt: {e}")
+            return {'attempts': 0, 'locked': False}
+
+    def verify_unlock_key(self, unlock_key, lock_code=None):
+        """
+        Verify unlock key against today AND yesterday (handles midnight edge case).
+        unlock_key : 12-char key entered by user
+        lock_code  : optional — the code shown on screen.
+        """
+        import hashlib as _hl
+        from datetime import datetime as _dt, timedelta as _td
+
+        SECRET_SALT = 'AurumOS@Jewel#2024$Prof'
+        try:
+            if not lock_code:
+                lock_code = self._machine_fingerprint()[:8].upper()
+            else:
+                lock_code = str(lock_code).strip().upper()
+
+            entered = str(unlock_key).strip().upper()
+
+            # Try today AND yesterday — covers midnight timezone edge cases
+            dates_to_try = [
+                _dt.now().strftime('%Y-%m-%d'),
+                (_dt.now() - _td(days=1)).strftime('%Y-%m-%d'),
+            ]
+
+            for date_str in dates_to_try:
+                expected = _hl.sha256(
+                    (lock_code + SECRET_SALT + date_str).encode('utf-8')
+                ).hexdigest()[:12].upper()
+                _dblog(
+                    f"[LOCK] Trying date={date_str} lock_code={lock_code} "
+                    f"expected={expected[:4]}**** entered={entered[:4]}****"
+                )
+                if entered == expected:
+                    with self._get_connection() as conn:
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('account_locked','0')")
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('login_attempts','0')")
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('locked_at','')")
+                        conn.commit()
+                    _dblog(f"[LOCK] Account UNLOCKED — matched date={date_str}")
+                    return {'status': 'success'}
+
+            _dblog("[LOCK] All dates tried — no match")
+            return {'status': 'error', 'message': 'Invalid unlock key'}
+        except Exception as e:
+            _dberr(f"[LOCK] verify_unlock_key: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def do_stock_med(self, data):
+        """
+        Stock Med Sign-Off:
+        1. Log session in stock_med_sessions
+        2. Archive katti, sales, stock into audit_archive (kept forever)
+        3. Write new OPENING- rows from physical count
+        4. Reset period: clear all katti, sales, stock (non-opening)
+        """
+        import json as _json
+        from datetime import datetime as _dt
+
+        try:
+            signed_by = str(data.get('signed_by') or '').strip()
+            notes = str(data.get('notes') or '').strip()
+            reason = str(data.get('reason') or 'normal').strip()
+            period_from = str(data.get('period_from') or '').strip()
+            period_to = str(data.get('period_to') or '').strip()
+            new_opening = data.get('new_opening') or []
+
+            if not signed_by:
+                return {'status': 'error', 'message': 'Signed-by name is required'}
+            if not new_opening:
+                return {'status': 'error', 'message': 'Physical count data is missing'}
+
+            with self._get_connection() as conn:
+                conn.execute("PRAGMA busy_timeout = 30000")
+
+                # 1. Log session
+                conn.execute("""
+                    INSERT INTO stock_med_sessions
+                        (med_date, period_from, period_to, signed_by, notes, reason, status)
+                    VALUES (date('now'), ?, ?, ?, ?, ?, 'SIGNED')
+                """, (period_from, period_to, signed_by, notes, reason))
+                session_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                _dblog(f"[STOCK_MED] Session {session_id} created — signed by {signed_by}")
+
+                # 2. Archive all records into audit_archive (never deleted)
+                for tbl in ['katti_vouchers', 'katti_voucher_items', 'sales_history', 'credit_ledger']:
+                    rows = conn.execute(f"SELECT * FROM {tbl}").fetchall()
+                    for r in rows:
+                        conn.execute(
+                            "INSERT INTO audit_archive (session_id, table_name, record_json) VALUES (?,?,?)",
+                            (session_id, tbl, _json.dumps(dict(r)))
+                        )
+                    _dblog(f"[STOCK_MED] Archived {len(rows)} rows from {tbl}")
+
+                si_rows = conn.execute(
+                    "SELECT * FROM stock_inventory WHERE tag_id NOT LIKE 'OPENING-%'"
+                ).fetchall()
+                for r in si_rows:
+                    conn.execute(
+                        "INSERT INTO audit_archive (session_id, table_name, record_json) VALUES (?,?,?)",
+                        (session_id, 'stock_inventory', _json.dumps(dict(r)))
+                    )
+                _dblog(f"[STOCK_MED] Archived {len(si_rows)} stock rows")
+
+                # 3. Delete old OPENING- rows — replaced by physical count below
+                conn.execute("DELETE FROM stock_inventory WHERE tag_id LIKE 'OPENING-%'")
+
+                # 4. Write new OPENING- rows from physical count
+                med_date = _dt.now().strftime('%Y-%m-%d')
+                inserted = 0
+                for entry in new_opening:
+                    touch = float(entry.get('touch') or 0)
+                    phys_wt = float(entry.get('physical_wt') or 0)
+                    if touch <= 0 or phys_wt <= 0:
+                        continue
+                    tag_id = (
+                            'OPENING-WT-'
+                            + _dt.now().strftime('%Y%m%d')
+                            + '-'
+                            + str(int(touch * 10)).zfill(4)
+                    )
+                    conn.execute("""
+                        INSERT OR REPLACE INTO stock_inventory
+                            (it_code, it_name, tag_id, pcs,
+                             gr_wt, ls_wt, nt_wt,
+                             touch, wastage, is_tagged, entry_date)
+                        VALUES (?, ?, ?, 0, ?, 0, ?, ?, 0, 0, ?)
+                    """, (
+                        'OPENING-' + str(int(touch)),
+                        'Opening Stock ' + str(touch) + '% - ' + med_date,
+                        tag_id, phys_wt, phys_wt, touch, med_date
+                    ))
+                    inserted += 1
+                    _dblog(f"[STOCK_MED] New opening: touch={touch}% wt={phys_wt}g tag={tag_id}")
+                _dblog(f"[STOCK_MED] {inserted} new OPENING- rows written")
+
+                # 5. Reset period data — clear all transactional data
+                for tbl in [
+                    'katti_vouchers', 'katti_voucher_items',
+                    'sales_history', 'credit_ledger',
+                    'uchak_inward_vouchers', 'uchak_inward_items',
+                ]:
+                    conn.execute(f"DELETE FROM {tbl}")
+                conn.execute(
+                    "DELETE FROM stock_inventory WHERE tag_id NOT LIKE 'OPENING-%'"
+                )
+                _dblog("[STOCK_MED] Period data cleared")
+                conn.commit()
+                _dblog(f"[STOCK_MED] Complete — session {session_id}")
+
+            self._mirror_data()
+            return {'status': 'success', 'session_id': session_id}
+
+        except Exception as e:
+            _dberr(f"[STOCK_MED] Error: {e}")
+            import traceback as _tb
+            _dberr(_tb.format_exc())
+            return {'status': 'error', 'message': str(e)}
+
+    # ── SESSION TOKEN — Layer 10 Security ─────────────────────────────────────
+    def _db_state_hash(self):
+        """Hash of current DB row counts — detects DB swap mid-session."""
+        try:
+            with self._get_connection() as conn:
+                counts = []
+                for tbl in ['sales_history', 'stock_inventory', 'katti_vouchers', 'admin_creds']:
+                    try:
+                        n = conn.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()[0]
+                        counts.append(f"{tbl}:{n}")
+                    except Exception:
+                        counts.append(f"{tbl}:0")
+            import hashlib as _hl
+            return _hl.sha256('|'.join(counts).encode()).hexdigest()[:16]
+        except Exception:
+            return 'no-db'
+
+    def _generate_session_token(self):
+        """
+        Called ONCE at startup. Generates a time-bound cryptographic token
+        tied to this exact session — hardware + date + time window + DB state.
+        Stored in 3 places: RAM, registry, temp file.
+        Valid for this startup only — never reusable.
+        """
+        import hashlib as _hl, time as _t, tempfile as _tmp, os as _os
+
+        SESSION_SALT = 'AurumOS@Session@Jenil#9x7z@2026'
+        REG_KEY = 'SOFTWARE\\\\Microsoft\\\\InputMethod\\\\AOS'
+
+        dna = self._machine_fingerprint()
+        today = __import__('datetime').date.today().isoformat()
+        ts = str(int(_t.time() // 300))  # 5-minute rolling window
+        dbhash = self._db_state_hash()
+
+        raw = '|'.join([dna, today, ts, dbhash, SESSION_SALT])
+        token = _hl.sha256(raw.encode('utf-8')).hexdigest()
+
+        # Store 1: RAM
+        self._session_token = token
+
+        # Store 2: Windows registry (disguised as input method cache)
+        try:
+            import winreg as _wr
+            key = _wr.CreateKey(_wr.HKEY_CURRENT_USER, 'SOFTWARE\Microsoft\InputMethod\AOS')
+            _wr.SetValueEx(key, 'SessionCache', 0, _wr.REG_SZ, token)
+            _wr.CloseKey(key)
+        except Exception:
+            pass
+
+        # Store 3: Random temp file
+        try:
+            tmp = _tmp.mktemp(prefix='.~', suffix='.tmp',
+                              dir=_os.environ.get('TEMP', _os.getcwd()))
+            with open(tmp, 'w') as f:
+                f.write(token)
+            self._session_token_file = tmp
+        except Exception:
+            self._session_token_file = None
+
+        _dblog(f"[SESSION] Token generated: {token[:8]}...")
+        return token
+
+    def _verify_session_token(self):
+        """
+        Called before every sensitive DB write.
+        All 3 stores (RAM, registry, file) must match.
+        One mismatch = operation BLOCKED.
+        """
+        ram_token = getattr(self, '_session_token', None)
+        if not ram_token:
+            _dberr("[SESSION] No token in RAM — BLOCKED")
+            return False
+
+        # Check registry
+        try:
+            import winreg as _wr
+            key = _wr.OpenKey(_wr.HKEY_CURRENT_USER,
+                              'SOFTWARE\Microsoft\InputMethod\AOS')
+            reg_token, _ = _wr.QueryValueEx(key, 'SessionCache')
+            _wr.CloseKey(key)
+            if reg_token != ram_token:
+                _dberr("[SESSION] Registry mismatch — BLOCKED")
+                return False
+        except Exception:
+            _dberr("[SESSION] Registry missing — BLOCKED")
+            return False
+
+        # Check temp file
+        try:
+            tf = getattr(self, '_session_token_file', None)
+            if not tf:
+                raise FileNotFoundError("no file path")
+            with open(tf, 'r') as f:
+                file_token = f.read().strip()
+            if file_token != ram_token:
+                _dberr("[SESSION] File token mismatch — BLOCKED")
+                return False
+        except Exception:
+            _dberr("[SESSION] Temp file missing — BLOCKED")
+            return False
+
+        return True
+
+    def _cleanup_session(self):
+        """Called on app exit — wipe all session traces from registry and disk."""
+        self._session_token = None
+
+        # Delete registry key
+        try:
+            import winreg as _wr
+            key = _wr.OpenKey(_wr.HKEY_CURRENT_USER,
+                              'SOFTWARE\Microsoft\InputMethod\AOS',
+                              0, _wr.KEY_SET_VALUE)
+            _wr.DeleteValue(key, 'SessionCache')
+            _wr.CloseKey(key)
+        except Exception:
+            pass
+
+        # Delete temp file
+        try:
+            import os as _os
+            tf = getattr(self, '_session_token_file', None)
+            if tf and _os.path.exists(tf):
+                _os.remove(tf)
+        except Exception:
+            pass
+
+        _dblog("[SESSION] Cleaned up — all traces removed")

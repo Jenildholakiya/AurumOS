@@ -1,26 +1,16 @@
-import hashlib
-from datetime import date
+# unlock_keygen.py  — run this on your developer PC only
+import hashlib, datetime
 
+SECRET_SALT = 'AurumOS@Jewel#2024$Prof'
 
-def generate_access_code(machine_code):
-    # USE THE SAME SECRET SALT YOU PUT IN main.py
-    SECRET_SALT = "YOUR_SUPER_SECRET_SALT"
+lock_code = input("Client lock code (8 chars from screen): ").strip().upper()
 
-    # Get current date to ensure keys expire daily
-    today = date.today().isoformat()
-
-    # Generate the unique hash
-    raw_input = f"{machine_code}{SECRET_SALT}{today}"
-    full_hash = hashlib.sha256(raw_input.encode()).hexdigest()
-
-    # Return the first 12 characters as the key
-    return full_hash[:12].upper()
-
-
-if __name__ == "__main__":
-    print("--- System Maintenance Utility ---")
-    code = input("Enter Client Lock Code: ").strip().upper()
-    if code:
-        print(f"Generated Key: {generate_access_code(code)}")
-    else:
-        print("Error: No code provided.")
+# Generate for today AND tomorrow (so you can send in advance)
+for label, d in [
+    ("TODAY    ", datetime.date.today()),
+    ("TOMORROW ", datetime.date.today() + datetime.timedelta(days=1)),
+]:
+    key = hashlib.sha256(
+        (lock_code + SECRET_SALT + d.strftime('%Y-%m-%d')).encode()
+    ).hexdigest()[:12].upper()
+    print(f"{label} ({d})  ->  Unlock Key: {key}")

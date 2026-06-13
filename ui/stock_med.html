@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Stock Med</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --white:#fff;--ink:#0e0c09;--ink3:#5c5a52;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.20);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#7a7268;--muted2:#9e9890;
+    --green:#15803d;--green-bg:rgba(21,128,61,0.07);--green-ln:rgba(21,128,61,0.2);
+    --red:#b91c1c;--red-bg:rgba(185,28,28,0.07);--red-ln:rgba(185,28,28,0.18);
+    --amber:#b45309;--amber-bg:rgba(180,83,9,0.07);--amber-ln:rgba(180,83,9,0.2);
+    --serif:"DM Serif Display",Georgia,serif;
+    --mono:"DM Mono",monospace;
+    --sans:"DM Sans",system-ui,sans-serif;
+    --sh:0 1px 3px rgba(14,12,9,0.07);
+    --sh2:0 8px 28px rgba(14,12,9,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+body{background:var(--cream);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── HEADER ── */
+header{height:60px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.05rem;color:var(--ink);}
+.h-brand em{color:var(--gold3);font-style:italic;}
+.h-sub{font-size:0.6rem;color:var(--muted2);margin-top:1px;}
+.btn-back{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid var(--rule);background:var(--cream2);font-size:0.7rem;color:var(--ink3);cursor:pointer;}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+/* ── PHASE STEPPER ── */
+.stepper{display:flex;align-items:center;justify-content:center;gap:0;padding:16px 28px;background:var(--white);border-bottom:1px solid var(--rule);flex-shrink:0;}
+.step{display:flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;font-size:0.68rem;color:var(--muted2);transition:all 0.2s;cursor:default;}
+.step.active{background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);}
+.step.done{color:var(--green);}
+.step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:0.6rem;flex-shrink:0;}
+.step.active .step-num{background:var(--gold3);color:#fff;border-color:var(--gold3);}
+.step.done .step-num{background:var(--green);color:#fff;border-color:var(--green);}
+.step-arrow{color:var(--rule);font-size:1rem;padding:0 4px;}
+
+/* ── SCROLL AREA ── */
+.scroll{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--cream3);border-radius:99px;}
+
+/* ── CARDS ── */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--sh);overflow:hidden;}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-family:var(--serif);font-size:0.95rem;color:var(--ink);}
+.card-title em{color:var(--gold3);font-style:italic;}
+.card-body{padding:20px;}
+
+/* ── PHASE 1: SNAPSHOT ── */
+.snap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.snap-box{border:1px solid var(--rule);border-radius:8px;padding:12px 14px;}
+.snap-box.blue{border-top:3px solid #2563eb;background:#eff6ff;}
+.snap-box.green{border-top:3px solid var(--green);background:#f0fdf4;}
+.snap-box.red{border-top:3px solid var(--red);background:#fff1f2;}
+.snap-box.gold{border-top:3px solid var(--gold);background:#fefce8;}
+.snap-lbl{font-size:0.52rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);margin-bottom:4px;}
+.snap-val{font-family:var(--mono);font-size:1.1rem;line-height:1;}
+.snap-box.blue .snap-val{color:#1d4ed8;}
+.snap-box.green .snap-val{color:var(--green);}
+.snap-box.red .snap-val{color:var(--red);}
+.snap-box.gold .snap-val{color:var(--gold3);}
+.snap-sub{font-size:0.58rem;color:var(--muted2);margin-top:3px;}
+
+/* touch breakdown table */
+.touch-table{width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:16px;}
+.touch-table th{background:var(--cream2);padding:7px 12px;text-align:left;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);border-bottom:1px solid var(--rule);}
+.touch-table th.nr{text-align:right;}
+.touch-table td{padding:8px 12px;border-bottom:1px solid var(--rule2);vertical-align:middle;}
+.touch-table td.nr{text-align:right;font-family:var(--mono);font-size:0.76rem;}
+.touch-table td.book{color:#1d4ed8;font-family:var(--mono);}
+.touch-table tr:last-child td{border-bottom:none;}
+.touch-badge{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--gold-bg);border:1px solid var(--gold-ln);font-family:var(--mono);font-size:0.8rem;color:var(--gold3);}
+.period-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:0.52rem;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);}
+.fg input[type=date]{height:32px;padding:0 10px;border:1px solid var(--rule);border-radius:6px;font-family:var(--mono);font-size:0.76rem;outline:none;background:var(--cream2);}
+.fg input[type=date]:focus{border-color:var(--gold2);}
+.btn-snap{height:32px;padding:0 16px;background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;}
+.btn-snap:hover{background:var(--gold3);}
+
+/* ── PHASE 2: PHYSICAL ENTRY ── */
+.phys-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.phys-table th{background:var(--cream2);padding:7px 12px;text-align:left;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);border-bottom:1px solid var(--rule);}
+.phys-table th.nr{text-align:right;}
+.phys-table td{padding:8px 12px;border-bottom:1px solid var(--rule2);vertical-align:middle;}
+.phys-table td.nr{text-align:right;font-family:var(--mono);font-size:0.76rem;}
+.phys-table tr:last-child td{border-bottom:none;}
+.phys-inp{height:32px;padding:0 10px;border:1px solid var(--rule);border-radius:6px;font-family:var(--mono);font-size:0.82rem;width:120px;text-align:right;outline:none;background:var(--cream2);}
+.phys-inp:focus{border-color:var(--gold2);background:var(--white);}
+.phys-inp.filled{border-color:var(--green-ln);background:var(--green-bg);}
+.helper-text{font-size:0.62rem;color:var(--muted2);margin-top:8px;}
+
+/* ── PHASE 3: VARIANCE ── */
+.var-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.var-table th{background:var(--cream2);padding:7px 12px;text-align:left;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);border-bottom:2px solid var(--rule);}
+.var-table th.nr{text-align:right;}
+.var-table td{padding:10px 12px;border-bottom:1px solid var(--rule2);vertical-align:middle;}
+.var-table td.nr{text-align:right;font-family:var(--mono);font-size:0.76rem;}
+.var-table tr:last-child td{border-bottom:none;}
+.var-table tr.tot-row td{background:var(--cream2);border-top:2px solid var(--gold-ln);}
+.badge-ok{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-ln);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.5px;}
+.badge-warn{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-ln);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.5px;}
+.badge-short{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-ln);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.5px;}
+.badge-surplus{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-ln);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.5px;}
+.var-positive{color:var(--green);}
+.var-negative{color:var(--red);}
+.var-zero{color:var(--muted2);}
+
+/* summary banner in variance */
+.var-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.vs-box{border:1px solid var(--rule);border-radius:8px;padding:12px 14px;text-align:center;}
+.vs-lbl{font-size:0.52rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);margin-bottom:4px;}
+.vs-val{font-family:var(--mono);font-size:1.15rem;line-height:1;}
+
+/* ── PHASE 4: SIGNOFF ── */
+.signoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.signoff-block{display:flex;flex-direction:column;gap:12px;}
+.fg-full{display:flex;flex-direction:column;gap:4px;width:100%;}
+.fg-full label{font-size:0.52rem;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted2);}
+.fg-full input,.fg-full textarea{padding:8px 12px;border:1px solid var(--rule);border-radius:6px;font-family:var(--sans);font-size:0.8rem;outline:none;background:var(--cream2);}
+.fg-full input:focus,.fg-full textarea:focus{border-color:var(--gold2);background:var(--white);}
+.fg-full textarea{resize:vertical;min-height:60px;}
+.warn-box{background:rgba(180,83,9,0.06);border:1px solid var(--amber-ln);border-radius:8px;padding:14px 16px;font-size:0.74rem;color:var(--amber);line-height:1.6;}
+.warn-box strong{display:block;margin-bottom:4px;font-size:0.78rem;}
+.checklist{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.check-item{display:flex;align-items:center;gap:8px;font-size:0.74rem;color:var(--ink3);}
+.check-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--gold3);cursor:pointer;}
+
+/* ── FOOTER ── */
+footer{height:64px;background:var(--white);border-top:1px solid var(--rule);padding:0 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.foot-info{font-size:0.68rem;color:var(--muted2);}
+.foot-info span{font-family:var(--mono);color:var(--ink);}
+.foot-btns{display:flex;gap:10px;}
+.btn-ghost{height:36px;padding:0 16px;border:1px solid var(--rule);background:var(--cream2);color:var(--ink3);border-radius:7px;font-size:0.74rem;cursor:pointer;}
+.btn-ghost:hover{border-color:var(--gold-ln);color:var(--gold3);}
+.btn-primary{height:36px;padding:0 20px;background:var(--ink);color:#fff;border:none;border-radius:7px;font-size:0.74rem;cursor:pointer;transition:all 0.14s;}
+.btn-primary:hover{background:var(--gold3);}
+.btn-primary:disabled{background:var(--muted2);cursor:not-allowed;}
+.btn-danger{height:36px;padding:0 20px;background:var(--red);color:#fff;border:none;border-radius:7px;font-size:0.74rem;cursor:pointer;}
+.btn-danger:hover{background:#991b1b;}
+.btn-pdf{height:36px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);border-radius:7px;font-size:0.74rem;cursor:pointer;}
+.btn-pdf:hover{background:rgba(168,125,30,0.14);}
+
+/* ── MODAL ── */
+.modal-wrap{position:fixed;inset:0;background:rgba(14,12,9,0.5);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;}
+.modal-wrap.open{display:flex;}
+.modal-box{background:var(--white);border-radius:14px;padding:32px 28px 24px;width:420px;max-width:94vw;text-align:center;box-shadow:var(--sh2);animation:popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes popIn{from{transform:scale(0.9);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-icon{font-size:2.2rem;margin-bottom:14px;}
+.modal-title{font-family:var(--serif);font-size:1.1rem;color:var(--ink);margin-bottom:8px;}
+.modal-msg{font-size:0.76rem;color:var(--muted);line-height:1.7;margin-bottom:20px;white-space:pre-line;}
+.modal-btns{display:flex;gap:10px;}
+.mbtn{flex:1;height:40px;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;transition:all 0.13s;}
+.mbtn-primary{background:var(--ink);color:#fff;}.mbtn-primary:hover{background:var(--gold3);}
+.mbtn-danger{background:var(--red);color:#fff;}.mbtn-danger:hover{background:#991b1b;}
+.mbtn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
+
+/* ── HIDDEN PHASES ── */
+.phase{display:none;}
+.phase.active{display:block;}
+
+/* loading */
+.loading{text-align:center;padding:40px;color:var(--muted2);font-size:0.8rem;}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-wrap" id="modal-wrap">
+    <div class="modal-box">
+        <div class="modal-icon"  id="m-icon"></div>
+        <div class="modal-title" id="m-title"></div>
+        <div class="modal-msg"   id="m-msg"></div>
+        <div class="modal-btns"  id="m-btns"></div>
+    </div>
+</div>
+
+<header>
+    <div>
+        <div class="h-brand">Stock <em>Med</em></div>
+        <div class="h-sub">Physical stock audit &amp; period reset</div>
+    </div>
+    <button class="btn-back" onclick="window.location.href='inventory.html'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        Inventory
+    </button>
+</header>
+
+<!-- STEPPER -->
+<div class="stepper">
+    <div class="step active" id="step1">
+        <div class="step-num">1</div>
+        <span>Snapshot</span>
+    </div>
+    <span class="step-arrow">&#8250;</span>
+    <div class="step" id="step2">
+        <div class="step-num">2</div>
+        <span>Physical Count</span>
+    </div>
+    <span class="step-arrow">&#8250;</span>
+    <div class="step" id="step3">
+        <div class="step-num">3</div>
+        <span>Variance</span>
+    </div>
+    <span class="step-arrow">&#8250;</span>
+    <div class="step" id="step4">
+        <div class="step-num">4</div>
+        <span>Sign Off</span>
+    </div>
+</div>
+
+<div class="scroll">
+
+    <!-- ══ PHASE 1: SNAPSHOT ══ -->
+    <div class="phase active" id="phase1">
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title">Book <em>Snapshot</em></div>
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:2px;">System records as of today — what the books say you should have</div>
+                </div>
+                <div class="period-row">
+                    <div class="fg">
+                        <label>Period From</label>
+                        <input type="date" id="period-from">
+                    </div>
+                    <div class="fg">
+                        <label>Period To</label>
+                        <input type="date" id="period-to">
+                    </div>
+                    <button class="btn-snap" onclick="loadSnapshot()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Calculate
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Summary boxes -->
+                <div class="snap-grid" id="snap-summary">
+                    <div class="snap-box blue"><div class="snap-lbl">Opening Stock</div><div class="snap-val" id="ss-opn">-</div><div class="snap-sub">Period start balance</div></div>
+                    <div class="snap-box green"><div class="snap-lbl">Total Inward</div><div class="snap-val" id="ss-in">-</div><div class="snap-sub">Katti received</div></div>
+                    <div class="snap-box red"><div class="snap-lbl">Total Outward</div><div class="snap-val" id="ss-out">-</div><div class="snap-sub">Sales issued</div></div>
+                    <div class="snap-box gold"><div class="snap-lbl">Book Closing</div><div class="snap-val" id="ss-cls">-</div><div class="snap-sub">What you should have</div></div>
+                </div>
+
+                <!-- Touch-wise breakdown -->
+                <table class="touch-table" id="snap-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Touch</th>
+                            <th class="nr">Opening</th>
+                            <th class="nr">Inward</th>
+                            <th class="nr">Outward</th>
+                            <th class="nr">Book Closing</th>
+                            <th class="nr">Fine (Book)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="snap-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ PHASE 2: PHYSICAL ENTRY ══ -->
+    <div class="phase" id="phase2">
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title">Physical <em>Count</em></div>
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:2px;">Weigh each touch separately and enter the actual weight on scale</div>
+                </div>
+                <div style="font-size:0.68rem;color:var(--muted2);font-family:var(--mono);" id="phys-date-lbl"></div>
+            </div>
+            <div class="card-body">
+                <table class="phys-table">
+                    <thead>
+                        <tr>
+                            <th style="width:80px;">Touch</th>
+                            <th class="nr" style="width:130px;">Book Weight</th>
+                            <th style="padding-left:20px;">Physical Weight (Enter on Scale)</th>
+                            <th class="nr" style="width:80px;">Packets</th>
+                        </tr>
+                    </thead>
+                    <tbody id="phys-tbody"></tbody>
+                </table>
+                <div class="helper-text">&#9432; Enter the weight you physically weighed for each touch. Leave blank if no stock for that touch.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ PHASE 3: VARIANCE ══ -->
+    <div class="phase" id="phase3">
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Variance <em>Report</em></div>
+            </div>
+            <div class="card-body">
+                <!-- Variance summary -->
+                <div class="var-summary">
+                    <div class="vs-box">
+                        <div class="vs-lbl">Book Stock</div>
+                        <div class="vs-val" id="vr-book" style="color:#1d4ed8;">-</div>
+                    </div>
+                    <div class="vs-box">
+                        <div class="vs-lbl">Physical Stock</div>
+                        <div class="vs-val" id="vr-phys" style="color:var(--green);">-</div>
+                    </div>
+                    <div class="vs-box" id="vr-net-box">
+                        <div class="vs-lbl">Net Variance</div>
+                        <div class="vs-val" id="vr-net">-</div>
+                    </div>
+                </div>
+
+                <!-- Touch-wise variance -->
+                <table class="var-table">
+                    <thead>
+                        <tr>
+                            <th>Touch</th>
+                            <th class="nr">Book Wt</th>
+                            <th class="nr">Physical Wt</th>
+                            <th class="nr">Variance</th>
+                            <th class="nr">Variance %</th>
+                            <th style="text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="var-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ PHASE 4: SIGN OFF ══ -->
+    <div class="phase" id="phase4">
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Sign <em>Off</em></div>
+            </div>
+            <div class="card-body">
+                <div class="signoff-grid">
+                    <div class="signoff-block">
+                        <div class="fg-full">
+                            <label>Signed By</label>
+                            <input type="text" id="signed-by" placeholder="Owner / Manager name">
+                        </div>
+                        <div class="fg-full">
+                            <label>Notes / Remarks</label>
+                            <textarea id="signoff-notes" placeholder="Any remarks about variance, damaged items, adjustments..."></textarea>
+                        </div>
+                        <div class="fg-full">
+                            <label>Variance Accepted As</label>
+                            <select id="var-reason" style="padding:8px 12px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;outline:none;background:var(--cream2);">
+                                <option value="normal">Normal melting / handling loss</option>
+                                <option value="error">Data entry correction</option>
+                                <option value="damaged">Damaged / broken items</option>
+                                <option value="theft">Under investigation</option>
+                                <option value="surplus">Surplus found</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="signoff-block">
+                        <div class="warn-box">
+                            <strong>&#9888; This action cannot be undone</strong>
+                            After sign-off, the system will:
+                            1. Export a PDF audit report
+                            2. Set physical count as new Opening Stock
+                            3. Archive all current sales &amp; katti records
+                            4. Reset the period — all stock &amp; bills go to zero
+                            5. Start fresh for the next period
+                        </div>
+                        <div class="checklist">
+                            <label class="check-item">
+                                <input type="checkbox" id="chk1">
+                                I have physically verified all stock items
+                            </label>
+                            <label class="check-item">
+                                <input type="checkbox" id="chk2">
+                                The physical weights entered are accurate
+                            </label>
+                            <label class="check-item">
+                                <input type="checkbox" id="chk3">
+                                I understand the reset is permanent and irreversible
+                            </label>
+                            <label class="check-item">
+                                <input type="checkbox" id="chk4">
+                                PDF report will be exported before reset
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /scroll -->
+
+<footer>
+    <div class="foot-info" id="foot-info">
+        Phase <span id="foot-phase">1</span> of 4 &nbsp;|&nbsp; Stock Med &nbsp;|&nbsp; <span id="foot-date"></span>
+    </div>
+    <div class="foot-btns">
+        <button class="btn-ghost"   id="btn-prev" onclick="prevPhase()" style="display:none;">&#8592; Back</button>
+        <button class="btn-pdf"     id="btn-pdf"  onclick="exportPDF()" style="display:none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export PDF
+        </button>
+        <button class="btn-primary" id="btn-next" onclick="nextPhase()" disabled>
+            Calculate &rarr;
+        </button>
+        <button class="btn-danger"  id="btn-signoff" onclick="confirmSignOff()" style="display:none;">
+            &#9989; Sign Off &amp; Reset Period
+        </button>
+    </div>
+</footer>
+
+<script>
+'use strict';
+
+var PHASE       = 1;
+var snapData    = [];   // [{touch, opn, inW, outW, book}]
+var physData    = {};   // {touch: {wt, pcs}}
+var varData     = [];   // [{touch, book, phys, var, varPct}]
+var TOL         = 0.5;  // variance tolerance %
+
+function f3(v){ return parseFloat(v||0).toFixed(3); }
+function hesc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── INIT ─────────────────────────────────────────────────────
+window.onload = function(){
+    var now = new Date();
+    document.getElementById('period-to').value   = now.toISOString().split('T')[0];
+    document.getElementById('foot-date').innerText = now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    // Set period-from to 1st of current month
+    var firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('period-from').value = firstOfMonth;
+    var t = setInterval(function(){
+        if(window.pywebview&&window.pywebview.api){ clearInterval(t); }
+    }, 100);
+};
+
+// ── MODAL ────────────────────────────────────────────────────
+function showModal(icon, title, msg, btns){
+    document.getElementById('m-icon').innerHTML  = icon;
+    document.getElementById('m-title').innerText = title;
+    document.getElementById('m-msg').innerText   = msg;
+    var bc = document.getElementById('m-btns');
+    bc.innerHTML = '';
+    btns.forEach(function(b){
+        var el = document.createElement('button');
+        el.className  = 'mbtn ' + b.cls;
+        el.innerText  = b.label;
+        el.onclick    = function(){ closeModal(); if(b.fn) b.fn(); };
+        bc.appendChild(el);
+    });
+    document.getElementById('modal-wrap').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-wrap').classList.remove('open'); }
+
+// ── STEPPER ──────────────────────────────────────────────────
+function updateStepper(){
+    for(var i=1;i<=4;i++){
+        var s = document.getElementById('step'+i);
+        s.classList.remove('active','done');
+        if(i < PHASE)       s.classList.add('done');
+        else if(i === PHASE) s.classList.add('active');
+    }
+    document.getElementById('foot-phase').innerText = PHASE;
+    document.getElementById('btn-prev').style.display = PHASE > 1 ? '' : 'none';
+    document.getElementById('btn-next').style.display = PHASE < 4 ? '' : 'none';
+    document.getElementById('btn-signoff').style.display = PHASE === 4 ? '' : 'none';
+    document.getElementById('btn-pdf').style.display    = PHASE >= 3 ? '' : 'none';
+    document.getElementById('btn-next').disabled = true;
+}
+
+function showPhase(n){
+    for(var i=1;i<=4;i++) document.getElementById('phase'+i).classList.remove('active');
+    document.getElementById('phase'+n).classList.add('active');
+    PHASE = n;
+    updateStepper();
+}
+
+function nextPhase(){
+    if(PHASE===1){ buildPhysical(); showPhase(2); }
+    else if(PHASE===2){ buildVariance(); showPhase(3); }
+    else if(PHASE===3){ showPhase(4); }
+}
+
+function prevPhase(){
+    if(PHASE > 1) showPhase(PHASE-1);
+    updateBtnState();
+}
+
+function updateBtnState(){
+    var btn = document.getElementById('btn-next');
+    if(PHASE===1) btn.disabled = snapData.length === 0;
+    else if(PHASE===2){
+        var anyFilled = Object.keys(physData).some(function(k){ return physData[k].wt > 0; });
+        btn.disabled = !anyFilled;
+    }
+    else if(PHASE===3) btn.disabled = false;
+    else if(PHASE===4){
+        var chks = ['chk1','chk2','chk3','chk4'];
+        btn.disabled = !chks.every(function(id){ return document.getElementById(id).checked; });
+    }
+}
+
+// ── PHASE 1: SNAPSHOT ────────────────────────────────────────
+function loadSnapshot(){
+    var from = document.getElementById('period-from').value;
+    var to   = document.getElementById('period-to').value;
+    if(!from||!to){ showModal('!','Missing Dates','Please select both period dates.',[{label:'OK',cls:'mbtn-primary'}]); return; }
+    if(!window.pywebview||!window.pywebview.api){ showModal('!','Not Ready','Bridge not ready.',[{label:'OK',cls:'mbtn-primary'}]); return; }
+
+    document.getElementById('snap-tbody').innerHTML = '<tr><td colspan="6" class="loading">Loading book data...</td></tr>';
+    document.getElementById('snap-table').style.display = 'table';
+
+    window.pywebview.api.get_touch_ledger_details('ALL','weight',from,to)
+    .then(function(txns){
+        txns = txns || [];
+        // Group by touch
+        var byTouch = {};
+        txns.forEach(function(r){
+            var tv = parseFloat(r.touch_val||0);
+            if(!tv) return;
+            var k = tv.toFixed(2);
+            if(!byTouch[k]) byTouch[k] = {tv:tv, opn:0, inW:0, outW:0};
+            var w = parseFloat(r.gr_wt||0);
+            if(r.txn_type==='OPENING')     byTouch[k].opn  += w;
+            else if(r.txn_type==='IN')     byTouch[k].inW  += w;
+            else if(r.txn_type==='OUT')    byTouch[k].outW += w;
+        });
+
+        snapData = Object.values(byTouch).filter(function(r){ return r.opn>0||r.inW>0; })
+            .sort(function(a,b){ return a.tv-b.tv; });
+        snapData.forEach(function(r){ r.book = Math.max(0, r.opn+r.inW-r.outW); });
+
+        var totOpn=0,totIn=0,totOut=0,totBook=0;
+        snapData.forEach(function(r){ totOpn+=r.opn; totIn+=r.inW; totOut+=r.outW; totBook+=r.book; });
+
+        document.getElementById('ss-opn').innerText  = f3(totOpn)+' g';
+        document.getElementById('ss-in').innerText   = f3(totIn)+' g';
+        document.getElementById('ss-out').innerText  = f3(totOut)+' g';
+        document.getElementById('ss-cls').innerText  = f3(totBook)+' g';
+
+        var rows = snapData.map(function(r){
+            return '<tr>'
+                +'<td><span class="touch-badge">'+r.tv+'%</span></td>'
+                +'<td class="nr" style="color:#1d4ed8;">'+f3(r.opn)+'</td>'
+                +'<td class="nr" style="color:var(--green);">'+f3(r.inW)+'</td>'
+                +'<td class="nr" style="color:var(--red);">'+f3(r.outW)+'</td>'
+                +'<td class="nr book">'+f3(r.book)+'</td>'
+                +'<td class="nr" style="color:var(--muted);">'+f3(r.book*(r.tv/100))+'</td>'
+                +'</tr>';
+        });
+        if(!rows.length) rows = ['<tr><td colspan="6" class="loading">No stock data found for this period.</td></tr>'];
+        document.getElementById('snap-tbody').innerHTML = rows.join('');
+        document.getElementById('btn-next').disabled = snapData.length === 0;
+    }).catch(function(e){
+        showModal('!','Error','Failed to load data: '+e,[{label:'OK',cls:'mbtn-primary'}]);
+    });
+}
+
+// ── PHASE 2: PHYSICAL ENTRY ──────────────────────────────────
+function buildPhysical(){
+    physData = {};
+    var today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('phys-date-lbl').innerText = 'Physical count date: '+today;
+
+    var rows = snapData.map(function(r,i){
+        physData[r.tv] = {wt:0, pcs:0};
+        return '<tr>'
+            +'<td><span class="touch-badge">'+r.tv+'%</span></td>'
+            +'<td class="nr" style="color:#1d4ed8;font-family:var(--mono);">'+f3(r.book)+' g</td>'
+            +'<td style="padding-left:20px;">'
+                +'<input class="phys-inp" type="number" step="0.001" min="0" '
+                +'id="phys-wt-'+r.tv+'" placeholder="0.000" '
+                +'oninput="onPhysInput('+r.tv+')" '
+                +'onkeydown="if(event.key===\'Enter\'){event.preventDefault();focusNextPhys('+i+');}">'
+                +'<span style="font-size:0.7rem;color:var(--muted2);margin-left:6px;">g</span>'
+            +'</td>'
+            +'<td class="nr">'
+                +'<input class="phys-inp" type="number" min="0" '
+                +'id="phys-pcs-'+r.tv+'" placeholder="0" '
+                +'style="width:72px;text-align:center;">'
+            +'</td>'
+            +'</tr>';
+    });
+
+    document.getElementById('phys-tbody').innerHTML = rows.join('');
+    // Focus first input
+    if(snapData.length){
+        var first = document.getElementById('phys-wt-'+snapData[0].tv);
+        if(first) setTimeout(function(){ first.focus(); }, 100);
+    }
+}
+
+function focusNextPhys(idx){
+    if(idx+1 < snapData.length){
+        var next = document.getElementById('phys-wt-'+snapData[idx+1].tv);
+        if(next) next.focus();
+    }
+}
+
+function onPhysInput(tv){
+    var el = document.getElementById('phys-wt-'+tv);
+    var wt = parseFloat(el.value)||0;
+    physData[tv] = physData[tv] || {};
+    physData[tv].wt = wt;
+    el.classList.toggle('filled', wt > 0);
+    updateBtnState();
+}
+
+// ── PHASE 3: VARIANCE ────────────────────────────────────────
+function buildVariance(){
+    varData = [];
+    var totBook=0, totPhys=0;
+
+    snapData.forEach(function(r){
+        var pd   = physData[r.tv] || {wt:0};
+        var phys = parseFloat(document.getElementById('phys-wt-'+r.tv).value)||0;
+        var pcs  = parseInt((document.getElementById('phys-pcs-'+r.tv)||{}).value)||0;
+        var diff = phys - r.book;
+        var pct  = r.book > 0 ? (diff/r.book)*100 : 0;
+        varData.push({tv:r.tv, book:r.book, phys:phys, diff:diff, pct:pct, pcs:pcs});
+        totBook += r.book;
+        totPhys += phys;
+    });
+
+    var totDiff = totPhys - totBook;
+    var totPct  = totBook > 0 ? (totDiff/totBook)*100 : 0;
+
+    document.getElementById('vr-book').innerText = f3(totBook)+' g';
+    document.getElementById('vr-phys').innerText = f3(totPhys)+' g';
+    var netEl  = document.getElementById('vr-net');
+    var netBox = document.getElementById('vr-net-box');
+    netEl.innerText = (totDiff>=0?'+':'')+f3(totDiff)+' g ('+totPct.toFixed(2)+'%)';
+    netEl.className = 'vs-val ' + (totDiff>0?'var-positive':totDiff<0?'var-negative':'var-zero');
+    netBox.style.borderTopColor = totDiff>0?'var(--green)':totDiff<0?'var(--red)':'var(--muted2)';
+    netBox.style.background     = totDiff>0?'var(--green-bg)':totDiff<0?'var(--red-bg)':'var(--cream2)';
+
+    var rows = varData.map(function(r){
+        var badge, diffCls;
+        var absPct = Math.abs(r.pct);
+        if(r.phys === 0 && r.book === 0){ badge='<span class="badge-ok">No Stock</span>'; diffCls='var-zero'; }
+        else if(absPct <= TOL){ badge='<span class="badge-ok">OK &#10003;</span>'; diffCls='var-zero'; }
+        else if(r.diff > 0){   badge='<span class="badge-surplus">Surplus +</span>'; diffCls='var-positive'; }
+        else if(absPct <= 2){  badge='<span class="badge-warn">Minor &#9651;</span>'; diffCls='var-negative'; }
+        else{                  badge='<span class="badge-short">Shortage &#9660;</span>'; diffCls='var-negative'; }
+
+        return '<tr>'
+            +'<td><span class="touch-badge">'+r.tv+'%</span></td>'
+            +'<td class="nr" style="color:#1d4ed8;">'+f3(r.book)+'</td>'
+            +'<td class="nr" style="color:var(--green);">'+f3(r.phys)+'</td>'
+            +'<td class="nr '+diffCls+'">'+(r.diff>=0?'+':'')+f3(r.diff)+'</td>'
+            +'<td class="nr '+diffCls+'">'+(r.pct>=0?'+':'')+r.pct.toFixed(2)+'%</td>'
+            +'<td style="text-align:center;">'+badge+'</td>'
+            +'</tr>';
+    });
+
+    // Totals row
+    var totBadge = Math.abs(totPct)<=TOL?'<span class="badge-ok">Balanced &#10003;</span>':totDiff>0?'<span class="badge-surplus">Surplus</span>':'<span class="badge-short">Shortage</span>';
+    rows.push('<tr class="tot-row">'
+        +'<td><strong>TOTAL</strong></td>'
+        +'<td class="nr" style="color:#1d4ed8;">'+f3(totBook)+'</td>'
+        +'<td class="nr" style="color:var(--green);">'+f3(totPhys)+'</td>'
+        +'<td class="nr '+(totDiff>=0?'var-positive':'var-negative')+'">'+(totDiff>=0?'+':'')+f3(totDiff)+'</td>'
+        +'<td class="nr '+(totPct>=0?'var-positive':'var-negative')+'">'+(totPct>=0?'+':'')+totPct.toFixed(2)+'%</td>'
+        +'<td style="text-align:center;">'+totBadge+'</td>'
+        +'</tr>');
+
+    document.getElementById('var-tbody').innerHTML = rows.join('');
+    document.getElementById('btn-next').disabled = false;
+
+    // Add checklist listeners in phase 4
+    ['chk1','chk2','chk3','chk4'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.addEventListener('change', updateBtnState);
+    });
+}
+
+// ── PDF EXPORT ───────────────────────────────────────────────
+function exportPDF(){
+    var from = document.getElementById('period-from').value || 'N/A';
+    var to   = document.getElementById('period-to').value   || 'N/A';
+    var now  = new Date();
+    var dtStr= now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    var tmStr= now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    var signedBy = document.getElementById('signed-by').value || '—';
+    var notes    = document.getElementById('signoff-notes').value || '—';
+
+    // Book totals
+    var totBook=0, totPhys=0;
+    varData.forEach(function(r){ totBook+=r.book; totPhys+=r.phys; });
+    var totDiff = totPhys - totBook;
+    var totPct  = totBook>0?(totDiff/totBook)*100:0;
+
+    var B = '1px solid rgba(14,12,9,0.08)';
+
+    // Variance rows
+    var varRows = varData.map(function(r,i){
+        var bg = i%2===0?'#fff':'#faf8f3';
+        var diffColor = r.diff>0?'#15803d':r.diff<0?'#b91c1c':'#9e9890';
+        var status = Math.abs(r.pct)<=TOL?'OK':r.diff>0?'Surplus':Math.abs(r.pct)<=2?'Minor':'Shortage';
+        var stColor = Math.abs(r.pct)<=TOL?'#15803d':r.diff>0?'#15803d':'#b91c1c';
+        return '<tr style="background:'+bg+';">'
+            +'<td style="padding:5px 8px;border:'+B+';"><span style="padding:2px 7px;border-radius:3px;background:rgba(168,125,30,0.09);border:0.5px solid rgba(168,125,30,0.25);font-family:monospace;font-size:7.5pt;color:#8a6c0a;">'+r.tv+'%</span></td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#1d4ed8;background:#eff6ff;border:'+B+';">'+f3(r.book)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#15803d;background:#f0fdf4;border:'+B+';">'+f3(r.phys)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:'+diffColor+';border:'+B+';">'+(r.diff>=0?'+':'')+f3(r.diff)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:'+diffColor+';border:'+B+';">'+(r.pct>=0?'+':'')+r.pct.toFixed(2)+'%</td>'
+            +'<td style="padding:5px 8px;text-align:center;border:'+B+';font-size:6.5pt;font-weight:600;color:'+stColor+';">'+status+'</td>'
+            +'</tr>';
+    });
+    // Totals
+    varRows.push('<tr style="background:#faf8f3;border-top:2px solid rgba(168,125,30,0.3);">'
+        +'<td style="padding:5px 8px;font-size:7.5pt;color:#8a6c0a;border:'+B+';">TOTAL</td>'
+        +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:8pt;color:#1d4ed8;background:#eff6ff;border:'+B+';">'+f3(totBook)+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:8pt;color:#15803d;background:#f0fdf4;border:'+B+';">'+f3(totPhys)+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:8pt;color:'+(totDiff>=0?'#15803d':'#b91c1c')+';border:'+B+';">'+(totDiff>=0?'+':'')+f3(totDiff)+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:8pt;color:'+(totPct>=0?'#15803d':'#b91c1c')+';border:'+B+';">'+(totPct>=0?'+':'')+totPct.toFixed(2)+'%</td>'
+        +'<td style="padding:5px 8px;text-align:center;border:'+B+';font-size:6.5pt;font-weight:600;color:'+(Math.abs(totPct)<=TOL?'#15803d':'#b91c1c')+';border:'+B+';">'+(Math.abs(totPct)<=TOL?'BALANCED':totDiff>0?'SURPLUS':'SHORTAGE')+'</td>'
+        +'</tr>');
+
+    // Snapshot rows
+    var snapRows = snapData.map(function(r,i){
+        var bg = i%2===0?'#fff':'#faf8f3';
+        return '<tr style="background:'+bg+';">'
+            +'<td style="padding:5px 8px;border:'+B+';"><span style="padding:2px 7px;border-radius:3px;background:rgba(168,125,30,0.09);border:0.5px solid rgba(168,125,30,0.25);font-family:monospace;font-size:7.5pt;color:#8a6c0a;">'+r.tv+'%</span></td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#1d4ed8;background:#eff6ff;border:'+B+';">'+f3(r.opn)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#15803d;background:#f0fdf4;border:'+B+';">'+f3(r.inW)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#b91c1c;background:#fff1f2;border:'+B+';">'+f3(r.outW)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:8pt;color:#8a6c0a;background:#fefce8;border:'+B+';">'+f3(r.book)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#7a7268;border:'+B+';">'+f3(r.book*(r.tv/100))+'</td>'
+            +'</tr>';
+    });
+
+    var netColor = totDiff>=0?'#15803d':'#b91c1c';
+    var netStatus= Math.abs(totPct)<=TOL?'BALANCED &#10003;':totDiff>0?'SURPLUS +':'SHORTAGE -';
+
+    var html = '<!DOCTYPE html><html><head>'
+        +'<meta charset="UTF-8"><title>AurumOS Stock Med Report</title>'
+        +'<style>'
+        +'@page{size:A4 portrait;margin:0;}'
+        +'*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;}'
+        +'html,body{font-family:Arial,Helvetica,sans-serif;color:#0e0c09;background:#fff;}'
+        +'#page{width:210mm;display:flex;flex-direction:column;margin:0 auto;position:relative;}'
+        +'thead{display:table-header-group;} tr{page-break-inside:avoid;} table{page-break-inside:auto;}'
+        +'.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-family:Georgia,serif;font-size:72pt;color:rgba(168,125,30,0.05);white-space:nowrap;letter-spacing:4px;user-select:none;pointer-events:none;z-index:0;}'
+        +'.wm em{font-style:italic;}'
+        +'#content{padding:8mm 10mm 5mm;position:relative;z-index:1;}'
+        +'.top-bar{height:6px;background:linear-gradient(90deg,#8a6c0a,#a87d1e,#c9a227,#a87d1e,#8a6c0a);}'
+        +'.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:5mm 0 4mm;border-bottom:1.5px solid rgba(168,125,30,0.22);margin-bottom:5mm;}'
+        +'.brand{font-family:Georgia,serif;font-size:20pt;color:#0e0c09;line-height:1;}'
+        +'.brand em{color:#8a6c0a;font-style:italic;}'
+        +'.brand-sub{font-size:5.5pt;color:#9e9890;text-transform:uppercase;letter-spacing:2px;margin-top:3px;}'
+        +'.brand-acc{display:flex;align-items:center;gap:5px;margin-top:5px;}'
+        +'.brand-dash{height:2px;width:16px;background:linear-gradient(90deg,#a87d1e,#c9a227);border-radius:99px;}'
+        +'.brand-lbl{font-size:5.5pt;color:#a87d1e;text-transform:uppercase;letter-spacing:0.8px;}'
+        +'.rpt-r{text-align:right;}'
+        +'.rpt-title{font-family:Georgia,serif;font-size:13pt;color:#0e0c09;}'
+        +'.rpt-title em{color:#8a6c0a;font-style:italic;}'
+        +'.meta{font-size:6.5pt;color:#7a7268;margin-top:3px;line-height:1.6;}'
+        +'.badge-rpt{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.08);border:1px solid rgba(168,125,30,0.2);font-size:6pt;color:#8a6c0a;font-family:monospace;}'
+        +'.sec-title{font-family:Georgia,serif;font-size:10pt;color:#0e0c09;margin-bottom:6px;margin-top:5mm;}'
+        +'.sec-title em{color:#8a6c0a;font-style:italic;}'
+        +'.sums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:5mm;}'
+        +'.sb{border:1px solid rgba(14,12,9,0.1);border-radius:5px;padding:6px 9px;}'
+        +'.sb.b{border-top:3px solid #2563eb;background:#eff6ff;}'
+        +'.sb.g{border-top:3px solid #15803d;background:#f0fdf4;}'
+        +'.sb.r{border-top:3px solid #b91c1c;background:#fff1f2;}'
+        +'.sb.o{border-top:3px solid #a87d1e;background:#fefce8;}'
+        +'.sl{font-size:5.5pt;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:3px;}'
+        +'.sb.b .sl{color:#3b82f6;}.sb.g .sl{color:#22c55e;}.sb.r .sl{color:#f87171;}.sb.o .sl{color:#c9a227;}'
+        +'.sv{font-family:monospace;font-size:11pt;line-height:1;}'
+        +'.sb.b .sv{color:#1d4ed8;}.sb.g .sv{color:#15803d;}.sb.r .sv{color:#b91c1c;}.sb.o .sv{color:#8a6c0a;}'
+        +'.net-banner{padding:8px 14px;border-radius:6px;margin-bottom:5mm;display:flex;justify-content:space-between;align-items:center;}'
+        +'.tbl{width:100%;border-collapse:collapse;border:1px solid rgba(14,12,9,0.1);}'
+        +'.tbl .hr th{padding:5px 7px;font-size:6pt;text-transform:uppercase;letter-spacing:0.5px;text-align:right;border:1px solid rgba(14,12,9,0.08);background:#faf8f3;color:#7a7268;}'
+        +'.tbl .hr th.tl{text-align:left;}'
+        +'.tbl td{vertical-align:middle;}'
+        +'.signbox{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:6mm;margin-bottom:4mm;}'
+        +'.sig{text-align:center;padding:0 10px;}'
+        +'.sigline{border-top:1px solid rgba(14,12,9,0.2);padding-top:4px;font-size:6pt;color:#7a7268;}'
+        +'.fbar{padding:3mm 0 0;border-top:1px solid rgba(168,125,30,0.18);display:flex;justify-content:space-between;align-items:flex-end;}'
+        +'.ftxt{font-size:5.5pt;color:#9e9890;line-height:1.8;}'
+        +'.fbrand{font-family:Georgia,serif;font-size:9pt;color:#0e0c09;text-align:right;}'
+        +'.fbrand em{color:#8a6c0a;font-style:italic;}'
+        +'.fbsub{font-size:5pt;color:#9e9890;letter-spacing:1px;text-transform:uppercase;text-align:right;margin-top:1px;}'
+        +'.bot-bar{height:5px;background:linear-gradient(90deg,#8a6c0a,#a87d1e,#c9a227,#a87d1e,#8a6c0a);margin-top:4mm;}'
+        +'</style></head><body>'
+        +'<div id="page">'
+        +'<div class="wm">Aurum<em>OS</em></div>'
+        +'<div class="top-bar"></div>'
+        +'<div id="content">'
+
+        // Header
+        +'<div class="hdr">'
+            +'<div>'
+                +'<div class="brand">Aurum<em>OS</em></div>'
+                +'<div class="brand-sub">Jewellery Business Management</div>'
+                +'<div class="brand-acc"><div class="brand-dash"></div><span class="brand-lbl">Stock Audit Report</span></div>'
+            +'</div>'
+            +'<div class="rpt-r">'
+                +'<div class="rpt-title">Stock Med <em>Audit</em></div>'
+                +'<div class="meta">Period: '+hesc(from)+' to '+hesc(to)+'<br>Printed: '+dtStr+' at '+tmStr+'</div>'
+                +'<div class="badge-rpt">Variance Tolerance: ±'+TOL+'%</div>'
+            +'</div>'
+        +'</div>'
+
+        // Summary boxes
+        +'<div class="sums">'
+            +'<div class="sb b"><div class="sl">Book Stock</div><div class="sv">'+f3(totBook)+' g</div></div>'
+            +'<div class="sb g"><div class="sl">Physical Count</div><div class="sv">'+f3(totPhys)+' g</div></div>'
+            +'<div class="sb '+(totDiff>=0?'g':'r')+'"><div class="sl">Net Variance</div><div class="sv">'+(totDiff>=0?'+':'')+f3(totDiff)+' g</div></div>'
+            +'<div class="sb o"><div class="sl">Variance %</div><div class="sv">'+(totPct>=0?'+':'')+totPct.toFixed(2)+'%</div></div>'
+        +'</div>'
+
+        // Net verdict banner
+        +'<div class="net-banner" style="background:'+(Math.abs(totPct)<=TOL?'#f0fdf4':totDiff>0?'#f0fdf4':'#fff1f2')+';border:1px solid '+(Math.abs(totPct)<=TOL?'rgba(21,128,61,0.2)':totDiff>0?'rgba(21,128,61,0.2)':'rgba(185,28,28,0.2)')+';">'
+            +'<span style="font-family:Georgia,serif;font-size:10pt;color:'+netColor+';">'+netStatus+'</span>'
+            +'<span style="font-size:7pt;color:#7a7268;">Signed by: '+hesc(signedBy)+'</span>'
+        +'</div>'
+
+        // Section: Book Stock
+        +'<div class="sec-title">Book <em>Stock Breakdown</em></div>'
+        +'<table class="tbl"><thead>'
+        +'<tr class="hr"><th class="tl">Touch</th><th>Opening</th><th>Inward</th><th>Outward</th><th>Book Closing</th><th>Fine</th></tr>'
+        +'</thead><tbody>'+snapRows.join('')+'</tbody></table>'
+
+        // Section: Variance
+        +'<div class="sec-title" style="margin-top:5mm;">Variance <em>Analysis</em></div>'
+        +'<table class="tbl"><thead>'
+        +'<tr class="hr"><th class="tl">Touch</th><th>Book Wt</th><th>Physical Wt</th><th>Variance</th><th>Variance %</th><th style="text-align:center;">Status</th></tr>'
+        +'</thead><tbody>'+varRows.join('')+'</tbody></table>'
+
+        // Notes
+        +(notes&&notes!=='—'?'<div style="margin-top:5mm;padding:8px 12px;background:#faf8f3;border-radius:6px;border:1px solid rgba(14,12,9,0.08);font-size:7pt;color:#5c5a52;line-height:1.7;"><strong style="font-size:6pt;text-transform:uppercase;letter-spacing:0.8px;color:#9e9890;">Remarks: </strong>'+hesc(notes)+'</div>':'')
+
+        // Signatures
+        +'<div class="signbox">'
+            +'<div class="sig"><div class="sigline">Prepared By</div></div>'
+            +'<div class="sig"><div class="sigline">'+hesc(signedBy||'Authorised Signatory')+'</div></div>'
+            +'<div class="sig"><div class="sigline">Date: '+dtStr+'</div></div>'
+        +'</div>'
+
+        +'<div class="fbar">'
+            +'<div class="ftxt"><div>System-generated Stock Med report from AurumOS Jewellery Management.</div><div>Generated: '+dtStr+' at '+tmStr+'. This document serves as the official stock audit record.</div></div>'
+            +'<div><div class="fbrand">Aurum<em>OS</em></div><div class="fbsub">Jewellery Business Management</div></div>'
+        +'</div>'
+        +'</div>'
+        +'<div class="bot-bar"></div>'
+        +'</div></body></html>';
+
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_print_window){
+        window.pywebview.api.open_print_window(html).then(function(r){
+            if(r&&r.status!=='success') showModal('!','Error',r.message||'Unknown',[{label:'OK',cls:'mbtn-primary'}]);
+        }).catch(function(e){ showModal('!','Error',String(e),[{label:'OK',cls:'mbtn-primary'}]); });
+    } else {
+        var w=window.open('','_blank','width=900,height=750');
+        w.document.open(); w.document.write(html); w.document.close();
+    }
+}
+
+// ── SIGN OFF ─────────────────────────────────────────────────
+function confirmSignOff(){
+    var signedBy = document.getElementById('signed-by').value.trim();
+    if(!signedBy){ showModal('!','Required','Please enter the authorised signatory name.',[{label:'OK',cls:'mbtn-primary'}]); return; }
+    var from = document.getElementById('period-from').value;
+    var to   = document.getElementById('period-to').value;
+    showModal('&#9888;','Final Confirmation',
+        'This will PERMANENTLY:\n\n1. Set physical count as new Opening Stock\n2. Archive all sales & katti records\n3. Reset stock to zero for next period\n\nPeriod: '+from+' to '+to+'\nSigned by: '+signedBy+'\n\nThis cannot be undone. Are you sure?',
+        [
+            {label:'Yes, Sign Off & Reset', cls:'mbtn-danger', fn: doSignOff},
+            {label:'Cancel', cls:'mbtn-ghost'}
+        ]
+    );
+}
+
+function doSignOff(){
+    var signedBy = document.getElementById('signed-by').value.trim();
+    var notes    = document.getElementById('signoff-notes').value;
+    var reason   = document.getElementById('var-reason').value;
+
+    // First export PDF
+    exportPDF();
+
+    // Build new opening data from physical count
+    var newOpening = varData.map(function(r){
+        return { touch: r.tv, physical_wt: r.phys };
+    }).filter(function(r){ return r.physical_wt > 0; });
+
+    if(!window.pywebview||!window.pywebview.api){ showModal('!','Error','Bridge not ready.',[{label:'OK',cls:'mbtn-primary'}]); return; }
+
+    var btn = document.getElementById('btn-signoff');
+    btn.disabled = true; btn.innerText = 'Processing...';
+
+    window.pywebview.api.do_stock_med({
+        signed_by:   signedBy,
+        notes:       notes,
+        reason:      reason,
+        period_from: document.getElementById('period-from').value,
+        period_to:   document.getElementById('period-to').value,
+        new_opening: newOpening
+    }).then(function(res){
+        btn.disabled = false; btn.innerText = 'Sign Off & Reset Period';
+        if(res&&res.status==='success'){
+            showModal('&#10003;','Stock Med Complete',
+                'Period closed successfully.\nNew opening stock set from physical count.\nAll records archived.\n\nSystem ready for new period.',
+                [{label:'Go to Inventory', cls:'mbtn-primary', fn:function(){ window.location.href='inventory.html'; }}]
+            );
+        } else {
+            showModal('!','Error',(res&&res.message)||'Sign-off failed.',[{label:'OK',cls:'mbtn-primary'}]);
+        }
+    }).catch(function(e){
+        btn.disabled=false; btn.innerText='Sign Off & Reset Period';
+        showModal('!','Error',String(e),[{label:'OK',cls:'mbtn-primary'}]);
+    });
+}
+
+// Init stepper
+updateStepper();
+</script>
+</body>
+</html>

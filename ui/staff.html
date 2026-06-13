@@ -415,8 +415,8 @@ function render(q) {
         var actions = isOwner
             ? '<span class="owner-tag">Owner account</span>'
             : '<div class="act-wrap">'
-              + '<button class="act-btn act-pw" data-idx="' + i + '" onclick="openPwByIdx(this)">&#128274; Change PW</button>'
-              + '<button class="act-btn act-del" data-idx="' + i + '" onclick="openDelByIdx(this)">&#10005; Remove</button>'
+              + '<button class="act-btn act-pw" data-id="' + s.id + '" onclick="openPwById(this)">&#128274; Change PW</button>'
+              + '<button class="act-btn act-del" data-id="' + s.id + '" onclick="openDelById(this)">&#10005; Remove</button>'
               + '</div>';
         return '<tr class="staff-row">'
             + '<td style="color:var(--muted2);font-size:0.72rem;">' + (i+1) + '</td>'
@@ -462,19 +462,22 @@ function doAdd() {
 }
 
 // ── CHANGE PASSWORD ───────────────────────────────────────────────
-function openPwByIdx(btn) {
-    var rows = LIST.filter(function(s){ return s.id !== 1; });
-    // We need to map rendered index back — simpler: find from all LIST
-    var idx = parseInt(btn.getAttribute('data-idx'));
-    var visible = LIST; // unfiltered for index match
-    var s = visible[idx];
+function openPwById(btn) {
+    var sid = parseInt(btn.getAttribute('data-id'));
+    var s = null;
+    for (var i = 0; i < LIST.length; i++) {
+        if (LIST[i].id === sid) { s = LIST[i]; break; }
+    }
     if (!s) return;
     openPw(s.id, s.username, s.role);
 }
 
-function openDelByIdx(btn) {
-    var idx = parseInt(btn.getAttribute('data-idx'));
-    var s = LIST[idx];
+function openDelById(btn) {
+    var sid = parseInt(btn.getAttribute('data-id'));
+    var s = null;
+    for (var i = 0; i < LIST.length; i++) {
+        if (LIST[i].id === sid) { s = LIST[i]; break; }
+    }
     if (!s) return;
     openDel(s.id, s.username);
 }
