@@ -239,13 +239,46 @@ body::before{
         <div class="em" id="em"></div>
 
         <!-- Lockout panel — permanent until admin resets -->
-        <div class="lkp" id="lkp">
-            <div class="lki">🔒</div>
-            <div class="lkt">Account Locked</div>
-            <div class="lks">Too many incorrect attempts.<br>Access has been suspended.</div>
-            <div class="lk-admin">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Contact administrator to unlock
+        <div id="lock-screen" style="display:none;position:fixed;inset:0;background:#0e0c09;z-index:99999;
+             display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+
+            <div style="text-align:center;">
+                <div style="font-family:Georgia,serif;font-size:2rem;color:#a87d1e;">&#128274;</div>
+                <div style="font-family:Georgia,serif;font-size:1.4rem;color:#fff;margin-top:8px;">
+                    Account <em style="color:#a87d1e;">Locked</em>
+                </div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:6px;">
+                    Too many failed attempts. Contact your AurumOS provider.
+                </div>
+            </div>
+
+            <!-- Lock Code -->
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,125,30,0.25);
+                 border-radius:10px;padding:16px 28px;text-align:center;">
+                <div style="font-size:0.5rem;text-transform:uppercase;letter-spacing:2px;
+                     color:rgba(255,255,255,0.3);margin-bottom:6px;">Your Lock Code</div>
+                <div id="lock-code-display" style="font-family:'DM Mono',monospace;font-size:2rem;
+                     letter-spacing:6px;color:#c9a227;"></div>
+                <div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:4px;">
+                    Read this code to your AurumOS provider
+                </div>
+            </div>
+
+            <!-- Unlock Key Input -->
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;width:280px;">
+                <input id="unlock-key-inp" type="text" maxlength="12"
+                       placeholder="Enter 12-character unlock key"
+                       style="width:100%;height:40px;padding:0 14px;border-radius:8px;
+                              border:1px solid rgba(168,125,30,0.3);background:rgba(255,255,255,0.06);
+                              color:#fff;font-family:'DM Mono',monospace;font-size:1rem;
+                              letter-spacing:3px;text-align:center;text-transform:uppercase;outline:none;">
+                <button onclick="submitUnlockKey()"
+                        style="width:100%;height:38px;border:none;border-radius:8px;
+                               background:linear-gradient(135deg,#a87d1e,#c9a227);
+                               color:#fff;font-size:0.78rem;cursor:pointer;">
+                    Unlock Account
+                </button>
+                <div id="unlock-msg" style="font-size:0.68rem;color:#f87171;min-height:16px;"></div>
             </div>
         </div>
 
@@ -524,6 +557,8 @@ function applyLock() {
     document.getElementById('lkp').style.cssText       = 'display:block!important;';
 }
 
+
+
 // ── Called after client clicks OK on temp popup ────────────────────
 function revealTempField() {
     // Show password field and button — hidden during lockout
@@ -560,27 +595,48 @@ function setSt(s,t) {
 }
 
 // ── Remote Unlock (called by poller when admin resets password) ───
-window.remoteUnlock = function() {
-    LOCKED   = false;
-    ATTEMPTS = 0;
-    // Re-enable input and button
-    var inp = document.getElementById('inp');
-    if (inp) { inp.disabled = false; inp.value = ''; }
-    var btn = document.getElementById('btn');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In'; btn.style.background = ''; }
-    // Hide lockout panel
-    var lkp = document.getElementById('lkp');
-    if (lkp) lkp.style.cssText = 'display:none!important;';
-    // Hide attempt dots
-    var ar = document.getElementById('ar');
-    if (ar) ar.style.display = 'none';
-    hideErr();
-    // Show success hint
-    showErr('Password reset by administrator. Please sign in.');
-    var em = document.getElementById('em');
-    if (em) { em.style.background = 'rgba(21,128,61,0.07)'; em.style.color = 'var(--green)'; em.style.borderColor = 'rgba(21,128,61,0.2)'; }
-    if (inp) setTimeout(function(){ inp.focus(); }, 200);
+function checkLockStatus() {
+    if (!window.pywebview || !window.pywebview.api) {
+        setTimeout(checkLockStatus, 200); return;
+    }
+    window.pywebview.api.get_lock_status().then(function(s) {
+        if (s && s.locked) showLockScreen(s.lock_code);
+    }).catch(function(){});
+}
+
+function showLockScreen(lockCode) {
+    document.getElementById('lock-code-display').innerText = lockCode || '--------';
+    document.getElementById('lock-screen').style.display = 'flex';
+}
+
+function submitUnlockKey() {
+    var key = (document.getElementById('unlock-key-inp').value || '').trim().toUpperCase();
+    var msg = document.getElementById('unlock-msg');
+    if (key.length !== 12) { msg.innerText = 'Key must be exactly 12 characters'; return; }
+    if (!window.pywebview || !window.pywebview.api) return;
+    var lc = document.getElementById('lock-code-display').innerText.trim();
+    window.pywebview.api.verify_unlock_key(key, lc).then(function(r) {
+        if (r && r.status === 'success') {
+            document.getElementById('lock-screen').style.display = 'none';
+            msg.innerText = '';
+        } else {
+            msg.innerText = 'Invalid key. Contact your AurumOS provider.';
+            document.getElementById('unlock-key-inp').value = '';
+        }
+    }).catch(function(e){ msg.innerText = String(e); });
+}
+
+// Hook into existing __loginResult to catch db_locked status
+var _origLoginResult = window.__loginResult;
+window.__loginResult = function(result) {
+    if (result && result.status === 'db_locked') {
+        showLockScreen(result.lock_code); return;
+    }
+    if (_origLoginResult) _origLoginResult(result);
 };
+
+// Run check
+checkLockStatus();
 
 // ── Realtime temp password popup ─────────────────────────────────
 window.showTempPasswordUnlock = function(tempPass) {

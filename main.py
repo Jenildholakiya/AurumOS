@@ -500,39 +500,43 @@ def normalize_tag_item(item_data: dict) -> dict:
 
 class AurumAPI:
     def __init__(self):
-        # Always use DB next to EXE (dist/database/)
+        # Always use DB next to EXE (dist/database/) — never project root
+        # This is the ONLY correct path for client installs
         if getattr(sys, 'frozen', False):
             _db_base = os.path.dirname(sys.executable)
         else:
             _db_base = os.path.abspath('.')
-
-        _db_dir = os.path.join(_db_base, 'database')
+        _db_dir  = os.path.join(_db_base, 'database')
         os.makedirs(_db_dir, exist_ok=True)
         _db_path = os.path.join(_db_dir, 'aurum_local.db')
-
         LOG(f"[DB] Database path: {_db_path}")
-
         try:
             self.db = DBManager(_db_path)
         except TypeError:
+            # DBManager doesn't accept a path arg — use env var approach
             os.environ['AURUM_DB_PATH'] = _db_path
             self.db = DBManager()
-
-        # --- NEW: Ensure secret backup structure exists on launch ---
-        self.ensure_backup_structure()
-
         LOG(f"[DB] DBManager initialized, setup_done={self.db.is_setup_done()}")
+
+        # Ensure backup dir exists
+        self.ensure_backup_structure()
+        # Layer 10: Generate session token
+        try:
+            self.db._generate_session_token()
+            LOG("[SESSION] Session token generated at startup")
+        except Exception as _se:
+            LOG(f"[SESSION] Token generation skipped: {_se}")
         self._window = None
         self.TEMP_KEY = "aurum-dev-2026"
         self.tag_factory = TagFactory()
         global _api_db_ref
         _api_db_ref = self.db
-        self._session_role = None
+        self._session_role     = None
         self._session_username = None
-        self._login_attempts = 0
-        self._lockout_until = None
-        self._MAX_ATTEMPTS = 3
-        self._LOCKOUT_SECONDS = 5 * 60
+        self._login_attempts   = 0
+        self._lockout_until    = None
+        self._MAX_ATTEMPTS     = 3
+        self._LOCKOUT_SECONDS  = 5 * 60
         self._last_update_files = []
         self._update_state = {"pct": 0, "msg": "", "done": False, "ok": False}
         self._load_lockout_state()
@@ -541,63 +545,17 @@ class AurumAPI:
     def ensure_backup_structure(self):
         secret_dir = r"C:\ProgramData\AurumOS"
         try:
-            # 1. Create the directory
             if not os.path.exists(secret_dir):
                 os.makedirs(secret_dir, exist_ok=True)
                 LOG(f"[BACKUP] Created directory: {secret_dir}")
-
-            # 2. Hide the folder safely
             import subprocess
-            # Use shell=True to ensure the attrib command executes correctly in all environments
-            # and capture errors so we know if it actually worked
             result = subprocess.run(['attrib', '+H', secret_dir], capture_output=True, text=True)
-
             if result.returncode == 0:
                 LOG(f"[BACKUP] Backup dir hidden: {secret_dir}")
             else:
-                # This will tell us if it failed because of permissions
                 ERR(f"[BACKUP] Failed to hide folder: {result.stderr}")
-
         except Exception as e:
             ERR(f"[BACKUP] Dir setup failed: {e}")
-
-    def pre_init_recovery(self, db_path):
-        import sqlite3, shutil, os
-        secret_dir = r"C:\ProgramData\AurumOS"
-        backup_path = os.path.join(secret_dir, 'aurum_backup.db')
-
-        needs_restore = False
-
-        if not os.path.exists(db_path):
-            LOG("[RECOVERY] DB missing — restoring from backup")
-            needs_restore = True
-        else:
-            try:
-                with sqlite3.connect(db_path) as conn:
-                    result = conn.execute("PRAGMA integrity_check").fetchone()
-                    if result[0] != 'ok':
-                        needs_restore = True
-                        LOG("[RECOVERY] Integrity check failed — restoring")
-            except Exception:
-                needs_restore = True
-                LOG("[RECOVERY] DB unreadable — restoring")
-
-        if needs_restore and os.path.exists(backup_path):
-            try:
-                for ext in ['', '-wal', '-shm']:
-                    p = db_path + ext
-                    if os.path.exists(p):
-                        os.remove(p)
-                for ext in ['', '-wal', '-shm']:
-                    src = backup_path + ext
-                    dst = db_path + ext
-                    if os.path.exists(src):
-                        shutil.copy2(src, dst)
-                LOG("[RECOVERY] DB restored from backup successfully")
-            except Exception as e:
-                ERR(f"[RECOVERY] Restore failed: {e}")
-        elif needs_restore:
-            LOG("[RECOVERY] No backup available — starting fresh")
 
     def set_window(self, window):
         self._window = window
@@ -1120,12 +1078,11 @@ class AurumAPI:
         except Exception as _e:
             LOG(f"[RESET] Temp check error: {_e}")
 
-        auth = self.db.authenticate_user("owner", password)
-        if not auth["authenticated"]:
-            auth = self.db.authenticate_user_by_password(password)
+        auth = self.db.authenticate_user_by_password(password)
         if auth["authenticated"]:
-            self._login_attempts=0; self._lockout_until=None
-            self._session_role = auth["role"]
+            self._login_attempts = 0
+            self._lockout_until  = None
+            self._session_role     = auth.get("role", "staff")
             self._session_username = auth.get("username", "owner")
             # Record successful login
             try:
@@ -1133,7 +1090,7 @@ class AurumAPI:
                     _lc.execute("CREATE TABLE IF NOT EXISTS login_log (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL DEFAULT 'owner', role TEXT NOT NULL DEFAULT 'admin', login_time TEXT NOT NULL DEFAULT (datetime('now')), ip TEXT DEFAULT '')")
                     _lc.execute("INSERT INTO login_log(username,role,login_time) VALUES(?,?,?)",
                                 (self._session_username, self._session_role,
-                                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                                 now.strftime('%Y-%m-%d %H:%M:%S')))
                     _lc.commit()
             except Exception as _le:
                 LOG(f"[LOGIN] login_log write error: {_le}")
@@ -1504,6 +1461,16 @@ class AurumAPI:
             return {"status":"success"} if success else {"status":"error","message":"DB save failed"}
         except Exception as e:
             return {"status":"error","message":str(e)}
+
+
+    def get_all_katti_vouchers(self):
+        return self.db.get_all_katti_vouchers()
+
+    def delete_katti_voucher(self, vch_id):
+        return self.db.delete_katti_voucher(vch_id)
+
+    def update_katti_voucher(self, vch_id, note, items):
+        return self.db.update_katti_voucher(vch_id, note, items)
 
     def get_voucher_history(self, vch_id):
         try:
@@ -2055,39 +2022,94 @@ class AurumAPI:
         threading.Thread(target=poll, daemon=True, name="ResetPoller").start()
 
     def get_last_login_info(self) -> dict:
+        """
+        Return last successful login info for login screen display.
+        - Admin: shows real owner name from app_config
+        - Staff: shows their username from admin_creds
+        - Time:  local machine time, formatted as "13 Jun 2026, 11:45 AM"
+        """
         try:
             with self.db._get_connection() as conn:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS login_log (
-                        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username   TEXT NOT NULL DEFAULT 'owner',
-                        role       TEXT NOT NULL DEFAULT 'admin',
-                        login_time TEXT NOT NULL DEFAULT (datetime('now')),
-                        ip         TEXT DEFAULT '')
-                """)
+
+                # Ensure table exists
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS login_log ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "username TEXT NOT NULL DEFAULT 'owner', "
+                    "role TEXT NOT NULL DEFAULT 'admin', "
+                    "login_time TEXT NOT NULL DEFAULT (datetime('now')), "
+                    "ip TEXT DEFAULT '')"
+                )
                 conn.commit()
+
+                # Get last login row
                 row = conn.execute(
-                    "SELECT username, role, login_time FROM login_log ORDER BY id DESC LIMIT 1"
+                    "SELECT username, role, login_time "
+                    "FROM login_log ORDER BY id DESC LIMIT 1"
                 ).fetchone()
-                if row:
-                    username = row['username'] or 'owner'
-                    role = row['role'] or 'admin'
 
-                    # ── If admin/owner → fetch real owner name from setup ──
-                    if role == 'admin':
-                        owner_row = conn.execute(
-                            "SELECT value FROM app_config WHERE key='owner_name' LIMIT 1"
+                if not row:
+                    return {}
+
+                db_username = str(row['username'] or '').strip()
+                role        = str(row['role']     or 'admin').strip()
+                login_time  = str(row['login_time'] or '').strip()
+
+                # ── Resolve display name ───────────────────────────────
+                # Admin (id=1) → show owner_name from setup (e.g. "Jenil Dholakiya")
+                # Staff        → show their username from admin_creds as-is
+                display_name = db_username
+
+                if role == 'admin':
+                    # First try: owner_name from app_config (set during setup)
+                    cfg_row = conn.execute(
+                        "SELECT value FROM app_config WHERE key='owner_name' LIMIT 1"
+                    ).fetchone()
+                    if cfg_row and str(cfg_row['value'] or '').strip():
+                        display_name = cfg_row['value'].strip()
+                    else:
+                        # Fallback: business_name
+                        biz_row = conn.execute(
+                            "SELECT value FROM app_config WHERE key='business_name' LIMIT 1"
                         ).fetchone()
-                        if owner_row and owner_row['value']:
-                            username = owner_row['value'].strip()
+                        if biz_row and str(biz_row['value'] or '').strip():
+                            display_name = biz_row['value'].strip()
+                        else:
+                            display_name = db_username or 'Owner'
+                else:
+                    # Staff — use their actual username stored in login_log
+                    # If username is blank/generic use db_username
+                    display_name = db_username if db_username else 'Staff'
 
-                    return {
-                        'username': username,
-                        'role': role,
-                        'time': row['login_time'] or ''
-                    }
+                # ── Format time (local machine time) ──────────────────
+                # Stored as: "2026-06-13 11:30:45" (Python local time)
+                # Display as: "13 Jun 2026, 11:30 AM"
+                friendly_time = login_time
+                try:
+                    from datetime import datetime as _dt
+                    # Handle both formats just in case
+                    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+                        try:
+                            dt = _dt.strptime(login_time, fmt)
+                            friendly_time = dt.strftime('%d %b %Y, %I:%M %p')
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    pass
+
+                LOG(f"[LOGIN_INFO] name={display_name} role={role} time={friendly_time}")
+
+                return {
+                    'username':      display_name,
+                    'role':          role,
+                    'time':          login_time,
+                    'friendly_time': friendly_time,
+                    'display':       'Last login: ' + display_name + ' on ' + friendly_time
+                }
+
         except Exception as e:
-            LOG(f"[API] get_last_login_info: {e}")
+            LOG(f"[API] get_last_login_info error: {e}")
         return {}
 
     def check_weight_stock_available(self, items_json: str) -> dict:
@@ -2222,6 +2244,19 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # ── SECURITY API WRAPPERS ─────────────────────────────────────────────────
+    def do_stock_med(self, data):
+        return self.db.do_stock_med(data)
+
+    def get_lock_status(self):
+        return self.db.get_lock_status()
+
+    def record_failed_attempt(self):
+        return self.db.record_failed_attempt()
+
+    def verify_unlock_key(self, unlock_key, lock_code=None):
+        return self.db.verify_unlock_key(unlock_key, lock_code)
+
     def get_log_path(self):
         """Return the log file path so JS can display it."""
         base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
@@ -2272,11 +2307,6 @@ def run_aur_os():
     def _on_start(w):
         w.maximize()
         LOG("[STARTUP] Window started and maximized")
-        try:
-            api.db._mirror_data()
-            LOG("[TEST] Manual backup test triggered")
-        except Exception as e:
-            ERR(f"[TEST] Backup test failed: {e}")
 
         # ── Auto-connect scale from saved config ──────────────────
         def _auto_connect_scale():
@@ -2397,6 +2427,13 @@ def run_aur_os():
 
         threading.Thread(target=_bg_check, daemon=True).start()
 
+    def _on_closing():
+        try:
+            api.db._cleanup_session()
+            LOG("[SESSION] Session cleaned up on close")
+        except Exception:
+            pass
+    window.events.closing += _on_closing
     webview.start(_on_start, window, gui='edgechromium', debug=False)
 
 
