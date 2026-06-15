@@ -1,0 +1,333 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     BASTION POPUP — paste INSIDE <body> of login.html
+     AFTER the lock screen div, BEFORE </body>
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- BASTION FULL SCREEN POPUP -->
+<div id="bastion-screen" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#0a0806;
+    z-index:999999;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+    font-family:'DM Sans',sans-serif;
+    padding:24px;
+    box-sizing:border-box;">
+
+    <!-- BASTION Logo -->
+    <div style="text-align:center;">
+        <div style="
+            font-size:0.6rem;
+            letter-spacing:6px;
+            text-transform:uppercase;
+            color:#a87d1e;
+            margin-bottom:8px;">
+            &#9632; AurumOS BASTION Security
+        </div>
+        <div style="
+            font-size:2rem;
+            font-weight:800;
+            color:#ef4444;
+            letter-spacing:2px;
+            text-shadow:0 0 20px rgba(239,68,68,0.4);">
+            ACCOUNT SUSPENDED
+        </div>
+    </div>
+
+    <!-- Red alert bar -->
+    <div style="
+        width:100%;
+        max-width:500px;
+        height:3px;
+        background:linear-gradient(90deg,transparent,#ef4444,transparent);
+        border-radius:2px;">
+    </div>
+
+    <!-- Attack detail card -->
+    <div style="
+        width:100%;
+        max-width:500px;
+        background:rgba(239,68,68,0.06);
+        border:1px solid rgba(239,68,68,0.25);
+        border-radius:14px;
+        padding:24px;
+        text-align:center;">
+
+        <div style="
+            font-size:0.55rem;
+            letter-spacing:3px;
+            text-transform:uppercase;
+            color:rgba(255,255,255,0.3);
+            margin-bottom:10px;">
+            Threat Detected
+        </div>
+
+        <div id="bastion-title" style="
+            font-size:1.1rem;
+            font-weight:700;
+            color:#fca5a5;
+            margin-bottom:12px;">
+            Security Violation
+        </div>
+
+        <div id="bastion-reason" style="
+            font-size:0.78rem;
+            color:rgba(255,255,255,0.6);
+            line-height:1.7;
+            margin-bottom:16px;">
+            A security violation was detected.
+        </div>
+
+        <div id="bastion-detail" style="
+            font-size:0.65rem;
+            font-family:'DM Mono',monospace;
+            color:rgba(255,255,255,0.25);
+            background:rgba(0,0,0,0.3);
+            border-radius:6px;
+            padding:8px 12px;
+            margin-bottom:16px;
+            word-break:break-all;
+            display:none;">
+        </div>
+
+        <div id="bastion-time" style="
+            font-size:0.6rem;
+            color:rgba(255,255,255,0.2);
+            letter-spacing:1px;">
+        </div>
+    </div>
+
+    <!-- Lock code -->
+    <div style="
+        background:rgba(255,255,255,0.03);
+        border:1px solid rgba(168,125,30,0.2);
+        border-radius:10px;
+        padding:14px 28px;
+        text-align:center;">
+        <div style="
+            font-size:0.5rem;
+            letter-spacing:3px;
+            text-transform:uppercase;
+            color:rgba(255,255,255,0.2);
+            margin-bottom:6px;">
+            Lock Code
+        </div>
+        <div id="bastion-lock-code" style="
+            font-family:'DM Mono',monospace;
+            font-size:1.8rem;
+            letter-spacing:8px;
+            color:#c9a227;
+            font-weight:700;">
+            --------
+        </div>
+    </div>
+
+    <!-- Contact message -->
+    <div style="
+        text-align:center;
+        max-width:420px;">
+        <div style="
+            font-size:0.82rem;
+            color:rgba(255,255,255,0.5);
+            line-height:1.8;">
+            Contact <strong style="color:#c9a227;">AurumOS Admin</strong> with your lock code
+            to restore access. Unauthorized access attempts are logged permanently.
+        </div>
+        <div style="
+            margin-top:10px;
+            font-size:0.7rem;
+            color:rgba(255,255,255,0.2);">
+            +91 XXXXX XXXXX &nbsp;|&nbsp; support@aurumos.in
+        </div>
+    </div>
+
+    <!-- Unlock key input (for admin use only) -->
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center;width:300px;">
+        <input
+            id="bastion-unlock-input"
+            type="password"
+            maxlength="16"
+            autocomplete="off"
+            placeholder="16-char BASTION admin key"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+            style="
+                width:100%;
+                height:40px;
+                padding:0 14px;
+                border-radius:8px;
+                border:1px solid rgba(168,125,30,0.2);
+                background:rgba(255,255,255,0.04);
+                color:#fff;
+                font-family:'DM Mono',monospace;
+                font-size:1rem;
+                letter-spacing:3px;
+                text-align:center;
+                text-transform:uppercase;
+                outline:none;
+                box-sizing:border-box;">
+
+        <button onclick="bastionSubmitUnlock()" style="
+            width:100%;
+            height:38px;
+            border:none;
+            border-radius:8px;
+            background:rgba(168,125,30,0.15);
+            color:#c9a227;
+            font-size:0.75rem;
+            letter-spacing:1px;
+            cursor:pointer;
+            border:1px solid rgba(168,125,30,0.25);">
+            Submit Admin Key
+        </button>
+
+        <div id="bastion-unlock-msg" style="
+            font-size:0.68rem;
+            color:#f87171;
+            min-height:16px;
+            text-align:center;">
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Show BASTION screen ───────────────────────────────────────────
+function bastionShow(record) {
+    var el = document.getElementById('bastion-screen');
+    if (!el) return;
+
+    // Fill details
+    var titles = {
+        'session_tamper':       'Session Tampering Detected',
+        'db_edit':              'Database Tampering Detected',
+        'fingerprint_mismatch': 'Unauthorized PC Access Detected',
+        'exe_tamper':           'EXE File Modified',
+        'replay_attack':        'Replay Attack Detected',
+    };
+    var reasons = {
+        'session_tamper':       'A session token mismatch was detected. Someone attempted to tamper with the running application or inject a forged session.',
+        'db_edit':              'The AurumOS database was modified by an external tool while the application was running. This is a serious security violation.',
+        'fingerprint_mismatch': 'This database was opened on a different PC than it was created on. Unauthorized data copying is strictly not permitted.',
+        'exe_tamper':           'The AurumOS executable file has been modified or patched. This may be a hacking attempt. Contact AurumOS Admin immediately.',
+        'replay_attack':        'An old or forged session token was detected. A hacking attempt was made against this installation.',
+    };
+
+    var atype = record.attack_type || 'unknown';
+    var title = record.title || titles[atype] || 'Security Violation';
+    var reason = record.reason || reasons[atype] || 'An unauthorized action was detected.';
+
+    document.getElementById('bastion-title').innerText  = title;
+    document.getElementById('bastion-reason').innerText = reason;
+    document.getElementById('bastion-lock-code').innerText =
+        (record.lock_code || '--------').toUpperCase();
+
+    if (record.timestamp) {
+        document.getElementById('bastion-time').innerText =
+            'Suspended at: ' + record.timestamp;
+    }
+
+    if (record.detail) {
+        var det = document.getElementById('bastion-detail');
+        det.innerText = 'Detail: ' + record.detail;
+        det.style.display = 'block';
+    }
+
+    el.style.display = 'flex';
+}
+
+// ── Submit admin unlock key ───────────────────────────────────────
+function bastionSubmitUnlock() {
+    var key = (document.getElementById('bastion-unlock-input').value || '').trim().toUpperCase();
+    var lc  = (document.getElementById('bastion-lock-code').innerText || '').trim();
+    var msg = document.getElementById('bastion-unlock-msg');
+
+    msg.style.color = '#f87171';
+    msg.innerText = '';
+
+    if (!key || key.length !== 16) {
+        msg.innerText = 'BASTION key must be 16 characters';
+        return;
+    }
+
+    if (!window.pywebview || !window.pywebview.api) {
+        msg.innerText = 'API not ready';
+        return;
+    }
+
+    msg.style.color = '#c9a227';
+    msg.innerText   = 'Verifying...';
+
+    window.pywebview.api.bastion_unlock(key, lc).then(function(r) {
+        if (r && r.status === 'success') {
+            msg.style.color = '#4ade80';
+            msg.innerText   = 'Restored. Reloading...';
+            setTimeout(function() { window.location.reload(); }, 1000);
+        } else {
+            msg.style.color = '#f87171';
+            msg.innerText   = 'Invalid key. Contact AurumOS Admin.';
+            document.getElementById('bastion-unlock-input').value = '';
+        }
+    }).catch(function(e) {
+        msg.style.color = '#f87171';
+        msg.innerText   = 'Error: ' + String(e);
+    });
+}
+
+// ── Enter key support ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('bastion-unlock-input');
+    if (inp) {
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') bastionSubmitUnlock();
+        });
+    }
+});
+
+// ── Check BASTION status on every page load ───────────────────────
+function bastionCheckOnLoad() {
+    if (!window.pywebview || !window.pywebview.api) {
+        setTimeout(bastionCheckOnLoad, 200);
+        return;
+    }
+    window.pywebview.api.bastion_get_status().then(function(r) {
+        if (r && r.suspended) {
+            bastionShow(r);
+        }
+    }).catch(function() {});
+}
+bastionCheckOnLoad();
+
+// ── Hook __loginResult to catch db_locked / bastion ──────────────
+var _prevLoginResult = window.__loginResult;
+window.__loginResult = function(result) {
+    if (!result) return;
+    if (result.status === 'db_locked') {
+        // Check if it is also a BASTION suspension
+        if (window.pywebview && window.pywebview.api) {
+            window.pywebview.api.bastion_get_status().then(function(r) {
+                if (r && r.suspended) {
+                    bastionShow(r);
+                } else {
+                    // Regular lock screen
+                    if (typeof aurumShowLockScreen === 'function') {
+                        aurumShowLockScreen(result.lock_code);
+                    }
+                }
+            }).catch(function() {
+                if (typeof aurumShowLockScreen === 'function') {
+                    aurumShowLockScreen(result.lock_code);
+                }
+            });
+        }
+        return;
+    }
+    if (typeof _prevLoginResult === 'function') {
+        _prevLoginResult(result);
+    }
+};
+
+window.bastionShow = bastionShow;
+</script>

@@ -38,6 +38,18 @@ import random
 from datetime import datetime
 from pathlib import Path
 from database.db_manager import DBManager
+try:
+    from database.bastion_ai import BastionAI
+    _BASTION_AVAILABLE = True
+except ImportError:
+    _BASTION_AVAILABLE = False
+    class BastionAI:
+        def __init__(self, *a): pass
+        def start(self): pass
+        def stop(self): pass
+        def notify_write(self): pass
+        def notify_session_active(self, *a): pass
+        def get_weekly_report(self): return {}
 
 try:
     from updater import check_for_update, download_and_install, CURRENT_VERSION
@@ -520,12 +532,32 @@ class AurumAPI:
 
         # Ensure backup dir exists
         self.ensure_backup_structure()
+
+        # ── BASTION: EXE integrity check (Layer 9) ─────────────────────────
+        try:
+            if not self.db.bastion_verify_exe():
+                LOG("[BASTION] EXE tampered — suspension triggered")
+            else:
+                LOG("[BASTION] EXE integrity OK")
+        except Exception as _be:
+            LOG(f"[BASTION] EXE check skipped: {_be}")
+
         # Layer 10: Generate session token
         try:
             self.db._generate_session_token()
             LOG("[SESSION] Session token generated at startup")
         except Exception as _se:
             LOG(f"[SESSION] Token generation skipped: {_se}")
+
+        # ── BASTION AI: Start background monitor ─────────────────
+        try:
+            self.bastion = BastionAI(self.db)
+            self.bastion.start()
+            LOG("[BASTION_AI] Background monitor started")
+        except Exception as _be:
+            LOG(f"[BASTION_AI] Start skipped: {_be}")
+            self.bastion = BastionAI(self.db)
+
         self._window = None
         self.TEMP_KEY = "aurum-dev-2026"
         self.tag_factory = TagFactory()
@@ -1052,7 +1084,13 @@ class AurumAPI:
     def _do_login_check(self, password, now, _dt, _td):
         if self._lockout_until and now < self._lockout_until:
             remaining = int((self._lockout_until-now).total_seconds())
+            try:
+                with self.db._get_connection() as _cc2:
+                    _r2 = _cc2.execute("SELECT value FROM app_config WHERE key='lock_code_cache'").fetchone()
+                    _lc2 = _r2["value"] if _r2 else "LOCKED01"
+            except: _lc2 = "LOCKED01"
             return {"status":"locked","remaining":remaining,
+                    "lock_code": _lc2,
                     "message":f"Locked. Try in {remaining//60}m {remaining%60:02d}s."}
         elif self._lockout_until and now >= self._lockout_until:
             self._lockout_until=None; self._login_attempts=0
@@ -1101,14 +1139,32 @@ class AurumAPI:
             role=auth["role"]; username=auth.get("username","Admin")
             landing="billing.html" if role=="staff" else "dashboard.html"
             self._audit(f"Login: {username}",f"Role: {role}","auth")
+            try: self.bastion.notify_session_active(True)
+            except Exception: pass
             return {"status":"success","role":role,"username":username,"landing":landing}
         self._login_attempts += 1
         left = self._MAX_ATTEMPTS - self._login_attempts
         if self._login_attempts >= self._MAX_ATTEMPTS:
             self._lockout_until = now + _td(seconds=self._LOCKOUT_SECONDS)
             self._save_lockout_state()
+            # Generate lock code for unlock key generation
+            try:
+                _lc = self.db.generate_lock_code() if hasattr(self.db,'generate_lock_code') else None
+                if not _lc:
+                    import hashlib, platform
+                    _lc = hashlib.sha256(platform.node().encode()).hexdigest()[:8].upper()
+            except:
+                _lc = "LOCKED01"
+            # Also save to app_config for health page
+            try:
+                with self.db._get_connection() as _cc:
+                    _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)", (_lc,))
+                    _cc.commit()
+            except: pass
             return {"status":"locked","remaining":self._LOCKOUT_SECONDS,
-                    "attempts":self._login_attempts,"message":"Too many attempts. Locked for 15 minutes."}
+                    "attempts":self._login_attempts,
+                    "lock_code": _lc,
+                    "message":"Too many attempts. Locked for 15 minutes."}
         word = "attempt" if left==1 else "attempts"
         return {"status":"error","attempts":self._login_attempts,"left":left,
                 "message":f"Wrong password. {left} {word} remaining."}
@@ -1127,6 +1183,10 @@ class AurumAPI:
         self._audit(f"Logout",f"User: {self._session_username}","auth")
         self._session_role=None; self._session_username=None
         self._login_attempts=0; self._lockout_until=None
+        try:
+            self.bastion.notify_session_active(False)
+        except Exception:
+            pass
         return {"status":"ok"}
 
     # -- SETUP -----------------------------------------------------------------
@@ -1387,6 +1447,8 @@ class AurumAPI:
     # -- STOCK LEDGER ----------------------------------------------------------
     def add_stock_entry(self, data):
         try:
+            try: self.bastion.notify_write()
+            except Exception: pass
             import time as _time
             LOG(f"[STOCK] Received: {data}")
             tag = str(data.get('tag_id') or '').strip()
@@ -1450,6 +1512,8 @@ class AurumAPI:
 
     def save_katti_voucher(self, vch_id, total_wt, total_packets, note, items):
         try:
+            try: self.bastion.notify_write()
+            except Exception: pass
             box_id=None
             if items and isinstance(items,list):
                 for item in items:
@@ -1588,6 +1652,9 @@ class AurumAPI:
 
     def generate_bill(self, bill_data):
         try:
+            # Notify BASTION AI this is a legitimate write
+            try: self.bastion.notify_write()
+            except Exception: pass
             vch_id=str(bill_data.get('vch_id','VCH-000')).strip()
             customer=str(bill_data.get('customer','Walking Customer')).strip()
             status=str(bill_data.get('status','CREDIT')).upper().strip()
@@ -1838,7 +1905,7 @@ class AurumAPI:
                 if self._window:
                     self._window.evaluate_js(
                         "var _ve=document.getElementById('sb-ver');"
-                        "if(_ve)_ve.innerText='v" + new_ver + " ↻';"
+                        "if(_ve)_ve.innerText='v" + new_ver + " ↻';" 
                     )
             except Exception:
                 pass
@@ -2134,6 +2201,10 @@ class AurumAPI:
         subprocess.Popen([sys.executable]+sys.argv[:])
         sys.exit(0)
 
+    def get_stocksync_snapshot(self):
+        try:    return self.db.get_stocksync_snapshot()
+        except Exception as e: return {'status':'error','message':str(e),'data':[]}
+
     def get_touch_stock_report(self):
         try: return self.db.get_touch_stock_report()
         except Exception as e: ERR(f"[TOUCH REPORT] {e}"); return []
@@ -2244,7 +2315,24 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    # ── SECURITY API WRAPPERS ─────────────────────────────────────────────────
+    # ── BASTION SECURITY API WRAPPERS ────────────────────────────────────────
+    def bastion_get_status(self):
+        return self.db.bastion_get_status()
+
+    def bastion_unlock(self, admin_key, lock_code=None):
+        """
+        Clear BASTION suspension using BASTION-specific 16-char admin key.
+        Regular 12-char unlock key does NOT work here — different salt.
+        Only the BASTION key from unlock_keygen.py (BASTION mode) works.
+        """
+        result = self.db.bastion_clear(admin_key, lock_code)
+        if result.get('status') == 'success':
+            LOG("[BASTION] Suspension cleared by admin")
+        else:
+            LOG(f"[BASTION] Clear failed: {result.get('message')}")
+        return result
+
+        # ── SECURITY API WRAPPERS ─────────────────────────────────────────────────
     def do_stock_med(self, data):
         return self.db.do_stock_med(data)
 
@@ -2255,7 +2343,116 @@ class AurumAPI:
         return self.db.record_failed_attempt()
 
     def verify_unlock_key(self, unlock_key, lock_code=None):
-        return self.db.verify_unlock_key(unlock_key, lock_code)
+        result = self.db.verify_unlock_key(unlock_key, lock_code)
+        if result and result.get('status') == 'success':
+            # Reset in-memory lock state so login works immediately
+            self._lockout_until  = None
+            self._login_attempts = 0
+            try: self._save_lockout_state()
+            except Exception: pass
+            LOG("[LOCK] In-memory lock state cleared after unlock")
+        return result
+
+    def bastion_get_weekly_report(self):
+        try:
+            return self.bastion.get_weekly_report()
+        except Exception as e:
+            return {'error': str(e)}
+
+    def generate_protected_pdf(self, html_content, password, audit_id='AUDIT'):
+        """
+        Generate password-protected PDF from HTML content.
+        Uses reportlab + PyPDF2 or pikepdf if available.
+        Falls back to saving HTML file with password hint if no PDF lib.
+        """
+        import os, sys, tempfile, subprocess, hashlib
+
+        base     = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        pdf_dir  = os.path.join(base, 'exports')
+        os.makedirs(pdf_dir, exist_ok=True)
+        safe_id  = str(audit_id).replace('/', '-').replace('\\', '-').strip()
+        pdf_path = os.path.join(pdf_dir, f"StockSync_{safe_id}.pdf")
+        html_tmp = os.path.join(pdf_dir, f"StockSync_{safe_id}.html")
+
+        try:
+            # Step 1: Save HTML to temp file
+            with open(html_tmp, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            LOG(f"[PDF] HTML saved: {html_tmp}")
+
+            # Step 2: Try pikepdf for password protection
+            try:
+                import pikepdf
+                # First generate PDF without password using weasyprint or wkhtmltopdf
+                pdf_tmp = pdf_path + '.tmp.pdf'
+                generated = False
+
+                # Try weasyprint
+                try:
+                    from weasyprint import HTML as WH
+                    WH(filename=html_tmp).write_pdf(pdf_tmp)
+                    generated = True
+                    LOG("[PDF] Generated via weasyprint")
+                except ImportError:
+                    pass
+
+                # Try wkhtmltopdf
+                if not generated:
+                    wk = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    if os.path.exists(wk):
+                        r = subprocess.run([wk, html_tmp, pdf_tmp],
+                            capture_output=True, timeout=30)
+                        if r.returncode == 0:
+                            generated = True
+                            LOG("[PDF] Generated via wkhtmltopdf")
+
+                if generated and os.path.exists(pdf_tmp):
+                    # Apply password with pikepdf
+                    if password:
+                        pdf = pikepdf.open(pdf_tmp)
+                        pdf.save(pdf_path, encryption=pikepdf.Encryption(
+                            owner=password, user=password, R=4
+                        ))
+                        pdf.close()
+                        LOG(f"[PDF] Password protected: {pdf_path}")
+                    else:
+                        import shutil
+                        shutil.copy2(pdf_tmp, pdf_path)
+                    try: os.remove(pdf_tmp)
+                    except: pass
+                    # Open folder
+                    try: subprocess.Popen(['explorer', '/select,', pdf_path])
+                    except: pass
+                    return {'status': 'success', 'path': pdf_path}
+
+            except ImportError:
+                LOG("[PDF] pikepdf not available — falling back")
+
+            # Step 3: Fallback — save as HTML, open print window
+            # Write password hint into HTML if provided
+            if password:
+                pw_hash = hashlib.sha256(password.encode()).hexdigest()[:12].upper()
+                hint_html = html_content.replace(
+                    '</body>',
+                    f'<div style="display:none" data-pw-hash="{pw_hash}"></div></body>'
+                )
+                with open(html_tmp, 'w', encoding='utf-8') as f:
+                    f.write(hint_html)
+
+            # Open print window — user prints to PDF manually
+            result = self.open_print_window(html_content)
+            note   = ''
+            if password:
+                note = f' Password hint saved. Set password "{password}" when saving PDF from print dialog.'
+            return {
+                'status':  'success',
+                'path':    html_tmp,
+                'message': 'PDF opened for printing.' + note
+            }
+
+        except Exception as e:
+            ERR(f"[PDF] generate_protected_pdf error: {e}")
+            return {'status': 'error', 'message': str(e)}
 
     def get_log_path(self):
         """Return the log file path so JS can display it."""
@@ -2428,6 +2625,12 @@ def run_aur_os():
         threading.Thread(target=_bg_check, daemon=True).start()
 
     def _on_closing():
+        try:
+            api.bastion.notify_session_active(False)
+            api.bastion.stop()
+            LOG("[BASTION_AI] Stopped")
+        except Exception:
+            pass
         try:
             api.db._cleanup_session()
             LOG("[SESSION] Session cleaned up on close")

@@ -210,6 +210,39 @@ class DBManager:
                     )
                 """)
                 conn.commit()
+                # ── BASTION AI tables ─────────────────────────────────
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_events (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts           TEXT    DEFAULT (datetime('now')),
+                        event_type   TEXT    NOT NULL,
+                        severity     TEXT    DEFAULT 'LOW',
+                        score        INTEGER DEFAULT 0,
+                        detail       TEXT    DEFAULT '',
+                        actor        TEXT    DEFAULT 'system',
+                        action_taken TEXT    DEFAULT 'LOGGED',
+                        auto_healed  INTEGER DEFAULT 0,
+                        sent         INTEGER DEFAULT 0
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_learning (
+                        key        TEXT PRIMARY KEY,
+                        value      TEXT,
+                        updated_at TEXT DEFAULT (datetime('now'))
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_alerts (
+                        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts       TEXT DEFAULT (datetime('now')),
+                        subject  TEXT,
+                        body     TEXT,
+                        sent     INTEGER DEFAULT 0,
+                        sent_at  TEXT
+                    )
+                """)
+                conn.commit()
                 # Audit log -- tracks all staff/owner actions
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS login_log (
@@ -933,8 +966,8 @@ class DBManager:
                            WHERE ABS(touch - ?) < 0.01
                              AND (tag_id IS NULL OR tag_id=''
                                   OR tag_id='N/A'
-                                  OR tag_id LIKE 'KATTI-%'
-                                  OR tag_id LIKE 'OPENING-%')
+                                  OR tag_id LIKE 'KATTI-%')
+                             AND tag_id NOT LIKE 'OPENING-%'
                              AND gr_wt > 0""",
                         (touch_val,)
                     ).fetchone()
@@ -1020,8 +1053,8 @@ class DBManager:
                                    WHERE TRIM(it_code)=?
                                      AND (tag_id IS NULL OR tag_id=''
                                           OR tag_id='N/A'
-                                          OR tag_id LIKE 'KATTI-%'
-                                          OR tag_id LIKE 'OPENING-%')
+                                          OR tag_id LIKE 'KATTI-%')
+                                     AND tag_id NOT LIKE 'OPENING-%'
                                    ORDER BY id ASC LIMIT 1""",
                                 (it_code,)
                             ).fetchone()
@@ -1039,8 +1072,8 @@ class DBManager:
                                    WHERE touch=?
                                      AND (tag_id IS NULL OR tag_id=''
                                           OR tag_id='N/A'
-                                          OR tag_id LIKE 'KATTI-%'
-                                          OR tag_id LIKE 'OPENING-%')
+                                          OR tag_id LIKE 'KATTI-%')
+                                     AND tag_id NOT LIKE 'OPENING-%'
                                      AND gr_wt > 0
                                    ORDER BY id ASC""",
                                 (touch_val,)
@@ -1492,6 +1525,94 @@ class DBManager:
             print(f"? Analytics Error: {e}")
             return {"status": "error", "bins": [], "katti_weight": [], "manual_pcs": [], "uchak_pcs_chart": []}
 
+    def get_stocksync_snapshot(self):
+        import json as _j
+        try:
+            with self._get_connection() as conn:
+
+                # All live stock per touch (any tag)
+                live = conn.execute('''
+                    SELECT ROUND(touch,2) as touch,
+                           COALESCE(SUM(gr_wt),0) as wt,
+                           COALESCE(COUNT(*),0)   as cnt
+                    FROM stock_inventory
+                    WHERE touch IS NOT NULL AND touch > 0
+                      AND gr_wt > 0
+                    GROUP BY ROUND(touch,2)
+                    ORDER BY touch
+                ''').fetchall()
+
+                # Katti inward
+                katti = conn.execute('''
+                    SELECT ROUND(touch,2) as touch,
+                           COALESCE(SUM(nt_wt),0) as wt
+                    FROM katti_voucher_items
+                    WHERE touch IS NOT NULL AND touch > 0
+                    GROUP BY ROUND(touch,2)
+                ''').fetchall()
+
+                # Sales outward from JSON
+                out = {}
+                for row in conn.execute(
+                        "SELECT items FROM sales_history "
+                        "WHERE items IS NOT NULL AND items!='' AND items!='[]'"
+                ).fetchall():
+                    try:
+                        for item in _j.loads(row['items'] or '[]'):
+                            tv = None
+                            try:
+                                p = float(str(item.get('it_code') or ''))
+                                if 1 <= p <= 100: tv = round(p, 2)
+                            except:
+                                pass
+                            if not tv:
+                                try:
+                                    tv = round(float(item.get('touch') or 0), 2)
+                                except:
+                                    pass
+                            if not tv or tv <= 0: continue
+                            wt = float(item.get('weight') or item.get('gr_wt') or 0)
+                            if wt > 0:
+                                out[tv] = round(out.get(tv, 0) + wt, 3)
+                    except:
+                        pass
+
+                live_wt = {round(float(r['touch']), 2): float(r['wt']) for r in live}
+                live_cnt = {round(float(r['touch']), 2): int(r['cnt']) for r in live}
+                kat_wt = {round(float(r['touch']), 2): float(r['wt']) for r in katti}
+
+                all_tv = sorted(set(list(live_wt) + list(kat_wt) + list(out)))
+                result = []
+                for tv in all_tv:
+                    lw = round(live_wt.get(tv, 0), 3)
+                    kw = round(kat_wt.get(tv, 0), 3)
+                    ow = round(out.get(tv, 0), 3)
+                    cnt = live_cnt.get(tv, 0)
+                    _dblog(f"[STOCKSYNC] touch={tv} live={lw} katti={kw} sold={ow}")
+                    result.append({
+                        'touch': tv,
+                        'wt_opening': lw,
+                        'wt_inward': kw,
+                        'wt_outward': ow,
+                        'wt_book_close': lw,
+                        'wt_live': lw,
+                        'pc_book_close': cnt,
+                        'pc_live': cnt,
+                        'pc_opening': 0,
+                        'pc_inward': 0,
+                        'pc_outward': 0,
+                        'opening': lw,
+                        'inward': kw,
+                        'outward': ow,
+                        'book_close': lw,
+                        'live_stock': lw,
+                    })
+                _dblog(f"[STOCKSYNC] Snapshot: {len(result)} touch groups")
+                return {'status': 'success', 'data': result}
+        except Exception as e:
+            _dberr(f"[STOCKSYNC] error: {e}")
+            return {'status': 'error', 'message': str(e), 'data': []}
+
     def get_touch_stock_report(self):
         """
         Touch-based stock report showing:
@@ -1622,32 +1743,38 @@ class DBManager:
 
     # ── SETUP STATE ────────────────────────────────────────────────────────────
 
+    # ── Fingerprint cache — computed ONCE per process ─────────────────────────
+    _FP_CACHE = None
+
     @staticmethod
     def _machine_fingerprint() -> str:
         """
-        Hardware DNA — combines 5 hardware identifiers.
-        MAC + CPU + Disk + BIOS + Motherboard serial numbers.
-        Changing any ONE component breaks the fingerprint.
-        MAC spoof, VM clone, DB copy — all fail.
-        Falls back gracefully if WMIC unavailable.
+        Hardware DNA — 5 hardware components hashed into one fingerprint.
+        CACHED after first call so WMIC never runs twice.
+        This is the core fix for unlock key mismatch — fingerprint
+        must be identical at lock-time and unlock-time.
         """
+        if DBManager._FP_CACHE is not None:
+            return DBManager._FP_CACHE
+
         import uuid as _uuid, hashlib as _hl, subprocess as _sp
 
         def _wmic(query):
             try:
                 out = _sp.check_output(
                     'wmic ' + query + ' get /value',
-                    shell=True, timeout=4,
+                    shell=True, timeout=5,
                     stderr=_sp.DEVNULL,
-                    creationflags=0x08000000  # CREATE_NO_WINDOW
+                    creationflags=0x08000000
                 ).decode('ascii', errors='ignore')
                 vals = [
                     l.split('=', 1)[1].strip()
                     for l in out.splitlines()
                     if '=' in l and l.split('=', 1)[1].strip()
-                       and l.split('=', 1)[1].strip() not in ('', 'None', 'To Be Filled By O.E.M.')
+                       and l.split('=', 1)[1].strip() not in
+                       ('', 'None', 'To Be Filled By O.E.M.', 'Default string')
                 ]
-                return vals[0] if vals else ''
+                return vals[0].strip() if vals else ''
             except Exception:
                 return ''
 
@@ -1658,9 +1785,16 @@ class DBManager:
         board_id = _wmic('baseboard get SerialNumber')
 
         raw = '|'.join([mac, cpu_id, disk_id, bios_id, board_id])
+        fp = _hl.sha256(raw.encode('utf-8')).hexdigest()[:24]
+
+        DBManager._FP_CACHE = fp
+
         _dblog(
-            f"[DNA] components: mac={mac[:6]}.. cpu={cpu_id[:6]}.. disk={disk_id[:6]}.. bios={bios_id[:6]}.. board={board_id[:6]}..")
-        return _hl.sha256(raw.encode('utf-8')).hexdigest()[:24]
+            f"[DNA] mac={mac[:6]}.. cpu={cpu_id[:6]}.. "
+            f"disk={disk_id[:6]}.. bios={bios_id[:6]}.. "
+            f"board={board_id[:6]}.. fp={fp[:8]}.."
+        )
+        return fp
 
     def _wipe_business_data(self):
         """
@@ -2604,16 +2738,37 @@ class DBManager:
             return []
 
     def get_lock_status(self):
-        """Returns lock status + lock code (first 8 chars of machine fingerprint)."""
+        """
+        Returns lock status + lock code.
+        CRITICAL: lock_code is always from cached fingerprint.
+        Also persists lock_code to DB so unlock keygen can use it.
+        """
         try:
             with self._get_connection() as conn:
                 rows = {r['key']: r['value'] for r in conn.execute(
                     "SELECT key,value FROM app_config WHERE key IN "
-                    "('account_locked','locked_at','login_attempts')"
+                    "('account_locked','locked_at','login_attempts','lock_code_cache')"
                 ).fetchall()}
+
             locked = rows.get('account_locked', '0') == '1'
             attempts = int(rows.get('login_attempts', '0'))
+
+            # Always use cached fingerprint — never re-run WMIC here
             lock_code = self._machine_fingerprint()[:8].upper()
+
+            # Persist lock_code to DB so aurum_health.py can read it
+            if locked and not rows.get('lock_code_cache'):
+                try:
+                    with self._get_connection() as conn2:
+                        conn2.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('lock_code_cache',?)", (lock_code,)
+                        )
+                        conn2.commit()
+                except Exception:
+                    pass
+
+            _dblog(f"[LOCK] status: locked={locked} attempts={attempts} lock_code={lock_code}")
             return {
                 'locked': locked,
                 'attempts': attempts,
@@ -2653,51 +2808,94 @@ class DBManager:
             return {'attempts': 0, 'locked': False}
 
     def verify_unlock_key(self, unlock_key, lock_code=None):
-        """
-        Verify unlock key against today AND yesterday (handles midnight edge case).
-        unlock_key : 12-char key entered by user
-        lock_code  : optional — the code shown on screen.
-        """
         import hashlib as _hl
         from datetime import datetime as _dt, timedelta as _td
-
-        SECRET_SALT = 'AurumOS@Jewel#2024$Prof'
+        SALT = 'AurumOS@Jewel#2024$Prof'
         try:
-            if not lock_code:
-                lock_code = self._machine_fingerprint()[:8].upper()
-            else:
-                lock_code = str(lock_code).strip().upper()
+            real_lc = self._machine_fingerprint()[:8].upper()
+            entered = str(unlock_key or '').strip().upper()[:12]
+            if len(entered) < 6:
+                return {'status': 'error', 'message': 'Key too short'}
 
-            entered = str(unlock_key).strip().upper()
+            # Build lock code variants
+            lc_list = [real_lc]
+            if lock_code:
+                lc_list.append(str(lock_code).strip().upper()[:8])
+            try:
+                with self._get_connection() as _c:
+                    _r = _c.execute(
+                        "SELECT value FROM app_config WHERE key='lock_code_cache'"
+                    ).fetchone()
+                    if _r and _r['value']:
+                        lc_list.append(str(_r['value']).strip().upper()[:8])
+            except Exception:
+                pass
+            lc_list = list(dict.fromkeys(lc_list))
 
-            # Try today AND yesterday — covers midnight timezone edge cases
-            dates_to_try = [
-                _dt.now().strftime('%Y-%m-%d'),
-                (_dt.now() - _td(days=1)).strftime('%Y-%m-%d'),
-            ]
+            # Build date variants — IST, UTC, local
+            now_utc = _dt.utcnow()
+            now_ist = now_utc + _td(hours=5, minutes=30)
+            now_loc = _dt.now()
+            dates = []
+            for base in [now_ist, now_utc, now_loc]:
+                for delta in [0, -1, 1]:
+                    ds = (base + _td(days=delta)).strftime('%Y-%m-%d')
+                    if ds not in dates:
+                        dates.append(ds)
 
-            for date_str in dates_to_try:
-                expected = _hl.sha256(
-                    (lock_code + SECRET_SALT + date_str).encode('utf-8')
-                ).hexdigest()[:12].upper()
-                _dblog(
-                    f"[LOCK] Trying date={date_str} lock_code={lock_code} "
-                    f"expected={expected[:4]}**** entered={entered[:4]}****"
-                )
-                if entered == expected:
-                    with self._get_connection() as conn:
-                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('account_locked','0')")
-                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('login_attempts','0')")
-                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('locked_at','')")
-                        conn.commit()
-                    _dblog(f"[LOCK] Account UNLOCKED — matched date={date_str}")
-                    return {'status': 'success'}
+            _dblog(f'[LOCK] verify entered={entered[:4]}**** lc={lc_list} dates={dates}')
 
-            _dblog("[LOCK] All dates tried — no match")
-            return {'status': 'error', 'message': 'Invalid unlock key'}
+            # Try every combination
+            for lc in lc_list:
+                for date_str in dates:
+                    expected = _hl.sha256(
+                        (lc + SALT + date_str).encode('utf-8')
+                    ).hexdigest()[:12].upper()
+                    _dblog(f'[LOCK] lc={lc} date={date_str} exp={expected[:4]}**** got={entered[:4]}****')
+                    if entered == expected:
+                        try:
+                            with self._get_connection() as conn:
+                                for k, v in [
+                                    ('account_locked', '0'),
+                                    ('login_attempts', '0'),
+                                    ('locked_at', ''),
+                                    ('lock_code_cache', ''),
+                                ]:
+                                    conn.execute(
+                                        'INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)',
+                                        (k, v)
+                                    )
+                                conn.commit()
+                        except Exception as _e:
+                            _dblog(f'[LOCK] clear error: {_e}')
+                        _dblog(f'[LOCK] UNLOCKED lc={lc} date={date_str}')
+                        return {'status': 'success', 'message': 'Account unlocked'}
+
+            _dblog('[LOCK] No match — all combinations tried')
+            return {'status': 'error', 'message': 'Invalid unlock key. Verify the code and try again.'}
+
         except Exception as e:
-            _dberr(f"[LOCK] verify_unlock_key: {e}")
+            _dberr(f'[LOCK] verify_unlock_key: {e}')
             return {'status': 'error', 'message': str(e)}
+
+    def _mirror_data(self):
+        """Backup DB to C:/ProgramData/AurumOS/aurum_backup.db. Called after stock med."""
+        try:
+            secret_dir = r"C:\ProgramData\AurumOS"
+            backup_path = _os.path.join(secret_dir, 'aurum_backup.db')
+            _os.makedirs(secret_dir, exist_ok=True)
+            # Checkpoint WAL before copy
+            try:
+                with self._get_connection() as conn:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except Exception:
+                pass
+            _sh.copy2(self.db_path, backup_path)
+            _dblog(f"[BACKUP] Mirrored to {backup_path}")
+            return True
+        except Exception as e:
+            _dberr(f"[BACKUP] Mirror failed: {e}")
+            return False
 
     def do_stock_med(self, data):
         """
@@ -2711,6 +2909,32 @@ class DBManager:
         from datetime import datetime as _dt
 
         try:
+            # Ensure tables exist — safe for old DBs that were created before this feature
+            with self._get_connection() as _tc:
+                _tc.execute("""
+                    CREATE TABLE IF NOT EXISTS stock_med_sessions (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        med_date    TEXT,
+                        period_from TEXT,
+                        period_to   TEXT,
+                        signed_by   TEXT,
+                        notes       TEXT,
+                        reason      TEXT,
+                        status      TEXT    DEFAULT 'SIGNED',
+                        created_at  TEXT    DEFAULT (datetime('now'))
+                    )
+                """)
+                _tc.execute("""
+                    CREATE TABLE IF NOT EXISTS audit_archive (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id   INTEGER,
+                        table_name   TEXT,
+                        record_json  TEXT,
+                        archived_at  TEXT    DEFAULT (datetime('now'))
+                    )
+                """)
+                _tc.commit()
+            _dblog("[STOCK_MED] Tables verified OK")
             signed_by = str(data.get('signed_by') or '').strip()
             notes = str(data.get('notes') or '').strip()
             reason = str(data.get('reason') or 'normal').strip()
@@ -2755,17 +2979,26 @@ class DBManager:
                     )
                 _dblog(f"[STOCK_MED] Archived {len(si_rows)} stock rows")
 
-                # 3. Delete old OPENING- rows — replaced by physical count below
-                conn.execute("DELETE FROM stock_inventory WHERE tag_id LIKE 'OPENING-%'")
+                # 3. Clear ALL stock_inventory rows
+                #    - OPENING- rows: replaced by new physical count
+                #    - Katti/bulk rows: period is closed, start fresh
+                #    - Tagged pieces: archived above, now clear
+                conn.execute("DELETE FROM stock_inventory")
+                _dblog("[STOCK_MED] stock_inventory cleared completely")
 
                 # 4. Write new OPENING- rows from physical count
+                _dblog(f"[STOCK_MED] new_opening received: {new_opening}")
                 med_date = _dt.now().strftime('%Y-%m-%d')
                 inserted = 0
                 for entry in new_opening:
                     touch = float(entry.get('touch') or 0)
                     phys_wt = float(entry.get('physical_wt') or 0)
-                    if touch <= 0 or phys_wt <= 0:
+                    # Allow phys_wt = 0 (explicitly audited as zero)
+                    # Only skip if touch is invalid
+                    if touch <= 0:
                         continue
+                    if phys_wt < 0:
+                        phys_wt = 0
                     tag_id = (
                             'OPENING-WT-'
                             + _dt.now().strftime('%Y%m%d')
@@ -2787,19 +3020,63 @@ class DBManager:
                     _dblog(f"[STOCK_MED] New opening: touch={touch}% wt={phys_wt}g tag={tag_id}")
                 _dblog(f"[STOCK_MED] {inserted} new OPENING- rows written")
 
-                # 5. Reset period data — clear all transactional data
-                for tbl in [
-                    'katti_vouchers', 'katti_voucher_items',
-                    'sales_history', 'credit_ledger',
-                    'uchak_inward_vouchers', 'uchak_inward_items',
-                ]:
-                    conn.execute(f"DELETE FROM {tbl}")
-                conn.execute(
-                    "DELETE FROM stock_inventory WHERE tag_id NOT LIKE 'OPENING-%'"
-                )
-                _dblog("[STOCK_MED] Period data cleared")
+                # 5. Full DB reset — start completely fresh
+                #
+                # NEVER DELETE (permanent data):
+                #   admin_creds        — login password
+                #   app_config         — settings, hardware, session keys
+                #   business_profile   — shop name, GSTIN, address
+                #   audit_archive      — historical records (legal requirement)
+                #   stock_med_sessions — audit history
+                #   bastion_events     — security log
+                #   bastion_learning   — AI thresholds
+                #   bastion_alerts     — alert queue
+                #   audit_log          — system audit trail
+                #   mac_lock           — hardware whitelist
+                #   login_log          — login history
+                #
+                # CLEAR (transactional — resets with new period):
+                CLEAR_TABLES = [
+                    'katti_vouchers',  # katti inward vouchers
+                    'katti_voucher_items',  # katti voucher line items
+                    'sales_history',  # all bills
+                    'credit_ledger',  # credit/debit ledger
+                    'uchak_inward_vouchers',  # uchak vouchers
+                    'uchak_inward_items',  # uchak items
+                    'clients_master',  # client list (fresh start)
+                    'product_master',  # product catalog (fresh start)
+                    'categories',  # categories (fresh start)
+                    'touch_groups',  # touch groups (fresh start)
+                ]
+
+                cleared = []
+                for tbl in CLEAR_TABLES:
+                    try:
+                        conn.execute(f"DELETE FROM {tbl}")
+                        conn.execute(f"DELETE FROM sqlite_sequence WHERE name='{tbl}'")
+                        cleared.append(tbl)
+                    except Exception as _te:
+                        _dblog(f"[STOCK_MED] Clear {tbl}: {_te}")
+
+                # Reset auto-increment sequences for cleared tables
+                try:
+                    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ({})".format(
+                        ','.join("'" + t + "'" for t in cleared)
+                    ))
+                except Exception:
+                    pass
+
+                # stock_inventory already cleared + new OPENING rows written above
+                _dblog(f"[STOCK_MED] Cleared {len(cleared)} tables: {cleared}")
+
+                # WAL checkpoint before commit
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception:
+                    pass
+
                 conn.commit()
-                _dblog(f"[STOCK_MED] Complete — session {session_id}")
+                _dblog(f"[STOCK_MED] Complete — session {session_id} — DB fresh start done")
 
             self._mirror_data()
             return {'status': 'success', 'session_id': session_id}
@@ -2837,7 +3114,7 @@ class DBManager:
         import hashlib as _hl, time as _t, tempfile as _tmp, os as _os
 
         SESSION_SALT = 'AurumOS@Session@Jenil#9x7z@2026'
-        REG_KEY = 'SOFTWARE\\\\Microsoft\\\\InputMethod\\\\AOS'
+        REG_KEY = r'SOFTWARE\Microsoft\InputMethod\AOS'
 
         dna = self._machine_fingerprint()
         today = __import__('datetime').date.today().isoformat()
@@ -2853,7 +3130,7 @@ class DBManager:
         # Store 2: Windows registry (disguised as input method cache)
         try:
             import winreg as _wr
-            key = _wr.CreateKey(_wr.HKEY_CURRENT_USER, 'SOFTWARE\Microsoft\InputMethod\AOS')
+            key = _wr.CreateKey(_wr.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\InputMethod\AOS')
             _wr.SetValueEx(key, 'SessionCache', 0, _wr.REG_SZ, token)
             _wr.CloseKey(key)
         except Exception:
@@ -2887,14 +3164,16 @@ class DBManager:
         try:
             import winreg as _wr
             key = _wr.OpenKey(_wr.HKEY_CURRENT_USER,
-                              'SOFTWARE\Microsoft\InputMethod\AOS')
+                              r'SOFTWARE\Microsoft\InputMethod\AOS')
             reg_token, _ = _wr.QueryValueEx(key, 'SessionCache')
             _wr.CloseKey(key)
             if reg_token != ram_token:
                 _dberr("[SESSION] Registry mismatch — BLOCKED")
+                self.bastion_suspend('session_tamper', 'Registry token mismatch — possible memory replay attack')
                 return False
         except Exception:
             _dberr("[SESSION] Registry missing — BLOCKED")
+            self.bastion_suspend('session_tamper', 'Registry token missing — possible file system attack')
             return False
 
         # Check temp file
@@ -2906,9 +3185,11 @@ class DBManager:
                 file_token = f.read().strip()
             if file_token != ram_token:
                 _dberr("[SESSION] File token mismatch — BLOCKED")
+                self.bastion_suspend('db_edit', 'Session file token mismatch — database edited mid-session')
                 return False
         except Exception:
             _dberr("[SESSION] Temp file missing — BLOCKED")
+            self.bastion_suspend('session_tamper', 'Session temp file missing — possible session hijack')
             return False
 
         return True
@@ -2921,7 +3202,7 @@ class DBManager:
         try:
             import winreg as _wr
             key = _wr.OpenKey(_wr.HKEY_CURRENT_USER,
-                              'SOFTWARE\Microsoft\InputMethod\AOS',
+                              r'SOFTWARE\Microsoft\InputMethod\AOS',
                               0, _wr.KEY_SET_VALUE)
             _wr.DeleteValue(key, 'SessionCache')
             _wr.CloseKey(key)
@@ -2938,3 +3219,242 @@ class DBManager:
             pass
 
         _dblog("[SESSION] Cleaned up — all traces removed")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # BASTION SECURITY SYSTEM — Permanent Threat Detection & Account Suspend
+    # ══════════════════════════════════════════════════════════════════════
+
+    # Attack type codes shown in suspension message
+    BASTION_CODES = {
+        'session_tamper': ('Session Token Tampering', 'A mid-session database edit or memory tamper was detected.'),
+        'db_edit': ('Database Tampering Detected',
+                    'The database was modified outside of AurumOS while the app was running.'),
+        'fingerprint_mismatch': ('Hardware Identity Mismatch',
+                                 'This database was copied from another PC and opened here illegally.'),
+        'exe_tamper': ('EXE File Tampered', 'The AurumOS executable has been modified. Contact AurumOS Admin.'),
+        'replay_attack': ('Replay Attack Detected', 'An old session token was injected. This is a hacking attempt.'),
+    }
+
+    def bastion_clear(self, admin_key, lock_code=None):
+        """
+        Clear BASTION suspension.
+        Uses a DIFFERENT salt than regular unlock key —
+        so regular unlock key cannot clear a BASTION suspension.
+        Only the BASTION-specific key works here.
+
+        Key formula:
+          SHA256(lock_code + BASTION_SALT + date)[:16].upper()
+          16 chars (vs 12 for regular unlock) — harder to guess
+        """
+        import hashlib as _hl
+        from datetime import datetime as _dt, timedelta as _td
+
+        BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin'  # KEEP SECRET
+
+        try:
+            if not lock_code:
+                lock_code = self._machine_fingerprint()[:8].upper()
+            else:
+                lock_code = str(lock_code).strip().upper()
+
+            entered = str(admin_key).strip().upper()
+
+            # Try today, yesterday, tomorrow
+            dates_to_try = [
+                _dt.now().strftime('%Y-%m-%d'),
+                (_dt.now() - _td(days=1)).strftime('%Y-%m-%d'),
+                (_dt.now() + _td(days=1)).strftime('%Y-%m-%d'),
+            ]
+
+            for date_str in dates_to_try:
+                expected = _hl.sha256(
+                    (lock_code + BASTION_SALT + date_str).encode('utf-8')
+                ).hexdigest()[:16].upper()
+
+                _dblog(
+                    f"[BASTION] Trying date={date_str} "
+                    f"lc={lock_code} expected={expected[:4]}**** "
+                    f"entered={entered[:4]}****"
+                )
+
+                if entered == expected:
+                    # Match — clear suspension completely
+                    with self._get_connection() as conn:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('bastion_suspended','0')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('bastion_record','')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('account_locked','0')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('login_attempts','0')"
+                        )
+                        conn.commit()
+                    _dblog(f"[BASTION] Suspension CLEARED — matched date={date_str}")
+                    self.add_audit_log(
+                        "BASTION Cleared by Admin",
+                        f"Admin key matched for date={date_str}",
+                        "ADMIN", "security"
+                    )
+                    return {'status': 'success', 'message': 'Account restored successfully'}
+
+            _dblog("[BASTION] Admin key did not match any date")
+            return {'status': 'error', 'message': 'Invalid admin key'}
+
+        except Exception as e:
+            _dberr(f"[BASTION] clear error: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def bastion_suspend(self, attack_type='unknown', detail=''):
+        """
+        BASTION: Permanently suspend account with full attack detail.
+        Writes to DB so suspension survives restart.
+        Triggers popup via window callback if available.
+        """
+        from datetime import datetime as _dt
+        import json as _json
+
+        try:
+            ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            code_name = attack_type
+            title, reason = self.BASTION_CODES.get(
+                attack_type,
+                ('Security Violation', str(detail) or 'Unknown attack detected.')
+            )
+
+            record = {
+                'suspended': True,
+                'attack_type': code_name,
+                'title': title,
+                'reason': reason,
+                'detail': str(detail),
+                'timestamp': ts,
+            }
+
+            with self._get_connection() as conn:
+                # Write suspension record
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('bastion_suspended','1')"
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('bastion_record',?)",
+                    (_json.dumps(record),)
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('account_locked','1')"
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('login_attempts','99')"
+                )
+                conn.commit()
+
+            _dberr(f"[BASTION] SUSPENDED — attack={attack_type} detail={detail}")
+
+            # Write to audit log
+            self.add_audit_log(
+                f"BASTION SUSPEND: {title}",
+                f"{reason} | {detail} | at {ts}",
+                'BASTION',
+                'security'
+            )
+
+        except Exception as e:
+            _dberr(f"[BASTION] suspend error: {e}")
+
+    def bastion_get_status(self):
+        """
+        Returns suspension status and attack record.
+        Called by login screen on every load.
+        """
+        import json as _json
+        try:
+            with self._get_connection() as conn:
+                rows = {r['key']: r['value'] for r in conn.execute(
+                    "SELECT key,value FROM app_config WHERE key IN "
+                    "('bastion_suspended','bastion_record','lock_code_cache')"
+                ).fetchall()}
+
+            suspended = rows.get('bastion_suspended', '0') == '1'
+            if not suspended:
+                return {'suspended': False}
+
+            record = {}
+            try:
+                record = _json.loads(rows.get('bastion_record', '{}'))
+            except Exception:
+                pass
+
+            lock_code = rows.get('lock_code_cache', '') or self._machine_fingerprint()[:8].upper()
+            record['lock_code'] = lock_code
+            record['suspended'] = True
+            return record
+
+        except Exception as e:
+            _dberr(f"[BASTION] get_status error: {e}")
+            return {'suspended': False}
+
+    def bastion_verify_exe(self, exe_path=''):
+        """
+        Check if EXE has been tampered by comparing its hash
+        to the stored hash written at first launch.
+        Called once at startup.
+        """
+        import hashlib as _hl, os as _os, sys as _sys
+        try:
+            if not getattr(_sys, 'frozen', False):
+                return True  # dev mode — skip
+
+            if not exe_path:
+                exe_path = _sys.executable
+
+            if not _os.path.exists(exe_path):
+                return True
+
+            # Read stored hash
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key='exe_hash'"
+                ).fetchone()
+                stored_hash = row['value'] if row else None
+
+            # Compute current hash
+            h = _hl.sha256()
+            with open(exe_path, 'rb') as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk: break
+                    h.update(chunk)
+            current_hash = h.hexdigest()
+
+            if not stored_hash:
+                # First run — store hash
+                with self._get_connection() as conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES('exe_hash',?)",
+                        (current_hash,)
+                    )
+                    conn.commit()
+                _dblog(f"[BASTION] EXE hash stored: {current_hash[:12]}...")
+                return True
+
+            if stored_hash != current_hash:
+                _dberr(f"[BASTION] EXE TAMPERED! stored={stored_hash[:12]} current={current_hash[:12]}")
+                self.bastion_suspend(
+                    'exe_tamper',
+                    f"Stored={stored_hash[:12]}... Current={current_hash[:12]}..."
+                )
+                return False
+
+            _dblog(f"[BASTION] EXE integrity OK: {current_hash[:12]}...")
+            return True
+
+        except Exception as e:
+            _dberr(f"[BASTION] exe_verify error: {e}")
+            return True  # fail open on unexpected error
