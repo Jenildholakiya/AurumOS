@@ -370,6 +370,30 @@ var stocks = [], filtered = [], editId = null, editMode = 'weight', delId = null
 var goldRate = 0;
 var currentMode = 'weight'; // 'weight' or 'pcs'
 
+function setupEnterKeyNav() {
+    const navSequences = {
+        'weight': ['f-itcode', 'f-grwt', 'f-lswt', 'f-pcs', 'f-touch', 'f-wastage'],
+        'pcs':    ['p-itcode', 'p-itname', 'p-pcs', 'p-ntwt', 'p-touch']
+    };
+
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const seq = (currentMode === 'weight') ? navSequences.weight : navSequences.pcs;
+                const index = seq.indexOf(this.id);
+
+                if (index > -1 && index < seq.length - 1) {
+                    document.getElementById(seq[index + 1]).focus();
+                } else if (index === seq.length - 1) {
+                    // Trigger save on last field enter
+                    triggerSave();
+                }
+            }
+        });
+    });
+}
+
 // ── MODE SWITCH ──────────────────────────────────────────────────
 function setMode(m) {
     currentMode = m;

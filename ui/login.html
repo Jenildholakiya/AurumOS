@@ -101,11 +101,21 @@ body::before{
 .em{display:none;background:var(--red-bg);border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:9px 12px;font-size:.73rem;font-weight:500;color:var(--red);margin-bottom:12px;}
 .em.on{display:block;}
 
-/* ── LOCKOUT PANEL — permanent, no countdown ── */
+/* ── LOCKOUT PANEL ── */
 .lkp{background:#fff8f8;border:1.5px solid rgba(185,28,28,.18);border-radius:12px;padding:24px 20px;text-align:center;margin-bottom:12px;display:none;}
 .lki{font-size:2.4rem;margin-bottom:10px;}
-.lkt{font-family:var(--serif);font-size:1.05rem;color:var(--ink);margin-bottom:4px;}
-.lks{font-size:.72rem;color:var(--muted);line-height:1.6;}
+.lkt{font-family:var(--serif);font-size:1.1rem;color:var(--ink);margin-bottom:4px;}
+.lks{font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:16px;}
+.lk-code-wrap{background:#fff;border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:14px;margin-bottom:14px;}
+.lk-code-label{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.lk-code{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--red);letter-spacing:6px;margin-bottom:6px;}
+.lk-code-hint{font-size:.65rem;color:var(--muted);line-height:1.5;}
+.lk-unlock-wrap{text-align:left;}
+.lk-inp{width:100%;height:40px;background:var(--cream);border:1px solid var(--rule);border-radius:7px;font-family:var(--mono);font-size:1rem;padding:0 12px;letter-spacing:3px;outline:none;text-align:center;box-sizing:border-box;margin-bottom:6px;}
+.lk-inp:focus{border-color:var(--gold);}
+.lk-err{font-size:.7rem;color:var(--red);min-height:16px;margin-bottom:6px;text-align:center;}
+.lk-btn{width:100%;height:38px;background:var(--gold);border:none;border-radius:7px;font-size:.8rem;font-weight:700;color:#fff;cursor:pointer;}
+.lk-btn:hover{background:var(--gold3);}
 /* Admin contact hint */
 .lk-admin{
     display:inline-flex;align-items:center;gap:6px;
@@ -217,9 +227,9 @@ body::before{
                        placeholder="••••••••" autocomplete="current-password"
                        oninput="onPassInput(this.value)"
                        onkeydown="if(event.key==='Enter')login()">
-<!--                <button class="eye-btn" id="eye-btn" onclick="toggleEye()" type="button" tabindex="-1">-->
-<!--                    <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>-->
-<!--                </button>-->
+                <button class="eye-btn" id="eye-btn" onclick="toggleEye()" type="button" tabindex="-1">
+                    <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
             </div>
             <div class="strength-bar" id="strength-bar">
                 <div class="strength-fill" id="strength-fill"></div>
@@ -239,48 +249,7 @@ body::before{
         <div class="em" id="em"></div>
 
         <!-- Lockout panel — permanent until admin resets -->
-        <div id="lock-screen" style="display:none;position:fixed;inset:0;background:#0e0c09;z-index:99999;
-             display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
-
-            <div style="text-align:center;">
-                <div style="font-family:Georgia,serif;font-size:2rem;color:#a87d1e;">&#128274;</div>
-                <div style="font-family:Georgia,serif;font-size:1.4rem;color:#fff;margin-top:8px;">
-                    Account <em style="color:#a87d1e;">Locked</em>
-                </div>
-                <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:6px;">
-                    Too many failed attempts. Contact your AurumOS provider.
-                </div>
-            </div>
-
-            <!-- Lock Code -->
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(168,125,30,0.25);
-                 border-radius:10px;padding:16px 28px;text-align:center;">
-                <div style="font-size:0.5rem;text-transform:uppercase;letter-spacing:2px;
-                     color:rgba(255,255,255,0.3);margin-bottom:6px;">Your Lock Code</div>
-                <div id="lock-code-display" style="font-family:'DM Mono',monospace;font-size:2rem;
-                     letter-spacing:6px;color:#c9a227;"></div>
-                <div style="font-size:0.58rem;color:rgba(255,255,255,0.25);margin-top:4px;">
-                    Read this code to your AurumOS provider
-                </div>
-            </div>
-
-            <!-- Unlock Key Input -->
-            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;width:280px;">
-                <input id="unlock-key-inp" type="text" maxlength="12"
-                       placeholder="Enter 12-character unlock key"
-                       style="width:100%;height:40px;padding:0 14px;border-radius:8px;
-                              border:1px solid rgba(168,125,30,0.3);background:rgba(255,255,255,0.06);
-                              color:#fff;font-family:'DM Mono',monospace;font-size:1rem;
-                              letter-spacing:3px;text-align:center;text-transform:uppercase;outline:none;">
-                <button onclick="submitUnlockKey()"
-                        style="width:100%;height:38px;border:none;border-radius:8px;
-                               background:linear-gradient(135deg,#a87d1e,#c9a227);
-                               color:#fff;font-size:0.78rem;cursor:pointer;">
-                    Unlock Account
-                </button>
-                <div id="unlock-msg" style="font-size:0.68rem;color:#f87171;min-height:16px;"></div>
-            </div>
-        </div>
+        <div class="lkp" id="lkp"><div class="lki">&#128274;</div><div class="lkt">Account Locked</div><div class="lks">Too many incorrect attempts. Access has been suspended.</div><div class="lk-code-wrap"><div class="lk-code-label">Your Lock Code</div><div style="display:flex;align-items:center;justify-content:center;gap:10px;"><div class="lk-code" id="lk-code-display">&#8212;</div><button onclick="copyLockCode()" style="background:transparent;border:1px solid rgba(185,28,28,.3);border-radius:5px;padding:3px 8px;font-size:.65rem;color:var(--red);cursor:pointer;" title="Copy lock code">Copy</button></div><div class="lk-code-hint">Share this code with your administrator to get an unlock key</div></div><div class="lk-unlock-wrap"><div class="lk-code-label">Enter Unlock Key (12 characters)</div><input class="lk-inp" id="lk-key-inp" type="text" maxlength="12" placeholder="XXXXXXXXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"><div class="lk-err" id="lk-err"></div><button class="lk-btn" onclick="tryUnlock()">Unlock</button></div></div>
 
         <button class="btn" id="btn" onclick="login()">
             <span>→</span> Sign In
@@ -327,32 +296,29 @@ var READY    = false;
 
 // ── Last Login Display ─────────────────────────────────────────────
 function showLastLogin(data) {
+    // data = { username, role, time } from localStorage or API
     if (!data || !data.username) return;
-
     var strip  = document.getElementById('last-login');
-    var nameEl = document.getElementById('ll-name');
-    var metaEl = document.getElementById('ll-meta');
-
-    // Display ADMIN for owner, otherwise username
-    var role = (data.role || '').toLowerCase();
-    var displayName = data.username || 'Owner';
-
-    document.getElementById('ll-avatar').innerText = displayName.charAt(0).toUpperCase();
-    nameEl.innerText = displayName;
-
-    // FIX: Force Local Time Format
-    var d = new Date(data.time.replace(' ', 'T'));
-
-    // Check if date is valid
-    if (!isNaN(d.getTime())) {
-        var dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-        var timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        var roleLabel = (role === 'admin') ? 'Admin' : 'Staff';
-        metaEl.innerText = roleLabel + ' · ' + dateStr + ' · ' + timeStr;
-    } else {
-        metaEl.innerText = "Last login: " + data.time;
+    var avatar = document.getElementById('ll-avatar');
+    var name   = document.getElementById('ll-name');
+    var meta   = document.getElementById('ll-meta');
+    avatar.innerText = data.username.charAt(0).toUpperCase();
+    name.innerText   = data.username;
+    // Format time
+    var timeStr = '—';
+    if (data.time) {
+        try {
+            var d = new Date(data.time);
+            var now = new Date();
+            var diff = Math.floor((now - d) / 60000); // minutes ago
+            if (diff < 1)        timeStr = 'Just now';
+            else if (diff < 60)  timeStr = diff + ' min ago';
+            else if (diff < 1440)timeStr = Math.floor(diff/60) + 'h ago';
+            else                 timeStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+                                         + ' · ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        } catch(e) { timeStr = data.time; }
     }
-
+    meta.innerText = (data.role ? data.role.charAt(0).toUpperCase() + data.role.slice(1) : 'User') + '  ·  ' + timeStr;
     strip.classList.add('visible');
 }
 
@@ -443,7 +409,7 @@ function onReady() {
                     if (!s) return;
                     ATTEMPTS = parseInt(s.attempts) || 0;
                     if (s.locked) {
-                        dots(MAX); showAR(); applyLock();
+                        dots(MAX); showAR(); applyLock(s.lock_code || '');
                     } else if (ATTEMPTS > 0) {
                         dots(ATTEMPTS); showAR();
                     }
@@ -534,11 +500,25 @@ function handleResult(res) {
 
     if (res.status === 'locked') {
         ATTEMPTS=MAX; dots(MAX); showAR();
-        applyLock();
+        applyLock(res.lock_code || '');
         return;
     }
 
-    ATTEMPTS = parseInt(res.attempts) || (ATTEMPTS+1);
+    // Handle error status (exception in backend)
+    if (res.status === 'error') {
+        showErr(res.message || 'An error occurred. Please try again.');
+        shake();
+        document.getElementById('inp').value = '';
+        document.getElementById('inp').focus();
+        return;
+    }
+
+    // Wrong password — increment attempts
+    ATTEMPTS = (typeof res.attempts === 'number') ? res.attempts : (ATTEMPTS + 1);
+    if (ATTEMPTS >= MAX) {
+        applyLock();
+        return;
+    }
     dots(ATTEMPTS); showAR(); shake();
     document.getElementById('inp').value=''; document.getElementById('inp').focus();
     showErr(res.message || 'Wrong password.');
@@ -547,17 +527,81 @@ function handleResult(res) {
 window.__loginResult = null;
 
 // ── Lock — PERMANENT (no countdown, no auto-unlock) ───────────────
-function applyLock() {
-    LOCKED = true;
-    // Hide password field and sign-in button — only lockout panel visible
-    document.getElementById('pass-mode').style.display = 'none';
-    document.getElementById('btn').style.display       = 'none';
-    document.getElementById('ar').style.display        = 'none';
-    document.getElementById('em').classList.remove('on');
-    document.getElementById('lkp').style.cssText       = 'display:block!important;';
+
+function copyLockCode() {
+    var el = document.getElementById('lk-code-display');
+    if (!el) return;
+    try {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(el.innerText);
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = el.innerText;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+    } catch(e) {}
 }
 
+function tryUnlock() {
+    var key = (document.getElementById('lk-key-inp').value || '').trim().toUpperCase();
+    var err = document.getElementById('lk-err');
+    if (key.length < 12) { err.innerText = 'Unlock key must be 12 characters'; return; }
+    if (!window.pywebview || !window.pywebview.api) { err.innerText = 'Not connected'; return; }
+    err.innerText = 'Verifying...';
+    window.pywebview.api.verify_unlock_key(key).then(function(r) {
+        if (r && r.status === 'success') {
+            // Full state reset
+            LOCKED   = false;
+            ATTEMPTS = 0;
+            // Hide lock screen
+            var lkp = document.getElementById('lkp');
+            if (lkp) lkp.style.cssText = 'display:none!important;';
+            // Show login form
+            var pm  = document.getElementById('pass-mode');
+            var btn = document.getElementById('btn');
+            if (pm)  pm.style.display  = 'block';
+            if (btn) btn.style.display = 'block';
+            // Clear inputs
+            document.getElementById('lk-key-inp').value = '';
+            err.innerText = '';
+            // Reset attempt dots
+            dots(0);
+            // Focus password field
+            setTimeout(function() {
+                var pw = document.getElementById('pass-inp') || document.querySelector('.inp');
+                if (pw) pw.focus();
+            }, 100);
+        } else {
+            err.innerText = r && r.message ? r.message : 'Invalid unlock key';
+        }
+    }).catch(function(e) {
+        err.innerText = 'Error: ' + String(e);
+    });
+}
 
+function applyLock(lockCode) {
+    LOCKED = true;
+    try {
+        var pm  = document.getElementById('pass-mode');
+        var btn = document.getElementById('btn');
+        var ar  = document.getElementById('ar');
+        var em  = document.getElementById('em');
+        var lkp = document.getElementById('lkp');
+        var lcd = document.getElementById('lk-code-display');
+        if (pm)  pm.style.display  = 'none';
+        if (btn) btn.style.display = 'none';
+        if (ar)  ar.style.display  = 'none';
+        if (em)  em.classList.remove('on');
+        if (lcd && lockCode) lcd.innerText = lockCode;
+        if (lkp) lkp.style.cssText = 'display:block!important;';
+    } catch(e) {
+        // fallback — reload page which will re-check lock status
+        try { window.location.reload(); } catch(e2) {}
+    }
+}
 
 // ── Called after client clicks OK on temp popup ────────────────────
 function revealTempField() {
@@ -595,48 +639,27 @@ function setSt(s,t) {
 }
 
 // ── Remote Unlock (called by poller when admin resets password) ───
-function checkLockStatus() {
-    if (!window.pywebview || !window.pywebview.api) {
-        setTimeout(checkLockStatus, 200); return;
-    }
-    window.pywebview.api.get_lock_status().then(function(s) {
-        if (s && s.locked) showLockScreen(s.lock_code);
-    }).catch(function(){});
-}
-
-function showLockScreen(lockCode) {
-    document.getElementById('lock-code-display').innerText = lockCode || '--------';
-    document.getElementById('lock-screen').style.display = 'flex';
-}
-
-function submitUnlockKey() {
-    var key = (document.getElementById('unlock-key-inp').value || '').trim().toUpperCase();
-    var msg = document.getElementById('unlock-msg');
-    if (key.length !== 12) { msg.innerText = 'Key must be exactly 12 characters'; return; }
-    if (!window.pywebview || !window.pywebview.api) return;
-    var lc = document.getElementById('lock-code-display').innerText.trim();
-    window.pywebview.api.verify_unlock_key(key, lc).then(function(r) {
-        if (r && r.status === 'success') {
-            document.getElementById('lock-screen').style.display = 'none';
-            msg.innerText = '';
-        } else {
-            msg.innerText = 'Invalid key. Contact your AurumOS provider.';
-            document.getElementById('unlock-key-inp').value = '';
-        }
-    }).catch(function(e){ msg.innerText = String(e); });
-}
-
-// Hook into existing __loginResult to catch db_locked status
-var _origLoginResult = window.__loginResult;
-window.__loginResult = function(result) {
-    if (result && result.status === 'db_locked') {
-        showLockScreen(result.lock_code); return;
-    }
-    if (_origLoginResult) _origLoginResult(result);
+window.remoteUnlock = function() {
+    LOCKED   = false;
+    ATTEMPTS = 0;
+    // Re-enable input and button
+    var inp = document.getElementById('inp');
+    if (inp) { inp.disabled = false; inp.value = ''; }
+    var btn = document.getElementById('btn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In'; btn.style.background = ''; }
+    // Hide lockout panel
+    var lkp = document.getElementById('lkp');
+    if (lkp) lkp.style.cssText = 'display:none!important;';
+    // Hide attempt dots
+    var ar = document.getElementById('ar');
+    if (ar) ar.style.display = 'none';
+    hideErr();
+    // Show success hint
+    showErr('Password reset by administrator. Please sign in.');
+    var em = document.getElementById('em');
+    if (em) { em.style.background = 'rgba(21,128,61,0.07)'; em.style.color = 'var(--green)'; em.style.borderColor = 'rgba(21,128,61,0.2)'; }
+    if (inp) setTimeout(function(){ inp.focus(); }, 200);
 };
-
-// Run check
-checkLockStatus();
 
 // ── Realtime temp password popup ─────────────────────────────────
 window.showTempPasswordUnlock = function(tempPass) {
