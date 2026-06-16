@@ -616,20 +616,26 @@ ScaleWidget.init();
 
 // ── JS Logger — sends messages to Python terminal log ────────────
 function _updateScaleUI(weight, stable) {
-    var w = (weight !== null && weight !== undefined) ? parseFloat(weight).toFixed(3) : '--.-';
-    var isStable = !!stable;
+    // ── PERMANENT ZERO-DRIFT FIX ──────────────────────────────────
+    var DEAD_ZONE = 0.025;
+    var wVal = parseFloat(weight) || 0;
+    if (wVal < DEAD_ZONE) {
+        wVal = 0.000;
+    }
+
+    var w = wVal.toFixed(3);
+    var isStable = (stable === true || stable === 'true') && wVal > 0;
+    // ──────────────────────────────────────────────────────────────
 
     // ── Popup weight (scp-wt) ──────────────────────────────────────
     var scpWt = document.getElementById('scp-wt');
     if (scpWt) scpWt.innerText = w;
 
-    // ── No auto-fill — user presses Enter to capture weight ─────
-
     // ── Weight field label status ────────────────────────────────
     var wtSts = document.getElementById('wt-scale-status');
     if (wtSts) {
         if (isStable)        { wtSts.innerText = 'STABLE'; wtSts.style.color = '#15803d'; }
-        else if (_scConnected){ wtSts.innerText = 'READING'; wtSts.style.color = '#d97706'; }
+        else if (_scConnected){ wtSts.innerText = 'ONLINE'; wtSts.style.color = '#0ea5e9'; }
         else                  { wtSts.innerText = ''; }
     }
 
@@ -641,13 +647,17 @@ function _updateScaleUI(weight, stable) {
         if (scpDot)  scpDot.style.color  = '#16a34a';
         if (scpSts)  scpSts.innerText    = 'STABLE';
         if (scpPill) scpPill.style.color = '#16a34a';
+    } else if (_scConnected) {
+        if (scpDot)  scpDot.style.color  = '#0ea5e9';
+        if (scpSts)  scpSts.innerText    = 'ONLINE';
+        if (scpPill) scpPill.style.color = '#0ea5e9';
     } else {
         if (scpDot)  scpDot.style.color  = '#d97706';
         if (scpSts)  scpSts.innerText    = 'READING';
         if (scpPill) scpPill.style.color = '#d97706';
     }
 
-    // ── Main billing scale bar — dynamic design ──────────────────
+    // ── Main billing scale bar ──────────────────────────────────
     var spWt  = document.getElementById('sp-weight-big');
     var spUt  = document.getElementById('sp-unit-big');
     var spDot = document.getElementById('sp-dot');
@@ -660,40 +670,32 @@ function _updateScaleUI(weight, stable) {
     if (spWt) spWt.innerText = w;
     if (shWt) shWt.innerText = w;
 
+    // Determine visual state
     if (isStable) {
-        // GREEN — stable, weight ready
+        // GREEN — Stable with weight
         if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
         if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
         if (spUt)  spUt.style.color = '#15803d';
         if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
-        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
+        if (spSts) { spSts.innerText = 'STABLE'; spSts.style.color = '#15803d'; }
         if (spHnt) spHnt.style.display = 'flex';
-        if (spBtn) spBtn.style.display = 'none';
-    } else if (_scConnected && (weight === null || weight === undefined || parseFloat(weight) <= 0)) {
-        // AMBER — connected but no weight yet
-        if (spBar) spBar.style.background = 'rgba(217,119,6,0.03)';
-        if (spWt)  { spWt.style.color = '#d97706'; spWt.style.fontSize = '2.8rem'; }
-        if (spUt)  spUt.style.color = '#d97706';
-        if (spDot) { spDot.style.background = '#d97706'; spDot.style.boxShadow = 'none'; }
-        if (spSts) { spSts.innerText = 'Reading'; spSts.style.color = '#d97706'; }
-        if (spHnt) spHnt.style.display = 'none';
         if (spBtn) spBtn.style.display = 'none';
     } else if (_scConnected) {
-        // GREEN — connected and has weight value (treat as stable)
-        if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
-        if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
-        if (spUt)  spUt.style.color = '#15803d';
-        if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
-        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
-        if (spHnt) spHnt.style.display = 'flex';
+        // BLUE — Online but Empty (or reading unstable)
+        if (spBar) spBar.style.background = 'rgba(14,165,233,0.04)';
+        if (spWt)  { spWt.style.color = '#0ea5e9'; spWt.style.fontSize = '2.8rem'; }
+        if (spUt)  spUt.style.color = '#0ea5e9';
+        if (spDot) { spDot.style.background = '#0ea5e9'; spDot.style.boxShadow = 'none'; }
+        if (spSts) { spSts.innerText = wVal > 0 ? 'READING' : 'ONLINE'; spSts.style.color = '#0ea5e9'; }
+        if (spHnt) spHnt.style.display = 'none';
         if (spBtn) spBtn.style.display = 'none';
     } else {
-        // GREY — offline
+        // GREY — Offline
         if (spBar) spBar.style.background = '#fff';
         if (spWt)  { spWt.style.color = '#c9c5bc'; spWt.style.fontSize = '2.8rem'; }
         if (spUt)  spUt.style.color = '#c9c5bc';
         if (spDot) { spDot.style.background = '#d1cfc9'; spDot.style.boxShadow = 'none'; }
-        if (spSts) { spSts.innerText = 'Offline'; spSts.style.color = '#9e9890'; }
+        if (spSts) { spSts.innerText = 'OFFLINE'; spSts.style.color = '#9e9890'; }
         if (spHnt) spHnt.style.display = 'none';
         if (spBtn) spBtn.style.display = 'inline-flex';
     }
