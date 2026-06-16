@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Create Bill</title>
 <link rel="stylesheet" href="fonts.css">
+<script src="scale_widget.js"></script>
 <link rel="stylesheet" href="sidebar.css">
 <style>
 :root{
@@ -257,7 +258,7 @@ input:checked+.slider:before{transform:translateX(20px);}
           </kbd>
         </div>
         <!-- shown when offline/reading -->
-        <button id="sp-connect-btn" onclick="scaleDoConnectDirect()" style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 14px;border-radius:6px;border:1px solid rgba(168,125,30,0.25);background:rgba(168,125,30,0.08);color:#8a6c0a;font-family:inherit;font-size:0.68rem;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s;">
+        <button id="sp-connect-btn" onclick="ScaleWidget.openPopup()" style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 14px;border-radius:6px;border:1px solid rgba(168,125,30,0.25);background:rgba(168,125,30,0.08);color:#8a6c0a;font-family:inherit;font-size:0.68rem;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s;">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           Connect
         </button>
@@ -266,65 +267,7 @@ input:checked+.slider:before{transform:translateX(20px);}
   </div>
 
   <!-- ── SCALE CONNECTION POPUP ── -->
-  <div id="sc-conn-overlay" style="position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:9000;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)scaleCloseConnectPopup()">
-    <div style="background:#0e0c09;border-radius:16px;width:340px;max-height:90vh;border:1px solid rgba(201,162,39,0.22);box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;display:flex;flex-direction:column;animation:scPopIn 0.22s cubic-bezier(0.34,1.56,0.64,1);">
-
-      <!-- Header -->
-      <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-        <div style="font-family:var(--serif);font-size:0.95rem;color:#fff;">Scale <em style="color:#c9a227;font-style:italic;">Connection</em></div>
-        <button onclick="scaleCloseConnectPopup()" style="width:24px;height:24px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;line-height:1;">&#10005;</button>
-      </div>
-
-      <!-- Live weight display -->
-      <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-        <div>
-          <div style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);margin-bottom:5px;">Live Reading</div>
-          <div style="display:flex;align-items:baseline;gap:4px;">
-            <span id="scp-wt" style="font-family:var(--mono);font-size:2.2rem;font-weight:500;color:#fff;letter-spacing:-1px;line-height:1;">--.-</span>
-            <span style="font-size:0.75rem;color:rgba(255,255,255,0.35);">g</span>
-          </div>
-        </div>
-        <div id="scp-pill" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:0.58rem;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.7px;">
-          <div id="scp-dot" style="width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
-          <span id="scp-status">Not Connected</span>
-        </div>
-      </div>
-
-      <!-- Form — scrollable if needed -->
-      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0;">
-
-        <!-- COM Port -->
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <label style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.3);">COM Port</label>
-          <div style="position:relative;">
-            <select id="sp-port" style="width:100%;height:38px;padding:0 30px 0 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-family:var(--mono);font-size:0.82rem;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;transition:all 0.15s;">
-              <option value="" style="background:#1a1812;color:rgba(255,255,255,0.5);">Scanning...</option>
-            </select>
-            <div style="pointer-events:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.35);font-size:0.65rem;">&#9660;</div>
-          </div>
-        </div>
-
-        <!-- Baud Rate -->
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <label style="font-size:0.48rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.3);">Baud Rate</label>
-          <input id="sp-baud" value="9600" style="width:100%;height:38px;padding:0 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-family:var(--mono);font-size:0.82rem;outline:none;text-align:left;transition:all 0.15s;">
-        </div>
-
-        <!-- Connect button -->
-        <button id="scp-connect-btn" onclick="scalePanelConnect()" style="width:100%;height:40px;background:linear-gradient(135deg,rgba(201,162,39,0.2),rgba(168,125,30,0.15));border:1px solid rgba(201,162,39,0.35);border-radius:9px;color:#c9a227;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all 0.15s;flex-shrink:0;">
-          &#9889; Connect Scale
-        </button>
-        <button id="scp-disconnect-btn" onclick="scalePanelConnect()" style="display:none;width:100%;height:36px;background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.25);border-radius:8px;color:#f87171;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:var(--sans);">
-          Disconnect
-        </button>
-
-        <!-- Status message -->
-        <div id="sp-msg" style="font-size:0.62rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5;padding:0 4px;">
-          Select a COM port then click Connect
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- scale_widget popup injected by scale_widget.js -->
   <style>
   @keyframes scPopIn{from{transform:scale(0.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
 #sp-port:focus{border-color:rgba(201,162,39,0.5) !important;background:rgba(255,255,255,0.12) !important;}
@@ -554,6 +497,8 @@ input:checked+.slider:before{transform:translateX(20px);}
 </main>
 
 <script>
+ScaleWidget.init();
+
 /* ScaleBridge inline */
 /* AurumOS Scale Bridge — ES5 only, works in Edge WebView EXE */
 'use strict';
@@ -572,6 +517,8 @@ var ScaleBridge = {
         this._errorCb  = errorCb  || null;
         var self = this;
         window.__onScale = function(d) {
+            // Bridge to ScaleWidget
+            if (window.ScaleWidget) { window.ScaleWidget._onScaleRaw && window.ScaleWidget._onScaleRaw(d); }
             if (!d) return;
             if (d.error) {
                 self._connected = false;
@@ -663,7 +610,9 @@ var ScaleBridge = {
 };
 
 </script>
-<script>
+<script>var _ddFiltered = [];
+ScaleWidget.init();
+
 
 // ── JS Logger — sends messages to Python terminal log ────────────
 function _updateScaleUI(weight, stable) {
@@ -770,8 +719,8 @@ var _scW=null,_scStable=false,_scConnected=false;
 function _isTouchCode(val){var n=parseFloat(val);return !isNaN(n)&&n>=1&&n<=100&&String(val).trim()===String(n);}
 
 
-function scalePopupClose(){document.getElementById('sc-conn-overlay').style.display='none';}
-function scalePopupOutsideClick(e){if(e.target===document.getElementById('sc-conn-overlay')){document.getElementById('sc-conn-overlay').style.display='none';}}
+function scalePopupClose(){ScaleWidget.closePopup();}
+function scalePopupOutsideClick(e){if(e.target===null){ScaleWidget.closePopup();}}
 
 // ── SCALE PANEL FUNCTIONS ────────────────────────────────────────────────
 function scalePanelLoadPorts(){
@@ -852,7 +801,7 @@ function scaleLoadPorts(){
     });
 }
 function scaleCloseConnectPopup(){
-    document.getElementById('sc-conn-overlay').style.display='none';
+    ScaleWidget.closePopup();
 }
 
 function scalePanelConnect(){
@@ -927,10 +876,10 @@ function scalePanelConnect(){
 // Keep scaleDoDisconnect working for backward compat
 function scaleDoDisconnect(){ scalePanelConnect(); }
 // Keep scaleDoConnect working
-function scaleDoConnectDirect(){
+function openPopup(){
     JSLOG('scaleDoConnectDirect called');
     // Open popup
-    var ov = document.getElementById('sc-conn-overlay');
+    var ov = null;
     JSLOG('overlay: '+(ov?'FOUND':'NULL'));
     if(ov){
         ov.style.cssText='display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
@@ -941,15 +890,15 @@ function scaleDoConnectDirect(){
 }
 
 function scalePopupOpen(){
-    var ov=document.getElementById('sc-conn-overlay');
+    var ov=null;
     if(ov){ ov.style.display='flex'; scalePanelLoadPorts(); }
 }
 function scalePopupClose(){
-    var ov=document.getElementById('sc-conn-overlay');
+    var ov=null;
     if(ov) ov.style.display='none';
 }
 function scalePopupOutsideClick(e){
-    if(e.target===document.getElementById('sc-conn-overlay')) scalePopupClose();
+    if(e.target===null) scalePopupClose();
 }
 
 function scaleDoConnect(){
@@ -1222,58 +1171,51 @@ function selectPrintCopyCount(count){printCopiesConfigTarget=count;document.quer
 
 async function loadWeightStockCodes(){
     try{
-        if(window.pywebview && window.pywebview.api){
-            weightStockItems = await window.pywebview.api.get_weight_stock_it_codes() || [];
-            allProducts      = await window.pywebview.api.get_products() || [];
-
-            // Load opening stock per touch directly from ledger
-            window._touchOpeningMap = {};
-            try {
-                var report = await window.pywebview.api.get_touch_ledger_details('ALL', 'weight', '', '');
-                var opnMap  = {};
-                var outMap  = {};
-                (report || []).forEach(function(r){
-                    var tv = parseFloat(r.touch_val || 0);
-                    if(!tv) return;
-                    if(r.txn_type === 'OPENING'){
-                        opnMap[tv] = (opnMap[tv] || 0) + parseFloat(r.gr_wt || 0);
-                    }
-                    if(r.txn_type === 'OUT'){
-                        outMap[tv] = (outMap[tv] || 0) + parseFloat(r.gr_wt || 0);
-                    }
-                });
-                // opening available = opening - outward already done
-                // katti live is already in weightStockItems
-                // so opening remaining = opening - max(0, outward - katti)
-                Object.keys(opnMap).forEach(function(tv){
-                    tv = parseFloat(tv);
-                    var kattiLive = weightStockItems
-                        .filter(function(s){ return Math.abs(parseFloat(s.touch||0)-tv)<0.01; })
-                        .reduce(function(s,r){ return s+parseFloat(r.gr_wt||0); }, 0);
-                    var totalOut  = outMap[tv] || 0;
-                    var opn       = opnMap[tv] || 0;
-                    // remaining from opening = opening - (outward that exceeded katti)
-                    var openingRemain = Math.max(0, opn - Math.max(0, totalOut - kattiLive));
-                    if(openingRemain > 0) window._touchOpeningMap[tv] = openingRemain;
-                });
-            } catch(e){ console.warn('[STOCK] opening map error', e); }
-
-            var b = document.getElementById('stock-count-badge');
-            if(b) b.innerText = weightStockItems.length > 0 ? '('+weightStockItems.length+' in stock)' : '';
+        if(window.pywebview&&window.pywebview.api){
+            weightStockItems=await window.pywebview.api.get_weight_stock_it_codes()||[];
+            allProducts=await window.pywebview.api.get_products()||[];
+            var b=document.getElementById('stock-count-badge');
+            if(b)b.innerText=weightStockItems.length>0?'('+weightStockItems.length+' in stock)':'';
         }
-    } catch(e){ console.error('[STOCK]', e); }
+    }catch(e){}
 }
 
-function onITCodeInput(val){
-    var isUchak=document.getElementById('uchak-toggle').checked;
-    var dd=document.getElementById('it-dropdown');
-    if(isUchak||!val.trim()){dd.classList.remove('open');return;}
-    if(_isTouchCode(val)){dd.classList.remove('open');calcFine();return;}
-    itDropdownHighlight=-1;
-    var q=val.trim().toUpperCase();
-    var filtered=weightStockItems.filter(function(s){return s.it_code.toUpperCase().includes(q)||(s.it_name||'').toUpperCase().includes(q)||String(s.touch||'').includes(q);});
-    if(!filtered.length){dd.innerHTML='<div class="it-no-results">No stock found for "'+val+'"</div>';}
-    else{dd.innerHTML=filtered.map(function(s,i){return'<div class="it-option" data-index="'+i+'" onmousedown="selectStockItem('+i+','+JSON.stringify(filtered).replace(/"/g,'&quot;')+')">'+'<div class="it-option-row"><span class="it-option-code">'+s.it_code+'</span><span class="it-option-touch">T: '+(s.touch||'--')+'%</span></div>'+'<div class="it-option-name">'+(s.it_name||'')+'</div>'+'<div class="it-option-stock">'+parseFloat(s.gr_wt||0).toFixed(3)+'g available</div></div>';}).join('');}
+function onITCodeInput(val) {
+    var isUchak = document.getElementById('uchak-toggle').checked;
+    var dd = document.getElementById('it-dropdown');
+
+    if (isUchak || !val.trim()) {
+        dd.classList.remove('open');
+        return;
+    }
+
+    if (_isTouchCode(val)) {
+        dd.classList.remove('open');
+        calcFine();
+        return;
+    }
+
+    itDropdownHighlight = -1;
+    var q = val.trim().toUpperCase();
+    var filtered = weightStockItems.filter(function(s) {
+        return s.it_code.toUpperCase().includes(q) ||
+               (s.it_name || '').toUpperCase().includes(q) ||
+               String(s.touch || '').includes(q);
+    });
+
+    _ddFiltered = filtered; // Assigned here so both branches can use it
+
+    if (!filtered.length) {
+        dd.innerHTML = '<div class="it-no-results">No stock found for "' + val + '"</div>';
+    } else {
+        dd.innerHTML = filtered.map(function(s, i) {
+            return '<div class="it-option" data-idx="' + i + '" onmousedown="selectStockItem(' + i + ',_ddFiltered)">' +
+                   '<div class="it-option-row"><span class="it-option-code">' + s.it_code + '</span><span class="it-option-touch">T: ' + (s.touch || '--') + '%</span></div>' +
+                   '<div class="it-option-name">' + (s.it_name || '') + '</div>' +
+                   '<div class="it-option-stock">' + parseFloat(s.gr_wt || 0).toFixed(3) + 'g available</div></div>';
+        }).join('');
+    }
+
     dd.classList.add('open');
 }
 
@@ -1491,82 +1433,42 @@ function enterItem(){
     var wastage=parseFloat(document.getElementById('it-wastage').value)||0;
     var fine=parseFloat(document.getElementById('it-fine').value)||0;
     if(!code||weight<=0)return;
-
-    if(isUchak){
-        currentItems.push({name:code,it_code:code,rate:weight,pcs:parseInt(wastage)||1,amount:fine});
-    } else {
-        var touchVal=0;
-        var codeIsTouch=_isTouchCode(code);
-
+    if(isUchak){currentItems.push({name:code,it_code:code,rate:weight,pcs:parseInt(wastage)||1,amount:fine});}
+    else{
+        var touchVal=0;var codeIsTouch=_isTouchCode(code);
         if(codeIsTouch){
             touchVal=parseFloat(code);
-
-            // ── Katti live stock (KATTI-% rows already reduced by previous sales) ──
-            var kattiAvail = weightStockItems
+            // ── Check available stock for this touch value ────────────────
+            var touchAvail=weightStockItems
                 .filter(function(s){ return Math.abs(parseFloat(s.touch||0)-touchVal)<0.01; })
                 .reduce(function(s,r){ return s+parseFloat(r.gr_wt||0); },0);
-
-            // ── Opening stock remaining for this touch (loaded at page init) ──
-            var openingAvail = (window._touchOpeningMap && window._touchOpeningMap[touchVal]) || 0;
-
-            // ── Total available = katti live + opening remaining ──
-            var touchAvail = Math.round((kattiAvail + openingAvail) * 1000) / 1000;
-
-            // ── Already added to THIS bill for this touch ──
-            var touchUsed = currentItems
+            var touchUsed=currentItems
                 .filter(function(i){ return Math.abs(parseFloat(i.touch||0)-touchVal)<0.01 && !i.tag_id; })
                 .reduce(function(s,i){ return s+parseFloat(i.weight||0); },0);
-
-            var touchRemain = Math.round((touchAvail - touchUsed) * 1000) / 1000;
-
-            if(touchAvail <= 0){
+            var touchRemain=Math.round((touchAvail-touchUsed)*1000)/1000;
+            if(touchAvail<=0){
                 showOutOfStockPopup(touchVal+'%');
                 document.getElementById('it-weight').focus();
                 document.getElementById('it-weight').select();
                 return;
             }
-            if(weight > touchRemain + 0.001){
+            if(weight>touchRemain+0.001){
                 showOutOfStockPopup(touchVal+'%');
                 document.getElementById('it-weight').focus();
                 document.getElementById('it-weight').select();
                 return;
             }
-        } else {
+        }
+        else{
             var sm=weightStockItems.find(function(s){return s.it_code.toUpperCase()===code.toUpperCase();});
             var pm=allProducts.find(function(p){return p.code.toUpperCase()===code.toUpperCase();});
             touchVal=sm?parseFloat(sm.touch||0):(pm?parseFloat(pm.touch||0):0);
-            if(sm){
-                var avail=parseFloat(sm.gr_wt||0);
-                var used=currentItems
-                    .filter(function(i){return(i.it_code||'').toUpperCase()===code.toUpperCase();})
-                    .reduce(function(s,i){return s+parseFloat(i.weight||0);},0);
-                if(weight>avail-used){
-                    showOutOfStockPopup(code);
-                    document.getElementById('it-weight').focus();
-                    document.getElementById('it-weight').select();
-                    return;
-                }
-            }
+            if(sm){var avail=parseFloat(sm.gr_wt||0);var used=currentItems.filter(function(i){return(i.it_code||'').toUpperCase()===code.toUpperCase();}).reduce(function(s,i){return s+parseFloat(i.weight||0);},0);if(weight>avail-used){showOutOfStockPopup(code);document.getElementById('it-weight').focus();document.getElementById('it-weight').select();return;}}
         }
-
-        currentItems.push({
-            tag_id:'',
-            it_code:code,
-            code:code,
-            weight:weight,
-            para:0,
-            less:0,
-            pkg_wt:0,
-            touch:touchVal,
-            wastage:wastage,
-            fine:fine
-        });
+        currentItems.push({tag_id:'',it_code:code,code:code,weight:weight,para:0,less:0,pkg_wt:0,touch:touchVal,wastage:wastage,fine:fine});
     }
-
     renderTable();
-    ['it-code','it-weight','it-wastage','it-fine'].forEach(function(id){
-        document.getElementById(id).value='';
-    });
+    ['it-code','it-weight','it-wastage','it-fine'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('it-dropdown').classList.remove('open');
     document.getElementById('it-code').focus();
 }
@@ -1584,16 +1486,8 @@ function renderTable(){
         var tw=0,tpp=0,tl=0,tf=0;
         currentItems.forEach(function(item,i){
             tw+=item.weight;tpp+=(item.para||0);tl+=(item.less||0);tf+=item.fine;
-
-            // --- NEW LOGIC: Dynamic Touch Display ---
-            var baseTouch = parseFloat(item.touch) || 0;
-            var wastage = parseFloat(item.wastage) || 0;
-            var touchDisplay = (baseTouch + wastage).toFixed(1);
-
             var dispCode=_isTouchCode(item.code)?'<span style="color:var(--accent);font-weight:700;">'+parseFloat(item.code)+'%</span>':item.code;
-
-            // --- UPDATED ROW: Using touchDisplay instead of item.touch ---
-            tbody.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+dispCode+'</td><td>'+item.weight.toFixed(3)+'</td><td>'+(item.para||0).toFixed(3)+'</td><td>'+(item.ls_wt||item.less||0).toFixed(3)+'</td><td>'+touchDisplay+'</td><td>'+item.fine.toFixed(3)+'</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';
+            tbody.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+dispCode+'</td><td>'+item.weight.toFixed(3)+'</td><td>'+(item.para||0).toFixed(3)+'</td><td>'+(item.ls_wt||item.less||0).toFixed(3)+'</td><td>'+item.touch.toFixed(1)+'</td><td>'+item.fine.toFixed(3)+'</td><td style="text-align:right"><span class="remove-icon" onclick="removeItem('+i+')">x</span></td></tr>';
         });
         var twc=document.getElementById('total-wt-cell');if(twc)twc.innerText=tw.toFixed(3);
         var tpc2=document.getElementById('total-para-cell');if(tpc2)tpc2.innerText=tpp.toFixed(3);
@@ -1607,63 +1501,21 @@ function renderTable(){
 function removeItem(i){currentItems.splice(i,1);renderTable();}
 
 async function handleTagScan(tagId){
-    if(document.getElementById('uchak-toggle').checked) return;
-    if(!window.pywebview||!window.pywebview.api) return;
+    if(document.getElementById('uchak-toggle').checked)return;
+    if(!window.pywebview||!window.pywebview.api)return;
     try{
-        var item = await window.pywebview.api.get_product_by_tag(tagId);
+        var item=await window.pywebview.api.get_product_by_tag(tagId);
         if(item){
-            if(item.is_tagged === 0 || item.is_tagged === false){
-                showError('Tag '+tagId+' is not registered yet.', 'Tag Error');
-                return;
-            }
-
-            function parseExpr(val){
-                var s = String(val||'').replace(/\s/g,'');
-                if(s.indexOf('+') !== -1){
-                    var p = s.split('+');
-                    return (parseFloat(p[0])||0) + (parseFloat(p[1])||0);
-                }
-                return parseFloat(s)||0;
-            }
-
-            var ovTouch = document.getElementById('v-overall-touch').value.trim();
-            var ovWast  = document.getElementById('v-overall-wastage').value.trim();
-
-            var dbW = parseFloat(item.gr_wt||0);
-            var dbP = parseFloat(item.para_stone_wt||0);
-            var dbL = parseFloat(item.ls_wt||0);'<td>'+(parseFloat(item.touch) + parseFloat(item.wastage)).toFixed(1)+'</td>'
-
-            // Calculate distinct values
-            var fT = ovTouch ? parseExpr(ovTouch) : parseFloat(item.touch||0);
-            var fW = ovWast  ? parseExpr(ovWast)  : parseFloat(item.wastage||0);
-
-            // Use the sum for calculation
-            var combinedTouch = fT + fW;
-            var fine = parseFloat(((dbW - dbP - dbL) * (combinedTouch) / 100).toFixed(3));
-
-            // STORE SEPARATELY SO RENDERER CAN DISPLAY BREAKDOWN
-            currentItems.push({
-                tag_id  : item.tag_id   || '',
-                it_code : item.it_code  || '',
-                code    : item.it_code  || 'TAG',
-                weight  : dbW,
-                para    : dbP,
-                less    : dbL,
-                ls_wt   : dbL,
-                pkg_wt  : parseFloat(item.pkg_wt||0),
-                touch   : fT,            // Store base touch (76)
-                wastage : fW,            // Store wastage (5)
-                fine    : fine           // Store calculated fine
-            });
-
+            if(item.is_tagged===0||item.is_tagged===false){showError('Tag '+tagId+' is not registered yet.','Tag Error');return;}
+            var mT=parseFloat(document.getElementById('v-overall-touch').value);var mW=parseFloat(document.getElementById('v-overall-wastage').value);
+            var dbW=parseFloat(item.gr_wt||0),dbP=parseFloat(item.para_stone_wt||0),dbL=parseFloat(item.ls_wt||0);
+            var fT=!isNaN(mT)?mT:parseFloat(item.touch||0),fW=!isNaN(mW)?mW:parseFloat(item.wastage||0);
+            var fine=((dbW-dbP-dbL)*(fT+fW)/100).toFixed(3);
+            currentItems.push({tag_id:item.tag_id||'',it_code:item.it_code||'',code:item.it_code||'TAG',weight:dbW,para:dbP,less:dbL,pkg_wt:parseFloat(item.pkg_wt||0),touch:fT,wastage:fW,fine:parseFloat(fine)});
             renderTable();
-
-            document.getElementById('v-overall-touch').value = '';
-            document.getElementById('v-overall-wastage').value = '';
-        } else {
-            showError('ID '+tagId+' not found.', 'Tag Missing');
-        }
-    } catch(err){ console.error('handleTagScan error:', err); }
+            document.getElementById('v-overall-touch').value='';document.getElementById('v-overall-wastage').value='';
+        }else showError('ID '+tagId+' not found.','Tag Missing');
+    }catch(err){}
 }
 
 function handleBilling(){

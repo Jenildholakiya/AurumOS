@@ -480,8 +480,9 @@ function handleResult(res) {
             }));
         } catch(e) {}
 
-        var landing  = res.landing  || 'dashboard.html';
         var role     = res.role     || 'admin';
+        // Admin picks year — staff goes straight to billing
+        var landing  = (role === 'staff') ? 'billing.html' : 'year_select.html';
         var username = res.username || 'Admin';
         try {
             localStorage.setItem('aurum_user_role',   role);

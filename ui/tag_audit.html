@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AurumOS | Tag Audit</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root {
+  --c:#faf8f3; --c2:#f2efe7; --c3:#e8e3d8;
+  --w:#ffffff;
+  --ink:#0e0c09; --ink2:#2c2a24; --ink3:#5c5a52;
+  --g:#a87d1e; --g2:#c9a227; --g3:#8a6c0a;
+  --gb:rgba(168,125,30,.08); --gl:rgba(168,125,30,.22);
+  --r:rgba(14,12,9,.08); --mu:#7a7268;
+  --gr:#15803d; --grb:rgba(21,128,61,.07); --grl:rgba(21,128,61,.22);
+  --rd:#b91c1c; --rdb:rgba(185,28,28,.07); --rdl:rgba(185,28,28,.20);
+  --am:#b45309; --amb:rgba(180,83,9,.07);  --aml:rgba(180,83,9,.22);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:"DM Mono",monospace;
+  --sans:"DM Sans",system-ui,sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;background:var(--c);color:var(--ink);}
+body{display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.tb{height:52px;background:var(--w);border-bottom:1px solid var(--r);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;position:relative;}
+.tb::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gl) 50%,transparent 95%);}
+.tb-l{display:flex;align-items:center;gap:12px;}
+.logo{width:28px;height:28px;background:var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo svg{width:16px;height:16px;fill:var(--g2);}
+.app-name{font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink2);}
+.app-name em{color:var(--g);font-style:normal;}
+.tb-sep{width:1px;height:16px;background:var(--r);}
+.page-title{font-family:var(--serif);font-size:.98rem;color:var(--ink2);}
+.sess-pill{font-family:var(--mono);font-size:.62rem;background:var(--gb);color:var(--g);border:1px solid var(--gl);border-radius:4px;padding:2px 9px;letter-spacing:1px;}
+.tb-r{display:flex;gap:8px;}
+.btn-tb{height:28px;padding:0 12px;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid var(--r);background:transparent;color:var(--ink3);transition:background .15s;}
+.btn-tb:hover{background:var(--c2);}
+
+/* MAIN */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+/* SETUP */
+#setup{flex:1;overflow-y:auto;padding:28px 24px;display:flex;gap:22px;}
+.su-l{flex:1;min-width:0;}
+.su-r{width:290px;flex-shrink:0;}
+.eyebrow{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--g);margin-bottom:8px;}
+.page-h{font-family:var(--serif);font-size:1.9rem;color:var(--ink2);line-height:1.15;margin-bottom:6px;}
+.page-sub{font-size:.8rem;color:var(--mu);margin-bottom:26px;line-height:1.6;max-width:480px;}
+.sec-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px;display:block;}
+.all-tile{display:flex;align-items:center;justify-content:space-between;background:var(--gb);border:2px solid var(--gl);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .18s;margin-bottom:10px;}
+.all-tile.sel{border-color:var(--g);background:linear-gradient(135deg,var(--gb),rgba(168,125,30,.14));}
+.at-name{font-family:var(--serif);font-size:.92rem;color:var(--g);}
+.at-meta{font-size:.68rem;color:var(--mu);margin-top:2px;}
+.touch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px;margin-bottom:22px;}
+.tt{border:1.5px solid var(--r);border-radius:9px;padding:12px 14px;cursor:pointer;transition:all .18s;background:var(--w);}
+.tt:hover{border-color:var(--gl);}
+.tt.sel{border-color:var(--g);background:var(--gb);}
+.tt-pct{font-family:var(--mono);font-size:1.05rem;font-weight:700;color:var(--ink2);}
+.tt-pcs{font-size:.66rem;color:var(--mu);margin-top:3px;}
+.tt-wt{font-size:.63rem;color:var(--g3);margin-top:1px;}
+.by-wrap{background:var(--w);border:1px solid var(--r);border-radius:10px;padding:18px;margin-bottom:14px;}
+.by-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:7px;display:block;}
+.by-inp{width:100%;height:38px;background:var(--c);border:1px solid var(--r);border-radius:7px;font-size:.85rem;padding:0 12px;outline:none;color:var(--ink);}
+.by-inp:focus{border-color:var(--g);}
+.launch{width:100%;height:46px;background:var(--ink);border:none;border-radius:10px;font-size:.85rem;font-weight:700;color:#fff;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.3px;}
+.launch:hover{background:var(--ink2);}
+.launch-ico{width:20px;height:20px;background:var(--g2);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hist-panel{background:var(--w);border:1px solid var(--r);border-radius:12px;padding:18px;position:sticky;top:0;}
+.hp-h{font-family:var(--serif);font-size:.95rem;color:var(--ink2);margin-bottom:3px;}
+.hp-s{font-size:.68rem;color:var(--mu);margin-bottom:14px;}
+.hr{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--r);cursor:pointer;transition:background .1s;border-radius:6px;padding-left:4px;padding-right:4px;}
+.hr:last-child{border-bottom:none;}
+.hr:hover{background:var(--c);}
+.hr-ref{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--ink2);}
+.hr-meta{font-size:.62rem;color:var(--mu);margin-top:2px;}
+.hr-pills{display:flex;gap:5px;flex-shrink:0;}
+.pill{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;}
+.p-gr{background:var(--grb);color:var(--gr);}
+.p-rd{background:var(--rdb);color:var(--rd);}
+.p-am{background:var(--amb);color:var(--am);}
+.hist-empty{font-size:.72rem;color:var(--mu);text-align:center;padding:18px 0;font-style:italic;}
+
+/* AUDIT */
+#audit{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);flex-shrink:0;background:var(--w);border-bottom:1px solid var(--r);}
+.kpi{padding:14px 18px;border-right:1px solid var(--r);cursor:pointer;transition:background .15s;position:relative;}
+.kpi:last-child{border-right:none;}
+.kpi:hover{background:var(--c);}
+.kpi.on::after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--g);}
+.kpi-n{font-family:var(--mono);font-size:1.75rem;font-weight:800;line-height:1;margin-bottom:4px;}
+.kpi-l{font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);}
+.k-all .kpi-n{color:var(--ink2);}
+.k-found .kpi-n{color:var(--gr);}
+.k-miss .kpi-n{color:var(--rd);}
+.k-extra .kpi-n{color:var(--am);}
+.prog{padding:9px 18px;border-bottom:1px solid var(--r);background:var(--c2);flex-shrink:0;display:flex;align-items:center;gap:14px;}
+.prog-track{flex:1;height:4px;background:var(--c3);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--g3),var(--g2));border-radius:3px;transition:width .4s;}
+.prog-txt{font-size:.66rem;color:var(--mu);white-space:nowrap;}
+.prog-pct{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--g);min-width:34px;text-align:right;}
+.ab{flex:1;display:grid;grid-template-columns:1fr 350px;overflow:hidden;}
+
+/* Tag list */
+.lc{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--r);}
+.lt{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--r);flex-shrink:0;background:var(--w);}
+.ls{flex:1;height:33px;background:var(--c);border:1px solid var(--r);border-radius:7px;font-size:.78rem;padding:0 12px;outline:none;color:var(--ink);}
+.ls:focus{border-color:var(--g);}
+.lf{height:33px;background:var(--c);border:1px solid var(--r);border-radius:7px;font-size:.74rem;padding:0 10px;cursor:pointer;outline:none;color:var(--ink);}
+.lh{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;gap:0;padding:0 14px;background:var(--c2);border-bottom:2px solid var(--r);flex-shrink:0;}
+.lhc{font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:600;padding:7px 5px;}
+.lhc.r{text-align:right;}
+.lhc.c{text-align:center;}
+.tl{flex:1;overflow-y:auto;}
+.tl::-webkit-scrollbar{width:4px;}
+.tl::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px;}
+.ti{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;align-items:center;gap:0;padding:0 14px;height:40px;border-bottom:1px solid rgba(14,12,9,.05);cursor:pointer;transition:background .1s;position:relative;}
+.ti::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;}
+.ti:hover{background:var(--c);}
+.ti.f::before{background:var(--gr);}
+.ti.m::before{background:var(--rd);}
+.ti.e::before{background:var(--am);}
+.ti.a::before{background:#ccc;}
+.ti.a{opacity:.6;}
+.ti.sel-row{background:var(--gb);}
+.ti.sel-row::before{background:var(--g);}
+.ti-ico{display:flex;align-items:center;justify-content:center;}
+.ti-id{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--ink2);padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ti-nm{font-size:.74rem;color:var(--ink3);padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ti-tc{font-size:.7rem;font-family:var(--mono);color:var(--ink3);text-align:center;padding:0 5px;}
+.ti-wt{font-size:.7rem;font-family:var(--mono);color:var(--mu);text-align:right;padding:0 5px;}
+.ti-st{font-size:.55rem;font-weight:700;letter-spacing:.8px;padding:3px 7px;border-radius:20px;text-align:center;margin:0 5px;display:inline-block;}
+.sf{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.sm{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.se{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.sa{background:#f5f5f5;color:#aaa;border:1px solid #eee;}
+.tl-empty{padding:40px 24px;text-align:center;font-size:.76rem;color:var(--mu);font-style:italic;}
+
+/* Scan sidebar */
+.rc{display:flex;flex-direction:column;overflow:hidden;background:var(--w);}
+.sz{padding:16px;border-bottom:1px solid var(--r);flex-shrink:0;background:var(--c);}
+.sz-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sz-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);font-weight:600;}
+.sz-save{display:flex;align-items:center;gap:6px;font-size:.62rem;color:var(--gr);}
+.sz-dot{width:6px;height:6px;background:var(--gr);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sz-row{display:flex;gap:8px;}
+.sf-inp{flex:1;height:44px;background:var(--w);border:2px solid var(--gl);border-radius:8px;font-family:var(--mono);font-size:.95rem;padding:0 14px;outline:none;letter-spacing:2px;color:var(--ink);transition:all .2s;}
+.sf-inp::placeholder{letter-spacing:0;font-size:.78rem;color:#bbb;}
+.sf-inp:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(168,125,30,.10);}
+.sf-inp.fg{border-color:var(--gr);background:var(--grb);}
+.sf-inp.fr{border-color:var(--rd);background:var(--rdb);}
+.sf-inp.fa{border-color:var(--am);background:var(--amb);}
+.sf-inp.fgy{border-color:#ddd;background:#f8f8f8;}
+.btn-enter{height:44px;width:44px;background:var(--ink);border:none;border-radius:8px;cursor:pointer;color:var(--g2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.btn-enter:hover{background:var(--g);color:#fff;}
+.ls-res{padding:12px 16px;border-bottom:1px solid var(--r);flex-shrink:0;min-height:72px;display:flex;flex-direction:column;justify-content:center;}
+.lsr-empty{font-size:.72rem;color:var(--mu);font-style:italic;}
+.lsr-badge{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;font-weight:700;letter-spacing:1px;padding:3px 9px;border-radius:20px;margin-bottom:5px;}
+.lsr-f{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.lsr-e{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.lsr-d{background:#f5f5f5;color:#aaa;border:1px solid #eee;}
+.lsr-m{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.lsr-tag{font-family:var(--mono);font-size:.92rem;font-weight:700;color:var(--ink2);}
+.lsr-nm{font-size:.71rem;color:var(--ink3);margin-top:2px;}
+.lsr-detail{font-size:.68rem;color:var(--mu);margin-top:2px;}
+.dp{flex:1;overflow-y:auto;}
+.dp::-webkit-scrollbar{width:4px;}
+.dp::-webkit-scrollbar-thumb{background:var(--c3);border-radius:2px;}
+.dp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:24px;}
+.dp-ei{width:42px;height:42px;background:var(--gb);border:1.5px solid var(--gl);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.dp-et{font-size:.72rem;color:var(--mu);text-align:center;line-height:1.7;}
+.dp-head{padding:14px 16px 10px;border-bottom:1px solid var(--r);}
+.dp-tag-id{font-family:var(--mono);font-size:.92rem;font-weight:800;color:var(--ink2);}
+.dp-name{font-size:.76rem;color:var(--ink3);margin-top:3px;}
+.dp-spill{font-size:.58rem;font-weight:700;letter-spacing:.8px;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:8px;}
+.dp-fields{padding:10px 16px;}
+.dp-kv{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(14,12,9,.05);}
+.dp-kv:last-child{border-bottom:none;}
+.dp-k{font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;}
+.dp-v{font-size:.76rem;font-weight:700;font-family:var(--mono);color:var(--ink2);}
+.dp-acts{padding:12px 16px;border-top:1px solid var(--r);display:flex;flex-direction:column;gap:7px;}
+.dp-btn{height:34px;width:100%;border-radius:7px;font-size:.71rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.db-warn{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.db-warn:hover{background:var(--am);color:#fff;}
+.db-dan{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.db-dan:hover{background:var(--rd);color:#fff;}
+.db-ok{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.db-ok:hover{background:var(--gr);color:#fff;}
+
+/* Bottom bar */
+.bb{height:48px;background:var(--ink2);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;}
+.bb-info{font-size:.65rem;color:rgba(255,255,255,.45);font-family:var(--mono);}
+.bb-btns{display:flex;gap:7px;}
+.bbb{height:28px;padding:0 13px;border-radius:5px;font-size:.66rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.bb-pause{background:rgba(180,83,9,.25);color:var(--am);}
+.bb-pause:hover{background:var(--am);color:#fff;}
+.bb-close{background:rgba(185,28,28,.20);color:var(--rd);}
+.bb-close:hover{background:var(--rd);color:#fff;}
+
+/* ── CUSTOM DIALOGS ────────────────────────────────────── */
+.dlg-overlay{display:none;position:fixed;inset:0;background:rgba(14,12,9,.5);z-index:9999;align-items:center;justify-content:center;}
+.dlg-overlay.open{display:flex;}
+.dlg{background:var(--w);border-radius:14px;padding:26px;max-width:400px;width:90%;box-shadow:0 8px 40px rgba(14,12,9,.18);border-top:3px solid var(--g);}
+.dlg.dlg-warn{border-top-color:var(--am);}
+.dlg.dlg-danger{border-top-color:var(--rd);}
+.dlg.dlg-success{border-top-color:var(--gr);}
+.dlg-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.dlg-icon-info{background:var(--gb);}
+.dlg-icon-warn{background:var(--amb);}
+.dlg-icon-danger{background:var(--rdb);}
+.dlg-icon-success{background:var(--grb);}
+.dlg-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink2);margin-bottom:6px;}
+.dlg-body{font-size:.78rem;color:var(--ink3);line-height:1.7;margin-bottom:18px;}
+.dlg-kv-list{background:var(--c);border-radius:8px;padding:12px 14px;margin-bottom:16px;}
+.dlg-kv{display:flex;justify-content:space-between;padding:4px 0;font-size:.76rem;border-bottom:1px solid var(--r);}
+.dlg-kv:last-child{border-bottom:none;}
+.dlg-kv-k{color:var(--mu);}
+.dlg-kv-v{font-weight:700;font-family:var(--mono);color:var(--ink2);}
+.dlg-inp{width:100%;height:38px;background:var(--c);border:1px solid var(--r);border-radius:7px;font-size:.82rem;padding:0 12px;outline:none;color:var(--ink);margin-bottom:14px;}
+.dlg-inp:focus{border-color:var(--g);}
+.dlg-btns{display:flex;gap:8px;justify-content:flex-end;}
+.dlg-btn{height:34px;padding:0 18px;border-radius:7px;font-size:.74rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.dlg-btn-primary{background:var(--g);color:#fff;}
+.dlg-btn-primary:hover{background:var(--g3);}
+.dlg-btn-danger{background:var(--rd);color:#fff;}
+.dlg-btn-danger:hover{background:#991b1b;}
+.dlg-btn-ghost{background:transparent;border:1px solid var(--r);color:var(--mu);}
+.dlg-btn-ghost:hover{background:var(--c2);}
+
+/* Last Result Banner */
+.lrb{background:var(--w);border:1px solid var(--r);border-radius:10px;padding:14px 16px;margin-bottom:14px;cursor:pointer;transition:background .15s;display:none;}
+.lrb:hover{background:var(--c);}
+.lrb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.lrb-label{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);}
+.lrb-status{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:4px;}
+.lrb-pass{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.lrb-fail{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.lrb-ref{font-family:var(--mono);font-size:.7rem;color:var(--ink3);margin-bottom:10px;}
+.lrb-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+.lrb-count{text-align:center;}
+.lrb-n{font-family:var(--mono);font-size:1.1rem;font-weight:800;line-height:1;}
+.lrb-l{font-size:.58rem;color:var(--mu);margin-top:2px;}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9998;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;}
+.toast{font-size:.74rem;font-weight:600;padding:8px 18px;border-radius:8px;box-shadow:0 4px 16px rgba(14,12,9,.15);animation:toast-in .2s ease;white-space:nowrap;}
+.toast-info{background:var(--ink2);color:#fff;}
+.toast-ok{background:var(--gr);color:#fff;}
+.toast-err{background:var(--rd);color:#fff;}
+.toast-warn{background:var(--am);color:#fff;}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* Save indicator */
+.save-ind{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;color:var(--gr);opacity:0;transition:opacity .3s;}
+.save-ind.show{opacity:1;}
+.save-ind-dot{width:5px;height:5px;background:var(--gr);border-radius:50%;}
+</style>
+</head>
+<body>
+
+<div class="tb">
+  <div class="tb-l">
+    <div class="logo"><svg viewBox="0 0 20 20"><polygon points="10,2 18,7 18,13 10,18 2,13 2,7"/></svg></div>
+    <div class="app-name">Aurum<em>OS</em></div>
+    <div class="tb-sep"></div>
+    <span class="page-title">Tag Audit</span>
+    <span class="sess-pill" id="top-session">Ready</span>
+    <span class="save-ind" id="save-ind"><span class="save-ind-dot"></span>Saved</span>
+  </div>
+  <div class="tb-r">
+    <button class="btn-tb" onclick="goBack()">&#8592; Inventory</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="su-l">
+    <div class="eyebrow">AurumOS</div>
+    <h1 class="page-h">Tag Audit</h1>
+    <p class="page-sub">Scan each tagged piece to verify physical stock against book records. Every scan saves instantly. Resume any time.</p>
+    <span class="sec-lbl">Choose what to audit</span>
+    <div class="all-tile sel" id="all-tile" onclick="selectTouch('ALL')">
+      <div>
+        <div class="at-name">All Touches</div>
+        <div class="at-meta" id="all-meta">Loading...</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    <div class="touch-grid" id="touch-grid"><div style="font-size:.74rem;color:var(--mu);padding:8px;">Loading...</div></div>
+    <div class="lrb" id="last-result-banner"></div>
+    <div class="by-wrap">
+      <span class="by-lbl">Conducted by</span>
+      <input class="by-inp" id="dash-by" type="text" placeholder="Your name" value="Admin">
+    </div>
+    <button class="launch" id="btn-start-audit" onclick="startAudit()">
+      <div class="launch-ico">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+      Start Tag Audit
+    </button>
+  </div>
+  <div class="su-r">
+    <div class="hist-panel">
+      <div class="hp-h">Recent Audits</div>
+      <div class="hp-s">Click to view summary</div>
+      <div id="history-list"><div class="hist-empty">No audits yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT -->
+<div id="audit">
+  <div class="kpi-strip">
+    <div class="kpi k-all on" onclick="setFilter('all')"><div class="kpi-n" id="kpi-total">0</div><div class="kpi-l">Book Total</div></div>
+    <div class="kpi k-found" onclick="setFilter('found')"><div class="kpi-n" id="kpi-found">0</div><div class="kpi-l">Found</div></div>
+    <div class="kpi k-miss" onclick="setFilter('missing')"><div class="kpi-n" id="kpi-missing">0</div><div class="kpi-l">Missing</div></div>
+    <div class="kpi k-extra" onclick="setFilter('extra')"><div class="kpi-n" id="kpi-extra">0</div><div class="kpi-l">Extra</div></div>
+  </div>
+  <div class="prog">
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <span class="prog-txt" id="prog-label">0 of 0 accounted for</span>
+    <span class="prog-pct" id="prog-pct">0%</span>
+  </div>
+  <div class="ab">
+    <div class="lc">
+      <div class="lt">
+        <input class="ls" id="search-inp" type="text" placeholder="Search tag ID or item name..." oninput="renderList()">
+        <select class="lf" id="filter-sel" onchange="renderList()">
+          <option value="all">All Tags</option>
+          <option value="missing">Missing</option>
+          <option value="found">Found</option>
+          <option value="extra">Extra</option>
+          <option value="absent">Absent</option>
+        </select>
+      </div>
+      <div class="lh">
+        <div class="lhc"></div>
+        <div class="lhc">Tag ID</div>
+        <div class="lhc">Item Name</div>
+        <div class="lhc c">Touch</div>
+        <div class="lhc r">Gr. Wt</div>
+        <div class="lhc c">Status</div>
+      </div>
+      <div class="tl" id="tag-list"><div class="tl-empty">Start an audit to see tags here</div></div>
+    </div>
+    <div class="rc">
+      <div class="sz">
+        <div class="sz-head">
+          <span class="sz-lbl">Scan Tag Barcode</span>
+          <span class="sz-save"><span class="sz-dot"></span>Auto-saving</span>
+        </div>
+        <div class="sz-row">
+          <input class="sf-inp" id="scan-inp" type="text" placeholder="Scan or type here" onkeydown="onScanKey(event)" autocomplete="off" spellcheck="false">
+          <button class="btn-enter" onclick="processScan()" title="Enter">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ls-res" id="last-scan"><div class="lsr-empty">Scan a tag to begin...</div></div>
+      <div class="dp" id="detail-panel">
+        <div class="dp-empty">
+          <div class="dp-ei">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div class="dp-et">Click any tag in the list<br>or scan a tag to see details</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bb">
+    <span class="bb-info" id="bb-info">Session loading...</span>
+    <div class="bb-btns">
+      <button class="bbb bb-pause" id="btn-pause" onclick="togglePause()">&#9646;&#9646; Pause</button>
+      <button class="bbb bb-close" onclick="dlgCloseAudit()">&#10003; Close Audit</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ABSENT MODAL -->
+<div class="dlg-overlay" id="dlg-absent">
+  <div class="dlg dlg-warn">
+    <div class="dlg-icon dlg-icon-warn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--am)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="dlg-title">Mark as Absent</div>
+    <div class="dlg-body" id="dlg-absent-tag">Enter the reason this tag is not physically present.</div>
+    <input class="dlg-inp" id="absent-reason" type="text" placeholder="e.g. Sent for repair, Given to client..." onkeydown="if(event.key==='Enter') confirmAbsent()">
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-absent')">Cancel</button>
+      <button class="dlg-btn dlg-btn-primary" onclick="confirmAbsent()">Mark Absent</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESUME MODAL -->
+<div class="dlg-overlay" id="dlg-resume">
+  <div class="dlg">
+    <div class="dlg-icon dlg-icon-info">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2.5"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="dlg-title">Resume Previous Audit?</div>
+    <div class="dlg-kv-list" id="dlg-resume-info"></div>
+    <div class="dlg-body">An audit session is still active. Resume it or start a fresh one.</div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-resume')">Start Fresh</button>
+      <button class="dlg-btn dlg-btn-primary" onclick="doResume()">Resume Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOSE AUDIT CONFIRM -->
+<div class="dlg-overlay" id="dlg-close">
+  <div class="dlg dlg-danger">
+    <div class="dlg-icon dlg-icon-danger">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="dlg-title">Close Audit?</div>
+    <div class="dlg-kv-list" id="dlg-close-info"></div>
+    <div class="dlg-body" id="dlg-close-warn"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-close')">Continue Scanning</button>
+      <button class="dlg-btn dlg-btn-danger" onclick="doCloseAudit()">Close Audit</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION SUMMARY -->
+<div class="dlg-overlay" id="dlg-summary">
+  <div class="dlg dlg-success">
+    <div class="dlg-icon dlg-icon-success">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="dlg-title" id="dlg-summary-title">Audit Summary</div>
+    <div class="dlg-kv-list" id="dlg-summary-info"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-primary" onclick="closeDlg('dlg-summary')">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO DIALOG (replaces alert) -->
+<div class="dlg-overlay" id="dlg-info">
+  <div class="dlg" id="dlg-info-box">
+    <div class="dlg-title" id="dlg-info-title">Notice</div>
+    <div class="dlg-body" id="dlg-info-body"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-primary" onclick="closeDlg('dlg-info')">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────
+var SESSION_ID      = null;
+var SESSION_REF     = '';
+var SNAPSHOT        = [];
+var BOOK_MAP        = {};
+var SCANNED         = {};
+var ABSENT          = {};
+var SELECTED_TOUCH  = 'ALL';
+var PAUSED          = false;
+var MODAL_TAG       = null;
+var PENDING_SESSION = null;
+
+// ── DIALOG HELPERS ────────────────────────────────────────────────
+function openDlg(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'dlg-overlay open';
+}
+function closeDlg(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'dlg-overlay';
+}
+function showInfo(title, body, type) {
+    var box = document.getElementById('dlg-info-box');
+    var t   = document.getElementById('dlg-info-title');
+    var b   = document.getElementById('dlg-info-body');
+    if (box) box.className = 'dlg' + (type ? ' dlg-' + type : '');
+    if (t) t.innerText = title;
+    if (b) b.innerText = body;
+    openDlg('dlg-info');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type, duration) {
+    var wrap = document.getElementById('toast-wrap');
+    if (!wrap) return;
+    var el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'info');
+    el.innerText = msg;
+    wrap.appendChild(el);
+    setTimeout(function() {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity .3s';
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+    }, duration || 2000);
+}
+
+// ── SAVE INDICATOR ────────────────────────────────────────────────
+function showSaved() {
+    var el = document.getElementById('save-ind');
+    if (!el) return;
+    el.className = 'save-ind show';
+    setTimeout(function() { el.className = 'save-ind'; }, 1500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+    loadTouches();
+    loadHistory();
+    checkActiveSession();
+});
+
+// ── TOUCHES ───────────────────────────────────────────────────────
+function loadTouches() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadTouches, 300); return; }
+    window.pywebview.api.tag_audit_get_available_touches().then(function(r) {
+        if (!r || r.status !== 'success') return;
+        var touches = r.touches || [];
+        var total = 0;
+        for (var i = 0; i < touches.length; i++) { total += touches[i].pcs; }
+        var el = document.getElementById('all-meta');
+        if (el) el.innerText = total + ' pcs across ' + touches.length + ' touch groups';
+        var grid = document.getElementById('touch-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        for (var j = 0; j < touches.length; j++) {
+            (function(t) {
+                var btn = document.createElement('div');
+                btn.className = 'tt';
+                btn.setAttribute('data-tv', String(t.touch));
+                btn.innerHTML = '<div class="tt-pct">' + t.touch + '%</div>'
+                    + '<div class="tt-pcs">' + t.pcs + ' pcs</div>'
+                    + '<div class="tt-wt">' + parseFloat(t.total_wt || 0).toFixed(3) + 'g</div>';
+                btn.onclick = function() { selectTouch(this.getAttribute('data-tv')); };
+                grid.appendChild(btn);
+            })(touches[j]);
+        }
+        selectTouch('ALL');
+    }).catch(function() {});
+}
+
+function selectTouch(tv) {
+    SELECTED_TOUCH = tv;
+    var at = document.getElementById('all-tile');
+    if (at) at.className = 'all-tile' + (tv === 'ALL' ? ' sel' : '');
+    var btns = document.querySelectorAll('.tt');
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].className = 'tt' + (btns[i].getAttribute('data-tv') === tv ? ' sel' : '');
+    }
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────
+function loadHistory() {
+    if (!window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_get_sessions(10).then(function(r) {
+        var list   = document.getElementById('history-list');
+        var banner = document.getElementById('last-result-banner');
+        if (!list) return;
+        if (!r || !r.sessions || !r.sessions.length) {
+            list.innerHTML = '<div class="hist-empty">No audits yet</div>';
+            if (banner) banner.style.display = 'none';
+            return;
+        }
+        // Show last CLOSED session as prominent banner
+        var lastClosed = null;
+        for (var x = 0; x < r.sessions.length; x++) {
+            if (r.sessions[x].status === 'closed') { lastClosed = r.sessions[x]; break; }
+        }
+        if (banner && lastClosed) {
+            var pct = lastClosed.total_book > 0 ? Math.round((lastClosed.total_found || 0) / lastClosed.total_book * 100) : 0;
+            var pass = (lastClosed.total_missing || 0) === 0;
+            banner.style.display = 'block';
+            banner.innerHTML = '<div class="lrb-head">'
+                + '<span class="lrb-label">Last Audit Result</span>'
+                + '<span class="lrb-status ' + (pass ? 'lrb-pass' : 'lrb-fail') + '">' + (pass ? 'PASSED' : 'INCOMPLETE') + '</span>'
+                + '</div>'
+                + '<div class="lrb-ref">' + lastClosed.session_ref + ' · ' + (lastClosed.started_at || '').slice(0, 10) + '</div>'
+                + '<div class="lrb-counts">'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--gr);">' + (lastClosed.total_found || 0) + '</div><div class="lrb-l">Found</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--rd);">' + (lastClosed.total_missing || 0) + '</div><div class="lrb-l">Missing</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--am);">' + (lastClosed.total_extra || 0) + '</div><div class="lrb-l">Extra</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n">' + pct + '%</div><div class="lrb-l">Done</div></div>'
+                + '</div>';
+            banner.onclick = function() { showSessionSummary(lastClosed); };
+        } else if (banner) {
+            banner.style.display = 'none';
+        }
+        list.innerHTML = '';
+        for (var i = 0; i < r.sessions.length; i++) {
+            (function(s) {
+                var row = document.createElement('div');
+                row.className = 'hr';
+                var tag = s.status === 'active'
+                    ? ' <span style="font-size:.55rem;background:var(--gb);color:var(--g);padding:1px 6px;border-radius:4px;margin-left:4px;">ACTIVE</span>'
+                    : '';
+                row.innerHTML = '<div><div class="hr-ref">' + s.session_ref + tag + '</div>'
+                    + '<div class="hr-meta">' + (s.started_at || '').slice(0, 16) + ' — ' + (s.started_by || 'Admin') + '</div></div>'
+                    + '<div class="hr-pills">'
+                    + '<span class="pill p-gr">' + (s.total_found || 0) + '</span>'
+                    + '<span class="pill p-rd">' + (s.total_missing || 0) + '</span>'
+                    + '<span class="pill p-am">' + (s.total_extra || 0) + '</span>'
+                    + '</div>';
+                row.onclick = function() { showSessionSummary(s); };
+                list.appendChild(row);
+            })(r.sessions[i]);
+        }
+    }).catch(function() {});
+}
+
+// ── CHECK ACTIVE SESSION ──────────────────────────────────────────
+function checkActiveSession() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(checkActiveSession, 400); return; }
+    window.pywebview.api.tag_audit_get_sessions(1).then(function(r) {
+        if (!r || !r.sessions || !r.sessions.length) return;
+        var last = r.sessions[0];
+        if (last.status !== 'active') return;
+        PENDING_SESSION = last;
+        var info = document.getElementById('dlg-resume-info');
+        if (info) {
+            info.innerHTML =
+                '<div class="dlg-kv"><span class="dlg-kv-k">Session</span><span class="dlg-kv-v">' + last.session_ref + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Started</span><span class="dlg-kv-v">' + (last.started_at || '').slice(0, 16) + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Touch</span><span class="dlg-kv-v">' + (last.touch_filter || 'ALL') + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Booked</span><span class="dlg-kv-v">' + last.total_book + ' tags</span></div>';
+        }
+        openDlg('dlg-resume');
+    }).catch(function() {});
+}
+
+function doResume() {
+    closeDlg('dlg-resume');
+    if (!PENDING_SESSION || !window.pywebview || !window.pywebview.api) return;
+    var sess = PENDING_SESSION;
+    SESSION_ID  = sess.id;
+    SESSION_REF = sess.session_ref;
+    SCANNED = {}; ABSENT = {}; SNAPSHOT = []; BOOK_MAP = {};
+    // Reload scans from DB
+    window.pywebview.api.tag_audit_get_status(SESSION_ID).then(function(r) {
+        if (r && r.scans) {
+            for (var i = 0; i < r.scans.length; i++) {
+                var sc = r.scans[i];
+                SCANNED[sc.tag_id] = { status: sc.status, info: { it_name: sc.it_name || '', touch: sc.touch || 0, gr_wt: sc.gr_wt || 0 } };
+            }
+        }
+        if (r && r.absent_ids) {
+            for (var j = 0; j < r.absent_ids.length; j++) { ABSENT[r.absent_ids[j]] = 'Marked absent'; }
+        }
+        // Reload snapshot
+        window.pywebview.api.tag_audit_start(sess.started_by || 'Admin', sess.touch_filter || 'ALL').then(function(sr) {
+            if (sr && sr.snapshot) {
+                SNAPSHOT = sr.snapshot;
+                for (var k = 0; k < SNAPSHOT.length; k++) { BOOK_MAP[SNAPSHOT[k].tag_id] = SNAPSHOT[k]; }
+                SESSION_ID  = sr.session_id;
+                SESSION_REF = sr.session_ref;
+            }
+            showAuditScreen();
+            updateKPIs(); renderList(); focusScan();
+            toast('Session resumed \u2014 ' + Object.keys(SCANNED).length + ' scans restored', 'ok', 3000);
+        }).catch(function() {
+            showAuditScreen(); updateKPIs(); renderList(); focusScan();
+        });
+    }).catch(function() {
+        showAuditScreen(); updateKPIs(); renderList(); focusScan();
+    });
+}
+
+// ── SESSION SUMMARY ───────────────────────────────────────────────
+function showSessionSummary(s) {
+    var pct   = s.total_book > 0 ? Math.round((s.total_found || 0) / s.total_book * 100) : 0;
+    var title = document.getElementById('dlg-summary-title');
+    var info  = document.getElementById('dlg-summary-info');
+    if (title) title.innerText = s.session_ref;
+    if (info) {
+        info.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-kv-k">Date</span><span class="dlg-kv-v">' + (s.started_at || '').slice(0, 16) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">By</span><span class="dlg-kv-v">' + (s.started_by || 'Admin') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Touch</span><span class="dlg-kv-v">' + (s.touch_filter || 'ALL') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Book Total</span><span class="dlg-kv-v">' + (s.total_book || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + (s.total_found || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + (s.total_missing || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + (s.total_extra || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Progress</span><span class="dlg-kv-v">' + pct + '%</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Status</span><span class="dlg-kv-v">' + (s.status || '').toUpperCase() + '</span></div>';
+    }
+    openDlg('dlg-summary');
+}
+
+// ── START AUDIT ───────────────────────────────────────────────────
+function startAudit() {
+    var byEl = document.getElementById('dash-by');
+    var by   = byEl ? byEl.value.trim() || 'Admin' : 'Admin';
+    if (!window.pywebview || !window.pywebview.api) { showInfo('Not Connected', 'Cannot reach AurumOS API.', 'danger'); return; }
+    var btn = document.getElementById('btn-start-audit');
+    if (btn) { btn.disabled = true; btn.innerText = 'Loading...'; }
+    window.pywebview.api.tag_audit_start(by, SELECTED_TOUCH).then(function(r) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Start Tag Audit'; }
+        if (!r || r.status !== 'success') { showInfo('Error', r && r.message ? r.message : 'Failed to start audit.', 'danger'); return; }
+        if (!r.total_book) { showInfo('No Tagged Pieces', 'No tagged pieces found' + (SELECTED_TOUCH !== 'ALL' ? ' for touch ' + SELECTED_TOUCH + '%' : '') + '. Tag your stock first.', 'warn'); return; }
+        SESSION_ID  = r.session_id;
+        SESSION_REF = r.session_ref;
+        SNAPSHOT    = r.snapshot || [];
+        BOOK_MAP    = {}; SCANNED = {}; ABSENT = {};
+        for (var i = 0; i < SNAPSHOT.length; i++) { BOOK_MAP[SNAPSHOT[i].tag_id] = SNAPSHOT[i]; }
+        showAuditScreen();
+        updateKPIs(); renderList(); focusScan();
+        toast('Audit started \u2014 ' + r.total_book + ' tags to verify', 'info', 2500);
+    }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Start Tag Audit'; }
+        showInfo('Error', String(e), 'danger');
+    });
+}
+
+function showAuditScreen() {
+    var setup = document.getElementById('setup');
+    var audit = document.getElementById('audit');
+    var ts    = document.getElementById('top-session');
+    var bi    = document.getElementById('bb-info');
+    if (setup) setup.style.display = 'none';
+    if (audit) audit.style.display = 'flex';
+    if (ts)    ts.innerText = SESSION_REF;
+    if (bi)    bi.innerText = SESSION_REF + ' \u2014 ' + SNAPSHOT.length + ' tags booked';
+}
+
+// ── SCAN — auto-saves every scan to DB ───────────────────────────
+function onScanKey(e) { if (e.key === 'Enter') { e.preventDefault(); processScan(); } }
+
+function processScan() {
+    if (PAUSED) return;
+    var inp = document.getElementById('scan-inp');
+    if (!inp) return;
+    var raw = inp.value.trim().toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+    if (!raw) return;
+    inp.value = '';
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    // Every scan → DB write via tag_audit_scan (already saves to tag_audit_scans table)
+    window.pywebview.api.tag_audit_scan(SESSION_ID, raw, {}).then(function(r) {
+        if (!r) return;
+        if (r.status === 'found') {
+            SCANNED[raw] = { status: 'found', info: r.tag_info || BOOK_MAP[raw] || {} };
+            flashInput('fg');
+            showSaved();
+        } else if (r.status === 'extra') {
+            SCANNED[raw] = { status: 'extra', info: r.tag_info || {} };
+            flashInput('fa');
+            showSaved();
+        } else if (r.status === 'duplicate') {
+            flashInput('fgy');
+            toast(raw + ' already scanned', 'warn', 1500);
+        } else {
+            flashInput('fr');
+        }
+        showLastScan(raw, r);
+        updateKPIs();
+        renderList();
+        if (r.status !== 'duplicate') showTagDetail(raw);
+    }).catch(function() { flashInput('fr'); });
+    setTimeout(function() { focusScan(); }, 100);
+}
+
+function flashInput(cls) {
+    var inp = document.getElementById('scan-inp');
+    if (!inp) return;
+    inp.className = 'sf-inp ' + cls;
+    setTimeout(function() { inp.className = 'sf-inp'; }, 700);
+}
+
+// ── LAST SCAN ─────────────────────────────────────────────────────
+function showLastScan(tag_id, r) {
+    var panel = document.getElementById('last-scan');
+    if (!panel) return;
+    var info   = r.tag_info || BOOK_MAP[tag_id] || {};
+    var badges = { found: 'lsr-badge lsr-f', extra: 'lsr-badge lsr-e', duplicate: 'lsr-badge lsr-d' };
+    var texts  = { found: '\u2713 Found', extra: '+ Extra', duplicate: 'Already scanned' };
+    var bclass = badges[r.status] || 'lsr-badge lsr-m';
+    var btext  = texts[r.status]  || '\u2717 Not in book';
+    var h = '<div class="' + bclass + '">' + btext + '</div><div class="lsr-tag">' + tag_id + '</div>';
+    if (info.it_name) { h += '<div class="lsr-nm">' + info.it_name + '</div>'; }
+    if (info.touch || info.gr_wt) {
+        h += '<div class="lsr-detail">'
+            + (info.touch ? info.touch + '%' : '')
+            + (info.touch && info.gr_wt ? ' \u00b7 ' : '')
+            + (info.gr_wt ? parseFloat(info.gr_wt).toFixed(3) + 'g' : '')
+            + '</div>';
+    }
+    panel.innerHTML = h;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function updateKPIs() {
+    var total   = SNAPSHOT.length;
+    var found   = 0; var extra = 0;
+    var keys    = Object.keys(SCANNED);
+    for (var i = 0; i < keys.length; i++) {
+        if (SCANNED[keys[i]].status === 'found') { found++; }
+        if (SCANNED[keys[i]].status === 'extra') { extra++; }
+    }
+    var absent  = Object.keys(ABSENT).length;
+    var missing = Math.max(0, total - found - absent);
+    var pct     = total > 0 ? Math.round((found + absent) / total * 100) : 0;
+    var kt = document.getElementById('kpi-total');   if (kt) kt.innerText = total;
+    var kf = document.getElementById('kpi-found');   if (kf) kf.innerText = found;
+    var km = document.getElementById('kpi-missing'); if (km) km.innerText = missing;
+    var ke = document.getElementById('kpi-extra');   if (ke) ke.innerText = extra;
+    var pf = document.getElementById('prog-fill');   if (pf) pf.style.width = pct + '%';
+    var pl = document.getElementById('prog-label');  if (pl) pl.innerText = (found + absent) + ' of ' + total + ' accounted for';
+    var pp = document.getElementById('prog-pct');    if (pp) pp.innerText = pct + '%';
+}
+
+// ── FILTER ────────────────────────────────────────────────────────
+function setFilter(f) {
+    var sel = document.getElementById('filter-sel');
+    if (sel) sel.value = f;
+    var kpis = document.querySelectorAll('.kpi');
+    for (var i = 0; i < kpis.length; i++) { kpis[i].classList.remove('on'); }
+    var fmap = { all: 0, found: 1, missing: 2, extra: 3 };
+    if (fmap[f] !== undefined && kpis[fmap[f]]) { kpis[fmap[f]].classList.add('on'); }
+    renderList();
+}
+
+// ── RENDER LIST ───────────────────────────────────────────────────
+function renderList() {
+    var search = ((document.getElementById('search-inp') || {}).value || '').toLowerCase();
+    var filter = (document.getElementById('filter-sel') || {}).value || 'all';
+    var listEl = document.getElementById('tag-list');
+    if (!listEl) return;
+    var allTags = [];
+    for (var i = 0; i < SNAPSHOT.length; i++) {
+        var t  = SNAPSHOT[i];
+        var sc = SCANNED[t.tag_id];
+        var ab = ABSENT[t.tag_id];
+        var st = ab ? 'absent' : (sc ? sc.status : 'missing');
+        allTags.push({ tag_id: t.tag_id, it_name: t.it_name, touch: t.touch, gr_wt: t.gr_wt, status: st });
+    }
+    var ekeys = Object.keys(SCANNED);
+    for (var j = 0; j < ekeys.length; j++) {
+        if (SCANNED[ekeys[j]].status === 'extra') {
+            var inf = SCANNED[ekeys[j]].info || {};
+            allTags.push({ tag_id: ekeys[j], it_name: inf.it_name || '', touch: inf.touch || 0, gr_wt: inf.gr_wt || 0, status: 'extra' });
+        }
+    }
+    var visible = [];
+    for (var k = 0; k < allTags.length; k++) {
+        var tag = allTags[k];
+        if ((filter === 'all' || tag.status === filter) && (!search || (tag.tag_id + ' ' + tag.it_name).toLowerCase().indexOf(search) >= 0)) { visible.push(tag); }
+    }
+    var ORDER = { missing: 0, extra: 1, found: 2, absent: 3 };
+    visible.sort(function(a, b) { return (ORDER[a.status] || 9) - (ORDER[b.status] || 9) || a.tag_id.localeCompare(b.tag_id); });
+    if (!visible.length) { listEl.innerHTML = '<div class="tl-empty">No tags match</div>'; return; }
+    var icof = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+    var icom = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var icoe = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--am)" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+    var icoa = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    var icoM = { found: icof, missing: icom, extra: icoe, absent: icoa };
+    var pilM = { found: 'ti-st sf', missing: 'ti-st sm', extra: 'ti-st se', absent: 'ti-st sa' };
+    var txtM = { found: 'FOUND', missing: 'MISSING', extra: 'EXTRA', absent: 'ABSENT' };
+    var scM  = { found: 'f', missing: 'm', extra: 'e', absent: 'a' };
+    var html = '';
+    for (var n = 0; n < visible.length; n++) {
+        var v   = visible[n];
+        var tid = v.tag_id;
+        html += '<div class="ti ' + (scM[v.status] || 'm') + '" id="row-' + tid + '" onclick="showTagDetail(\'' + tid + '\')">'
+            + '<div class="ti-ico">' + (icoM[v.status] || icoa) + '</div>'
+            + '<div class="ti-id">' + tid + '</div>'
+            + '<div class="ti-nm">' + (v.it_name || '\u2014') + '</div>'
+            + '<div class="ti-tc">' + (v.touch ? v.touch + '%' : '\u2014') + '</div>'
+            + '<div class="ti-wt">' + (v.gr_wt ? parseFloat(v.gr_wt).toFixed(3) + 'g' : '\u2014') + '</div>'
+            + '<div><span class="' + (pilM[v.status] || 'ti-st sm') + '">' + (txtM[v.status] || 'MISSING') + '</span></div>'
+            + '</div>';
+    }
+    listEl.innerHTML = html;
+}
+
+// ── TAG DETAIL ────────────────────────────────────────────────────
+function showTagDetail(tag_id) {
+    var rows = document.querySelectorAll('.ti');
+    for (var i = 0; i < rows.length; i++) { rows[i].classList.remove('sel-row'); }
+    var ar = document.getElementById('row-' + tag_id);
+    if (ar) ar.classList.add('sel-row');
+    var panel   = document.getElementById('detail-panel');
+    if (!panel) return;
+    var bookT   = BOOK_MAP[tag_id];
+    var scanT   = SCANNED[tag_id];
+    var absentR = ABSENT[tag_id];
+    var status  = absentR ? 'absent' : (scanT ? scanT.status : (bookT ? 'missing' : 'unknown'));
+    var info    = bookT || (scanT && scanT.info) || {};
+    var pcM = {
+        found:   'background:var(--grb);color:var(--gr);border:1px solid var(--grl);',
+        missing: 'background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);',
+        extra:   'background:var(--amb);color:var(--am);border:1px solid var(--aml);'
+    };
+    var pc = pcM[status] || 'background:#f0f0f0;color:#aaa;border:1px solid #e5e5e5;';
+    var h = '<div class="dp-head">'
+        + '<div class="dp-tag-id">' + tag_id + '</div>'
+        + '<div class="dp-name">' + (info.it_name || 'Unknown Item') + '</div>'
+        + '<span class="dp-spill" style="' + pc + '">' + status.toUpperCase() + '</span>'
+        + '</div><div class="dp-fields">'
+        + '<div class="dp-kv"><span class="dp-k">Touch</span><span class="dp-v">' + (info.touch ? info.touch + '%' : '\u2014') + '</span></div>'
+        + '<div class="dp-kv"><span class="dp-k">Gross Wt</span><span class="dp-v">' + (info.gr_wt ? parseFloat(info.gr_wt).toFixed(3) + ' g' : '\u2014') + '</span></div>'
+        + '<div class="dp-kv"><span class="dp-k">Net Wt</span><span class="dp-v">' + (info.nt_wt ? parseFloat(info.nt_wt).toFixed(3) + ' g' : '\u2014') + '</span></div>'
+        + (info.huid ? '<div class="dp-kv"><span class="dp-k">HUID</span><span class="dp-v" style="font-size:.68rem;">' + info.huid + '</span></div>' : '')
+        + (absentR ? '<div class="dp-kv"><span class="dp-k">Absent</span><span class="dp-v" style="font-size:.7rem;color:var(--mu);">' + absentR + '</span></div>' : '')
+        + '</div><div class="dp-acts">';
+    if (status === 'missing') {
+        h += '<button class="dp-btn db-warn" data-tid="' + tag_id + '" onclick="openAbsentModal(this.getAttribute(\'data-tid\'))">Mark as Absent</button>';
+        h += '<button class="dp-btn db-ok"   data-tid="' + tag_id + '" onclick="reScanTag(this.getAttribute(\'data-tid\'))">\u21ba Scan This Tag</button>';
+    } else if (status === 'found') {
+        h += '<button class="dp-btn db-dan"  data-tid="' + tag_id + '" onclick="undoScan(this.getAttribute(\'data-tid\'))">\u2190 Undo Scan</button>';
+    } else if (status === 'extra') {
+        h += '<button class="dp-btn db-dan"  data-tid="' + tag_id + '" onclick="undoScan(this.getAttribute(\'data-tid\'))">\u2190 Remove Extra</button>';
+    } else if (status === 'absent') {
+        h += '<button class="dp-btn db-ok"   data-tid="' + tag_id + '" onclick="removeAbsent(this.getAttribute(\'data-tid\'))">\u2190 Remove Absent</button>';
+        h += '<button class="dp-btn db-warn" data-tid="' + tag_id + '" onclick="reScanTag(this.getAttribute(\'data-tid\'))">\u21ba Scan Instead</button>';
+    }
+    h += '</div>';
+    panel.innerHTML = h;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────
+function reScanTag(tag_id) {
+    var inp = document.getElementById('scan-inp');
+    if (inp) { inp.value = tag_id; inp.focus(); inp.select(); }
+}
+
+function undoScan(tag_id) {
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_remove_scan(SESSION_ID, tag_id).then(function(r) {
+        if (r && r.status === 'success') {
+            delete SCANNED[tag_id];
+            updateKPIs(); renderList();
+            var panel = document.getElementById('detail-panel');
+            if (panel) panel.innerHTML = '<div class="dp-empty"><div class="dp-ei"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div><div class="dp-et">Scan removed</div></div>';
+            toast('Scan removed for ' + tag_id, 'warn', 2000);
+            showSaved();
+        }
+    }).catch(function() {});
+}
+
+function openAbsentModal(tag_id) {
+    MODAL_TAG = tag_id;
+    var sub = document.getElementById('dlg-absent-tag');
+    var inp = document.getElementById('absent-reason');
+    if (sub) sub.innerText = 'Tag ' + tag_id + ' \u2014 enter reason for absence.';
+    if (inp) inp.value = '';
+    openDlg('dlg-absent');
+    setTimeout(function() { var i = document.getElementById('absent-reason'); if (i) i.focus(); }, 100);
+}
+
+function confirmAbsent() {
+    if (!MODAL_TAG || !SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    var inp    = document.getElementById('absent-reason');
+    var reason = (inp ? inp.value : '').trim() || 'Not available';
+    var tid    = MODAL_TAG;
+    window.pywebview.api.tag_audit_mark_absent(SESSION_ID, tid, reason).then(function(r) {
+        if (r && r.status === 'success') {
+            ABSENT[tid] = reason;
+            closeDlg('dlg-absent');
+            updateKPIs(); renderList(); showTagDetail(tid);
+            toast(tid + ' marked absent', 'warn', 2000);
+            showSaved();
+        }
+    }).catch(function() { closeDlg('dlg-absent'); });
+    MODAL_TAG = null;
+}
+
+function removeAbsent(tag_id) {
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_remove_absence(SESSION_ID, tag_id).then(function(r) {
+        if (r && r.status === 'success') {
+            delete ABSENT[tag_id];
+            updateKPIs(); renderList(); showTagDetail(tag_id);
+            toast('Absent mark removed', 'ok', 1500);
+            showSaved();
+        }
+    }).catch(function() {});
+}
+
+// ── PAUSE ─────────────────────────────────────────────────────────
+function togglePause() {
+    PAUSED = !PAUSED;
+    var btn = document.getElementById('btn-pause');
+    var inp = document.getElementById('scan-inp');
+    if (PAUSED) {
+        if (btn) { btn.innerHTML = '\u25b6 Resume'; btn.style.background = 'rgba(21,128,61,.2)'; btn.style.color = 'var(--gr)'; }
+        if (inp) inp.disabled = true;
+        toast('Scanning paused', 'warn', 1500);
+    } else {
+        if (btn) { btn.innerHTML = '\u23f8 Pause'; btn.style.background = ''; btn.style.color = ''; }
+        if (inp) inp.disabled = false;
+        focusScan();
+        toast('Scanning resumed', 'ok', 1500);
+    }
+}
+
+// ── CLOSE AUDIT ───────────────────────────────────────────────────
+function dlgCloseAudit() {
+    var found   = parseInt((document.getElementById('kpi-found')   || {}).innerText) || 0;
+    var missing = parseInt((document.getElementById('kpi-missing') || {}).innerText) || 0;
+    var extra   = parseInt((document.getElementById('kpi-extra')   || {}).innerText) || 0;
+    var total   = parseInt((document.getElementById('kpi-total')   || {}).innerText) || 0;
+    var pct     = total > 0 ? Math.round(found / total * 100) : 0;
+    var info    = document.getElementById('dlg-close-info');
+    var warn    = document.getElementById('dlg-close-warn');
+    if (info) {
+        info.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + found + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + missing + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + extra + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Progress</span><span class="dlg-kv-v">' + pct + '%</span></div>';
+    }
+    if (warn) warn.innerText = missing > 0 ? missing + ' piece(s) are not accounted for. Close anyway?' : 'All pieces accounted for. Ready to close.';
+    openDlg('dlg-close');
+}
+
+function doCloseAudit() {
+    closeDlg('dlg-close');
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_close(SESSION_ID).then(function(r) {
+        var found   = parseInt((document.getElementById('kpi-found')   || {}).innerText) || 0;
+        var missing = parseInt((document.getElementById('kpi-missing') || {}).innerText) || 0;
+        var extra   = parseInt((document.getElementById('kpi-extra')   || {}).innerText) || 0;
+        var setup = document.getElementById('setup');
+        var audit = document.getElementById('audit');
+        var ts    = document.getElementById('top-session');
+        if (audit) audit.style.display = 'none';
+        if (setup) setup.style.display = '';
+        if (ts)    ts.innerText = 'Ready';
+        SESSION_ID = null; SESSION_REF = '';
+        SNAPSHOT = []; BOOK_MAP = {}; SCANNED = {}; ABSENT = {};
+        loadHistory();
+        // Show summary dialog
+        var sinfo = document.getElementById('dlg-summary-info');
+        var stit  = document.getElementById('dlg-summary-title');
+        if (stit) stit.innerText = 'Audit Complete';
+        if (sinfo) {
+            sinfo.innerHTML =
+                '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + found + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + missing + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + extra + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Result</span><span class="dlg-kv-v" style="color:' + (missing === 0 ? 'var(--gr)' : 'var(--rd)') + ';">' + (missing === 0 ? 'PASSED' : 'INCOMPLETE') + '</span></div>';
+        }
+        openDlg('dlg-summary');
+    }).catch(function() {});
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function focusScan() {
+    var el = document.getElementById('scan-inp');
+    if (el && !el.disabled) el.focus();
+}
+
+function goBack() {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
+        window.pywebview.api.navigate('inventory.html');
+    }
+}
+</script>
+</body>
+</html>

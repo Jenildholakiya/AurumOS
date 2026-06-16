@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Master Stock Ledger</title>
 <link rel="stylesheet" href="fonts.css">
+<script src="scale_widget.js"></script>
 <style>
 :root{
     --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
@@ -132,7 +133,8 @@ td{padding:8px 12px;font-size:0.76rem;font-weight:500;border-bottom:1px solid va
 <body>
 
 <!-- ══ SCALE BRIDGE (no async/await, no arrow fns, pure ES5) ══ -->
-<script>
+<script>ScaleWidget.renderMini('sw-mini-stock', 'gr-wt');
+
 'use strict';
 var _scW = null, _scStable = false, _scConnected = false;
 
@@ -178,16 +180,13 @@ function _scSetStatus(label, color) {
     if (txt) { txt.innerText = 'Scale: ' + label; txt.style.color = color; }
 }
 
-function scOpenPopup() {
-    var ov = document.getElementById('sc-popup-overlay');
-    if (!ov) return;
-    ov.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
+function ScaleWidget.openPopup() {
+    ScaleWidget.openPopup();
     scLoadPorts();
 }
 
-function scClosePopup() {
-    var ov = document.getElementById('sc-popup-overlay');
-    if (ov) ov.style.display = 'none';
+function ScaleWidget.closePopup() {
+    ScaleWidget.closePopup();
 }
 
 function scLoadPorts() {
@@ -383,39 +382,7 @@ function scInsertToGrWt() {
 </div>
 
 <!-- SCALE CONNECTION POPUP -->
-<div id="sc-popup-overlay" onclick="if(event.target===this)scClosePopup()"
-     style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;">
-  <div style="background:#0e0c09;border-radius:16px;width:320px;border:1px solid rgba(201,162,39,0.22);box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;">
-    <div style="height:2px;background:linear-gradient(90deg,#a87d1e,#c9a227,#8a6c0a);"></div>
-    <div style="padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-family:var(--serif);font-size:0.95rem;color:#fff;">Scale Connection</span>
-      <button onclick="scClosePopup()" style="border:none;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);width:24px;height:24px;border-radius:5px;cursor:pointer;">&#10005;</button>
-    </div>
-    <div style="text-align:center;padding:8px 18px 4px;">
-      <span id="sc-popup-wt" style="font-family:var(--mono);font-size:1.8rem;color:#fff;letter-spacing:-1px;">--.-</span>
-      <span style="font-size:0.8rem;color:rgba(255,255,255,0.35);margin-left:3px;">g</span>
-    </div>
-    <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:0.5rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">COM Port</label>
-        <select id="sc-port" style="height:38px;padding:0 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:#fff;font-family:var(--mono);font-size:0.8rem;outline:none;cursor:pointer;">
-          <option value="">Select port...</option>
-        </select>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:0.5rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">Baud Rate</label>
-        <input id="sc-baud" value="1200" type="number" style="height:38px;padding:0 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:#fff;font-family:var(--mono);font-size:0.8rem;outline:none;">
-      </div>
-      <button id="sc-popup-connect-btn" onclick="scConnect()" style="width:100%;height:40px;background:linear-gradient(135deg,rgba(201,162,39,0.2),rgba(168,125,30,0.15));border:1px solid rgba(201,162,39,0.35);border-radius:8px;color:#c9a227;font-size:0.8rem;cursor:pointer;font-family:var(--sans);">
-        &#9889; Connect Scale
-      </button>
-      <button id="sc-popup-disconnect-btn" onclick="scDisconnect()" style="display:none;width:100%;height:36px;background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.25);border-radius:7px;color:#f87171;font-size:0.76rem;cursor:pointer;font-family:var(--sans);">
-        Disconnect
-      </button>
-      <div id="sc-popup-msg" style="font-size:0.65rem;color:rgba(255,255,255,0.35);text-align:center;min-height:16px;">Select port and click Connect</div>
-    </div>
-  </div>
-</div>
+
 
 <!-- CUSTOM CALENDAR POPUP -->
 <div id="cal-overlay" onclick="if(event.target===this)closeDatePicker()"
@@ -475,7 +442,7 @@ function scInsertToGrWt() {
     <div class="modal-head">
       <div style="display:flex;align-items:center;gap:14px;flex:1;">
         <div class="modal-head-title">Receipt Entry &mdash; <em id="display-it-name">&mdash;</em></div>
-        <div onclick="scOpenPopup()" title="Configure scale" style="display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:7px;background:var(--cream2);border:1px solid var(--rule);cursor:pointer;">
+        <div onclick="ScaleWidget.openPopup()" title="Configure scale" style="display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:7px;background:var(--cream2);border:1px solid var(--rule);cursor:pointer;">
           <span id="modal-sc-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;"></span>
           <span id="modal-sc-wt" style="font-family:var(--mono);font-size:2rem;color:var(--muted2);letter-spacing:-1px;line-height:1;">--.-</span>
           <span style="font-family:var(--mono);font-size:0.85rem;color:var(--muted2);">g</span>
@@ -507,8 +474,9 @@ function scInsertToGrWt() {
             </label>
             <div style="display:flex;gap:5px;align-items:center;">
               <input type="number" id="gr-wt" class="entry-input calc-trigger nav-target" step="0.001" oninput="validateFormSecurity()" placeholder="0.000" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();if(typeof _scW!=='undefined'&&_scW!==null&&parseFloat(_scW)>0){this.value=parseFloat(_scW).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
+              <div id="sw-mini-stock" style="flex-shrink:0;"></div>
               <button type="button" id="sc-insert-btn" onclick="scInsertToGrWt()" style="display:none;height:38px;padding:0 8px;border-radius:6px;border:1px solid rgba(21,128,61,0.25);background:var(--green-bg);color:var(--green);font-size:0.68rem;cursor:pointer;white-space:nowrap;font-family:var(--sans);">Use</button>
-              <button type="button" onclick="scOpenPopup()" style="height:38px;padding:0 8px;border-radius:6px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold3);font-size:0.68rem;cursor:pointer;white-space:nowrap;font-family:var(--sans);">&#9889;</button>
+              <button type="button" onclick="ScaleWidget.openPopup()" style="height:38px;padding:0 8px;border-radius:6px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold3);font-size:0.68rem;cursor:pointer;white-space:nowrap;font-family:var(--sans);">&#9889;</button>
             </div>
             <div id="sc-live-wt" style="font-family:var(--mono);font-size:0.68rem;color:var(--muted2);margin-top:3px;min-height:13px;"></div>
           </div>
@@ -577,6 +545,9 @@ function scInsertToGrWt() {
 </main>
 
 <script>
+ScaleWidget.init();
+ScaleWidget.renderMini('sw-mini-stock', 'gr-wt');
+
 'use strict';
 
 // ── STATE ────────────────────────────────────────────────────────
@@ -758,7 +729,7 @@ function generateUniqueTagID() {
     return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
 
-function h(s)   { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function h(s)   { return String(s).replace(/&/g,'&'+'amp;').replace(/</g,'&'+'lt;').replace(/>/g,'&'+'gt;').replace(/"/g,'&'+'quot;'); }
 function esc(s) { return String(s).replace(/'/g, "\\'"); }
 
 function updateVariationHint() {
@@ -893,7 +864,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeModal('entryModal'); closeModal('itemModal');
         closeModal('deleteConfirmModal'); closeModal('previewModal');
-        scClosePopup(); closeDatePicker();
+        ScaleWidget.closePopup(); closeDatePicker();
     }
 });
 

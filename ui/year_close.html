@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AurumOS | Year-End Close</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --c:#faf8f3;--c2:#f2efe7;--c3:#e8e3d8;
+  --w:#ffffff;
+  --ink:#0e0c09;--ink2:#2c2a24;--ink3:#5c5a52;
+  --g:#a87d1e;--g2:#c9a227;--g3:#8a6c0a;
+  --gb:rgba(168,125,30,.08);--gl:rgba(168,125,30,.22);
+  --r:rgba(14,12,9,.08);--mu:#7a7268;
+  --gr:#15803d;--grb:rgba(21,128,61,.07);--grl:rgba(21,128,61,.22);
+  --rd:#b91c1c;--rdb:rgba(185,28,28,.07);--rdl:rgba(185,28,28,.20);
+  --am:#b45309;--amb:rgba(180,83,9,.07);--aml:rgba(180,83,9,.22);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:"DM Mono",monospace;
+  --sans:"DM Sans",system-ui,sans-serif;
+  --sh:0 1px 4px rgba(14,12,9,.07);
+  --sh2:0 8px 32px rgba(14,12,9,.13);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;background:var(--c);color:var(--ink);}
+body{display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.tb{height:52px;background:var(--w);border-bottom:1px solid var(--r);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;position:relative;}
+.tb::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gl) 50%,transparent 95%);}
+.tb-l{display:flex;align-items:center;gap:12px;}
+.logo{width:28px;height:28px;background:var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.logo svg{width:16px;height:16px;fill:var(--g2);}
+.app-name{font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink2);}
+.app-name em{color:var(--g);font-style:normal;}
+.tb-sep{width:1px;height:16px;background:var(--r);}
+.page-title{font-family:var(--serif);font-size:.98rem;color:var(--ink2);}
+.tb-r{display:flex;gap:8px;}
+.btn-tb{height:28px;padding:0 12px;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid var(--r);background:transparent;color:var(--ink3);transition:background .15s;}
+.btn-tb:hover{background:var(--c2);}
+
+/* PAGE */
+.page{flex:1;overflow-y:auto;padding:32px 24px;display:flex;gap:28px;align-items:flex-start;justify-content:center;}
+
+/* LEFT — Main action */
+.col-main{width:480px;flex-shrink:0;}
+.eyebrow{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--g);margin-bottom:8px;}
+.page-h{font-family:var(--serif);font-size:1.9rem;color:var(--ink2);line-height:1.15;margin-bottom:8px;}
+.page-sub{font-size:.8rem;color:var(--mu);margin-bottom:28px;line-height:1.7;}
+
+/* Year transfer card */
+.transfer-card{background:var(--w);border:1px solid var(--r);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:20px;}
+.tc-head{background:var(--ink);padding:22px 24px;position:relative;overflow:hidden;}
+.tc-head::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(201,162,39,.10));pointer-events:none;}
+.tc-eyebrow{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:10px;opacity:.8;}
+.tc-title{font-family:var(--serif);font-size:1.15rem;color:var(--w);margin-bottom:4px;}
+.tc-sub{font-size:.72rem;color:rgba(255,255,255,.45);}
+.tc-body{padding:24px;}
+
+/* Year row */
+.yr-transfer-row{display:grid;grid-template-columns:1fr 40px 1fr;align-items:center;gap:12px;margin-bottom:24px;}
+.yr-col label{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:7px;display:block;}
+.yr-inp{width:100%;height:42px;background:var(--c);border:1.5px solid var(--r);border-radius:8px;font-family:var(--mono);font-size:1rem;font-weight:700;padding:0 14px;outline:none;color:var(--ink);letter-spacing:1px;transition:border-color .2s;}
+.yr-inp:focus{border-color:var(--g);background:var(--w);}
+.yr-inp.readonly{background:var(--c2);color:var(--mu);cursor:default;border-style:dashed;}
+.yr-arrow{display:flex;align-items:center;justify-content:center;color:var(--g2);font-size:1.2rem;padding-top:22px;}
+
+/* Stat chips */
+.stat-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:22px;}
+.chip{background:var(--c);border:1px solid var(--r);border-radius:9px;padding:12px 14px;text-align:center;}
+.chip-n{font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--ink2);margin-bottom:3px;}
+.chip-n.gold{color:var(--g);}
+.chip-n.green{color:var(--gr);}
+.chip-l{font-size:.58rem;letter-spacing:1px;text-transform:uppercase;color:var(--mu);}
+.chip-loading{opacity:.5;animation:pulse 1.5s ease infinite;}
+@keyframes pulse{0%,100%{opacity:.5;}50%{opacity:.9;}}
+
+/* Note */
+.field-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:7px;display:block;}
+.note-inp{width:100%;height:38px;background:var(--c);border:1.5px solid var(--r);border-radius:8px;font-size:.82rem;padding:0 13px;outline:none;color:var(--ink);margin-bottom:20px;transition:border-color .2s;}
+.note-inp:focus{border-color:var(--g);}
+
+/* Warning */
+.warn-box{background:var(--rdb);border:1px solid var(--rdl);border-radius:9px;padding:14px 16px;margin-bottom:20px;display:flex;gap:10px;}
+.warn-body{font-size:.75rem;color:var(--rd);line-height:1.7;}
+.warn-body strong{font-weight:700;}
+
+/* Transfer button */
+.btn-transfer{width:100%;height:48px;background:var(--rd);border:none;border-radius:10px;font-size:.88rem;font-weight:700;color:#fff;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.3px;}
+.btn-transfer:hover{background:#991b1b;}
+.btn-transfer:disabled{background:var(--c3);color:var(--mu);cursor:not-allowed;}
+
+/* RIGHT — Archives list */
+.col-arch{flex:1;min-width:0;}
+.arch-title{font-family:var(--serif);font-size:1.1rem;color:var(--ink2);margin-bottom:4px;}
+.arch-sub{font-size:.72rem;color:var(--mu);margin-bottom:18px;}
+.arch-list{display:flex;flex-direction:column;gap:10px;}
+.arch-row{
+  background:var(--w);border:1.5px solid var(--r);border-radius:12px;
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  transition:all .18s;
+}
+.arch-row:hover{border-color:var(--gl);background:var(--gb);}
+.ar-year{font-family:var(--mono);font-size:1rem;font-weight:800;color:var(--ink2);}
+.ar-meta{font-size:.66rem;color:var(--mu);margin-top:3px;}
+.ar-right{display:flex;align-items:center;gap:10px;}
+.ar-size{font-size:.68rem;font-family:var(--mono);color:var(--mu);}
+.ar-badge{font-size:.58rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--c2);color:var(--mu);border:1px solid var(--r);}
+.arch-empty{background:var(--w);border:1.5px dashed var(--r);border-radius:12px;padding:28px;text-align:center;color:var(--mu);font-size:.76rem;line-height:1.8;}
+.arch-empty svg{margin:0 auto 10px;display:block;opacity:.3;}
+
+/* ── DIALOGS ─────────────────────────────────────── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(14,12,9,.5);z-index:9999;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+
+/* Confirm dialog */
+.dlg{background:var(--w);border-radius:14px;padding:26px;max-width:420px;width:90%;box-shadow:var(--sh2);}
+.dlg-rd{border-top:4px solid var(--rd);}
+.dlg-gr{border-top:4px solid var(--gr);}
+.dlg-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.dlg-icon-rd{background:var(--rdb);border:1px solid var(--rdl);}
+.dlg-icon-gr{background:var(--grb);border:1px solid var(--grl);}
+.dlg-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink2);margin-bottom:8px;}
+.dlg-body{font-size:.77rem;color:var(--ink3);line-height:1.7;margin-bottom:16px;}
+.dlg-kv-box{background:var(--c);border-radius:8px;padding:12px 14px;margin-bottom:16px;}
+.dlg-kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--r);font-size:.76rem;}
+.dlg-kv:last-child{border-bottom:none;}
+.dlg-k{color:var(--mu);}
+.dlg-v{font-weight:700;font-family:var(--mono);color:var(--ink2);}
+.dlg-confirm-inp{width:100%;height:38px;background:var(--c);border:1.5px solid var(--r);border-radius:7px;font-size:.85rem;font-family:var(--mono);padding:0 12px;outline:none;color:var(--ink);margin-bottom:16px;transition:border-color .2s;}
+.dlg-confirm-inp:focus{border-color:var(--g);}
+.dlg-confirm-inp.err{border-color:var(--rd);}
+.dlg-btns{display:flex;gap:8px;justify-content:flex-end;}
+.dlg-btn{height:34px;padding:0 18px;border-radius:7px;font-size:.74rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.dlg-ghost{background:transparent;border:1px solid var(--r);color:var(--mu);}
+.dlg-ghost:hover{background:var(--c2);}
+.dlg-danger{background:var(--rd);color:#fff;}
+.dlg-danger:hover{background:#991b1b;}
+.dlg-ok{background:var(--gr);color:#fff;}
+.dlg-ok:hover{background:#166534;}
+
+/* Progress overlay */
+.prog-overlay{display:none;position:fixed;inset:0;background:rgba(250,248,243,.92);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.prog-overlay.open{display:flex;}
+.prog-spinner{width:40px;height:40px;border:3px solid var(--r);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.prog-title{font-family:var(--serif);font-size:1.1rem;color:var(--ink2);}
+.prog-sub{font-size:.76rem;color:var(--mu);}
+</style>
+</head>
+<body>
+
+<div class="tb">
+  <div class="tb-l">
+    <div class="logo"><svg viewBox="0 0 20 20"><polygon points="10,2 18,7 18,13 10,18 2,13 2,7"/></svg></div>
+    <div class="app-name">Aurum<em>OS</em></div>
+    <div class="tb-sep"></div>
+    <span class="page-title">Year-End Close</span>
+  </div>
+  <div class="tb-r">
+    <button class="btn-tb" onclick="goBack()">&#8592; Back</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- MAIN COL -->
+  <div class="col-main">
+    <div class="eyebrow">AurumOS &mdash; Financial Year</div>
+    <h1 class="page-h">Balance Transfer</h1>
+    <p class="page-sub">Archive the current year, carry forward all live stock as opening balance, and start the new year completely clean.</p>
+
+    <div class="transfer-card">
+      <div class="tc-head">
+        <div class="tc-eyebrow">Year-End Close</div>
+        <div class="tc-title">Transfer &amp; Archive</div>
+        <div class="tc-sub">Current data archives to disk. New year starts clean.</div>
+      </div>
+      <div class="tc-body">
+
+        <!-- Year selector -->
+        <div class="yr-transfer-row">
+          <div class="yr-col">
+            <label>Closing Year</label>
+            <input class="yr-inp readonly" id="yr-current" type="text" readonly placeholder="Loading...">
+          </div>
+          <div class="yr-arrow">&#8594;</div>
+          <div class="yr-col">
+            <label>New Year <span style="color:var(--g);font-style:normal;">(editable)</span></label>
+            <input class="yr-inp" id="yr-new" type="text" placeholder="e.g. 2025-26" oninput="onYearInput()">
+          </div>
+        </div>
+
+        <!-- Live stats -->
+        <div class="stat-chips" id="stat-chips">
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Stock Rows</div></div>
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Total Weight</div></div>
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Tagged Pcs</div></div>
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Bills</div></div>
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Katti</div></div>
+          <div class="chip chip-loading"><div class="chip-n">—</div><div class="chip-l">Clients</div></div>
+        </div>
+
+        <!-- Closing note -->
+        <span class="field-lbl">Closing Note <span style="color:var(--mu);font-weight:400;">(optional)</span></span>
+        <input class="note-inp" id="yr-note" type="text" placeholder="e.g. Year ended. All accounts settled.">
+
+        <!-- Warning -->
+        <div class="warn-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div class="warn-body">
+            <strong>Irreversible action.</strong> Current year will be archived. Live stock carries forward as opening balance. All bills, katti, clients and vouchers will be cleared for the new year.
+          </div>
+        </div>
+
+        <button class="btn-transfer" id="btn-transfer" onclick="showConfirm()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Close Year &amp; Transfer Balance
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHIVES COL -->
+  <div class="col-arch">
+    <div class="arch-title">Archived Years</div>
+    <div class="arch-sub">Previous years are stored in <span style="font-family:var(--mono);font-size:.78rem;">database/archives/</span></div>
+    <div class="arch-list" id="arch-list">
+      <div class="arch-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Loading archives...
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="overlay" id="dlg-confirm">
+  <div class="dlg dlg-rd">
+    <div class="dlg-icon dlg-icon-rd">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="dlg-title">Confirm Year Close</div>
+    <div class="dlg-kv-box" id="confirm-kv"></div>
+    <div class="dlg-body">Type the closing year exactly to confirm. This cannot be undone.</div>
+    <input class="dlg-confirm-inp" id="confirm-type" type="text" placeholder="Type year to confirm..." oninput="onConfirmType()" onkeydown="if(event.key==='Enter') doClose()">
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-ghost" onclick="closeDlg()">Cancel</button>
+      <button class="dlg-btn dlg-danger" id="btn-do-close" onclick="doClose()" disabled>Close Year</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT DIALOG -->
+<div class="overlay" id="dlg-result">
+  <div class="dlg dlg-gr">
+    <div class="dlg-icon dlg-icon-gr">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="dlg-title" id="result-title">Year Closed</div>
+    <div class="dlg-kv-box" id="result-kv"></div>
+    <div class="dlg-body" id="result-body"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-ok" onclick="document.getElementById('dlg-result').className='overlay';">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="prog-overlay" id="prog-overlay">
+  <div class="prog-spinner"></div>
+  <div class="prog-title">Archiving Year...</div>
+  <div class="prog-sub">Please wait. Do not close the software.</div>
+</div>
+
+<script>
+var CURRENT_YEAR = '';
+var PREVIEW_DATA = null;
+
+window.addEventListener('DOMContentLoaded', function() {
+    loadPreview();
+    loadArchives();
+});
+
+// ── PREVIEW ──────────────────────────────────────────────────────
+function loadPreview() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadPreview, 300); return; }
+    window.pywebview.api.get_year_close_preview().then(function(r) {
+        if (!r || r.status !== 'success') {
+            var chips = document.getElementById('stat-chips');
+            if (chips) chips.innerHTML = '<div style="grid-column:1/-1;font-size:.76rem;color:var(--rd);padding:8px;">Failed to load preview' + (r && r.message ? ': ' + r.message : '') + '</div>';
+            return;
+        }
+        PREVIEW_DATA = r;
+        CURRENT_YEAR = r.current_year || '';
+
+        // Set year fields
+        var cy = document.getElementById('yr-current');
+        var ny = document.getElementById('yr-new');
+        if (cy) cy.value = CURRENT_YEAR;
+        if (ny && !ny.value) ny.value = r.next_year || '';
+
+        // Render stat chips
+        var chips = document.getElementById('stat-chips');
+        if (chips) {
+            chips.innerHTML =
+                chip((r.stock_wt || 0).toFixed(3) + 'g', 'Closing Weight', 'gold')
+                + chip(r.stock_rows || 0, 'Touch Groups', 'green')
+                + chip(r.tagged_rows || 0, 'Tagged Pcs', '')
+                + chip(r.sales_count || 0, 'Bills Cleared', '')
+                + chip(r.katti_count || 0, 'Katti Cleared', '')
+                + chip(r.client_count || 0, 'Clients Cleared', '');
+        }
+
+        // Enable button if new year is filled
+        checkEnableBtn();
+    }).catch(function(e) {
+        var chips = document.getElementById('stat-chips');
+        if (chips) chips.innerHTML = '<div style="grid-column:1/-1;font-size:.76rem;color:var(--rd);padding:8px;">Error: ' + String(e) + '</div>';
+    });
+}
+
+function chip(val, label, cls) {
+    return '<div class="chip"><div class="chip-n' + (cls ? ' ' + cls : '') + '">' + val + '</div><div class="chip-l">' + label + '</div></div>';
+}
+
+// ── ARCHIVES ─────────────────────────────────────────────────────
+function loadArchives() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadArchives, 300); return; }
+    window.pywebview.api.get_year_list().then(function(r) {
+        var list = document.getElementById('arch-list');
+        if (!list) return;
+        if (!r || !r.archived || !r.archived.length) {
+            list.innerHTML = '<div class="arch-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>No archived years yet.<br>Close the current year to create your first archive.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        for (var i = 0; i < r.archived.length; i++) {
+            (function(a) {
+                var row = document.createElement('div');
+                row.className = 'arch-row';
+                row.innerHTML =
+                    '<div>'
+                    + '<div class="ar-year">' + a.year + '</div>'
+                    + '<div class="ar-meta">database/archives/' + a.year + '/aurum_local.db</div>'
+                    + '</div>'
+                    + '<div class="ar-right">'
+                    + '<span class="ar-size">' + a.size_mb + ' MB</span>'
+                    + '<span class="ar-badge">ARCHIVED</span>'
+                    + '</div>';
+                list.appendChild(row);
+            })(r.archived[i]);
+        }
+    }).catch(function(e) {
+        var list = document.getElementById('arch-list');
+        if (list) list.innerHTML = '<div class="arch-empty">Error loading archives: ' + String(e) + '</div>';
+    });
+}
+
+// ── YEAR INPUT ────────────────────────────────────────────────────
+function onYearInput() { checkEnableBtn(); }
+
+function checkEnableBtn() {
+    var ny  = (document.getElementById('yr-new') || {}).value || '';
+    var btn = document.getElementById('btn-transfer');
+    if (btn) btn.disabled = !ny.trim() || !CURRENT_YEAR;
+}
+
+// ── CONFIRM ───────────────────────────────────────────────────────
+function showConfirm() {
+    var ny = (document.getElementById('yr-new').value || '').trim();
+    if (!ny) { document.getElementById('yr-new').focus(); return; }
+
+    var kv = document.getElementById('confirm-kv');
+    if (kv) {
+        kv.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-k">Closing Year</span><span class="dlg-v">' + CURRENT_YEAR + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">New Year</span><span class="dlg-v">' + ny + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">Carry Forward</span><span class="dlg-v">' + (PREVIEW_DATA ? (PREVIEW_DATA.stock_wt||0).toFixed(3)+'g across '+(PREVIEW_DATA.stock_rows||0)+' touch groups' : '—') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">Archive Path</span><span class="dlg-v">archives/' + CURRENT_YEAR + '/</span></div>';
+    }
+    var inp = document.getElementById('confirm-type');
+    if (inp) { inp.value = ''; inp.className = 'dlg-confirm-inp'; }
+    document.getElementById('btn-do-close').disabled = true;
+    document.getElementById('dlg-confirm').className = 'overlay open';
+    setTimeout(function() { var el = document.getElementById('confirm-type'); if (el) el.focus(); }, 100);
+}
+
+function onConfirmType() {
+    var typed = (document.getElementById('confirm-type').value || '').trim();
+    var btn   = document.getElementById('btn-do-close');
+    var inp   = document.getElementById('confirm-type');
+    var match = typed === CURRENT_YEAR;
+    if (btn) btn.disabled = !match;
+    if (inp) inp.className = 'dlg-confirm-inp' + (typed.length > 0 && !match ? ' err' : '');
+}
+
+function closeDlg() {
+    document.getElementById('dlg-confirm').className = 'overlay';
+}
+
+// ── DO CLOSE ──────────────────────────────────────────────────────
+function doClose() {
+    var ny   = (document.getElementById('yr-new').value || '').trim();
+    var note = (document.getElementById('yr-note').value || '').trim();
+    closeDlg();
+
+    // Show progress
+    document.getElementById('prog-overlay').className = 'prog-overlay open';
+
+    if (!window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.do_year_close(ny, note).then(function(r) {
+        document.getElementById('prog-overlay').className = 'prog-overlay';
+
+        if (!r || r.status !== 'success') {
+            showResult(false, 'Year Close Failed', r && r.message ? r.message : 'Unknown error', null);
+            return;
+        }
+
+        showResult(true, 'Year Closed Successfully', 'Stock has been carried forward to ' + r.new_year + '. Software is ready for the new year.', r);
+        loadPreview();
+        loadArchives();
+    }).catch(function(e) {
+        document.getElementById('prog-overlay').className = 'prog-overlay';
+        showResult(false, 'Error', String(e), null);
+    });
+}
+
+function showResult(ok, title, body, r) {
+    var dlg  = document.getElementById('dlg-result');
+    var box  = dlg.querySelector('.dlg');
+    var icon = dlg.querySelector('.dlg-icon');
+    var titl = document.getElementById('result-title');
+    var kv   = document.getElementById('result-kv');
+    var bod  = document.getElementById('result-body');
+
+    box.className  = 'dlg ' + (ok ? 'dlg-gr' : 'dlg-rd');
+    icon.className = 'dlg-icon ' + (ok ? 'dlg-icon-gr' : 'dlg-icon-rd');
+    icon.innerHTML = ok
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    if (titl) titl.innerText = title;
+    if (bod)  bod.innerText  = body;
+    if (kv && r) {
+        kv.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-k">Closed Year</span><span class="dlg-v">' + (r.current_year||'') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">New Year</span><span class="dlg-v">' + (r.new_year||'') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">Opening Rows</span><span class="dlg-v">' + (r.opening_rows||0) + ' touch groups</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-k">Archive</span><span class="dlg-v">archives/' + (r.current_year||'') + '/</span></div>';
+    } else if (kv) { kv.innerHTML = ''; }
+
+    dlg.className = 'overlay open';
+}
+
+function goBack() {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
+        window.pywebview.api.navigate('inventory.html');
+    }
+}
+</script>
+</body>
+</html>

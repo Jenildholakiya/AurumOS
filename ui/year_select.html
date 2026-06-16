@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AurumOS | Select Year</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --c:#faf8f3;--c2:#f2efe7;--c3:#e8e3d8;
+  --w:#ffffff;
+  --ink:#0e0c09;--ink2:#2c2a24;--ink3:#5c5a52;
+  --g:#a87d1e;--g2:#c9a227;--g3:#8a6c0a;
+  --gb:rgba(168,125,30,.08);--gl:rgba(168,125,30,.22);
+  --r:rgba(14,12,9,.08);--mu:#7a7268;
+  --gr:#15803d;--grb:rgba(21,128,61,.07);--grl:rgba(21,128,61,.22);
+  --rd:#b91c1c;--rdb:rgba(185,28,28,.07);--rdl:rgba(185,28,28,.20);
+  --am:#b45309;--amb:rgba(180,83,9,.07);--aml:rgba(180,83,9,.22);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:"DM Mono",monospace;
+  --sans:"DM Sans",system-ui,sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;background:var(--c);color:var(--ink);}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+
+body::before{
+  content:"";position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 50%,rgba(168,125,30,.06) 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 20%,rgba(168,125,30,.04) 0%,transparent 50%);
+  pointer-events:none;
+}
+
+.wrap{width:100%;max-width:520px;padding:24px;}
+
+/* Brand */
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center;}
+.brand-mark{width:40px;height:40px;background:var(--ink);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.brand-mark svg{width:22px;height:22px;fill:var(--g2);}
+.brand-name{font-family:var(--serif);font-size:1.4rem;color:var(--ink2);}
+.brand-name em{color:var(--g);font-style:normal;}
+
+/* Heading */
+.heading{text-align:center;margin-bottom:28px;}
+.heading h1{font-family:var(--serif);font-size:1.6rem;color:var(--ink2);margin-bottom:6px;}
+.heading p{font-size:.8rem;color:var(--mu);line-height:1.6;}
+
+/* Current year card */
+.current-card{
+  background:var(--ink);border-radius:14px;padding:22px 24px;
+  margin-bottom:12px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;overflow:hidden;border:2px solid transparent;
+}
+.current-card::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 40%,rgba(201,162,39,.12));
+  pointer-events:none;
+}
+.current-card:hover{background:#1a1814;border-color:var(--g);}
+.cc-badge{font-size:.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g2);margin-bottom:8px;opacity:.8;}
+.cc-year{font-family:var(--mono);font-size:1.6rem;font-weight:800;color:var(--w);margin-bottom:4px;min-height:2rem;display:flex;align-items:center;}
+.cc-sub{font-size:.72rem;color:rgba(255,255,255,.4);}
+.cc-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+.cc-live{font-size:.6rem;font-weight:700;background:var(--g2);color:var(--ink);padding:3px 10px;border-radius:20px;}
+.cc-arr{color:rgba(255,255,255,.35);font-size:1.3rem;}
+
+/* Archive section */
+.arch-label{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.arch-label::before,.arch-label::after{content:"";flex:1;height:1px;background:var(--r);}
+.arch-grid{display:flex;flex-direction:column;gap:8px;}
+
+.arch-card{
+  background:var(--w);border:1.5px solid var(--r);border-radius:12px;
+  padding:16px 20px;cursor:pointer;transition:all .18s;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.arch-card:hover{border-color:var(--gl);background:var(--gb);}
+.ac-year{font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--ink2);}
+.ac-sub{font-size:.68rem;color:var(--mu);margin-top:3px;}
+.ac-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.ac-pill{font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.ac-arr{color:var(--mu);font-size:1rem;}
+
+.no-arch{
+  background:var(--w);border:1.5px dashed var(--r);border-radius:12px;
+  padding:22px;text-align:center;color:var(--mu);font-size:.76rem;line-height:1.8;
+}
+
+/* Spinner inline */
+.spin{
+  display:inline-block;width:18px;height:18px;
+  border:2px solid rgba(255,255,255,.2);border-top-color:var(--g2);
+  border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Loading overlay */
+.loading-overlay{
+  position:fixed;inset:0;background:rgba(250,248,243,.92);
+  display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;z-index:999;
+}
+.loading-overlay.open{display:flex;}
+.lo-spin{width:36px;height:36px;border:3px solid var(--r);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite;}
+.lo-year{font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--ink2);margin-top:4px;}
+.lo-text{font-size:.76rem;color:var(--mu);}
+
+/* Error */
+.err-box{
+  background:var(--rdb);border:1px solid var(--rdl);border-radius:8px;
+  padding:10px 14px;font-size:.74rem;color:var(--rd);margin-top:8px;
+  display:none;
+}
+.err-box.show{display:block;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-mark"><svg viewBox="0 0 20 20"><polygon points="10,2 18,7 18,13 10,18 2,13 2,7"/></svg></div>
+    <div class="brand-name">Aurum<em>OS</em></div>
+  </div>
+
+  <div class="heading">
+    <h1>Select Financial Year</h1>
+    <p>Choose which year to open. Current year has live data.<br>Archived years are read-only.</p>
+  </div>
+
+  <!-- Current year -->
+  <div class="current-card" id="current-card" onclick="selectYear('current')">
+    <div>
+      <div class="cc-badge">Current Year</div>
+      <div class="cc-year" id="current-year-lbl"><span class="spin"></span></div>
+      <div class="cc-sub" id="current-year-sub">Loading...</div>
+    </div>
+    <div class="cc-right">
+      <span class="cc-live">LIVE DATA</span>
+      <span class="cc-arr">&#8594;</span>
+    </div>
+  </div>
+
+  <!-- Archived years -->
+  <div class="arch-label">Previous Years</div>
+  <div class="arch-grid" id="arch-grid">
+    <div class="no-arch">Loading...</div>
+  </div>
+
+  <div class="err-box" id="err-box"></div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="lo-spin"></div>
+  <div class="lo-year" id="lo-year"></div>
+  <div class="lo-text">Switching year, please wait...</div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    waitForApi(function() {
+        loadCurrentYear();
+        loadArchivedYears();
+    });
+});
+
+// Wait for pywebview API to be ready
+function waitForApi(cb) {
+    if (window.pywebview && window.pywebview.api) { cb(); return; }
+    setTimeout(function() { waitForApi(cb); }, 100);
+}
+
+// Load current year label
+function loadCurrentYear() {
+    window.pywebview.api.get_active_year().then(function(r) {
+        var lbl = document.getElementById('current-year-lbl');
+        var sub = document.getElementById('current-year-sub');
+        if (r && r.status === 'success' && r.year) {
+            if (lbl) lbl.innerText = r.year;
+            if (sub) sub.innerText = 'Live data \u2014 all changes save here';
+        } else {
+            // Fallback: get from get_year_list
+            window.pywebview.api.get_year_list().then(function(yr) {
+                if (lbl) lbl.innerText = (yr && yr.current_year) ? yr.current_year : 'Current Year';
+                if (sub) sub.innerText = 'Live data \u2014 all changes save here';
+            }).catch(function() {
+                if (lbl) lbl.innerText = 'Current Year';
+                if (sub) sub.innerText = 'Live data';
+            });
+        }
+    }).catch(function(e) {
+        var lbl = document.getElementById('current-year-lbl');
+        var sub = document.getElementById('current-year-sub');
+        if (lbl) lbl.innerText = 'Current Year';
+        if (sub) sub.innerText = 'Live data';
+    });
+}
+
+// Load archived years grid
+function loadArchivedYears() {
+    window.pywebview.api.get_year_list().then(function(r) {
+        var grid = document.getElementById('arch-grid');
+        if (!grid) return;
+
+        // Also update current year label from this response if not set
+        var lbl = document.getElementById('current-year-lbl');
+        if (lbl && (!lbl.innerText || lbl.querySelector('.spin')) && r && r.current_year) {
+            lbl.innerText = r.current_year;
+        }
+
+        if (!r || r.status !== 'success') {
+            grid.innerHTML = '<div class="no-arch">Error: ' + (r && r.message ? r.message : 'Could not load years') + '</div>';
+            return;
+        }
+
+        if (!r.archived || !r.archived.length) {
+            grid.innerHTML = '<div class="no-arch">No previous years archived yet.<br>Use Year-End Close to archive the current year.</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+        for (var i = 0; i < r.archived.length; i++) {
+            (function(a) {
+                var card = document.createElement('div');
+                card.className = 'arch-card';
+                card.innerHTML =
+                    '<div>'
+                    + '<div class="ac-year">' + a.year + '</div>'
+                    + '<div class="ac-sub">Archived \u00b7 ' + a.size_mb + ' MB \u00b7 Read-only</div>'
+                    + '</div>'
+                    + '<div class="ac-right">'
+                    + '<span class="ac-pill">ARCHIVED</span>'
+                    + '<span class="ac-arr">&#8594;</span>'
+                    + '</div>';
+                card.onclick = function() { selectYear(a.year); };
+                grid.appendChild(card);
+            })(r.archived[i]);
+        }
+    }).catch(function(e) {
+        var grid = document.getElementById('arch-grid');
+        if (grid) grid.innerHTML = '<div class="no-arch">Error loading years: ' + String(e) + '</div>';
+    });
+}
+
+// Select a year and switch
+function selectYear(year) {
+    var overlay = document.getElementById('loading-overlay');
+    var loYear  = document.getElementById('lo-year');
+    var errBox  = document.getElementById('err-box');
+
+    if (errBox) errBox.className = 'err-box';
+    if (overlay) overlay.className = 'loading-overlay open';
+    if (loYear) loYear.innerText = year === 'current' ? 'Current Year' : year;
+
+    window.pywebview.api.switch_year(year).then(function(r) {
+        if (!r || r.status !== 'success') {
+            if (overlay) overlay.className = 'loading-overlay';
+            showErr(r && r.message ? r.message : 'Failed to switch year');
+            return;
+        }
+        // Navigate to dashboard
+        window.pywebview.api.navigate(r.landing || 'dashboard.html');
+    }).catch(function(e) {
+        if (overlay) overlay.className = 'loading-overlay';
+        showErr(String(e));
+    });
+}
+
+function showErr(msg) {
+    var box = document.getElementById('err-box');
+    if (box) { box.innerText = 'Error: ' + msg; box.className = 'err-box show'; }
+}
+</script>
+</body>
+</html>
