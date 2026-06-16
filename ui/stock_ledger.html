@@ -180,12 +180,12 @@ function _scSetStatus(label, color) {
     if (txt) { txt.innerText = 'Scale: ' + label; txt.style.color = color; }
 }
 
-function ScaleWidget.openPopup() {
+function openScalePopup() {
     ScaleWidget.openPopup();
     scLoadPorts();
 }
 
-function ScaleWidget.closePopup() {
+function closeScalePopup() {
     ScaleWidget.closePopup();
 }
 
@@ -474,9 +474,6 @@ function scInsertToGrWt() {
             </label>
             <div style="display:flex;gap:5px;align-items:center;">
               <input type="number" id="gr-wt" class="entry-input calc-trigger nav-target" step="0.001" oninput="validateFormSecurity()" placeholder="0.000" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();if(typeof _scW!=='undefined'&&_scW!==null&&parseFloat(_scW)>0){this.value=parseFloat(_scW).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
-              <div id="sw-mini-stock" style="flex-shrink:0;"></div>
-              <button type="button" id="sc-insert-btn" onclick="scInsertToGrWt()" style="display:none;height:38px;padding:0 8px;border-radius:6px;border:1px solid rgba(21,128,61,0.25);background:var(--green-bg);color:var(--green);font-size:0.68rem;cursor:pointer;white-space:nowrap;font-family:var(--sans);">Use</button>
-              <button type="button" onclick="ScaleWidget.openPopup()" style="height:38px;padding:0 8px;border-radius:6px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold3);font-size:0.68rem;cursor:pointer;white-space:nowrap;font-family:var(--sans);">&#9889;</button>
             </div>
             <div id="sc-live-wt" style="font-family:var(--mono);font-size:0.68rem;color:var(--muted2);margin-top:3px;min-height:13px;"></div>
           </div>
