@@ -1,4 +1,3147 @@
-import marshal,zlib,base64
-exec(marshal.loads(zlib.decompress(base64.b85decode(
-    'c-qvx3s_v&c__N~o;~k@8QyQ$yd*|EBtTCDl6ixKKo-cdkmSk0+Q3M|4B2}SVm!#Qt2QWBB8Z&`#Y%+|pBmLpgPYtFa@wBAcAGj)+stTi8Bge~+xnbV=k%Ns+vlr~eD9b0ueIl~2S!M7+wXi=`dG8}dcXh2`u~6ZJth063jKb(z*5w83Q>r*Q~fkgpJk~H|IVs6h9L$iUS}jfP5m1ASfq^RBlWWVO7g4fS8FMT;x)YbY;v5Os&GD`3Q{T0rfy6VKj+!>IHf6&`VGzNif}%QHXIXbLFVUfLFVUdfguuuM<cO6k^CC_jpWzVZz8`*{mJAvCG?vb`c3OkBfshW>Et(~KZE>c_Ggmctp2RfEK{M;Rw3<Wsy`cglKpz9=KdT$ho|DrCDPSPV?&+Y8>iRQ*}6ErZitgI2kFD3hzxHetXm5O{RQNg>*wG%(Ox)O*k4HEjP|0@;{IadH`z-@OZ!V{N{hde>{~{+_HTt4Lw^|wNwaSoE$=TMt>~{9t?aKPd9v(PqucwpgFm@{2TJC%&JM)sWp+Jj*F$1+>cg{B(_f2d>rRvlBe)CYfx8>!gS!V6fV&sQX>WK;p+*kE_MzRV@G{+Bhl=?9sF<%GVo}Luw!Z<D!Z(D$_ZIj*fVM*FgQ$$JM`rlLDOG42#5{q@BRMPJyOE?RCOIqNyNR@{xxa;>+9_0ZnL^vcqubvKEozO-avQY09qr&dAa@7ku7=#5Bv%dOs*U72gmyw(4)a}T*SRuS^%^MUaI{~O^dwzO@d+iAz|z!7YKFf0%mj5oagv(A;bsUolJPDhWv4*dsgbg`o}{j>tV^wj)am_|C<AION15POK&rn9r!w!kkF$0MO-E1mb@X(1_Oy04_q23&w?9yhyM`+F26a-z@xHdbLApAq8W<lM;)S4E;K%INLH-UC)bNf$C$c$)gDPGSoPszgpJ65Z;SKrmA5!>ObkX4m7ZX_oG-AS=R;YAEw#r#moDHDe7#1z*tZrlM>!BKZsYjHY5br>V=Dx#r2USCY)6F~D9?(^0bx=LbyR0sk5LAehVvuo)L3YgQ8VRbAO>kI8`Jj%!zz>eQtOIsFsJ0G>IQ9<pF)r^xR%_kq#&KbMw5Qk7Y`5_a*XdEK%~3Tr88ld+U<(?s3|K{8$cEH;@F(I!;u5v0PP{74bj<O~>XKDs(zS^z6W5-*^4v}F*2Nna{l+S<rfOB6aBa_(J=YFiIXGAA*B5x%0s)_(K||y5W5<tJTAC~^oyUS2WQC?d6@7PTn8XV<(PeR-!+wb1UA9r)Ob6McxXpA>+tPHz>aY&;0t9NCtfI^2bToFh#msehZa>~Z=9&lahp2uA(Xi|khyj;H3UHN(1y_ZX;Hr@dT+O7~tPx5e+aSGe4lu;~m?Z^HQg`TXAp`ud>{yYv4+Uwfh-aVUge=@cjm2Vf*jyHiJ2}$Es&LqLToO+GJVnN1LsbfSRl-)h97$!gV8#=GlZWb2iY}|*avP(SkO16op#nR<PWeLBy3$$E<s5S-$_sanRsY+RZE!eUwxLPOgkW>=?(}FK^6;9?>ry|Yt}<Mgd^*xXg^Ii=LM;~Spv!iicNc7^H8w%*!>gymT~(3lZLl#n>1-0-NE1AN&OT{@1Ir0hmJ_XeL*!1JT}8IpLeu<7QhT>qi&qui&lXEiXR(Yr(YPJ^4HnB6$E|iLMkvSi;}s^5i6ULtg`GW-*5TqvyU0Q(4rwsPc`n1+EeUG!f|^|7ss4qgO3HwfnH53P;0Ql>&NAc_EaPK%g9cNPbHZVFT9L)-K(NGN1={UFWApK2$6CAlEKju_>+S66b}Or^c2w;iTz|Cb<If@NZsy#CYz&3{VF#llB1=YR-X+b<`a+ElDU=bmVgJE(>qDpyJNsj192%kPvktexYH$jZ!StS^t=*QE)~EV<db)Zoo!H-Wygg`a?CR<{VQJ|((cRV4*wP!bP}uN7`6_9SRt9-I5twjR5$DVYX!J$|5kISpmm&%kiYZqFmH@a-q$!tnV?Be+Nk|(3x~#jQ*Cp7-IET|w+1T6M*~tx#SOt+2o!kkV1LjpE0i)J24nQkE$T|4)yub|#R&j(EtAa|aIB2s88tHJtQ)yNL6arABBEXmrsvsBs)wW(3<j3%W53;bx1vttTqvCMPS!NNf0Mfg`-;O7!iA?btt59aG8k1*gU%Y?;%-qDn<n(iX<GvN+6F%b;cQgFPPOql((^Y-yM-+{drpz?IIC)Q#xu$^62O?ezFKnx%zMI;}D&A7i;Koc)1TlDG9b#~ni38%58wWM~ONZAQ>=KQ|?i?P*xCm==z+S<f61vu%3W~0tcHtQKj^KzS(%q{g*G8|5-fW#Oe&x`6iCZ@wJpUfe6^@eeCs@-%n%a8om~b2)LorQtTyfkyK41Gv|9gpL8+W26+|++k{+~s;9Qpqmlxyly2%B+Zm<Oog@YbE8qtkHK6elf>ly9h_)Y9jujYjHleyjEo`P1TzV)FVC6IvcoO2*@qf;8t^psajX*2XkQ8#&r?;>=tG%)0U-b>?qYrz<y-j*Ca*B0Zr=mEm%MnglA`o;1aHn6ssEO5Pf0jg`eI*%;v*WN)7G?6!?zjx5>OL`S?LPCcdwZ4Etv6_fOODE*W|Hbzx(R!4LtvmW+rZJfSF^Y4r|b{mflS&rQgpS`pD;<Sc++)_|-1U&AK)8<X*J6Z=)K5i|R$og^}jKrqMS{n^bjjp>_D3tasMch>Bt|uNNRmSFL*d{qMA9bRx&pV0HgdH+8VQb7BRBd{`mOXrwr&z)v*d9SFvbu#t2yYXNgp2@KDE0}sq6c~_rZt^n6@=Ni+iEIEPq<4<%K(uel%B|yme~QxAm}Xl8U>Ub=smM2;Pp;$4L~w9LpD24h+8E|4kWP?@D!JThmc?*0&cp1NrWIXF#td=5)(|c+Z?<_;vfKwcI(28LIduMhK2?%L=bbmn3&=b2Vw3+9MR<*=5Wn*oSTh?KE(@|YTzK0e78Q`%He<E?>0iM<8O1JfFXc@A*g`YkdT5MjCl+AU>4HJfSq;P96`;f^&Af*ycpDCY{EildKICMMMCq7Ha8z+onyQss2sFAfkr2ATo1IgZLrzt7_toql@f}|*qp(HKK_EMv*(0h9UH@(lM$;(xCScGg`DFqX{gkQKkpa^{5=6ML*6>t0XV%K5Q9U6W)pc=8yRL76rh!Pp*1ixK$Qn|R)j*Cf*MHQMP^4kCOF5e!$2+&ghyzQW|75Ye^8Bk2OSNv7Mrsss2_I??X^ga3K|EU4$%p8&WKc|s3d4R7pCmA5={*y2$S%AlwkG@Mo&Jh+Vz9MrLw!bma96i)`S@mH*0SlxN%@vzwOV3pHKXB;^)u(^f|9(z~3`?sbw|MbZz*`@HP7t``pfXl|OOorS?@;^`*nlAD&Uqm%PVrT{R_NSI?@i8)gl2C+5%iO|_RgSJm1tO*}vGrHjvBeA%|F=3YJa+KJmIUbEb`{NSX&^x)mC_ewigHHNDvXGFgyXGK%!(-baiidR{~3Y+O;Ggp(cUoCsB>ULGYxI2)PIiK~v)T~mqX3!`bexb<<q-U?Bm-*7mRtwACNcmp&o$SSq<-&%m&DRcHIkaNPyJyJz<DGxb{9N}_owxUdzxnAvTJHSGCD)pg$}oRSDKd1^`cE`ePVq|i4qx_;#T<Wj!?bZtMJZEPSkA|CuV$_k*7^!-y*p3&3r{bzXGp`+eQdg)&0JxNeQfc3&oaC7!*KA7$Iq6mu$4Zx@{N)2Iqo=?*@i&%uFD;==w-HQl~sG8qihj)rmJpd&FSZNdNpOstXT>u@MfA9QoWk0Wp=w1l5#8mM!q+*Y=QM^Dy0%2G~?Bj`KK3nf7VWK=B~v)ucq!jcK@fJWKf1QjP5tAW*13a`$5VNv)|12XV<@I#E5^x0}=16KhZYU9ad03Q&b$TRs5`m1~)!7?O`4ZMg8Z0FBBD!#9tdl^+f2uct~Lw2x9~XDb7;@_v^PkTEmpW!FXsuH8w9JDIWR(v_}{fW*?D1Wiy09U_9(2xu;2+&OmBBR6X3f&sFxXjV7Z=f8;frmF|yp_*m<54#FwP9q-(372)_K&_=8xQAY)vQ?R)v>&O?!RaZff^DIB;;smGD#g&a&1>WJ}oI@M}AhF%dRaSBmlLkrUaCX~yo*Ur>K2$_a6(>%LRhA>Ioktscd%2DOpa`fGNLj0$8yLrDaJa0pA*<a!U>!VX4i#2g#SKm%Zj*md7{C{9)QO}9NLYfI39`7sL3IcY6STo>*c?;_H5hn=Pypuyz$goj8j#qpp$-vv3V<d-;O$n-(vzU5n!mskh@+Q=jIh;$hB0Y0EqFA8TI`bK>tRkJX4sM0A<@EbLf|+CJns^^_!ASQF-Cdg8ClmSW+$#cH~ZYH;%gUgU-W0}o>qS-g|1|5^<`{bQ2R4>tYqx=W$gB6?48yJ^y%L0N}s-RH7D=Zo*R2^9lUXHVUItj_Da_WIYrZ5AEu^XZ=Y?y-Zk4bpSv*SPi>gihI#D=t{j*%FY8MJDY;%l?uQ}9yyuGNX7jDC8(j;Pe&b%RW^Xuo{gwKg%q{f|^)2HK<ATDUS+Owc*VlX5`b{_wD*Ca`%Bp|Av(i!UuOjGa&!bPnxMa3`$9m{qO2GBp(L4rDM;51<5iViBYdwEDfn2m$T~=v9O+(mMaGGO}b=7i({V*CjC;E-W)9m{@8bU}9Oz|8$2eVq?W!vxW1V_4r(T!RMM=&02LqV0myT%1a%yg^6)7|$Nj3xv_6PHEFM0f!TEFbWODolaHk*6MS#VA|T;g+@<?i@eK4GGRsF4`>a?=HQ}jf?oeaSB{(O)KZ(N5{A^*m@IA0dc%zP?#h<#VSBzN31owb`u)mV?1{u6uz?8YIjwhuf9M3TQqf_lbE_nbPk9Ivx4BjBX-*WoC5>r&`^zK1Zo#LNGjpVIv!ZE1p&DLN5~+#CbK|`g_j`W8#rAhnW+!;$t(JNpFV%?!b0|nxz1;<TiW9{HwU<y#rC^3pD1WUJG};YOFJ!1f_lt4iCO1^@-a;ekNmVkVj1IYWv52zDTc;=g`F8yOeu(;wX>tjDVF$^cGakQN=f`GyJkwoVBpKf1FB)<0I87%X(6359P)-PJVR4zk2)T=$V0~kYx?zEf+>whbv7#=z>S;Vupz(JqeUu|kWEeLz?Xnj;L}4}8ILA{_{8BId2}8<QiYG9vw54fl`zipWfbv!poj}2=@Mmp1U#lmQ-<)^YAIJ~95m_Qrq9M~3Vuzv$M9=JCg^$MR052H;q2BprE8$iiEey=mTksuii}C+CM!aPlAtyt)U-WLO$nX|ze{9JQj;o_e3_auxvHZalgpGV!ejCz!hD%<`&_%CVUb>k+7m9ZCDMw>{BAmX(sc&R;BMIr5_tvOvM@IyCN^^_NjAT!o}^c(Z!ytXJ_-GwO1hW?{UW~;bcCmoHjd#uL0cMIdn?<Uj{q)14j^()0VO;*0$9-ret>Jnp-!&xXs2|1*&JLq(B4&NMGnD%GvKreNJ8l(61tAVsLbx2Ww!IDs%y@0<=mic46rm8WGZ)Ahfkfi3O0Oue?~&J2x|k*F%>if+JUdBq*JuxNMkb&A0hWM;4>nA$U1I!Sumc)J5aZ94FezyT!gPmsFBucAI50q$Y@Xnr{XZ6N2~~kW>9AXYTb&DS23s#<(GIc_}IRWWtztErQ)fU*5+d;kM^D6$Y=m1ZXFw$1XOc?a{yL4<OHlSbd=j1!(13^ypMtA{ZD`Ot6$y6Je@(sx=S;BYJL1Ffjt0S=qVP64|*d{)5DyD(Gcofk^J#woIF5AxaI3gy$Qj@;#1R|Ksc)puaUl5=TRW|%Eqva>6UH`*`NXjQJBTUbQPcQDr6hxMHdV-eJ;q@&If5nkQRgVz<R8bIVZY{ETJW3!H~`phICc+cAyIE;(@Aj;ve9hcZ5KjKx)PuGgCN2ucl|s6}~hy_vF_`Ufqg$35!XK)o-Twi*~IP)%%L-{Y3}n>AUpZ>bKat^vi=%+LuNG8JTm*bA>bGGlq@W9v)7-jX%b`=)<rzuEQXnfk{8jU<?YVO4`G?;rko(b(*HGCbHBd^<BjTExT@21evNG(v|D);$|zP9+Un)(AE$04*tTJaKLSTRJS8Ze~gR4ZT&~;(@WI7%+}i}^GWm7b4hd6-%9aiw*GH&G5kVuD(y~=uFEzn5G<&UGv@}&<!iKR#Oj9aS2ZTsMs1in5UZq(CstW`D-tkd51Jp51Mr3_340K(<MjEPrx)gMqTG0iLVHXUZjgl|oe4ozZ$~3wHuxqLV;=-N32Fy+?+o3nszYNZbQ0!Y=O~sSXeC#9#|Sf#;509hTRaCp5nY<Xe;~xnpmP)xK^AG929*PoE?x{O+_o_R?>@r$Gbal#V?RcT$f!tNWh^67TUiUVC#Zly0EeFpDg^6<@ES=n2t^XKDySgNpsNN8`HTUb#UlalxggDp$>F^a^H16s>G4;G@KeI!hV^iZCKtuJVrA-IYuf%=)A84ugMY1g;uo5{U#ci$)_l!t`)=?1&i+LqP*A-z^nOvbzo_;TC1cz*tyqHu$=A+aIXjoVlC{m3wGHU3tXhBK&S}L5iOKkWbMC~gXKp;R(C*LM=}&|lfyAVl;+dN1k!c2di)M<k_kCm9%;1a9t{97a#-jO}d0}Cv-?(GNxW{MQv!wPLpYUp)_;gjD{t;zVZuwB7_ZnK4HEn;RsaRw5+AXWeCG-9M<Q>z^f#me-RkKy|8L#Ev&R<mf3-|hy_d#$@{+u|^%<Y};T}WQQ95HdRW^rJ_J<~g*m~IMW<X)egot#gZA6Q7aJ@m#f=F9mr8dfq|d>JkNjJCVNyR<js&~!&2C37WZt1o5if@0z6<&@n&a(%=o67oLLP^nq4ecn(kG{4C#)-DQvSiCg&2W9>p&Hl2M<;+%pO6y8WmoKI3-4p(l<M#~5KV3Cu-qVzRJJqWxeL(Ks8D;7!bS#mB4XN-NN|rUHtHzYi)|3$OKy1d_vZ=CZ2le)j+;&>=PC^simc;yt=>WJtNu(j@CrR42eC1EFi9e6V{(L?5n-kmW6+fv5q*)PjzZ?;*_;v_NAj(cnNx!uG)|J8dm+IjsegrCLH)EqQ81s!omU<%iLp-uGoWGa412BRBZgr3yAGaZCC$<wZ0O&slY-X~#qnp#L5dIwdXTy6h<^&Czh<sj{Uc%(aUt*RgPFF_&#NS}{a_Y?KnZE0%XHUQMj6bPlC8^w(RPIlzymTm_&zhDP2HX7l(iMG$Pha8JS9w`U;3vppf>d~m;92YB%gLx80Ow1zoHCrIhiF7!)<j`(RP10QZbzWz29lG&94vnDbvgoda%514xuWpU(JHS*z_J?}hKEH4lk#F<5|DJS5)dtXmz+8_0+dJx3Dkgby(EbP{T?nR-*UkzSR{B52NL}ZXT!yQDuE(X^PQaw)eF{{q?z8iq?^6-DX%<zBiEO<<-MdWK2x&<n0}+Mgf=t6ACe=ScZ`o>1dE4|pGR6k*aBaWCRi_Pg0KuBe-;LRP~)oJ<To|{VBb>T_YW?cn*I7_FWVfVDq$^HM3)esee)FAEwCf#%|wb||3qg|wwEHa7-s1*2qwiX&8MPUBEWIn@6xb*$$G{uCrc9o-oyU42`~ckJ$5~(ga~?z-8RTOL}^LC4>5m%yIn5fJi4T7RadI!GW@#2OU<h~IChtF%KbT&eqGh2=72tZF2$$M^|HB}@UOlZlEiw{5Qy|7<H3vzD*M+M4i6JwIU<JS)W}E@1tvQtnFyhw>=st=a8UPgjbuOpd(;uZPH_Sd_2_^Sm@h$Sg|vnO;qhHJv|$h`AKL#LV(vxROlyo<nH(^t5H8ZQ%f|9RN?IT>d8V2`JH={Z)?D#&!FGQ^wLh^203iTQ_Z9ctR==^xt0@W#U?snAOu`p1$<hVP3rPp4m(2&L|Ez7)Dc;i3;BJr+BBHu2bgZauzk;E7Hr{y~<taThh2oJZ*hi*NLbxH$dCoi{pX!k%tHUXVRsHH=3TeJg_iNx+3%^>VyG-@#kRDt;GJtD93E(E6L~s*P8Zup``;90GzDy{YPa0x?;%57kQ7VL_Od8GUL47ZrRs1o)V0pp)7ldLw<{TIoU7QFgq}9%eIGz(o0*MZ-<Qm6a&Pv3)0520cj6!m@AuJcjb0XkswjmpjLMe~&F2M$ruG2w^;E32*DDEh}2^XORyA`S<#IIDAgR_o}Sq90abU5ueCQ`Wx-Znhq;xN73)y3i4Y;GbXdwAYv<t!GbgY<{wa_5~YuRL?`w79M8G%7z`1&;Z&Sl$kQr+SZ{aToRWovJu3o+)qdm3}uScV}-BmmaV9ZNu*D_2JLfRMbx4xDvN6n%1m!D|-7Xu)_i3-q+aF)e0XK<=CkNhr>P&d=<TritFXfs{5Bpfev1TZGQg?fPdV-3%KxoptvX-<}AjXU`+S~n~@M6IKeD2ELaO2-6Zf8<;&xgis<%$FE%Dl8S|xz`BKMxX=1)22-76M)o$VM!g3dFW*wmYc<SM2z&ehCi59#hEE6tR1mg}@&=C1PZ?y+C7Gd1s!19u63mkB;tiU6!R`5vc0Si@1S%M17;J|tzYa;pVPL-|wh`>G8bPx|o@FO#Kn!TzE|Kt};v&)*CKz<Sa%?f1ZL2!Z;Yl!zF#eGF1ftR>=(P;_3((=iP0uRi~5Yl9VnbAw!I2fvfMocV+Y7#?Pcj~F$=EknpGaSBzl7^>_3$op?Uje`QXFMDd@#mTx<AuG_-2+x05KgYYd(cITaHq>hFB<+UoTp40zl=;g7zEQVdh?5~?p&b1vuCBa_Fi%A(vY{P)oW;bPt(4MynJ>T``FmounavQYHRVN=rtJK#Y-S|mcyX{M=8-DwGyD%)Rif(CU=v0a?{d0#YX~Sgs&BwU#|nApaih5+$5F471>5n!R+|(!xO1jCbvh$gGDXW89)H0lpf_-{bqE@l**$L>8lx9$`!fR@~GlnXGdXEB(K_|Mw)ZkgyXf>!y2e5jVp4a0C5pHPLF1Y8DwafML@fi#h7Q#PBAB`tFvKEFpTJ2?GK?jI(NfSt03}W06;E(td7YLbdtomsxY(}7aSs2CMB!jM54!Jt|DB>pvpGva0<N8h8N5)h(=C#n|sUgZt3v#V2|hYz>%K5(*quGJA1m}vlR~RW2Xo1(-AqbRlM$W5)VZwVxjn;a-7IXu>(%09Znp952{4oDh!SUjVD?=+dKL!M;rV4T90-229-m0rxlL6VZk{L83oMpG;5^|_qMbT`3tTf?F#B`qGjA6^&zMjgG}^jP=Sv?l@usy<*bm9Wc(N&D0h;4)srB66D$5_vgAL=$iD8Lb<b~IESqurGxo1!H2N|c{Ta<O?B5zw<_-r8CM+}bV%IeNiHgd|xmkOw?na$=OON--WB#08e|q1v{)3bZi97HSrPJn3HwR29*LAbHxt)F!H{BRCngB&i%3IAYn5SP;-&Vuc*ZH%{XPN^U*>l#fU6{{YQ&B~gbC#L5)f{d<W#0Nq!@?GC&W?MjJJwR5#I<zFl=JCYDW%Px5x&NLwpK(X<=tQ(h?vX&d|^{1_14~krrpfjnI`O3vQ4#$w|6s5b;_8tBqCSN(Xsbqc=e4kQ$YH`uHJ;h+d^G~l{yUP0wyg9%C3pGf8yhoH<?)mla^D8DaMr$#V9=rS-I+v;EfVbAf(r_5IVK)EcYmSDcoipGa>T<fsiO85VEIOSCZ^}U}H-eCiftSnPM-py`f*(y@lFcAnhT}YPWON^H!T3uQRT>=Lo^g#454_y0H`n0oW|!#X)yg7{WA0a*)(@99Ax&03!;;+p)eLiIOnEI?k*OW=OER$_0BztcoTHDoIFCCkxVG4kYoZ5Pu%%lb{~A0Jb2$dywP>G4Lk(2WBPNRj?oJV?i4B8p$bO$%}Oibs-ryGX|nXE6u|j=eI%%CTeZ^-x#XBhU!4a;h!6RYWP{=U!|V7TRmsJHF9HQk^W)An+g831K!jV)2-mF8jRlL^1I5vs%TrPUU+ih{Oc$0RkV4_+r6faWkY8mC3Cv#e}AN;(w?UOcd(-E(+`cAA5n}po#d;449#BCj%BDUCG9Jnm_4RVe;{H(=@)Vuw^85X8aeil4B&f9YiKOhy_KfJevY`?v`q<$w`z?|8pYcT4gR+^N^rYl?oRX(NUIES#b9qtDLjl|l98}XR0t`GCIV)XAB9sg%w!Y3m>hZZ#D!?0Qo8%U$@Eh3;h0eB*;Is$rlRZrA@&2J^3iEgSmt?{M72gP6)jO-Q!MNprH2KW`g061wXi$m-Py)3)1#6!3=q(1DDe&B>l)b|de&w=gZP}d(*DsKWp%t;P+18YVc4TNTM(y|B$WI{N`y6`mEU|`raan>JUM*RezrJHNonB}vRiL$M7BfahBbh7J*M=s@lW@tV5~Dd8pNQ?Y&`B+9v!&Z9zC338reCh6Vg0-F~y_8(hH8H4Q1rW=j*DEr94W3^C;zOSC%Kw6ZZ}<_SAG_%5vmCP7YKcCyiW{o9bLpXLrOI#R9~=Q5e4UhSIWR>1*N$A?@09Pej{a^w5=F{Lr4s^e|A#LsoTsdl98K6_|+y`(w+-Sb$gMQwEoL-3;b>4D0HYVZ@$@90WckLeR``(I8=yl7E7BZIjiJ3w3N<Y3u3;mor0O{qNyYB5-kw`}?{un$_%dIItL{%PC=>RgsuVu5(CYVGP^O^Nu>q)8K5b*m#GNB&p+E!lcCc5UuA!td9!LHNpez#q1R*TY|y_2Fc3k<Ha!7Wq=3Fm*)t#4_}u{)NmxN1gixsljSbymg)r}&`z$?s<`G6rxO}zjX?LRI}E`rUE^X<9a5zjt|kBc2i;r*$Va(9xKd296QL`&qN=J2VD8`JQ~E>f{1@yHI{&|7=i7vp-Yt9vzyBbO`=<xn?x=zqa*v2L6jXq!+FX-C4b~nXuwmr|tm=WK`_&hmjtkDAp`Z%JV-Vo@wXk>r(eof!ef(SLdikw%Dv{}nOUQ+{OXx-*ecg>fP;C>DZP?}l^7y;bedS1uW-z%5D2XA9@yx`z5a`4xMSA3Fy7=JYvH7Og4&6TVT9>c*VCZ5xJC`2EefZ}e|B*W(Jors`v>z~lS<U0x)Ev>OZE$P3VXH6z6V~8PuEUEAU&wF*Kgh#UMDBz-Y4!=$#f@Xxws47mck?Crl)_TPGg`;Fw}n$QJIC#a$Y)ri=}4-Ikeo)J@Bt>L6hReq7-($3&aC_>*5Ad#vhJjCNg*AXI_`mjdx8t9#qq&GSZ8L1kOLz^kVUNLF^<eRn1CWI9fi%|67Gkuzl8q>JO7BCf1*N)>p(Htuw<`j=lL;-m!ayFGV6xy<KjrCV+<A$i#LbBhgso41rU%yCE+lU%buW7$`sK)CP<{D&7zgI7BLvoC-Iz=7Q53qCj1X7q(g5`kZ3sE31J863Fb-#l}(MuTY7^D;o+57TpHN^#3x|7EOg7^0=iE-Vihf9nFaOO8=6)LYfV^x^(`$tTzxFXM;2ZgUS)km!R6ybN}K<;dgIN(`I1*`GpR3UzaRd%<-Fna=WoYhK$4kKuerbM4&;@1w;%VVJmob!^?}}at>McJb0xRTH_SK7Uv<6azU^Kte)YLeG?dohO{`jQeb0Tzy<lG|_8JZ>YYqlY+ozS7^_39F%=?H+*Y29`SYy%>b_G&1uOFU0JkP$SyRBR32;}9@i;GVNatjvH7RT2B3+6tin6v{kG_)fr8EekGoES*YxIQ#HG<WQ!vonf-DGBS;ysUjcB|VUxcWc{?ZSyA<PtI-gXCIttUge5m^DNaa7a#O<2WL71MWwHqZ<`ld{Y5oD=v_+r{?m6AZ$9HIYMwc~nwl|JxuBVMFD5TGFDaIi7dsZ~mQLI~dH3+Uliria`!w&(99m8tem{e|lM^W0F_-XuX5NS4T;A$tZ)VGKYU`(K#n8Q9?w|}=fvhdlEmsc_%)MrD=MU@NtXr(`nhw5ac;Z7GR=?Eu<NhD@FLilMoy&$pA4nX+)y%?`%rakQ*&_Qx-J80*JKr5$&OA+6h#JE+!xh7dCfldUUe@FiE?R*!c5|ME+VH4*4f~fh^?|ISg_7@WyR&Vn<;RD9bjW9H_iEZdT`QzgGs9Fmldyl)lrl3q-!WgeaAv6*rYrTpvgu%;u<Qr5i(mZyZeK>-imC3i)s)<iC^}(RH1V-TdO`H2)~=X#-ZSm|Y)t{N4@A84-p+5@-%-i@NsbZRcPovDbjo+@^E-=_Kh37W|I;D^cB_&ODV2YwRD%B@LgMQbYNFR_w8WgIH^(xB-SNXWqw9s-hvd=5qvPL@VG8l_AE8nEkeJPG`f2K+xi+V9qGP3$jnzi>JQKs@r#E82acz>RWi(Q>CQYn%DB;k3A<VCHnPMa-=_ub1sXX)s$w>gh7wM}frC%AQrR{d7MflZ#1C*ILIM(buY71cuYX|SpLU9aNK{~c207rBikvn%?90?Bd9EPQmJ~-%3jshm<*cgDmp2KE?#6=*`<$n-XvQ4yDu`-OLH1a>mZ98CRgS_1m1t}4(gHVeP^qn+jFG>*M-F0kq0<_$w*z?*shWCc}b4iLHOZ^ltYf3_w4EPML|8o6Y3)ah6$*uO~Rxjt)Vm4jZm97;-p3jgsKj<~&EgQCllCCjKLRP?(icirMQ<=|HwrtwA#<B@}BY{OeQ_-@i1opW%b;q))8cyA;yqHT2QuitxM7k@wncAyH(k$*hP2s0&X;ebiY|Cd@7$^@P7khCr={1Yhi*T&$UNP<Qnf8#AV($YHTZ4J4D7!h6daI$dxqx~nlWERXyi)))rQ)5k#OD2qclIm6Pvpj8`0o+!-T$Oz{0Rmr@QOn0w-i$f1k|_|^WWlV8end>nDvk|BO!kHFpYBoWuFzI>{anj5s!?<^sq=tBtY4#IY4c)LYj=zr^XyOr13z@kv4lBEj7uw^cywjarnAx|I8`1ETzh$-mssTDfLD5)l<@MbU&>t=gBFJtQ@^ZvyR6Yf21lO|8$j)i^CwD5e|ja7Sc-1Ma?7=&nNxLP6C6wvPr<|4wy!Yck#;)oVW24;S1mpXVP6NeOE>9g1IeQxb<OW4`?$XL!t+TWegC-P{Qy*F`g{LlcfZI_gi1%+=fuPGSOVe-N(eZyErBp!N9{e(-AhRJ3Y3np|Gf_I;aly20T(OaxWLu^XIMhajT2BoE2p!3_hU3R|YRj9L|aJLFTN84U9Pe(}hAra(fqKCPJuVysHAzj9A2x1Wn?T=vU+<`g=`Yz_@eq#A4^tliq}b(@el<nr7FSWNls`CH?yT+5OWk@26zolj)mXaB$o*+%U{soM8iLSszi#ga$z77&fUPkeYV=$n25%qUF?5Km+F*XFF$G*3^*Tmj=K&$>CA9kh-7(G;+_~+Ph6l^-ERW)Xw)zhd#vT)4umib)SBsr!ouSut{nF{LP!adr??K-pu_gsrA0pdVJU<HGK976bCi4+B|}Zl`SMKD7>bMWkV&t=kt8o0}aChZYyb(zO>4Pf%np?KMk02Z?F$;vY#lZ^crwXxu2~mp@awGGcX2Ut!T=o{vf?^H}h6fCV1c4rpNAXZBvHwt%He8$;!7Alo0ZEvJyhx&QM@~wzhev;_c$>=Ix5N8*-Ynn0GR1@V}GAH0LSb$x&keb|s{VL5OtW<L;<ZCZq^Q#}okXcn91JEi7p91%@&%Lq-)hR1*)u!Aw{9uR^Lf)DecH0_)?-ShkAIQJLt4Asl#dYlovy8@~nX7(Scz*rbKS5)0nPGms-BL3qk$0{ae}B5gBO5p4QIOm{^Xx^a!b8e~kyr#$hMiy}QD5{b$wl}Gvf3xpM!D4UNsrfNJ&VrVnnLtUWbny4WFXOOW(M!=DXaJi;v3Gii<)e^6igmb6yohC}0QjtF+GI^9RM@ipOxQV$FH(^W5<~4=HrxF%g8UQ{Dr4yj0iUA^Vn8F?zO6e%{u<^|3L{Rf2S&bQ_7Qzx<2dd(%4uP4WubN<fD>r3=KRoYilLWPe9TlHlnF#<i%C5{>4?qcG3t;SOlk~fe5m_0NJ9~ZZN36J<IQ3i(*CPY?@*1CysWEp$joYJYVUY`*>Ns`hq5OzRAqo{_W975B^9*Z<^Jrmp6w24oBj>GT^S*oJZH_98F{lV%CZOV|L}g@TK3+dE<`PMyT4<v~yhs7x>=87eO(?(=MM{+8MR>dzI15#D*bE|OIR3*oZ{UA-4&KLQ^*x}Ub!&?x?4+p9omf#M-OLx&xrA~40X^l;2$y+6LSe{VJZ7(HheP5C4Q?eTSSK3prxH=(aC%ALLBbITe-+XIwvkUHm%@pTMTF|0#7JnD(>WF)cBBUX^q@OuUGK0JnlK9TfG&DKZ@rIAqCkI0)}p#1cYaYtq;uHPOSF4KR=dax`E-PnTk?cCTd1bPl+!Lc%%-~^CYprZbXe3#XLDF4tTxO)4r(wBg^lb8duTcJBp9$mgnRxwcK#c7o}$Anz&bjN4H3MEk1z-|1R)x=Im|i<Ly`zKfyW#-#M`ZtK?O8jV!1IBE^KaCLZb+xgcaI`cu^O_X_Lsd26{c4jj#Z}hOs3NVYB^0!v)f_ruBiu<ZGiZj;=Aa2?qn|dDk7Y4$S;IG<!&5;6zwodGq6o$Jf+UM(M{Cn~^-DSkqBl@eKR20n1Y)&L%FKID#CRCHBrj?qcs!>W{O3l)Yr|rnWAd+5-87Gx|V!_Vv-1puU2%G6<Mc1ak6k9r)$}%mS;pUGbf&8_gepx9oP=Ld|z7=9=FxC|b?sZXLRDXx_D)Td^<_C^f&<f4hHC@g2(z-5fL57Rbq)I}oU-nrpdv<b#6Zm4Y3<f*p%Z_X>6gxRMpF_8wQe_(dPL_pi9x4|eaFXP3F!!0x^Hw>p56*Z2x*7OnRR_5{q8^C~DFiriveuq`o*uB8LsibK9Fhu-b=Z8<vEzM5O$E!wwKw3NDZ^6vS&Bk%Iwz7yW3PkB$C^7ftf_MY)_&n)L!0-**^yqCNEgMy-4lQ$-BKD){ld$+XQ?R_`p-J-is-#z3l=~?EEuI-{Sa;}fQJi69IQ%R}UwX@on^=l_-3Q)k&ua17Y)<sjf#Va{AzMPtmC?+j`H8aPXFA=Y~yO%TftY+qYwwhCd<H|P1<=)cW(9PFkGYI%jKCLWF2CEYelF6!GEL;Snb=R_K_lFtTbJZ`MzkYG{;{4!3tv_S?qGB=Go3Rs6WFW+`#7yn{zJ<PpHgC;QZ{d@^oF}38zMK=wrl$ib8P^-W2FNa1Idji0r<Si4mCm1AZ1!#0vy|#DIxutiSD&sKq1p$c4XZ&k?(N8--cD>(w>41jq|xy4PI}Wm`1py@03SceGhw&E*paFDQ$u2Vf#OfIl@Ri$1qK{aUfhwQcsCJ;yqltgkasf`*q@_4RH}Hlq;bz7PVr})5<bjKcego}$O;Pk$ZjO61QrW&4q7b2ugDh`)qv9_NOuY}W``$AVpf(TjmHkR9_tMnntP5M>FKr*{<vg|_J3jLU#Rfr$5I(G`?T$m69DhT_4a8$2s`*s{62;4)BciCDK%>*N}D>ZxTe3N_onXjYjy=RDdEq3eodY1v)Zqzk$qM!h~FE(Gaj2ICe6$dzouv{L7kzx)bo*vN`IQZ)E!LQf2r#uR;SGSD3eik&>v}N@T$_3IUiMNmFXX+@56!T=~QLWT1AF3Z?5-a3VuGW*`qut_2&a}<zRF1qr}id42_TwrV%uNUw=t|J+6&da>J$AOkd#wEhZ7sC&gw$^HU6x#6kWkY60W<|EiT+ve|^ix=S)57?+_MWkW<^`w$%wqTGbe!0Z{}MUN7(SrUyBzYh_%sE{iYWPC*0sF1>WN=TFCQ%b^FFlyMWLIjt^<~ZvgUascXXoF@$8??}djHoaRv_U6pLxfsEhF4f<hbHtW0sNPl2aPge6FdxHWr-feD~z1dikg%RkMEcD)A}JAnJ#Ol)E>q2j7Q-xFo3^99V`|SK`AKpbyY;*L~}(yj%f(}lqN=GbW^hn5d#8g=V_rR+Q(lvf5d1jjnc6>1lg*J2%Hc~Dm7Yiyfl$=bg~v`WwXrI$F}Yf>uCKt*{l!YHKdgZE<I|EK>2A8-MzYXt%$o)9@&@7b){rIPG2??KAO^bbSN9<n?YIF4=u@jtd``gYf0{7jw*SkL$(9*aE)0K7a|{zL&#r%XCUNH#B&|;bGQu2|1BAF7TfYErm88Co?tK~M#F!g9RFj4{z{e6Us+SCC}o3;m~P%cFRCu8Apf68J~<_apTU^Y5_6djSy)DR4o^~7KMc_}h225MhJtDWGi=CxptrTFwYiU*umZw9%vW$O=lI}A1ve~MCR|+Gv7RINc4hFK#pXEAJFvxa?nFoHu~yE8xCZWEP#wyMWiTP5SrMdn5RqvC>qiI}<^(mvf>RWsJhOrXJW%ea+Ob1QhQ*s9h7ep26jilD?&MS5J;#nTc6Igx1=7+46*WB2hTGTR&RZ8f#JdKg9MTQfhImXrK14J>u~>c!btabx(Z<!%^DtMU29^~b#T9m(7U`?m9z|FL{R$gWC%~r0hk0Uw0R`D}{G=%S4v|_pkL`qY_V#vmw?|}0FNF*;SuoQT2pBuov2~jrSQ_1KbMqGHng!2DR01R>=|5t^VV9(#8AwXQlAq<%jrfvVIjfwp&Sm;dMeuDj&1vo#xrL-}mthIea(qjlIc=2GH}#<rw2Te9f{F<dGk-<ba8QZEd9#wt#sj*N%v+Ep<~muds`U>M+WS17Of4}RBH3I&2Awps!iz+P;b`Nr#-Q?WV_#oqPy-lTcT3~37A)rhT|*BP-P;@8>GHXYl+*A)&5;#?J!BO%JWz6wufc4@HrxhXf`=xGtJX0aemO+ohk{0;raTxSP>J=m!EqNa)Q}}dmIbt4!UdTyK^f(Z2UX4iY?n<U68~R{*oJeEp5U1fzKFd#s4cv}SzK9AAvh-p`6oP&6DWb!woJev5``lcTtT=LRvD3rUpx`A_Ox-zh1-z)9?qgxgj8^iGujsqUTVR#;mDPd8P|)Bdx^C`4{B~}7P9<Y?WJ~D1eXrIuTFe<zc*#u8k4BqwVIT>l2qYKs_-XOtx>v!BlKbkCid*J_CRXiYFg%8#!IJXdOlVvGLrvAMWy7-mc6tM=*gtiUjj*z5hyH~KY2TU=1?G~;MU$7d*|Dib1HtISZw)W$D18XC;U5G{X5#chfeu+oLVg_Uua%b-|4znad4^GU-rZtJ9pwnLOA20<(%z5s9kjZ@WPuH?&|z|4*P4nyhjIowF9eFwTsP5>NmUY?QFf<=&x$KD|#yrL+*ZGX4$`_;WmGgP9>PU$tCkA<~tWoF1i;TUQ_F`p$*6;Q~HY+E_Hmuu*%Fe1C>+i&E9e4(3_)oTi!K$`>fu9Veg2;>pbt@J#ncupf=2CeCo{k!nx8lhEZm&R_<6#d%b_9vcXr`;IBOBZAZRJ^s@5h!MW0x&aR|y@uhF^r<X08%-*x3)5;IbRX-?R<iEe|p1J<z!JEZ%{43jDcK&hkUH+YIms+N?p6|iNQA%!=-6)&i<IgU?mtC_U`qOJy()an&_xaQJL!yl5kKn4euI3ldx4hPIyJMl>U$XaJ$+4xDA9wty<L(K6{So-WiW2#~n2ybRdYYZ?_h~Xe)F)26u3fltVNUNimfSN|EvWqZ?JN3SKK(Age$R@&!KZKV>+uRv>%A$veCl0GLyN9JW-e5l<73l+5S?qe)p4U^{%L=1)xF$3i>3a|y(^gqe3=LQnNL8f%;&qYEma*ipE`feS6Jf(B7M)&&bvC_{=?q7t~H82LMOo@n;D+Xn=#H!E~GBl?i6^-_AR9?x$buS=%V*P_nLy%9;H8_Xyudi2YTbB!~b%G#&h^fvid&zB$M2)(6BV|{mOPC8e*zlG3>l&Afh4KU7xMxQp(Jk<`-K(Thmd>t#cF8Ei>7EL+%3+t9bum>R~PQmZ@p)p?bw1YqH?uPc#P)S5beub@$=D)SuNW53AHaqcsrzGp+V;x#DNZiHEl+ezrx4{Z;JYU5cOWRd=m3?+~U!KHkkf;uW7akdjv+75u4r)sPBlE-U-h<OwtlQK!`sby^)!r_~d6S_4t1O+ZGXRBHk^qEZWP68bJmxlD(ZYEc@vsVE)XH1dE|I(fh<17(4miL$}XLOJ-sHS%a!4tX>zmpmGlM;;B!M;u=;#Gt~<Y(IyJ_yY3HqGI?iL?zJfQuxDRD)LZR5qT)A7?purg3RESqHW-ALFM3XMHS$dp-OPg_%X2lZD>1rR%-`-Rtr^wTZy0h>aRkz;BF^ReeFQIz^z8R!L31iz^z4l!QF}Wk%!Le$U|rQ$wO!L_@Oh@K%O=`0B#*R2=0FL1i1C65!?pU1nvRUOdd3A0rv^i3T`861GfpagWHTcz->XD;I^Vem+|9dhrw+}UEp@0Bj9$T?#uWwvL5^x89EAX7kU!hBj^~o-KZDb9@Gc!QFI*KC(%>j9z(x}PQd*1qNm}j51j<}IO+%YDRc_l6X<*BG{irR7SS2_J&B%y(0*hA_Z0d9vZ4X_&!WMb%Kp;`LFgI8gZoTqo`zr!ENB=)z7Pr-fe<UQg=UFGXW@GQor4sE$PO+-qu}z$0qziTf;)`fL}O6*2>K#?+0gGJ0lv;65x&kL7r1sb4(=#A53U1EkdO=DI??yhB%~cfZut5ldKO#(dB7FX6u2(*1N0okkE2WQbsjwr?gV-P+zSx%8xS*zF2k1_{a@%e;p<uSTkz#UUjlauO_SAk5&Cci`tTh3GWZ$vBKR+%tB~S(^c8SlKwky-H_$b3FQXZ7e-q7;k@y;<{4MkngnS9T4DK}gI=ENRH^BWex(@D(Xb#+~=s%(xQ2STVH{t86=oN6Up&z1~5H^Fp1z)r1x551ygx!L$m(UWLhu@dckI-%S{W|(K#C`*P2i)uERdDCfe?tEOVs4;6K)(aO-$buL=qqRe+?(hQxZgs*3+`{DKSZxX{H@80=06H*h#|<vqn!`21)=@_yDiht^;`%mGvA@S3>Y+ev~A|3&F*l7Nv(`7^Dsyye*!b!-E4%u%y<M}sOu5!ilbihIV@do;1>xdj}pctLXRTtdc`{rD>^^d=<6b*ulgMMRnccQr_`Tg&eXCVs$+U+h||Mw%i<HFG1#<dWR^4@jqt>;KTA=5kWlzJ#z7++2iDR3e|RS3<CwU99Aysx<^P+k)(E!`8Q(BPd4ucrU{cH;EZnRdXk)bf$?Mw><rZ(u<Do3k=XavHQ-NYHiPMkrhwt+ZasZW&6t9g}!}f>g5)HBzrpe?M^s?}Dd5<4bNA;%CGC3Q0ZDjOnWl|d@4~GUYqS>;PaUSD2yXP_M&t4}&oGX(Upezxdo~t2_LTAC|t+jHb#KIV%<RZEHouxP?u0*bAXDN-U!@*ZXCSw?<+$xh!;1C1<3vaRzUM6c%?_-WY(Yl9ka%DU`=}}we>fgy^EH=i|S6`IHZ;{1s!Dpjv-^P0wDuwVWi{p%MWY>^7e)}P9$ePm1dXs@AFgEZRwHLKe!U@S2BQX+Nl1^3<QNr9%lJ24oN_tB2J+!3Sm^S6CZ`0>l=dykrU*8XNvHT&S2YNI>45U}NF1TVyMSN@$d$B@{MS!V?h^EAod?nXw>dh|B$ibxD6d7ZPMQ&<TiLG-#r0zKS&r>XEubNo$hy${RDWv>1jRpD0fgXPMOXX3;eG`2XWDDyf3yepNwJM1rvh;O=P+2l`M-xXPIlf%4ZX9d7_Kr9wxFM$<@d7ty8$1U;$Y!-Whl%xHhm&)ivpHN4>fm|AqmXp34fYz=#M4Yb<m4DHniWCa7=F+}9O3Qu2b#)e=jf=_fvjmXmfW2bG57TtKV+BKiB*lF$d3-#C(qQ?bvdo*gv~W_6e~|!?cLT<zN{#eBlMtU6*jpn7MVRg<F3l?al3tg$xuT#KT+93c#K@U)ZpSyH3<;H3oWEikgcjEYNnu}sFx^VhWn2-NnKcxGyIfP_>toxoDq){)EO#v+~tA-O0aa%e%nx4C|;_j%*<8tU*w8<4i}l9#W5jOPy8J66mJ*#XN!ua`tH|Ds(Oio)-l((z+0T-uCZ~Kpv277Vo40DrRfZJRGO8rorZ*<YLE<hP=!U5?e?J3Y3FNef`(>ir^AMa5G!z|4GKJ#R~~oRu*KQX!&$;>n5(KLlLT3G;`qRr;KZtbL4`2x5Y9z3`wq$Eo4-pFB}->e0i}>4gx|-`_i;EaK!Zk{BJT()EMsv^p%^WAWntE`G|=vCVfrp&?McR&k4<ZW^(OuvB^iClNXY$#DKC(odwq0vbS2&FOE=Fj0aNmI<E(L>T{e|M)Jl4dFTG~5)}Ov-M)6-v<$-MOR^^S#mF(@l?Cmq^zc&>IQuD8O&vt*rDAT&>H3L;rwt$wJ){InI@yC=VEqR7sOQy1OZe`xc#LpY~v&=K9_Y1eqocEfl7y7{Yl&EGg3ArJOpyGuzZ|e4C(~i}Q94v^Eko!QyDB}xFrlvIN?GzfjY1*dUinsF<o2nIWS1Z9U{E!Y=3cN#;ch1}yWWJ9RP0o-qGOU<7PQa)6gGBPsiiM05e)KF$mO5lHJd}PMLpBoIW)nmg2Qy1{vj{7cSo4-|_i=MLacH4Q8Z}thEo%QeRDK;Ny$DA{+TE!nS4(J*gz63^MBWKM+Su3O-YO*uKLF0zB1;riU_)5rV;1Ce@D1Y_4?NY>*o&?GoFT8VxvZmOybx-KI4+Ly4)S7~OR(Wr%Xs9@j?I7%s$s0Q%=H|0=f%d67mzveoDHiN)p72MQ@yRdy(GF<dOsSr|2f{lVbx%PyuM>~NgCbbWA2h@>OOfYoGn`B)^L@U#!jpuJa}%HSQX+%ozQEiAQeZnqT~sQGOnx`X`(9;f4;J2N6qf2ts`3n9Wt1NO_q-hx`ZR-G6@f0ka3=a@qj&bh70d5`Cyy3J??`i<TV}vVP{WR$}gzID%XPSj^_&`lsxz?6cY(PG!WGG!NEk#SO?X-<Gf99I)Vu{(Gs2KU<OPgKJ2jFYzPzK03F1qUod$<dRyCao)_?|-uwkfYzfas<dJVON#tE?Y~P;bkR+3co`$Bc^~h1n;ntHvBe|5rw?ISEOVGmC>ChdaRFD9tW-ux8ISxRAJSb$u@6y>E7W_!w=$K2yM(~`2=iqRLv(#m?LlH+BpSEBtQb&&V^#)CruAb(@J;(bjy{*kX-7USrWXa^6^oWy%yt@RMLZ4WzpAV*3$lKfDf=QrRFImaaSi%n-=`3RcKSW9p{u8-&vxJbTpvpoHh@im|ek_2zj1>JEfDh?dCNT=j01poIRv&wFCNsmAwBc07kMfDj3i3cwB4tQ<xpq!7U%IR>i}yg%m5vXiq4T0YqkOvK!?cX+CuUDzMUVNig(Lp7x@p}<Y?d~6Z7-FYIjxbufV6E{U%JMq64F+)^5)Ji6fdclvz}PVYV~Ec`m@?svX1z&j`*{B;4Dtbx;b!b_{Q+9(Ho<0G<~oAPW$(I?({6R`74^2^IHN1r86BwF{OI3Y%$xLS-+gx@Jk(K$_zivRDYv>L9@8cpVKhiB@Z)rcenX-+NTePpXRxE<>K7AW#hI$&XySsIqbJDY8Kqy)VgKU{$JwjUwrvus#`Yfe?Qyo&n}-n{Jt^!rf_TG#>B0u8&eCXmJ9aDYtValwfb|~W;LIvD6WVk^W5+(bS$3r7c|ZoRtpLvVO`$3L;ixpp?VMA)ht21hn7u;A*)u8W!_$HA}>ny%=XN8_){yF*!MIIYm7phv}!QTWY6_3>{&L{t{C?D4EvVKmJQ7zJ@KOXz4P0=hRS74)f%JJ7Okci%xnDV=INHJ?VspKl3k1Fhr@3Uuk1eT+kM!-`-pc}x7X0KtU0;{btkN7N_?7<WzCi~l}ft@3rFsm-LsNX=}W0xPT5Y>7+c>nwS5@TXVkIU16W70{Yv|aq1<OEUp7>dfjh8lIJl-$X{%OqO6L3U8;t&(N@zz{M58j_XUJbRa3uA<WkcPXjtVP9mJy}MoYGh7u^GtB57M)*56=!y>jQ<QI3PRpn;$47b|P~_-#MXgh~J8T^8!UB__rWXx@AFF+V!r|m)9*N&=^)UoKM3oYl?`*W!ZZg^QWKiOi0x-Eoe%`nw4pveX=)n8J83^nDE_OQds{<p)LAgTg}xbY{qToIiF!GjP^_CrdzJHuc;yKvrqCvIroIF@e~W=Uem4>!|r>A-Q*f?&u6gpq%;Ren%#@yBJVZTuNWHc85&5M1D}0jB54>HN}Q%@L0o_|JC_Z+Vu$ux*O$A9{i>=5;&WJWyrgk&PYw0cEqO;7>d%r*N0X_aWmP}PQh%;5ebP+*dG*0#iPX<)v^@tEKR-Z&>t(b@jS6ofjosw(CuxO`qOr?rpWLGGB_uvssPGjkvEQscrdRlC5|61A_f$&o-%Hf?>J;}f%6gRwzfuYQhrH_;QZk*QwUjGLBE=)j;^|vOZ9$jH9>7w?<t54tM$$4PkBD8bDvgwgvMY(%xp=&NAo4u)umW>GqTD+y<8n4Jo_rdSg)_?P)2^>?QYM9lbWl$6qf8wUeo1N!X(%^Ar(e$>Bs4sGk(~_v%2htQ-RaGBr;iHwv5QfR;hheVL=yf-5SZq}$B&-jnhBYKfM^tW0%z+ab2mX1ey7$p;AYA@%#82`#w0LhBg@)EPyn2h8?hmT4fVLWNUZe!2d2p&k`LjmkRm6Nq6IP%%p$75sh6QP17S2p!dft~BK&|zorE4v!?yb+Q5DezUg^Euu&p|s$O8pMz^X*&s03aF$Qsvb-Jjx)MbNIQhoCrL!qD`4gp>)SRZZ*gGZM9{DQWolynbNz!2Gu5luG<ut$tQNcW5#7J=5-xGB>thk$Q01^u#X=d4aTo>(9(SGyn90Yq8&3@`U%v<KEL>n0dyZW}R*e7}HjaoX^P3H{LUr#^ip_^aMVU(|0eP|KZe|Q;SY-YTJ9JcKjv;K3i(Zxly@bUFZc0XT?zCGt`i?rB<S4E;rU=eM&l0(yDCQuXwvS5mPj~mEez27LQmw#^br(sBU})ixo?ZsW;;hPKM0Ph79GtgJ+XqblDbyRa*pp)Cu?%%o2X$(Fp{M5Hg=D5z5Yq7}b9);qFd}Oj*=!?l<r(<x8`aLDcZ0kOc#Ttv=0GfCG|%_%EcDE{RB~5buJ87}Vg$K!;%~46^IkU1U_=pd@yeTwYv$ZyA!VWQYOT$3F8sjED6o!fd9{X`qTZ4V1F;MuGJQH=G8_i^|E+uk18nyM@0bJ3u6C7PsM4<MEcxKCboHu`?X(7gKmbf(cfHEY@)pdfYk6Lr_T?Kv>WYzt%<x|BXn3VWeByP^t)4DzOYyQZa606elGCH}UKom)HRet1Veg$)4NkE!?>{;!invFXiyvz0)lbRHM*mD4gH2uw}7iN%NkeF}&1EV5!ek%zbfg&}%AMF%<g@#bl+IJP`5m`NH-Z>i4ycDT+TxY)n+Vm8b-7%=(VNsiXAznUp=nz{u{BA6IFg@z7EE$mncEmHFeD43<5C72i-}wTF#&69%v<0{f<v@$<$tH_Q^<Q{{$7>XTzun@VQtP4zH&+evD@w5?g)9c0FB0ydH2W=?N)r-y6?V7>=o9gYA^)Ufpdvvt2a;Z%3yQ$XK`SYvwfs;dkH5OTIq+M}XnT(C)p2QgEICr@UgR4pA9+7Z{Nolsms)woR}sw7id65XX37hr>9%`_;^F0Ea4l%fjRymna6+wi;TGLkAB^eSG!Gob~n(`K%w70<W$)6COttJ%4?w%*u!tKvq*{P~4RfA+rV!>h^ZGtc^yi&v7j`I5K!lPjj1!|L-n`M37p*gr2W06|eRqlqyw;w^8yTXr}5-5RgCd)d?jD7v)v87(GQW-90DIniq>UN*q~$sp)p<^%FX$qP+%6HC3#YMV+GZzm)+af-J&CHQ0Tw8#@aU!Wdt7F@_D&x=xVHQ(c$YT;84DX^hJgmsOH@lms?Teurxdr0=lf-E84H4&O!=WvDzc{uZl3A4{=Vm|#ZupggZ8w``{@tlS-xl<$aBn$n0CL|UNkU(!-(dXUM=LPbM7Ft#+4)`h#yxX$UHQ?(SxYsq}9UAea*t`Z?AbZOq>oe~1YIbe%mPsnJ{@jQ+BCl_H@qta!4>A`RV&q$ir04Ba4j4m+0x6~#M+stLQm`>80F!m3U@TXbLKTxj4JjC;A+p?$dBcsgvb%Y}eZ|U$<lW>Hi;G=r*J&Q;Na-dhJ@KI{Ne^irzvYH#%ccAt#T1KmbpWceDDfuS8#c7m5ZBOBK0wzLnSQ}K=!#4z3F%StO~oJ+hP1sKA#F<ceY{A7TNpVpv^$-MJK_}Z6ASn8LF`T>L5)K$Socn+<9>QHUF&%sr*j)l@b*FHC{M8Kpw2nr;05whwuGx_T0(ewFkt|*c44JUvD;~aT#@Z%92R&U>jV@2lkGxKFBRjmxd5wD!Z^A0r`nITw)S;)x1ZsNVauR8RB_mbAhsnYs2O6Rog=Ei4(CLW9dV8e60)ERNth4WhJz{CA5noI{4kM7rAvD^dQ3}*M35fAS`Shq1qDMM7Pq;jp2Wo`Qpsb@laRnRXbI<Z=f!OM_0das|5MUCb&N^-1$xz#iO<-V5?4&cK2tGK37BcT`s^I@m1h^KZd?c?rObTs<=nZNujhKV)x~_1=<<E@nm|_Gt&AHPD_P~ftn!7fr6PY;!}Ou|Q}O~uTVC6Gd+SP3gRiK;UvzM#sM%N4e7DPA^yIyw6W-$|X8QjYQsot{<kkA}YVYMWF1lxQfs7pKO>(m@!@RJ4sm7mi;9f@8-EGqyf&8sY9p2+-yki%9DU)8q<fm&|V!HjaPjn$>0dxt#LHV3@4v_xBWkXRQzjVp$?R&<TVtLPCA&}t<^aBw;#`;2Ibu&l3Ra@DdMZL}K1wS#OqQFK}z|U!0)QWe^DJ_iRoq8Jlf6OSsjX405BL^UC!7ou?DvWt2nU>o)i+AX~z6t6SbDzs%;W#YpbS18dleiY*>Ck@+c9b#!p#(XJkJMo#y@k4_3|Woej?t&bYdL<6&ZB%IB0}ZXJ*qde%++dQg<kpPLfoTiYPxWULE6ij;pp>KfL=j+)Psx-w<k69{sU1`lqq$okv>ayo&OSp4XaLJ<-*6yZHSXwJEb0`rgZS9hd;xW!WQbxSD}Oi*?7b;4&zCPqMmX49}!xcO7!UBnUV3xUU~ND<E4nApB_zIo8Sp3@+vYit$)1(N;N#9RP7^6P1;!M)ftw8kupAHWo}}197gurFdn8W@lD*AP_le}revmDJV|liu}+D$G?FV>mdg}3S8AMGDV}6RV@u*9eYMw<BKZZ4C)tzY)??8vY#hV^yK5@dV~jhSq1JnnW#gNQBE%5*(?ce5GN7Ey_^F7k@@UFzNSOm*Sb=hH%4{=UeU+tL5m73S5expK{5J~1I~z^_@|L!=+lFYw#q6~-REUaDF)Bf&Xv<CIR65LNh9?bX=eI+a<KvCmR#X-#ArqNBnOLRRlNs0kyE!5zxGhU+PkA=wU_F_VZz{`^9(U!%uelOcMb=|!qz&1gY#6QW56QD5+FD3e{VjGX=OHO;BEq10PY$YuQ=%rMsL2pZd^w(sxbvL_sdwI#AxKx}S;~_ks!#>mg=2>4sf>s0k-|+C-E%#;an0fEj*!rs7(ANFldb<ev`41qZH%n;{D;)AH&VmaO=>7uuNsc_J>-01qC4%m{HXCDAm-!EM4fE6#80t5nnG?0NY>-{`RX_Bc+`Lncyu1U$AAvrR6JK8!H>urDj0q|5%Y$M+9OYsO@yG+;wYP|QKS46i=LoRQm#}IYP!jIjGheCd{ZBJiA5QCiA62<VU*p2Uw6QdK_;H0W)xS;WD2|$Q&~iq?@l-@R+;$fUrOQeOO7$`R4~Ow-xfeE9&R1_--?WYTNqK>O*TXTa2L7W(65XDXzva`6R*Xlv=MK2S>2k_la-~Tm8EC{7mA3_Nl%yI=W?UZ))vd|O~_+3Ow40u>z}ltLyclCGQFW+S)-Wl2ZmEEjlCUBJ&ng&&Tv3hM-g&GkQs8|_pHgivxI!hU$GQMFe7Js45E!~xB})+1jH<(_+`RDF)9FrnJYiXsCNY+z2DExf2C#S)TgT%95y*vk4;8b%ztry(3`n!IkkMT{kzW)lY{jV_wIR>hMLxvD`t&b6!Ubs;&+tg3bPWwqV2*W6Jk(1J~(1MXTe_e7=FAPC=E<O+{Yxt{a?X97=0F5C&dklZDhFd`?FtX<mx9^9-B?O83z0MX5=Y-1+Zj1oHElK`bV2%Ag{Z+zY@|x$MOdiTysxjS8H!`YgzB{BV{h9%WAh+N3rd7bH$FT9cIodasq#TUAjTcPbWsxhk#~`ro>+%Eq1G&7cC<;QKrL=D?HF}kZV8IbNndRbdm%}3tSas@xwk6AO9Of@!4YGv7n*FB3zHE7+dZ3Fc)7bj$wKgXTKzAd_U0C+pVJm$a=tC`)e$)aHhY)i>zHz`+k*`E=gBP>wTs5{?Y?0r5(P~4u9#PmC|Fr(qn53ozzGNnmgW2dTa09@{g6wmLB>adQSZG!q43BQFw~JL`7d<=7S0t!yt=?$E_^2a;510XRxw_E4aHS>5x2+P)V3sgH~}QsKYKaeAMQ;k7aM}_v3RqL3#zE5?LL?yx`V{J}0b#;{j931(jVmLr~d79xqb{4c0+oN1sr_K(>#&AcupP%h!$Z!XS(=*0nZB<yZ#oR#6P<2drqAx7e)%K*6tnx{|DULx|Cb=qxJq2DGq)37P(Z?LuFWzv)<v83dnaLjD;~h@R~FyN!28eJy>VLG6Pz@D^b*z_9Xy$j59=MYx&uAv*+D;_@Bi+u?bGiP<c~9v$>ZNoE47C9H}>+=s}$h8X1~Uiw$|cn$YBOIm{SEw8oTZeJ;>^Oe-yP4br1`AeEZ{da4(6j#^mt=Uog|FQQb&~032nkWi|l>`Wo0EmSk39cZ-Mcj8%0vAyfDT*Q~S+W)yVu2zhij)hWEz+Re?e6nJx!osJoEcMX=b7rb$57idfnPEmxI5FKBqyeq#8oONfH6w9`<$G9r{9@*Lnltlk><?2dv6th0$8MEXL{awi{(?isJeCQuK)f2|Nj5?x5bim)v;uKZGHT16G+NSi&`3+TH3&Lke`{JnSp~ZMIaMV=|yrH!qU3ty;CrLIkc^siHZRQWYGz12!s#y!J?wFvK9T0&T7a`*hHnR9jw{8*|VMKC}&aGzB~5&pU`hx=>-DJ<2JZQAOJaNpte}R)yOt9XM<;D&p;DB(mgRp5^ln_;PzH6IyoBkSX5_XQh??}#S@dRX7J5eNzT!+G6Z*EbB@}^dXJ4cY(AgOUSfwuOheTZkxC8`RtESE`U*=McSh+zFLYMhoI^b<w1TaF)HZZz%r<mna4>O~%TdOHHK083`JoXTd#A&0=l>Ym?d1Ko4fYT8+UyAVp|WJ_gG0l;L;XX2;E^LiX@y#UXr!li1U`(ntOv9llyb0t%vMv4RDh%jE^9Md+i=9yHPzK6wxiG_Z`w^n(+^$b%pP4cVC$D5n&DxW<?OthEQP8#IoG*SMeIXhHguyWEQX=Sk<Ka_GXc4pzc4=oEeOWZXh!wyJ8;0q<KrJydr7!e6VRO5>xpW>f&x3k^u#z@U^IPdewrBPLgpwv3$qjBv#<tIu!E4^s3xIWWN)a*Y0vp_&MY&U##`D@H;)vWoHCT$4{scRmjS5EG$LgtnFVhsk>U}ofJw-#v3r?H%)(YcdM(Dd=ND026q)PdMfWTL{ZvFO<c0>(m6;hph^ImQJggp+{V{&VH3KbiJyDrw4qA=E4RB`Ki*`%2MUt!VQUGgGo2(@*WRF{6B>^Kj2bdXXg@9PGsDe1d=~wTF*rSwZJ;)RpjpFzP*F~`P!rq4|73!{WZkW~VFK)2GmW6)8%;XY6>p=OU+6mGP`xEss+~vX2oQdLRT<B;V>~b)QkRrC<!Oj8`Dyo1`A8-hw$_bZue0pMT77R2Zqlw{(%Df)f6fm_wkD`<W=0tRce2wKBVC6xpqG^e#6jgv3Fpipvz(oon-G$yyPuU*vABQYr+K#3#7Ce&de*{1FsYE3D9aJRm$COjpFIBtlnQRcF`_+uFX*X@!9Y|wLZOi??7USyn&lMt*b+za9zH5D9YZGm4iWC+5Yl4~UhpDk+wDtIJaLjZ9Ti*YxqbI17r>N6UQLYK*DDexun>sx5?I{RK^78EU;{j)=q>;{U3>)^+hP~^SyN1C#diQegr#j;oBC+`d_SwnPfOpY9g)R4N%0!)A*e{G-L2MOUExo3Eqrso)Z@6Ll?jG7yOBuVC`@kjA;Y`iac*D#T)zPLpm}fuCW6oI~^w+MQ3KseoBL)jZAK#0uVE1xM!nsv+Zk7M(fQ89z59jvMxxMRWncSh3BcExltWJHcH>BMa(dLG=#k98gjU)c1@3q}%3p^dvG36aW7gMq~q;*ELmaw*f))u@`;#Yi6bwd?69Plt@Z9ykf*m+mGXEPmsa#JPBvr#H*gf-s?XIIkMl}z^TUyIV!#uYKR9nP+zv#b1Mp!CKflij+4qX?*P8m}Au*#Vp>sAqB-Ruu4N)|=Vav;C^TC{xhF<g~6RBD$Pa*URmZrakM}|F*b#Y;6j*%yTEVcKzv<-iW?9tS_ha<&m;opoh}do9~sD`+EZg-<^%L?OiYY>y{gujmmqwb_b*Z*IQMTqa~QNKEHA1*224e)X`H^+iA)^{<%_Gnf+Ul)L`6HgBpKf64^?r(nh*%j5_5C<)5J@+!W!a@+UzXKQ-ns*6#HY#<+iZf25!yaAG5eI(e2NpQE#V%l#2+-twV{0U=}dfU$@eO|Q&fonIYWD}4F#iY(IFv7Y^I<?7_?GuLMPbxhvw07mE425JLNI<Il#C^dGJI&yU5$(3WD8S-8^b@kL*&6^F^8~m0)KU35hTwo0SE0TyYXJvA=f6eu#`?}k|KQO|SHd7@nK{KWAUcn<e{VNSu8&*x<-m}*2Zvg{#>75gSgOsC-F78_Ej%f44+EQ9u>c146pzU3EwcQX-vj_WJE7BK59CcLdDZ1b^WgB17L^2Jp7_S<`nPqfl8I!qdQ>0Yq`U!ZjV!dXiN~am~xv<$on>~zqo*h1uzxaCIor1<d9h1|vlE!7-6iW=F*l%!|CF{N_2HB$)Wt#8HL5Z8$B1=)Eq~gsJ*G~k@!8)d7Po%8&UP1BNu{Td%KN%<qVoXVEu=&UB@3wEGQ)5S%wxe{(QKsODdqrh_)Ay`5tO0khn{n)Aiky+W%3x)ruqv3lagH_}k8}_GqGB-U@*nmuymj(U#o(q$v{$@e{LdoMF|1!qEj|}Ib}Dpw0*>$GMVfe;IZaX?@7-hbzh-lME)o?T5J&QN2gg6xrRg&uBvHoie(lCYhDq#qzXtT98~a_<*!AV6LX>G=!`2Gdiq>SWN*``ki!v+LEUzja+|PiGgnjp4e_br9JP2N6%l`5U8FxH1h4C$ALaL%jZgEhzahP&V(z>&ERcFxw(G>Q8Mfr5*9nKfsEUX_clHAJHgY>Ok=HW8QZCnP@x0UAMO3Cd)HB9d=8Lkz-r|&j`AMaOmWr9B+bl8UXh(FBj$^bt;E_Y@gR^mTvcUFR5pEy*94f;<SU@@Px<sY_WQx*kCQ$-qht(6bAOQ{z4l-eUXER)jcgS1k5I7?1vz{2T#<%k@o%k(2+oNmWJ`i@u%u1N|NJa#%YBHAg&_!j6tY$yLiPJ4(0;X*P*eiK8{#aw5}6}VwP$BRt^<IN<6c-M@(FF~%y%R*TZi>8DrRPvK-P-{<-C>BE<A{!|fO~D;a2asuxT|ee`e|H@G2udkM$JWs5ajOIf$Nde_H!z+nrkH?%T_jg9sII;uj0!06fgFo0>LU02MQqka$aZ{72Huiwc}sc)^C7hI7qMk*Su`mo<bSMKl89kg8Htc5JfV17xzj;X!hR5jdYwjyfk}Z_N|&U(KrE^)=l1Hv0bl}cg2;#mykyVu#VP0bnt2%5?huTQf+Q{=?4Y1X)3dhOc%&5M)^uSS+AeuwK275&`*<w+$t5tzGYheZD(Bi+&&5v8BFaS&@YLTs2v{sA%9YunQ;EG|a()&WB$hdz^SHfZY}m#!-d*l}^sO>S+fqeibv5|oXanLL`-KPc_T6XZh=oozI1Bg%?V>u9#BN1Q?0${Yh&{@n1!}RbK=*JkVcwR;piB8c3;dYC0tSqH18uoaBw$h|x-44Y{_=)HF*FaSeax#9_WLLl=WHWrSf>9N%)n_CxQyM9MkTPNQQ0{Ugu{zUpPeS4yUi3UXDCS+9uviov78tl=^q*!f1-crRBS|9pG#s<#ee3Il0(QilJm%9^QMN###zvF6|z4A94#18FQN>rHkH$OMblx(9j*wTRu$dl&z*#-f%ifc&KXaB2^rD!%!+&ZoUq<O>m3nOZKSw5Qd|}(wxj>ceyf%nvcJ%Z3?|A{e^=iS)4x{m^{*_GgVe7TtorqjN_UC=Qt3>`zn|fh;WuScklY7oTsfq7$bAh7Rl8aDR$ed7L2SWR)|P~{V8|k`4T~A;wZ{Rd6Tx@-c!s5a2!)_FWTZMhi(m&|5XS<3!8!EQQwdX$%q^X@XxY9aEwIm^?g=vQl451+e^gmF6_QNrCN5IzHlb_A>L9Hti{zJw^XusRx<G&MnGGeq=P)%o#^fKls)}S<R%htUUEAmQEWg}8N$1zEsD3L^sVg?EB6aR^e^_OuRo1nEpfsfF46Ax*RZmE@FQT`uPE)!vN>vuK>1#!%+a+tRwNXmz2&r~O@=AVC6mWgNl-9M}Rkfg9x;19TUE!<|-K<e|+3=gKIbAvUEdvJ4{Boq=nzS)!VjDw-G&L$9FD7|>KYSICLB2_-QuNhh0iy6M;w7B-E!>Bv99D=u3K%4Zy-&!Xksu*olAMJ`tXPj|1v{nTB8CaWu*7MMPsTy;rf+?=B;(aV>5~bXrKR!Op1w^U6)%r^n>-o3JeqCtXnA=ux5=YO<lzJ5ZaWg1oqA_UzRg>Po#2Tu(KdB6#>-Xulw^)iFy5gc;E*yY!kdYW@WvY*^JDY|Z~m-cFJ+-v<W^9c9690`!F;j`oyGg4gowzs@ZiYdZ1V}8K@)kbgAI{Q#BB*M2wp4!r4*p(bA{i*i6YjNFv)muXi32{9?XIm4up=smSCVCA`JnY3%AukWXDf`WrU$!B>I|T9uM2{-vt8N@ax>Wl*X&G<<Vn6<RAzWe*8|UkR=PxHX|(+-YW_A<hKH_C;S>ZmeP4OEJpF``K+CUDB*o8oj+UPICDp$>6g<-xxf54<U@;P?Cy1n<?zNY%+GkIFU}y~Sq~Q~6R-u|DchpL27zeHJdQ<E?44nf1=V0RmfW_tsEgf(A)aA07U)a`_d?bM97+$1S+OD#_`c+eFbj-+Lc&7{5=M<9A*c#@6<+4y<z)=v3vloD&Ypz_cU(-HvIjaxg$>1JfxiAOj|~D3bFjlO8aN9$eK8iKC&u2KvK<;|wLRc|vF;$G1KI7j+0ZH1V#XNk4b(#@hEKaVw)rdAwi2*=K$n5usfuY_Ti^xKWYP+A7Vyg#=xpdQj|xk;fn~DX6$~a#ehizTNACaZ#tyh_w%f^PU~R6)wXs=oXLBT1U4VE62|QyH`)TjoxOd78QHEosaYsZKT;%z2mj}Lk)=iK{#IZmb$O+-UU<d%2buEL_!NY1srPH4Ax$~?aznY7}J<f*0Mm>NKljUrE&O)d9v*XZH4WTD15Xd<EiTIopNMw%N(Fyd}qBYL%2t4hA9M3!ASoqV7#vgcst>1s1YV2FTM5%^Dio=^?oALk_G3SQO4%+Mpn>%T9Cu81w<-l_93hPL=%U|a&p|sT@Rn4b5Q>37bYS_P_+mKRqL$vV_r9Bj}<SZXt>smb;$+iDRq*K?dC^yAfnKhAJRpDKo^e(7Y+SR|(zdA+h?e}c8ffmNrvC@zHx-0z0zjx}!sbCvZ*+*6E-;h(o$HT*?=;2e;X*V-GNgX=7DZ-|(qDWE2n;q9X0%oSDjVf#p_O187fAHo(YUCu-bBgLdO+gjQg)s3nO*~DJiwyA`HQ@u?tobqo-ZearZAzqu!&s!SG+bCq7uJRgd+Ea7^=YPXcvZfcCNh}A`eGU?`#NZSNAPS&zb}$!hi>Wq9wx75rSDT?-kRi1`E_~N)=1kL1J8zRdm{RRwZpW&bmbt+N-w;*bbTpsjIno8rF$sT-e2gQn+2dlJ}(n#vsWwqnRhI^KnDiuf7tR)OYrD=*ZSe$lT6)y+SpHN`=PVbz?Fg3Du1qDLz$X`S;4-Lswa|L>R(!)q>j6&Gjo*dB6aZ+^~3_LTclKrUw)A<vX=Z>goCD`pgIkKvw`DO=V8h^5;BcOb~mgl*UD*A)rR?#+z)c8C!mU%>30Pd*0brR{X)I*9r?peIV|tt7g;Daq&TxipmjkKx}{L2!I1u7L~ntSDBmbroBD2LSYLfdUkw@6%$k_Lvlz@VG?(fE&OjZdZ3?NHBe}(ay!Y^R=WSW=6196jt?R$5>PHOj0qlY255SE7v-<ul(M?Snyjr>>`!VtD{G5Gu@$FV;Ir#CD5*v8(QyIG2m3^JkpH@31eJ#@W>!slF`z=y%>-|m~q&F~Szec)|*4m#Y{XilEFMN<D1$REs;4qz~JRre8$jR&9gMZM1!So&}xC$#*?s2YSzQ;bA-og`0c?LXNd15Ic_TdE1@h9?~+@j-QG?ZJPEp6kpBV=vDdrPv-Tk4(R3w@ZNV_IC%f}lhpuP9(cENEBAkHHP?wNZbhxJ8#Hg@RC|x~3801fEucGlC^?9D(ezY;>#JnsR6{joqkvM^5p?ShQ=idnelW^k7G{!QcbXvzgmLs>mzwXi<&!D)L2f%w;*TKm7?zy(H##D)yxDPsLlsVb+Tc?Hc4a#oYNjc@?JMma&b$nv&bvTxS=vQg#M#ZxZeY|G;^yWhk3=p!+MkR!3KRSzR$p_5*dau?ehQL^K-d!p6V?Q|MgoUzws+`S(n_{4I>BVYwe2#z2&K7UDhVV6uCb`v7fYh2XHNfmQ)31q9(pc0L4uTI+#`6@8y-vR5Uq%dg49rYb<N{Lh9=O@Q=KHGQ;hKc(6q6Oo&?Dze}91Zv)ThSoLSg+L2{fHXZoO4Ju>y4poQ=#qo$t#)O1IeuH3(_M<+wqY<`Dh1c1C9aCAjm7aLjy+=eVQBf`Ld%c0%*ES)+u=N>TCz<ZDKC#~n>=z}9>q3!lsvXrks?wmzA~8*6KOs%k<Kkj6>m|F0s^Pu>0xmwE+>gVFd_`j#ds2`sU~5>4{~Za5$N}*Be&e~%lIhwH%Zh`C5ajmUhOlHu$P4p9r&?yb-cJj2`pHB{7aI{lF_YL3<mbtU{MdKOYhPC-Y2%Q{s}f;NC?=?dO{-B`aUeloG2+p5FjB$0b=~gWijV-xtI~l&T`;@U-uz_rh})eQ}SpPB3+0~A=X<P=c+G~ZWvlSm1aqKH0wTUL|k>3470$ROF&+jD~Wd`lJewPNV8fw*Da0mQRD})8KoSra)PltsnV`>`-bC_$`2~3V`rEH6I4F|SV}i$j+hHy&%Ktr_AF!GO_{0#%An)NmG4$=D4Es~s$~?aLXSY^QGFCJk8*V*kFqt<*-b$ulijs~M+$ZYbhNR7(l)SQauRhThc6`eFHp?`lzuRzJs7c9t|(W_X>IAc`Tg9Rxf{<=M~^Yi<Nk$UHobfA&Sl@#Hay%^f`SwNUWg1<t!1v^Yt8<Ce_NcX5+a8E$my%LyIyp&A)iIC>#o6X<vA7I6@U<8;Kyyd1U$Z7A%*E09H#4)J%Ctt<n<Kb@8w`1{a%3-T$Ahy<uQ^eQznJihJP`H$0?eD98Y|iCys28(|Qcxz0#Yu6GEpDZ;>cTh^L5$AIp10$vUBfumm^sh_?-bM_E!r76*=ze$5i%{%L^6*|`McPTUjOt>guy^GOLs{E+Qy1|8$hL6u8#Z$1y!MxMgQ%8B%6L>$(sa#Zv++7Rd1JSyIoctOG!)JbiV5gCuuwk3tPAmL9I_w?AI#X>$J@zS6UG}EU%=Mb1jnei6<Ij;p-DVy&uf&Qoz^zw>ti(k98>ArNb*O$I?ZOM9G5bHz;cU4kf>*IA1faLb6_&$A0N?z;v;NRH^ef_!Gon`<#)?l<75<nU|L2)O14hiFu#wR}4BBYJ>We}!>=hC^h9r{fRSe15xaoQtLuEwV&%!I|emk;hl<h&*(tZ(PW(StL$DY09i#7yMXCXRbXWq}s;3gpY$aZUF<Mt|v2eVU%vo$D8vE4KJt+0Pr>0-qARod*NULk)Qn1pDtp!wip@CsO`A@d?+sh*0vvHstfP$tjd8iCUKIILmowC67OoQz;`0MzElav!lg4b~I-x&1>g@5u~Mp5x`)EoE}~L(!Q;FbX2xlu<V8<HLvV!pE{)<9=k=ea`rp3IQtz`BlTtVf|~uyug{hsk2S(IMF0(NCH?wN>=#%$2L$HO;MRMfl?Kp*iP0|Idj7CrkM&wo@0gN$zHB?t_60|3pF4K3o?krVbQbkjQ3W{Kx$|z~fvRd|dcr;HagU#OFC;8>;WNO}5B7KW4vqGnvc>Y-CTCn{TWvQa<ab!3?Ad2rGt)#=IXmYapM?G*Fs9$dX^5k1PrN=fXXAgzR#}OVX<7VSgv1gRlV=t!i8lt^3+S*ShEUD=65!4wm5a5>xd`_Jxo|P2r-wyzM-Dw*$Q|GrH@Of^=eP0{6hP{EjpJ91bXU4(QHij%bEM5XHSMuoa7|1>x0}4gTfE}qX9N$*r@Y>ap4Q#FS+w0bPo;~vFg;uK40My3sd8PsxZ8DcdN*qK4c7gHyaHRM1&=^AkN~#(oM&$Kfr7Iv*?mL&K-JCKZd5`j+y`k#JZ`em2}B@oR5E;MbnFI>EWM)gDHOQg6O~<Xd#C1ze@a905VE31<FuHWsQ*#tV1JLT?17}Js>*=`IsSkH;q1^rZx0*;4-^RzHggqkMBUzJ=g9N6`B~R9pz+Xn1$O=1<m3#L{mzoE33pV^{aiFAUhGDY$+1yIHu3go#ymMQGkpfkvZv?WFv=zD0rF#5``-g!m=zlTPQ-<Z<cWyC6vgyi=};{E6#l%$;qhI7LyFE=euf;xi1`Z_J>-7QQHZUde1uJq9q2ZwJv8x%N};KghwP8bstChGab#o=fk`>^9C94n+NgN^TvR$fKR->7UZgRDi;G2sQh=$*Ve+ygKt^DpXucqm9vN{4PS>aeOxD^cPMmS0c@$N4@9*s%7zdvuzm4!wK$W8s((Sp(8UyN6&U2E_bqwr@R%|`Q2ti(4A{Ko9B9x0iK!Cn~uV`iz&G%|sepD2kTAvTq9(;*JptsLodHyxe>zA)x4r!`FqesG{Ptv1LhDXoPqi3jzNoMryvgDpV8$r(wUL9Q1ubm567=8P)GWBjAqu-kh@#_es7jKFs>JkX?JMG6Ab4A!(Lz`<Db6wcnLYrF{bK4#B{@}ujj1z}t{!5g;Iizig6xgZqqjbShh{NutPP)OBkJCF9(%9oLu@RjS!o#&g{H#lB5+<vJhoE&Yt7L70$=Vgps;0B5nXKAyRx_Q|%w)ALcSBHL-D=V6RoANghLB}9DzPV|>fID;)YfG1mV*eqC2a1d&E1T-H*6lD%>#`2AVMf!oebygrt@|Oq@ldVdpTA9XPBJEm7aTg)2eB$n9<wA`bt_~=_f+^x`@TL(hX0xOhb3|hkj+wdEI=?yw)5tSA3R}zo`@%hOte(Rhe_oY+XI_`l)NDUL9x5mCFYr=6%ck5i>%n_v?bY=)zvcyf2QFyxbSbGQCoDwJMxdMrW1z%|UsjtaYO-1O{?sg4$2eCU?Y`yD1gv9KR8Xb@|KPn=%o2CGTopIMYsN+WmN-i^{Y!nN6D_Ox+l)j~LCbT)GN+^iAb;<#*G=wp!X&%h>7}W5bH%J`VDH##x}sLmC?zLQsgm+dtx0tStugl)f>fZQ2xzGjn4Q(wDDZUYiaXtA9}VL&rOgV1KA~-)F|0&p=OuR;`u!!IWs&Iveg8%&U&IZpKg+HdN6D(7ho;BSf1%e)ah3rI4ZQGlA*y<>mw?QkPt7NkHnhBh^oZ|FFNCJ*^C8{Z$=818je|X%QI;R(m2j`42fA4GZ{R9~cevvKY|!Vqd&#DEl&^wO*4vKrsN6An$|wCeR<B!;X8nsS;)8u0k7m7>W~t@O%byKm1H%_@?iQFRUr1HN{XxlZz^}H>BzU-+aiauXE5%hrhtDqqLPFRn<M61*vIr9(evcpa!>9dxmmE@2N0&ZFOQpg`%HYoO=#wMH^<rA*E=erVAgg6Ma};HJpimR9FtuA7|7L=ZSuX+d%qfMLEMIqMvmdhATur*Ga*hpPMmw%@Ggf<3BG{9+KfdFV`Nz@J}!)NPnUfA5!C=q+{R%pQv$o)hdTG@K4Mc!%F-UyWvoW_>*=FraQ#LnDmo9Qjn&UQjmwrln&>}scZ!(pUM*t7vhu+ev2xEHKa<!!w#IX!#YqE;^AtXszT{H^N0wiRq2PVIBiwIbXmsXHk@vgf^?ETUJ+9+S$Sb)pvfsAeNBS!dj+-gge-wv2C;mRP8=6HnB!^a<J$2AdKfeX`;K%HLq}o)=woEQ?<+(MO9tJ6MzP2&HZ6(el=47|)L#MDGh=A6^Z496Y2!8t+my>=JL7iG+PK}K$~HXXhM^sxJ*sQM8;^_PnZF1PXR8+X4sx$TehgZzAjZ-LqawITusJ_Q2}v~o{M+oDZDtO7&)E<k^ym`mwzPp`YvZqyZfJGwokL|z&(6D{sR`tY$u)R+9jUINw`0>_ydIu;H{e&j$o=rqb=V~gQW@(<Xw<uh<IfhQr58MBJN^lZ39Mnwc+A3Q(Z=KII4<5ZLBbJ<MSqdA+=>D*3=>l%3urkk1d>MHLVQ2?7<A=hPXb3UzEy0Joya8UvKX5%&VH3=CnE6lXONe8l{*(yDw`wu<B@`iNWLqQKlZsCHyp*5`!*FKo#mDCtL3YcRLN;3YkavoqVEho12_)%M)xNJ9}I+!ouE#hW{!<hPn}@~C#V4eI=y5~Qdwu0yEv@N)v?!4UOO4iZJ=`-0%wAm@3`;gwlDi)c&^QeI@Shi0!5UzF|2B$RZWP5H*=tt&Qj+t(al}Tu5|onT}GD-za^7`w6IS4N3#E4C;cy_lO`0%s`N1}KMCdUuXjeVvod{hL8PU)eW9mIDdOpOc_AWq)Qc*-B?3C(f7zO13o1}oJ5QtOcnl4ll29+DfvvAxNFU`>LWh=k{VR9W1Y_r_1V&Ft&z0s&hljG>+9Zu;=4)ai>up_Jqp8}a#0DY#Frk0jz|&}|L5l?Rxjywyqb8))70>{uYBV#1G`)%7ljJLjpp1mkCkJoqkw(+>l{A`r9$TZicV~?z_)_;)jbqX&hKw-BXStAGIQ6)Hp8zwHBYa;_m&yxnxsc-%?oTU`8)w5byt+z>ydCSR;b}@WL_X4#YDPswZcJ0UB7RBALw-^~OXn5rrN7<=`RU6f9palwzrK;Ad(26Cw&!bU8*x;U%{!FD)@i+mc{*~f09&WMtX)vCe|c<Op|B>Ad=;`euf>k_NeDzueivT;JO+6{{sm0^8+dsWUi|QK176;SmwyW{0WqhiBB6=sV$q3_UT61M|54`{U|M4A6S~uDbDecf&)UjJ2&Bxa@;bfb!gI(oY1BJMy3V?*SS?OJG?2El0nS)1W1MA|?2fi2z*0?2mAM_yEwM<@$dUoEZ&1}m{;x3geFRpKR2heZ`~iIQ@8RVuDX0?arvDn(Nc}QdY4vw8^97`OB7X=oL&XybL1W2x;RVtI@~>g)Z{Q`NY8r_v!Tu^qrN!gr&}jT9$-v8z$#Ql70p9&vc=<8BKy?(k4pTS9F||`9rmG}>3hzPf68Szdst|LYrieFW8No~;H51DdYQY#lxE5%<fz(Nh<~T!``sh>04Spj2pQ%}jWN4T1c=(|bT351mA<)I>z>f}E*TLxagmt~Nu9wmEEsy?#CX1)m*%agI+<V!U)n;T!#sUE_+0`rfJs8iA$*u}#*VEbcOm<^9yPeK%XR<q2@Z>TgI?JXwU)k{gNUcmuuqZeYB!gu^%X&Sf-yhQUKT0dJDZ#;WOQnB;vD89+Rf;BSBBZZHc_1dS?_0iz$qE53!lr84R87@99Ws$ZiX9<Ej<E6uP#vY=TN0>2QRl7}zTExbz8<t~GofL*1|BMSe>sf{cPmBLf+=%9)mb?iq9Fwr|LrG`1kv!o696mWR#o#rspxjA6C0=!{Y2Y^586cU>#7Et@eQmTq&F(-2PL8p3QGsmMIS2dgIS^vYqG%okMNv9v*@EdDNGk*@LDP!D91mlk_<H9A2mw{G5JRwa&Z4+iFi<fe=LJJKTa19YVeQMD4iu9%*H>~!*@T<hTr|zEFR3oKh8l<ZRUeH_{VJuaQzvcaWEVIS+*3Uh2i>N6zyb#Oj^FWZE{kOblFbc@~l5E+UK}^iu_0v59b2$10j&q0;0}QiTl#DcMD*@;_3Nm@3`yYMP5{e*exY!q-QrLi{eT{ir`p7=hlRBp@r%<_g~q+a`;aNzKkgJS0xWnw9*&aIz@jgc8a&rBVAVT1VS+<5aOIbC`kx}2^&HoUCvvgN5l4^aK`HGp9|yNBNsMVT*rlvLgqs#Zb$s^mCWEpoR8O<ke_ctaR3w$#~<2g^4ccZDL`?;T$@lO8CR=)5KueA!a6oWXF4rR^Q|J4P=pb3`@=x~OrBVhv!m!FK4%q}x<W2}GQgZ?5jw9eNi5L=vBdCpc3dn`Y*S*95Ti_Fylv!(B}$)iCy?14;bGHwy=O{2J{A`C5^i!!>088>bRm%sF#fTb5CVciT;TIoC75+0ho{o0-sw<ZNK{LdbgpqnmB!8`w+M*{Jkz3`-)<8WA#;H!5mQL06GEF$O~j35gv2nfbL)!XnLQY{8o5AM0-tdI7ZOErTV>%K#fco;nikGiLX;*1CI~Z4IEY<D`D>CTEurvf1qFT$QQ^~o6<PV6I0!qt-jQgOz9dDW(LZi$d{G`Z4CzV|STel5Jb@)cKw!zZobl41uz&gH9bl~q36c8+g{52|oGXYbAV3NTSZu3cYdD)~@TE~v?2FrcM^GqR!ALD=QDR(oCkfa8UtTjimvBf(Arq%J!wI1_Y3)_V*Ivn^_nEJ~zh?R}eHhv=Rbam?0{?1=+BhULnk%VhNnozkZ8x8i=D#Cp{@16@e^5>XZ$HgQayQ<l{J2Qp$cgl<=WLJr8QVdKZm0w)H?(IUV}X$rv7jzdDGJ%b3i#rffWKJR&sqVY^P0&y@`B4-W$V3k5gl{boJT5;f&Wr2$ihD=pPxNH3(7<~f-P1e(1-^V*@4spi>j)ss+b*42SO8lgi@i8^=yupIf@RCT5U+jutkyaT3nr=Pqr_b0H1UdNtJ_l;wCKNxbh<+j_DEL;m=~W;4xO!V%`|EDBAXTY*8oBor`L=_Uu>TNfSC`LPl5+X?HwknWAEk$i`8=L>1UT<uQ+pMX{r5F@s+sxaZhv+`~SqtYlw@!+|;j>2}6qj@79Bk+{0VI5dYsrjxU7FFe|sbt8bFs>QTK`HOlM`;$G^iXTI5QLP|VNJ3k38D2iZVtSJ|;);@yM{7%veg$bu{wD75_PClGBCbpMG}(*@nfEC7kBtqp;mIW^`X|z`oQatpIkH#{%gvaYB`O_9)=fy!vaLSlmMErFLAscmG0h5l{wBHLISW=Jiq`GP5;W;y#hWxP?m3uByttH!n;IzM`~_#a)5a*;?qy`I6#dE6H)pTRG8uW{jAA;Yn8_$z#v|z&-)y<k@+WPp#jjUhtGttLkK~pHcCDYFb%!a{;fN*+8O*ptn&P){fA?F8K-XVpL~@I%-2|<3Q!4j8OYW*0dNIE`$5^VCpZrYkTvj4q@RGF&f04g-ZEEdFzb|-To!r2JLsZ)Ur5X$=4sMD|l*3pgJLi@2SI@^(AKClD*$3(DgG~1SVATh%E(_K}aL4JZ(=VS7XP430WlZ+26&xuz%KSRNl+ss)w7Vll>nqP)eQvFeG1^xo_vPTlO@&CSk84CW#nQ|J*uBo)_a-*VsL^Ag&f~AuqL|%#uI+id?t7g#Izu_Fp>bDue3BlY43E#!<FnKp$&7nediXKBdjgi=5DePAKUF&ts&cLuF;)9Q`aWdnQx($h{;XhEfcW9mJ5#~MjY1e@`{<M5qo?Vkr>XHt>g+Ug^c-zGPifDms!Sq<tyHf&QrxnU|2d9jKZ&hKK12TD&F?e^_ffqksFP=?6B7_0vU`%LJ4+j<DDBjjn>8Y(ef9XuX%FseK^J@uJMiHbdXcH%j<){|4^`Q-et5l`D&HTr_tW<Nhm^MeA;dSzW|bx-w59}VN(M3HguRZvFS{uVURo!q-3Mshz+KhA!w6r&@*7cF%z?Wtr0Uod%hl$4t<Lv~)~7b+L#;=?O(sW>4;dRnCr*V=oS{#g37<GepEyUIpJh(Wtw{I*)Fu8WgBeUt--?1CIJYdME5B#m{R2thSdd_<yTjG{>FWJV^#R5@5Vjtst%n)wXxMt3wjO7!CsumFj9A0J<%>9KgJ(9fK)=)ZC+?a~{4Sz0UF~^*mO{+6oU_0g##r~(!>iqt))rC~z)Ur8!W7(|Tt7zb9-?)J?y3$UtDIr%f#-){P2X%Y_t%MTRXNKJREgfp?(FZtf1)>o^iQg~Di5TIHgZb9j}NdKc&(H4x8fgkNDs*6ABq*=&WE7?%JC0%83#)74-2I5PN@{$DaT>D$~@eTe<aTu$j3i2V=$ec3$N|z!*cv%MYsJ>qxh5E@WCey7`XLGqxev(^pj>KNK+WRPsvsAs>>U0!l@c`r%4K~!a)oFn<yCtDiPk4AG{VYzLK3ZLPD$?FHmaQj*RclC98LGm0iLf@wP_LC`gikCuBoWrtl(*8PMe8{M@`3VT!oPZ-^3*j&M6jf^^IrM-ai>3oyti4|#0Mvo1*RhmlU}YwFTD>qxL9S9{hhR7E?Z>4;-M3J&r=i{ds@$oxS#R;Mtu5K<t1MZm9Fs2>u)CSDTrzzBBa;dz0>gun#^0R?>GtrB~xIugQjqR15DsKVv-x-VSxf^B<#);m3ej+q<^mfQIRG8YsISTXIHV|hN7?f8{A#(O~i25{tP68vrK$R#N%N>n!vIfC(|$-^_Z5qP=}P6s!q;*=^4Fcdfp1_*VVkq&3LWB5+T@M>|`Qb}7X!<Hu6(iF0^0NMujh^&*?a?h_++7&&!jWU_=kV91!R@Kw0`oPE!kG%s3=l4(FRrSOaqbg)LQ{$``-K-Zoo0Ew`TsPV(PM$9aHx#>oEx`zyJBC16!V}<*kL{(6^UNSb!n#skFrh@$<jlv=T}pfsK@%FB7g$L&p2pLN?rd-ap)0=O6YuP#1Vi_MJUfJaL!s36fLx;Scxw}|RfII*rt+wgP_V&*NB0Co3`mac3?um_T26?P>Jnew=L&Zkv6$^*(wdWVaxH8F`Hyg={O?dOv7Q(_)CWN!2iXMx1TGljfpr;KOost#F1V&)xKqHgqg82(FTjL+a3(H7B#v#7F!2dO<D4YtE+kekgz`trnw3y$Q5F_I-s1+c5#d3HwK0GVxT>T0IN@bKg<Lw6h*%(?eb|aEFdO7uDCP3jICMcsUgJY>jsHp%b6baN{Fkcgh|U<+IcS}O(UmXv@cEwNkk0PUj(|JOSDRn!S<}CI;Ppe-4l&kBMpw1m6DhL4*?hg(e<1KQQ`EBD6H?jWp`7BHV$H~y9LxQmYD^JRPT1t2O%A_<G1ad~BRbP+9b~s&ZMmZ>j_lgK(i76#5$qBKg6dr_df$H2e%tZxp>W%ibla0m+exPB6xDc|Iz3I9&fV3Y|ID!qzEid?@%Mx(_PlrI{pp+2)bQ9(<~G$Lt@%s9Qz{LR#K4vDLQ7A!=to`k;Cj2J2wdOG7WY_^Phw;-YV(gQLb3cCif<@mCo(U}IkaL#buNgPaEv!63Eup>B5Y#|wSqhBH$E|#!`!a+qLNp#<cd;|<&X-)4lc`=mCK?@oRC38;{=rw438-x<ZmZT-*h`2z+F*p0k}D}B<1NXm0K{4)A-Jc@zbC5*TgR>l(3!(R8JMCr|c2+ls$euQ}t?B6gx&jR>yYZM7WK`oETZ)gyNaGv(vL2)ZU^t_He}QnV<2t+K|d439uN>BLrCdSK#um@K+uQSIpP=UJ*o~CU*<p7epu#3(vqSd<a$iJ3CU$8-PnW2FXYzXK*~u_5#~zTWP6H=zbYF2$9C6Y)GE^WK$E4S@}Ci0DlE<#6gGufCC*SkHRk&r|Klo2NF2L;}_>WQ&W(DjfxP$@I9^mm9(pAtMwr*lCTBs0wQ?>8@<pDm^yZv862kuo}!*|QPwlR#l>dJCN44+f5{!+Kllw?rK_z@z38T1>@?wH<R6I<iZD0uy~nzHhsXL44e?Qg|KBzN$j{+8{W>vbQ5*sQZW*(v5{(B`E-scm&d9->&%n_;%8j1h^vZ#&2UfiyeK8n4LqQ}b|Mm7iYmZoMuMb`u3|s4IYkj2f5H)-xJbZ#4K0%!vXNI4m4!J1T8Ok;R1~4}d44}0P4xpjnTF(RWH!R9kV#m&kL0v^P<HQ_WFV>uh-H_3CjZmPs1%OUt9rY9!T^`S~b0k6jXLf7$5@_18nz(<4g`pY#+t@VsKz@dc{<3#37v)98@1RA4V86LwC($7H!#@!HM}>7$oU1hcy{Zc-Ix0h|-4TO1Y;e#9hrcY){lmU@`o7;E^sIL?hW*R?P^QAQ#y4B9xB91;q9&@anRQtEXR%zJ`-N7d&gNjBdjrKGRa02iL904Ksyz{%dHEn~@SdSGZUKC@7QH<YD0pj<&T3fh-V~>)&7i={0#IP4C9Jj4TAN=PEDmY+gtfi2w)d{K?@LbCq09c$0}nTIL7{Az?-!kWy3$0q(v;oR_${5ayBxn&UD2H@zHLSLSGnTu0_p918BCX8AkXb`DY#DXIelepzaC6y!^R1koBV6AvkE>r4~OU*JajC<Ts|@4XQhv0m4HlM9#a{?3ndG9b0N+kK^Ath)j;OlQlFd++X&=bd`Yn-^sB@teO^HTNr8|piqZ0yqqGbH)4eJol;4pOX%H}Yn?B6lwhv(l<P5~AC+eLJe#sMq^tJi~+BOLFiR!WXByF3w)sOY|R_lf|@^7C{Cx67l)k<gkn|IzB=St3H?ZD-!(5!o9n?4b8ZAjp`rLo^c=Zeq#5A9WckaNLs<GlD5sdFo7w3BCoZ^uC6fPaqL+7KE(Yy^=BEoTTlgqwa%HoDym%HOHCmNFoK3jF*EMjqd>mKlOD+h)STlgBe3kvoUb@p5PVp0i)$(+G}}m2ZA7m?IZ_uUJr%CL}eBg=~a~yx3PJ@x(ZT?|r3tfm-g^>5M!P*!Wz9Ko9K}sBb3EMIml+a;|!(oS^0zgc;6*rL1ko&K9?Afg$ECXoZQ10zgd*m-L_=bpme{`E=+^z1Ww9{+1-b*ufk10xc47AtChqc@G2G`}9O9ONlRGLRNT$9Rkx&h!e9Je63k<#0B1ld)bmf_?d7ykivr%Wb%o{KwboSTDRtTyDZj<MRxu_HU&`ftuus8I~}pHL3&@=<2keN^}cX5d5#c(s?XS#veDmyB_n7}_PHK`UNG(iMI_{Kvc+m-U<a+Th}dNjojbV0y3l-0nql&p1SvwfPm>7d4CbckE7JFE#(bMOq#-JZ%GZFT?K2Q|ZXH#DQP{m?CaSl2$3WEh41g!8^_ju74)7xNZ192<i!jMcZk}rm;B$_{dvn{^kKr%f+xE$cxMi7@r_V4isd+n+F%@zs1{?(5?|&q8kocuP+~ylv-Z%2MbGHHSUr%+oi8~lg3zjV5o)+`-gI>}cPqL*;aX{Kkax1#eX+;`_7Mr>7w$Hd`=DE<@u8S98#GuLPvs_eKXo+KoibWKLbsSlO*b%PGygRBGJk&kV+f!W=mBB1-Vo@`Q{#Mz>$ORapiu_B2;eWvv#j9(HMX@J_%n!pKaf;WdGG0DH>1X|y+a9-a@O))FCbErBxja+$#m=wyGVAQ^u`iDFfcM9Gw|~>tKV&Nt`gFxMMLOn7L90%T^p5t9owALAJhoUK+q}n3ph!{^Gj12@COCBGi76QQHC`0*{EkWyvJkSo8JmYzez2%H(gnJk)nUPMF0wA>9=F%#LQ%rvWjJJP@5^V{P~PN21e*hIrJ;(WLfBvlmZaKF@DY5XY8dv}J?n+WJfOl45!jH&>zbTIg+2KD?vY+6=)f^&*I=)$e;*2D+<UBlbZnHZC;X7D3<fYB8td)r9kC6M^dEGN9JdYh9=AD<j2-G90!19`9U7~E{X@ba<S6!VA|!H8?>^^|!7-a1nWxz+Y~<X`ws}yufjsQTVZ_&Ma+blE>+pG*eRl3yyTegoo4&~AjTdHjEOzt{jrNX=!RjAMw5Tjr)e2abip0kp5P0cG?`YYc3h>YIAhYCnWyyug62expzqRCGYsu(heoXn4=$~iFX>Z)*EGl)vHY}>RK-_3PJjj4Cvd_%9xcRXtAB1nW+7@Lapa!irvO}DRKO7%y634j!91bih=T0SfK`Rmq62<S{&o%bYh;5{Ic+lD1%eFhQGRnZ3s6eYN-qI~p1GIb5F*Y}6yWpB#u*D8Wt86UEK&V?a4K~okd9NGL2`O7=DE_nOIT+4`@rcT~m)ZNs8d3WMj2)hs=r(dM)aa!r&UfN5LH-fhQq8z0y{I&Yojt5UagYC#IOemL5*itu)xsdmNbwm}pw&Kp@!6;hM(CaPlK&KkT8CPtXfA(&jKgU$er6%QmRW7o&*0_f=%7fv&6yMO>VpA4$PeKKn);G7Ox=MOD6W$**c^G4Rb0)uyzmf;d<nU}z_8UUgq3p2eTkSp3ms#iO`XHS9zA^-i#&}qUF7e?Tz^L;;}Z~HYMiVE$r+H8!f~DjKfD*G&=nB>7;TG+$K7a}ffr^b;Kdyk&rGJywv1Rk$t)b@otTJ9U}tzNB4KnY{(;whIGVh$mB}i;7m$5}6osu!*M!sa?xg3f)%o>dM?39kzf;tH&y=$|7S64vbE^Y7I=4P-?WV2WjJ20B?OX1LI8vn%gZY&wu09bqRM3VB#!$5>5@+rS6h|z1uUA~FpzJQjawcp!Pg~A2mJ2K0pO#mx)~!DKXYGLlD?Rt6An&F^lvf&XL<&kGw%q|`u=X9b|M}pVb@N8;P3y)4wReOX8Kd%!d@dF1pTI!zYH*c_GP1&I+a0xSZPecruGm9Y?7362Ct@pxXKeYwnl&O++PW#xDeJZds}-wB%<qOaX-ij^sFE{`aUyJ-p^Y<)aTZ3=<?g!~<7C)4M;qrD<I^h=P+9OEM5oeUlfaO+`n9vybD5mo&=AV_O3T%jm)q7%cXSRv@x8M*&W5Wx>8j4)C8lcsMh|uP*arviR2}~;hF(=oo2wafEvSpZ9&krYxv#6Qsj1S%km))2Lv>B{S_b%_!46uwtDJwB7tx!-`U+ZK5z<#7JGQ+cy)#l$MYSA?6zvL}jW{YJrAI%P<JM!Kvv32rW<X23XRkaP*3{FQ`oJ+p)441G1HPhR(ruBVV)j_F$d0-$QsO`nOD6+onUYR;D=&8IT+q&xbirGNn-Yb(W9!gMGYbMm5xw!1fvW?XB2ht?<O`9=&@JI^QMPd~%;AD2x}Yhj54Q}^Ed!B);y10=tyGnhDd^h7v4S4#3tVjIg=1_$3h-|a-cJVwZ)$P18L4*5X+t?<s9X{A4`K^Lx{^1@Hy5ri1hU>(`YhA1GI`ay+~b#gPjN#Lumt;<vYypTk<wlMzCXWkb%<)|N6`&X<QDr{*_wqiRrsF?5P_rq@!(MyzXi-2>s4zwvyRTJ3-p9CTRzJz^%KD<FqpLNIHfusQK-TS>m7x44WktWcNNx%Mi<r;(3*m^o^Ww94gS|Oqn-|@=hNx=YxUux2D+$$NpFZ0mfXMtJ>mL(y1qYDc7QHC!1g|jw@^&0ibJZ>O^HlhaIdi=Nc{NhyJx9=Plg&#tPpG<?P@x^I+R^Yx!f!Gr$)=)>nkFbvQ<0sj5U2P_eSnp`C-Q%+OdamI2lV<*fL041{urH21yMcrYs|2%Q4z=jIlhq(!HsWpnl!5iW5Ug+0IcHE>bgONbiBS*g*k{w}4%|#o^jMy0$NpU&Mx21Y;V>>j!gCKLF>T8eA2k+=8`&KkK`);J1J-G27s(-Ah;O-H=4A75*{*zCb~sC(szop)9?h<CwM&yoo9Mu=^8YKqNkgROKO<66(^`)|Y!8+}EPTh?eq$`x#)Nd=8fqG^S)x#p*azu@Qd{rL768YVW9Okw0nOgZtTFHhm7~>ccNoB7H8%uI@k<s||sPz!6H{7S^`k(YC|v>JH@VYW`LagmBmA-cc3)89}KEA8uMObwMQC_A>t9z6^E*>@ZY8^VOaQp8pft9^#hKM$ye&$EX9pB~yU(ZM9|0BD!tgGbX~{D|J?YA3x1198=>zt#1M84^);TD$xg}PRrOH{3DS9{P;-elpLuM{Y;i~q($_JwM%(aDWXd)NApE@M8!vS_?=<}NHY%UXq}v?g5O{oC8Hg9NF*IglZT`VP;5vo9W%;9StxB$j<w^VqKvU7Jk%tG={?dTO8H$0{MucW@<<ha*N}0<f!}pVVY)_qq!GW{qC6_Ye<8)-RVg{D#ebob9<|DUVUmNd{~}*}v}hZX#b%82+!W7<E{K*ePWvTr)JM8}*iL5&!fzp+agUd;@evE!q)8uPm7{!&Qw%YIBW-`0kkt|N5F@0*Pkn+=BZLgTgJe-D=pi}$4Nv4p6G3wmwmD-CocwQMK4Z5pb_X$L_yyM`@}3CU$Do5f#GD}}CBdN~ZVd84G1IvJ94j%|G%ky82+2ljTg*uc^pN~83i*f^k<rXA6&0IenX(0u!ooY6!ZpvE&t8A_y9<H(aNRz-Zr>gIzI)dEHGR0Co-U{ljQ;S6cb@qEak`*0Y&%HX4l=ewjCFWL3HFJAW8E9>J3)j0jVCGX$w+RYp9oiV(N$d=`f&dV8vL(2NvTeLxhclL7r|p!z(wnt@2Hv|AVdFUXGNDrbhE(>uD3LbF7r0C^zTI6DVbonaY8IStB`IJ=LMRC`aN-yCOr`%Qv!bBNzWunn((y8G^b4ouf)aE&fsY~WJp)SJ>vynj>>?H1IBDo1`%;N5eH4MeJq0ykv$v=mTmrdoY9V3Tk=?GbO4;{94?z-i`T>_3VY*MaB@74CI{FsznOj|ePwb@w&o4nJ7{|cRoY4A?OB(F6n&AL{AEc<VF^ms^r3>LNNyhdX$|zONkX<d=v1BwH|)VHgJD$_t*Y|Rhg1!K;%1sx^~=vwio7qskaE-?W{hY}-2F`{xbpzPZ2WDGGZ&C#rLzLRS&o6Lu*3PPlr^eMSSR?fgpG7e1-OEdQwi_;ZGz%#jaDycmyjB*{&5`bmc)<zy5zCGF8x|x#~=B1*<*cO{<Xd?dF0m>kM(us*ZR8jkzY@Htgokkt*^@-`E}LTDpx)$CDcR)p+Pb1#H84Vd*B@{cjvLm6g1g`ZvHUx?%SEMIP*&ipMv~}PfGsSCl!o37mu(({yVVt;s=Y~_@N;@`sDdJ#7*uV7tbzH(mBhHehxdAEPx@Gh>x+Pe8k&AhqFo|n=r;5eA9TiTWN%8CnP)`{+(37DL#ROZ{}?rIfNB%4q#++*^vcXNLi92d3xdyk+7u3?Ttm{eW@fhDsM_TrAsPaIe9)+iW#JuH;>~p7S@O}OjKP~jdFi^hKcz@QB};zcF1+XO-f@<rBNl)X`-7r<cgF?e>v>(c%t~l>Dg!+=SVu>UO?zuQR&60xmkBK9lbZs{*X*edly*sSXRut)Z_NfU$hY}uM63<Ejqfm3fPc_)ddk(VG-O<5+a^HJr5yJ9T*SiYkNOh%Zbt6u_MC?0I%~2Z(4KgS=_@m?oXQ&k7{V%$NH;!=WNh(fmh>2MeKb?b~J4o)EjVZvlDLe+gQwP)E7sAN0D^XknaO3f%P8!n$DjiN!DTxHOq7&M@<cEIU1uhG)73r$M#ee<Z!ETjw4C9bVkMJ-7H|1I#u(<D!XcNXp9(VKN5}jFOUT}Bxa4e&B~^G8uM!L8<M-4l6!dtYsGJtT`%)@GKH;o3QqxHd+Ob(_2-$+C%`Z2#3?54bU2To^9Uwyaz&BI-^LU+CGz{2&M|@fY1`$W|C_m;v$r#a&57(wOy?1S{OO7OO-y0kBlAlW`5T$S+B=1NgJ+mLXE?8q&g*0H`maJSMyjrlHtwgi`#;s?TyKSOgX>Py#&JqJ9@nH5(V0bS`~ByFCF}b2MQZ#Um084Oo?q_zRFnCsE^n<ZT+~7rwFFB-MSG#;;s|!HtN-JojVbDhlcBCtuaU@I^Z9GfzwP<n<r|kn`JJH&cX;9)J#j8PLDCZ><#~pgcy?8Cuc+kBrt3{_wqI`#NCHo;XD~&FRu%V5*41Nc1Y;@>n`&rNO{lha{XA0(Bj>_ky4L29spT`1ZOu#>%PDO+awdchl9XxyvWV7_JNm<KcT=?k8(kaqRP}JU;xJut_#ve~{O}7IKTccOYRziVN(R)+2nT380qy5|I}QLjUZj9mWh1!0FY2o7Zxnq{iGv>>)JWj9QF*|Kf3PRxKo<U?S_<xbm?Z^wJ~YBSA6k?HO8mp3oB;{`VJ8OCA4#O(DhwjkBii1kZzrgzc*q)zGh}_hns+0;{ZFy2EIqopm>pkG(;jv?jT3-OrUTOLv9fHv-UPAX!g>d-cQE>LN?rbCL}9%;|G)z|>OVB+h+Y-v<K&CmI=y|!IlY|){PLe;OV~8vZGBje=u`pZGatXHJ{)k;;sg%@12w%=BoRTu9f;`cPA5s)p?L67Kzx^^>`*eEQ(Pioq@3HK6kNbaMM}U(<zn3k=qPg5=9-zY#r7&llD*TjXFXh`6nEmrMTo=bkg+=%jv}<jh#(-wY@b8l#y8^d36SRB;6h45g34|ZWBo&Yqo-_8LXVZrH^m-uNO{PL!a*P}V=*iAe<Ru^2&9T%KF>y%e_I2mhnMxEktmccQJrhKCt@%z?~53qh^B5_!Jr{?-?hH5wTiY@`JWCHGS-F_*~-)3Qf?x|yxh`&jMg<#s-{>F*%qYLEB8D7b(D5@NL3Bi<qvd$!{5&aV*g!LGg_A|575!b3)OX^?<<{!_>X|hhu<_}AbB%a3a+Tbk_5lB*hKsRmNXH?UwxG|zzHh`Q@4TjX!BvufHn0JM6#C(34XpL{4$@!{Fo>!lj4LW%1ccWh)k8fqxA|7|0UkxA=dMJVT5tZw)&?fEfOgqWAzXz78JE{rZ6jM$w|G2gz&e;H%7thkA!cGl3Q{(=dFULc&nr><{!BT*GOWyT_oqA6R&M@+C4)c3kredwb=Z14r$?G^w6T7x8&H56G<$YmG^ueJr`V+j`Y-{(*%@<7LTz}`Qq5(+=4RChBE@BX6{)xLB5u}c2iO2H7PaWoeriv$$?AwF1Lg;luglWcx1BWG)=C~^Ai!X?bjk{re(z$F`8C;zO}%)m_)2cBe{8R;A=hp%<FyMRmFiZDQm-TrMTI$DFtsq<VeFS=~vUgt-h}T<v}ZaEtOUJhS%Toz5W~hZw)Z^W~#J>(zb?FZ4te7^*E)oQ!4v?9mtKU5Yzm#J2#aD=!t)V($<Dlb=&OS&~odAysk3QT3VMCf6FNX*PG?l;KnVhw5vpZt3VFZWy)?Neyb*@I}5+9!a(|VmK0p0+KG9RbkBO@htpBjtozycuL)epeJ&tQ)hqFg>=QtHk6}_zU`X{XWkCly>HING<G?<LB|>co6OM%L##7^aY;XUhc=VD-lnd)FXY0PRlbc{4>2}ii#B&*T(&22=F5@Fz5(JU*ebOXjLfKAmiO>ZQ{^OD3+^sqxkV{3V1xc$ZPFnMlNUJ=dIUq7pBP0@HUQfogZg2z;X-!*_Uxu*_(O({E)hu>(BbzG3v#?@r84}tY31ckRq!-2uL0&o#`v_*`R)`I7i&g&wxh__yE+68VR@pAhd%U(YKxX#Zp!t>8R&Se_a*?hHP@bm>5l9v=NeZcTUN=`}{QYT<ZF+WM4&0saR*~>4ixo$Pd!Q8+D_BkdA>3mFlsNuQ#~#iiZJOw)8Cophk?BLIb@9SkTQY)2(+hc-IZHE6cfh^VYI9_=XiEtyj)dyWEv7B3*qs?S@POtgEGUy6PudR>yFh~WD_Gj!0Uve33o<2<!jIHO6_6A`QyX?SKpTOACp5<cm<co>DS(;4^Gdia)UbiQB?c%=XMMYF#mDH1!@6CxZWp7gU^JBh?2e`e36D?FMi-@ZeHKHBuAp@l{wJu$eGnA72ZBd8Uu|AJ6w+0|Jwtv?9yWE*rVgreh%p^nkwSBfg{uo|`5|LXq@;psdV<b5M(L0J%9sZslHZu{S1_eb;nGgJv@`fDQ`*NE_lJ!mv~h$njxF!sx?f4rex=pFqPnVz=({3@+?9bZq<Cf)^m2^tLg^sa7b>_5Y3o9&dj6K9k-{xU3b!0>(w0*nI2`Dvw9O$^%QjmM1gm?&(NijV+nEclx6+&j@aJ}ZagPOm56=ea_bk$$BKdpya+oev_8Rc_cIWhJ@t>q&ApH}q6kLU+!u?-SDnyVm;uOhH%q@9*2=Pi$ITvOpCM6=dA@$%V6Y~8ru4^1Bz<8J{Tb}KM)5n%9H<r@+(zWLU3yj`LshvP}v|U}`WXGIbK*9>PIk$V^_mG5>#6Zgu#uEcE7<-COIM0eWg(P+v8|D7;2&8xjs@TSy`}Uo(0WK4*b~S7`V9CZ=>&}F%bpT6-q#^t9Bq2NLy#d%+wc85WKq|VU=y=VucFgbckFIrw@@s>&|GxhrrRaF@8+}alR(9fVXj<^^W1aZB(oS5MGx3XdLZ%j!wJ~3O0-Y2?P6F)tIN(Tt5CZ{aAd?<TrF3`Bk`!_+LX18-R29cHz{0NS(ji2Q+06m%DH&blGy!&~UJf0P8-)xPL9ji^65IoEX_sT2k)0i~=R>;2gWIyr%6LhOS@E%o-#Y}y=?sS&AyFQ{ASfC#)TyAeEBwa-mzeCmSNfK_R`5?-+E$MTbhNI4Qn@yos8dhTP8UeVLMa_!!M)zY*PXXz!Al7kENHxP0DItp8~zI=l_I~SQuJ??&P@ETv`!U%Q-*=$O_dZ}g`pds#I~MkCQKWAVuFR`Oy(#Bj=gu{P8(Q$Qt*t?Cr;vz@STL)t<DySxGRLrCr;sO<b*<yONvJZ@v2gEJ{lh1CfULzWeVtgB=I@P>U=~gI-j&5WEjj&M_adR7J^t3?ish2&o{XyCg$d6y)0j|SeRrl&*N6&?8zRe*I_A34=RhWp$P|{B}<xYCia8uq>MvFDp?bd6d_Z9so*Puq6&81OcPPuGfnUqiBxS6|C>B*5dZd3xIW(D)<-(nFS86QQ!iI8cSkf?E3OwWAx7Z{Z9Gb8j|$mqCU$Hp*SX%k-WbvzfH&C9S_(3JAwwc#xxd@rKxu12s#^Y@trWvOTMYN?w67>8LNMPK^v*WXD;98hr`Wk0ziBXo<jvhuXS4ify&R_7lwG^<Tauiv68u&^2Gb={a22Mt+2S2mBJLBDB?&&AcS4qsedJ$9K1^sbg-&q=zq6wON<5clr&D^LphUM5P)P#<ZW5B*z{&?Z3}5jD@_i+jtpw}}A@|{1;DMEopdyweDk9^_Y-v8(7AlhHQJDZ0kzJOJa({VLBz=h7i^r&lefX;gNncs?*|TVik&XC=SQQZKRgg?#N@96qS|UUp;*wH~)@WE-lOg~Ki8qfXM=_|ULva~r7%IeNP_S|HDN-uVQ`8_>NuFdQ_?&=L>bIg8_EXb6UG~bQmphibKh@>GQTK+&-_F>Z!}d<v-pSbaGDXgH=bfTnM7vJX##5B`)IEdsmD5*GztQbiF~tqx;&!^YJ@^Du+{+mDg$={BVVE(DEbn^^p(JN@bmia<Vo6qQpe|6tNgIzNoiqipfQQnyg;ed^P&x=a{z7B7S@f>c0Is((O1jnftvWME-&RYzv*ow5<S=bk_9*b%g*iPqe!Bw$>GyCcxC(O}Uy8P;b&nEDb_A~ze}y2fVjgvc94Z^819GS`$U8uOf>0vRdSsB96x`LkB!Rhj^-u5wX{^EKwmd=l&;zU_ab7d#;0|owiTU5`Ta=H@%}-3(?2DOp8!_khAna@RrD>11ibE7<b0e1<8M~wu$%=)HY0tP9mNJfP70~*LZQ{!KgQyg`$<4C<F+%&e9=#1$Mf{z4_hN1Wfkoi)vv9?{z^xdWvKPCjH?AsQ9t!Js(fVEfIzP$iYs30xTHnm*TbFy|X6Dd@-w#$r?ee})H3o=`Lg($FjC;V;^dAX6yFR~umO6Nv>KLbWPf@C;V$5+bhBEwUbUpKLj?%iGyQ&_<7xx0b82a|V;7oHGMK{$-cr_}WE%;4ahO-{OS%txLy%b!N_T;$ueBdjJl6>ihl)zbwENU<UhkqeRRGf68k>(`ms0zvqPy=*!j$DYD;r<eia3z*vhD)A;lA$3<+K9dR2e9MIS;5d=4lQiM_BPty7VKHqhwS@S6su-RQ$#6FZyckJo}va%gXC7wQE{yGjbB@kChfe&WyOS7uA0+s&lYV#2F#OqzGzI6d=n4;2(<7w2DXJ79qYd0pfwIgQ%)($*|tc8lmh?yYe}-cMEuw-qnRSTngB(>`GI*JS4OxYO`R3&`41<oYTy8~i|Z^oH-C{Qt#W6xmB>s7P8M<-Zk#0WB!{n*BL5dSZAL_~AWcn?^4;HSy3rIa@1o1Q*6TN<8)rl1M_2Z9+sQ0-%1upPpia($bZiYaZP`A+0tDL!WQJa_*+t*Q?V>l8P6ZxNJ8}F!U?6o9mxAlR=+x84rXH`gTPL3u=Hlnzh0{xY^b+i=lnGc)Yswi-C8eljCm??Viia;A{u-pjheK1zx1`%mLGmQdTV`-nFOqY_{DgP>0$>N-WK5qCrzGV60WYxaXs)E{GstN;PjZsxNpgwbgw3x{rZ7(0?p!Zk_ipT`jyy@7I1{o@#3{{l)H#y!EK<|Yf%LyTsnN#9o2&KKu|`%3v8O3k3bEVY5*TAUt+6v22c>YZt@xj?T_laJjuV{OVHkJMdgB{KR0-|*#=Q&Bj}$!s;(79(F^eZ5oC=inuV9-ik_Wbnws)<!Y#a;OkH!a-xA+yaY*+9(yg0;|82jq<mcY#0y5*o)-r}7ccMvA{&N*a>9Pxl+Vjx*dV!9&mmy`AqAjpWe<AjoD^Mmtvy%=rBFXN-!-(<-Rtvh7Bh>TIwFSsFi?aVavb4HFlj(E(IlpR3I*<GS7er6hulP`YMk9GhFI|0(!r_dV66~#%gzoJb*!mVy@i-pC&6CgG-Z;MTSa1G9cKNiLCteYZP*{|5I+QV7JbXM`&i9j}8(j3hBasIpc8%FBzDAO_)DXD&Q{Q7v{)Orn5(z|~C{kfZS)X_841i|cc{|3i&XR+n(e<-ht?;!gE$AV|6`h6hvsQrWG-?E{9h8gF)G&=E{rE18z)nPE*A_dofNwPv76*}P1AkKvC_!+>N^Y+)2C)Wj-mQq?%%4o_cMcLLx6lYq#^);B5xUu}B85VI8!y*=7Sj3mbquk%bq$VNpi?JtqPG*ib7ffppZ-(ML>s~Y|ljzcOkS^t>%HK(4y#c4=kN|ViN0;|)NJ8ZY<I~Dbjh&=U5!5J*mGW4ONnVNQI$k3B3#C(r|2wr4!~X^YshgM-T$6?*zK#37GF{_oumG(Qq)V8vzee1sE3P5m+4BZSu{DG^p%eGv1a3}vd+_LEQXW}S9(g?UoC3<Rsk*XJNQouj-!@NE^<)boL2WzamX$mMGl>92-A;OTod$W+gwPE*pqkMm2g_J0OOTapVuEzoTpk<y<BV&j0%e+juoEB;`pacOX^=zk14tzg^=H#ydb)|TZjw`+9T^_(9Vr_d=?8_fvlpIfIvgFm2YVb2!9txwJ^c3xw`YQ!z6irQIUER5Ww3vs*Jdy2c8>0cYP+#P1m#j<|Gi2((!Jj~V1s1}6ohu7s50JN<P}H;@1X;LSO<~ES(i}+fs@H*otyVUF9HaL6V;-OygR&|O_8eSLwXB@4I)Y2;iSns9PCwA#W#;{qp`?IqQ1|#`BmV7CGU{yFCodHIFgeAD99GYT)O%+<|p8B-ptjRO_8)%znLa77KXF!bhe$zc2I`$-=s^8mG{#`RgE`}z4hc~x+qisxk{urMoOygRW}4Cg5`AMzB`QvH;Oh~O!Y8(Z`V6>iCdpb#nut*ekT0b=jfB0*`mVo;5>B<Di-e>;jR1V!LQNv;TI;(({VeZ2fOqIOP59Tn$z5sf!}OUg7nQjQjoqSf$3Wr(k`R?mJWw$Bf46YU2XWSB6U|IeybXT=|(BICT+OsG4i<a`;bR$8@3I5oFk5;NF`zx`7`F`Mo8j>kDo{S7<pt#dE|n56pxW7sXnRShQ8*H^ZnFsq4yF5Tlt#otC8fG!5Q}tz0dPBPaj&G6CkN9B?XC!#N8Nu1&InCWo0R9ENc>(1qlIi8kN9;dE`a{i;PNO8HnJ(Bq%}_Rm7?jOMz^1?z3D1+>xSZWLeCqIcDmf0!Rdj&JB)LiBlIL?{`$manJmP3oddY)%!i^;g28@Nn;J7#7gCp*j6ecQ;+hg2v&Rs`;7=QPGEmOah{$y&rDp{!~xm(RS}GtcJxNh9Y<Rb4?3Bm&W}r|;ZbVrNqYFio#8XoIO4SrxbGF({kVVMjr2QZtpQK4hAHg$Sh_JmjU4;n{GFkvs8df-t~1R3iF>w^HIKjX`g3>eEr9BDugl&YxYItgQAd{^qJ|GMwvl`J#cLD(((C8%lr{%OgLT1Y-fg?n1}GC<GPLnDlYjVgIc^%o?#p2t?xU9c8eJc5W?-<f`8K~Zh^;#}T+|Z~80C)Y_ydmvk)Lk8=(VoGZUug;Qwh?y71HiZ`E4~0)0yb1Pw!4K?uqkX|4H<J7lG;dzsP&@_%^QlUUUY7od5|E0Kp9;xD(uWN)$;6+(c4bB$C=C(+~$FA#u|Hq$C)0+$623T=#~o-H42pkD$b#8j95#ZPFL`CT%F&O_apR9dMWuM%7!V_2;(zeBOJPj+EGy+uL`}87u>ENXlx``^U4)!I?SBoH=vmoZtHWVP6K62{igSuZ&%8LiLvgFC_>;i3I`Qhd2s8L6~=C*H4l)D;naM5tRl%!eT!9V_>koW6;og+F&IO?HxmH+h=$-ijBy@cR(}zJF$Z0Kr)=fV{?;};hAiwEaoXkR@5xtUf@2Q=@VfJJ#G6$$04*5={J_WnQ<qBt|u9zWz#tAGfp$c*}v9ZcA0JpSB`y6vaY-QF@Yll7kK=aK<J!p;nNSKsY}!!$b#DUG*cONGsl!o{AH3ULwrvq0LgnvGH~@?h6tv!MW$lOy#fMWDMrUKp{XXCu8$ARt6x8byn=r&MKo1h_KGi*(r%$~BR=|$o$n<g#o<juxktYwWH=y5sO3HD$eyB({3+_hZLdR0?<(GqM#*TDWPH#+Ie`b@0?KF-I5s*F8I5WW8BJn;KoPXSVTEYoKGWclj$wzWXRyDw%puJ0%O9e&P~ENUnVF-e&69=>C^MtJNCdYP>UUx4_u%100@1g>gLKmKqZ1=ml1hLd+#<}q4i8^~hyMZ#$i`<T$q|SW$SVMn1#N_9XKdl^1xf2zIS@j0L0~Qj@=m}f8)7-{2(cV36G}oYUt}MOZJM*GZO{A}{M7#z3vFr<*-(iusRTN1b**-}p7C@s8O?rO=FO`x_~xt6Z)Vl|vg$qaOje6e*8;VDr<PBxOt}XbZPSC)%oY2stE*StVmH`Vs+iR3?{%!@{jlg>(fxXQaENIgW}1#aNYSs5w<cC6T=Q--lUd26RDCahP549UJ?Z^qxMLj}WEzL)XGQ>>tuB3tiPUC%u?^7Mr4>&tbZS$z>9BXy1U%|wZTpCK49d0|;+--arfWpt$S<{dCAdWic3MpMLYj!I;Ny4=|F8IOPi_OlB=XEMN{5BTIn-B(s5ulAFw0q~GIDg^Cd3KEqj_SV3C>WCU@<x)APUBy2}^R?-L<SNr`-qtA6#>+mkfqq*hTuZnZ979PhAA*Clcpm6<}W{3a~$tnIy!UN|S*29u89X1R`*ZdRIgkiRv>;>_el?r)diElPF}^6i69^0Vm;N5EXDz!=)EPr8$ByzU&X+@aeW|p4>;6gnhJh-!5{*Kl{u?6BJ2B#7<}dF60`6?Z{t=cI2<ZTNQMah3>K7pM*67#=~b(q>rrM@r%zO(%DO*v$OPuBV1@c`1JCar;@!;3us>mF+9}s@Dzzw1k_6~9pPOFcB;w7EOxN3%uHJl-x8wg;3V75w@@bqQK}!#GzCKf0UvDt04LUB@Vk`AO2dnKt}iJUe5r|tA?jieejL9a|4=4WpMp!P9JAt+_{|PiuIrKyf(AfFBAdx*dbi_#?){5Ds#xy{@f+=<J~g?8VaiSc?RX9(+65hgk01tZr+~fuiC<dc!rh5JUCFwtghlE4yh&tIV)vv%cvMPE$ppV|E>vwl9YcV#k?II8DNhPwt^7HnQhfJNwjmMf6PZ9lVXe?fkfM2vDksH}yKqPt!EWpbDRGD*<WhueBC)g}$w(qc_X$A8eFI+*g5IllWo|@Y7LO9vAbW#M_eBe0r^qQpp2~3`C4L#PHwzM&gLXF!&xrGY+mNYXcay-~4T1f9jx*kJr-XM@<2a$W6g!kra@+%iocI;IAV1LYjsH%O)eE^9B<yrIZaGr5Ln$JvH6fYEL4r#n)o?%O;Mr@oIpb*|<PVQ?1dCRWzjP+Fn<HkDSP(CWu55=dka6yj;*`bSgEObYKv(dtLFz&Fylg1=%b_09SlmHJ(%GTmfwm(spx>y)I*+`Yzl;afn}Cj33Z)+tWo2d5??Jj*I&ie3zq|i%nf0IGDs>y=wjjKl6a*hVF$aj`MYzsgLD=V$wvj9LfC#KnSM11IAs_~8sdaohAfCN64ljNgAy<!2m{E}q<dtL%iiauWX)|l4%wY2bt0XAlNC<U$$jtT_R&huS;}pnkMz?h+hwL+>mkef-ge4rplXh^FjT@YXVe>esav(}i>&OZ<+1_fP5UzuTG<2FLZ5C)J8+7G%B!gUpyc1o7we(kqn&`MXYC-!1sD{X~cotW$CT#gy6ApnI1I>dXqKd45MzC=VhHUUrg1iEP?n9Qda*k)X2tlb+b_9sj-a69R-O<}V#JY%o4%RqLgh)k1^2wvnb=bY-jqPSdoE!hYa9{b8pad+L6{92Q++ts1@kV0lKPU{y1~tz$?CPXdB^!!T=m9|9m{^`zxymFLttXeeTbZPa&7?YCQXP}j0BvrQS90m>I$v6yKfB~^+qVf%$9H=EwC7vBYZ_l|2UFR}lpek>xKGffy}s<;CE?Pk<@jF;@zk^UV)qAmMX&eV?)gUVrlxImXyw?-Wsk|5`e*%1$CfTH57C;o#SWjQ&7WKr!qYAD!T;+$B5+td{C-061C@Gd#$|ckdfV!eF$Ilu{sC{pTHO!#-`juxB-3`BZaqP3PHw191>Fz;lhXlR)jifV0aMyWm$cIv9sbN5SKaITZ|`@X^b9h&`{<ng-qc_tr|1)>n6}e&>lr%ZEPZbD5rHRKa1Lw@8nG%*zDLK#r$aC{hkfcUTG92%qg)Oc?Y}-u!nE!9Cy$b%EPlDs>G&;vhmmxpqZqr{D(l3sxAPSpjpDbfMex|rnguTXl`aV$i)9@R#9!4AFkO$sbOWsL15DOgLHt0L-dRliAP<M>Vi7n-?cZUI!Ph^t;AL-c#fS*zNiZ|^Y>)Vi?ZxfUo-l@D2s=;g4V@T~_J?==XhW8uy8`%?2YE+DjF3dmxeLLKGP|pgMA46yOxA4KO$3*2<lGbx%~IA;%VS|>d1WQ997DpcOsQ~zm>ZoiU*awkBb50H-=fA^EOVt8k;N!lilOCgmt)t@n=cWAhW;#UrQ8s9&TH@`H^2|Q{YKX^;6+^&qbX)oC7Y@$pQ?&c)qH!%tNDJ)TPbVC`>o9W0jBQgX59&2-3g}dRHWMRmj~80MXt+?%6PZNZGZFXovU8SnwY6L%#?IJ6bW=a_~PM@#8_!fnBVR3rmPjx`+7j?i3Aj_1+8V++eQK&%Vcfw#M|}CHW~2_frIorG7&gNnW=?k=!1ADI6NP;Eg(CIT?s`ZC<T|WWGo<t1YZ*@3to~T$u|+fdf+mHPvV{A#K&<*2!r7XL(fBRQqTk8*9eZ3G2)FBF|G^3(STnBfg6;?6IZs&5usgwB9E7jbPq2bz^)2P4Gux`K}UMf;f9@V*6DdL<7TL9$mzxr$8omVLF_jY#$18`F99(!s}Jt)O3PKt=$zd$a(T`|T?>fpbF-5cj?5<L9y3dXKAS&6dbH7*NgMTTVn^qgq_Fc#<O@pQ?imx#RKd^Zo1D)_n|kB)@@Y@rcZ`2({8q_dXSKMGxvBtrIQVtxdR7agJ-FEZK%2UfcdKNz<kd1pTjVZsr}?xsi=APUo<qKpL;j>PH|aj%IY6rpzN=lEe@74Yz|y05@H2s`fC=1x;u(5mj6OaNA)zMlfBB^dGaUTnk#rCBH#A)RyuMY0-BPq-(l<;hki6GKfaBYk2p&bU)&k<~cx7ug@pd{6)7c_$<d>?vjqQOCjmKg^%RYniEGgtlV75=-Z6=BWFl~8MQk-eaFBJsSR?Skr=)DG=MM;Mo$+!*O?LpGlQNZ;}jh)$hOlc8Ig(4Z_pYzEW+4;I%xR?}n80DLm+cQ(eVT7?Dt~8x&bf57`Jr260b**7TdIb7nH$=}l)jsb&ZwZ`ehq)7N1o!tHXFVn0L>s|B`Ed7j8G^X37@D!Sh-U0BWTs5wo>*y0CGM$lm`)Xe<8R;onH>#Qz_ks$?|YDBk2Y`Tmd}R6r$NK#ZU6q^w+?SM4f~pgnWhtT-HG46{Wb!Pn3=V}5JPOgwmraK!Uu>(l8CC1v;7H<`<jk3O(*HPliOvazj;Y;8Y`aTjw*~+1lP}yJa{1n?IDm7`yN6y9N9a*s!)+!aab-Kdf;b#O<;X|mT5B6b>`pxTT4S$_w#1!r1`?6CDc9Gw;g;fxFupHBR4B=`>TXc#xy-k*FF26@hX!zUIB2p?dI{&EBtaSV8;)lT_?8J%-{Z=PWZrgb@Ds|-d5dj-w}&a@R%{9i!t)y@T!iK54M8sui>Px=_J#1nyx$j+n-%pG`ptFlh^FlQQOF@`P$@+ncVgqKSDrI(SRwjl?uU=JdA#l)4rzDOw(Dq?(BcklgwKtXCRdHjxH+Hd)uF6Tcsi~484HZu>TbIy}4;HgU2o82rFoc?efpIPyXl{#_e+mPJX886kT`fxBm>tR)5-Z6^taSk>_2OE}89iYp_Jjvc%0Qg=2p$JoaKf_m?!me?Th%;p9Zr2p0&)9%hHa6ybnV)Q+9+fdKuSl9Gs<a;T&Ye@Vk(jwHMw`*@5@A_DiY3-TwF=7ZMToKljQ$3d#gDP0ib*fcJLPtFt9oe#i)YaSAogy<raY^+`-0@vUqw&g|I62?9W)L?{z4#=D`4oxkAauXh@JAtCS{)hu)AFYX(1DZQ>NBK5fQfxu~ynHD58wCp!ATG>Y4T;Q=Pz4IgsfRGN6pGs#LrOd1L&D@SgzC<c*2-8>aTO5)2Hg?LU4>B4*-3rD49FGMc%+)e9Yq`5E3lPL$bBm9Gf>4kYaYF1vD;uIM7xFhCbDk<&j7!sufjI*QI3EnE=pP)qUAYvorgY^7K*cIY|pHKi-s&HKvr%SAb+6NK}T`T%`{iX-Mo#|3V%lSFEL?a=~DXxUA8OlHT%zXr4Q0VrXzE&&a7wFc#@d3+Rd~^Us@xR*0h2L(lcC%bn(IU?1TQ?yp_(|mMs}*VoQzzh896<!LWLFhdjw|oc*5Gd-cC9+^=Hx_q{ht500!4lF;z7-?A}gr7upeU$oPdof(^>=b@T&0dEt4_o;0cEFONpq&niJvQ|hBlfHe(OXZQ871^$$_+jBdWjiq#L#zd58g|pzX2kA^%i*z32#<}XH1P9|7M{G5CTlAo-pLifbUqH#1q4hRW$kj}ooZ#fh<N894$|+6MBw;aU3`;6PMJ|Jcl##tH*gcl+6H+RUF(o|yKiQhFQJS{sGy}4{~1J~CdhO~^(#acz7k{ULH%vChZA4jHt`OI9i2=<4K1zN#jCyPsho;K0*TlM3krFnA56$u4*nV*;FljQfTjM9*NrQxolf|W>3k3AY4_$c35RIuq3v%k3>flD>_4I<coOqoUPxR#R=<v<?D-^g<cizP7GQ^b;dppgCPgSVTsT@6irgi&;xQI5EbtF<$B_hw61{;tK^Tx<gkA~jha-ZKeAzH1MsZN;&Y@q}21ZDW9c&=B2oz61<QTI~PNHohWC#CBNPrkEkWnLgG}zFD)du;582%w9w;R6tIV=Q&R~)tvuJ$EXf4jyr|E&X?HSNBdcBZCtv!>Tq(|i9IQ!~IM9$jpIKSAxXdh@<t^j6W@ex|XHK5=IA#4|ot{5Ni8PF(b5T%xs?AlS`GTAfcT@;~uQjVn@@j@B91RmPApNujA6SpkD%x!6?y+g<T85GQN4*@IdK>+}^fMeam<W`v1Tp3;u|sG;4d*f9=$UHkopw;DDNjQ9?WFbB+Zt$F)*74}$v=BZaj^d%@rJY)+7evz|bDCQxY*^r`w@d_)VXX@XFv8<9#uu}!$+l<Z3O_MBaRcIhl%!260jhVv#bDP1_{|y%-V>B<aOAAAA<Qmz9NtyWNlh;pfD(ig8I?ouRY+e+;AD7@VdPwj7Kb^Tx(nDu{H04V<M<<^1ryA&zgT5WstuP-j&jYWx7r@bz0Di+j7`*Kekrf6iXKW%8QMsQD3fvjxM7o`}CM914*W0%#a5yET{3SqZqL6yXDFhU_jMY<uUdFM#+@_8JPrw<y2=>2t4>(XoKU%^ZamU-bj+AxxmsM6)vGWg2z4TT{_ZrL;Wxi&(JZG7+K+tHke6n+J8@Mc_upb@*ha+IIh9AxOWJu(3UoDAoOdi9Z%2)6kI7H_bV%G$JOh6!AR(T5FQ@;^MWcM8b^~Z4bu46F-#Gk;<)<jduQS%wm@8wOCGo$87TT6Kpj5~jImTGwhPHbov`%l;>FJSBWUEX7_jk>el9e0YpS>`cs7VPuocl`_6$v>ZwiAO!IIP|z<+{ZOO+2eBH#PMi5(XdN{C_E@7U{Hi;P(+bIq23JHMD~M~pgJ5a{(lj_slge6gHstE9QCm^^D9Fui7R!hDPPsQjxpN8yCS#QBe`>Nz5JlJjVU_xbL}CY`dDzhDyncU&StyWZoXi)Sqyf{JZ&?NLQ9??k5+D!@^WDM?S17`Mo4)9!ZtU>YQcjzF0X|5<!?qC=fvXD>UJ0jhheX=It2&D8?o?*Xm?j`Jh%LuYoEK1(KRya1Dk4-Pi<n<ZHt}$q|_TF%Oxx0t_w_(ak1llb&9)zZa(A7K1-*a4TBT!_i6U~Rmrc|R_b1Myp{{*-CF)eeixI|^+2Ttqk6w?Lw$@<9is<NJ`@SGr?;ubZIET6eEV!5xtDId1nu{Ds}8#-G%3N)+et!r)X7@+5pNrmtu@5kWjIXNh`@2%yhrOcjs2hVV};aZl;b`@3LS`Id{y{0!DsdGJdIrw2UkQ%zvE2Mp1RL;s;JF0G+Z=vyme@JuqY_msxul)Lom`w$Kj4aqcN!JGf!G<A!075=wr(V?U_%sb(Q58I)w0-{eF>I2vJ!>IwbHSSb6UVc^xl*f195rtHMIJ<dwv6vn+73&W0(=Y(9|KS~m&jVefJ;oxQ+lp8ptd<XzDG7#tyY-XmBd{HgjCo2zPd{;SWq6WylO8TTlyucmc15Ja~2W7x_s;Q>bSmSrzrd;GA7^+3zUZdRDI#JxBfNZ!+mOqr5<X#`AXqGPtel>h&;8FqH}8CL&PGYoCv`Gt=~C=r=s)UV(UFGW}3_Wo;vcTQ<zNax_h%G`;xX7eYbXIBp2?5g9;uICxe=iuz>MzgCM&8{P8c4fK<m+7|n>v3TFJ+}Hew~fxMp>?%zcGbbzRR?ER9hzM^%Z|s?C&W(lBn+GUSv@&ED<>T7_hFMk=p|^&0F7)|fXv-Ng8}c$XBjPykuXal@S9c)!fo=_l9IAeZ(hbp`3|MzWE`iIVuw-+QpqV5zf-A5$WaJ=4oa%X#3)lH{<f30(eJz1|IfpA)ls(oe64C?#w;987SvAOv$k%R+9`Y1PTi$;+Mc!3cd4DRXKnp1wKMmuowZAC!=AOXcd4DTL!DeQk2ACK_q<2JF83(hvv$!gwT*k$F5acK*h##MF9^vJr;scS`DTrSFBJJ6Y&=2awz6%J+qjU|5$;X22lrOq?<kITd*6AJXg<iYbkdMC!4VfLP(TFpW5L<;Ectw!Ku9)opsgtj^;mV%Jb4MmCu$2`VTEbJqo(fmfXr$eVV%YT;<mw#_U_?;6kI|(ML>jHxmaYk1f(bFMFtF=Rv14xXv{DMP7pT}P*RpDvlSYvpaSvXQ&c9P9G#h*w2ay<B%2*RWwRylxPO0LKnfEh;Z*yCc`_hF*GQO@La*XM=v4fN@Hyj9zf4om!8xE{l{x0%8ELg4$LC?__pA(^Avb7h5%oA+0*-AUK2ijohZ{g0jx>P!8!jBYcS1Ouy**-Jg6PKq;RWmDq(gbOwY#_1aC8t*2<Hu<7<jjcDBSQrhkW991tF&D->@j>XHE>ffIKAZv62C?ZDNF)xe|y&3h5EV_)}@Zomi+$B*TNqK-TH`8SAKJWR|j`z;4Ktz)=`&wz6YE*s$#zf`}JHDB@9`Pn}2SAKMr@L7y};Ll-uOCVWE^%+N)8aFS6^Eq1=IPIVt%lip9eub_uV=$2=FIc7TD{6L?5>&)sIxA;x@9l580DLSxT)aJD_`u3&tEuk`r#FvUz>Tfl!Ho7L<b4+^O76vbRF0Lj2FzsI2{T}+Hl`&mpulkeH!e!@~^!hCVU2SMxtN&r+y~g_!OxsENwAt5YW^+DB%2+vhmvDE!*>k7Ia}{|tFh%W~MLoWv9;T?5*7t6SU_n63sPkUya2LE;e5crRo+)lyFYZ~hF?mO}Bq(2ssdHY-XP<(ufsL#e9l1|1IlWslR6xFSfjCq^fvGcYcDM>&FTP#uK7%47LsmWG(3TSA$75>!&Eu~6*Bfs)x-T)gjqAB4?<k{h-AX|DsvYwaQGODpHoPWsjlF*H_C-%7Q*da#;P6@-W9ZsaqkIjf&UPigo_0IUJ>czRvfH+_=z8+b9oL}(DWKwOTG#yRj@u4T1yk6%Uf8`h%4GL!rK0>aOr85$ojdu>v^!~ZZ3koQTsQXJ&t-D^x6*?Jj^ZbA`s4-ne6f8i1IsLQlRk9~t*H5AD+^QRx&$vD`Sg*28@Ra4g|FCXRqlo&ZwJ>8DF6O^OE-qy!;8A=v3thD3UG42Uf9)4+;0?v^p7xEcLnhyS$cOd@uNH(ri(@3$RE?90L=Rru@~_dWr%1MP;ngbQFxP>#z}mE6NQfCAhSml?oTYd<ODQb5bjZ*M@bXGqT>orxrPPMT;Q%Oq(uuxrr3qp`;sh{p(5qiAweC7Fy<9s6D^2I<#pLSM(M80_zW&cC8>0Z9W0ASgj$^zImOpy4wPP$En<uK7(vE=QMw?phh07STr`~$GU2W&j48N#tc*l5i8ubmg)lLY5+$yclER4dp;O8uu9ZG79SZ((Hhgt3QqD(EqLu(R19lxPpRi9&vio~#%+<&y&+hTx2?e~Mz6%>kZ(`lATdr8A$(bwVBO@o;x<<O&M@E_p9h$-e;md6UN4q<Qz-5R0KvPAqk|UuhyM3T-`1H{Z1H4(wD0hIMISw4-hcJA_9}>|beqMkF{5py(avi@eV56_x6@`pZAUnOyv;^aX9uqrbg6pDj#GVKB*k8^#0v24_3dYG$R%WoC0zI+Tf(bKBIiQ`N;w;)(4JW(%QBbmeIASkEg?$EB?<03|coj(<(}f|0?+Y)yz{*`e4;!lv?|^p7It~dPcH;|<Ygp(C&2xhnzX~@)_%1&|7!Zl24>aj)>@s(k=ZvS9E;g+>>9ZsBn3cY4-@>p%f_A~L0UzBV_~e1k@JkGbRdg$*uFI}bI;D71Q{vN<K*?WXDXZ!GLS_#3b(x7E-iU7@{!#=I!_*g|95;>etVH>D;e)^`6nv4a%LNL9K*B=<9tx>&0H&HyZ7j-gT^<>pfOvFf7UJ6f3IX<p2mt#;03V~iC<u;NWMGju<+INQtz!-aK_U2tk)u}U%YF$Cs0!TlF&t2>tl|BfqE~8`=3hDBHZOKQ02@>uqb>v~UFwZ1%U5nVmz}Oox}=HGH81u&P-`J6a-(Ir#Z|naE<-U(`hB_qS~c(>QM+`}rFM^RB-TSy_yTXXU!QsF#OjGxPc11REK|V;+DcEFM?p6orH`GYkDj7WU7*#Yi=F-igR9q<Q0dnjH}zFMeHC5ZMz<fQPn`3$pQFz|!{|qr6(8txK_PwRlH%6_p|bRm98)H5Dl&YE4A&8leM8Z-sc7{nS~nE!+&Cub;I^nYpFYai!&0Uh4C(Kh^lcT`z1(<stV(RlCEga84B+IQTv1!8<eef3OjpR-Rm3~{l<jfEyCNK<-;EQ2W0U|UA+)1?p7`wxV0I1g9VMJu!l}a%Roz7euP}zs+>e8%9ocJ1;SQxm9J7Xm-9$S(<cCE)QOqe{NofpoDtqFZ@~5sD_tZ5NPhC^_)HUOux@N*oHFqel+9N+PytgOaQ~;_=jTHYH2w|{IbWqMKI)Es^8qU`dK><$Q0|i*u?`YUtJix(XVI>7dWAi~)clK{#1sW0v{O^zj4J8(a;8^4^rGSTcc#y&aWT>e`n975uk#gum53S^<W{nEomiBIhDiB85MCgX#lNcz=D2$*LYZxKt<%s`{hb<0s#GyDLuY>?%sQ)V10Xr8dUl5fQw2p{TzHqZ%gImvwLF-HvScg@b8<J(orYhT~%BFM9Zb0;xapwHQ=J{#g`Dy0-?B@A--}!mw{8jp#gHb)V*cM1gdSJ+VU4C2cu7TcIo(69%Q*wwgn3m3bkX`K88*ZIkJ?T2d=*zvi-!FWtaIF~H0G&LudGZ<G$!F-1apvR%0=;}wa!2A(GDR)xMICFoOit&6{9?9E$bpr#ua`g$EWa1xS`NK_^7cu<Fy`-D&xZ_S)}i-~(?cgVhtBwh&d_Jan4$6Yp=tWkG}AY;Q!|Eq*XZlxx5okBSkSm$0Qp8k>jMbX`KIoU4seUcL+eJ!E#`Ll(=%^1tTwpnUp?q0zAt%8vZi46^?j5mtsj6q=qdaH4o*@=@hwc6I11U$%zQS!C#~rIWJ`-B7PzWkm4Esu`3ZKs&znS@dhDJgzf+CfD{apPCqIZ6!lPQ)nMV9TCx&Ugth0sqL4mS!Kk<Va9H#e+I$M52A%wZ%bYsyhqpYNqtfN%$lig+xY7|CAz>O;W9XR(gv7I8|`a?jGC|EFzb}P(|-p><5PY3tmr!~~)nBC+2=7T&&J#o7!=Jsrn126MLEfRaS$ia}@EyCk&Se22ujvPdH{<}$H_Mq^7zaZMPu58D;;yvricdRSfvu@mub)|dORqR+-wr5@Cj&<dny`H~rJlO4H-YRG%5r=!ZdbhoPAuiIdJ?BnhOb?U7Gl(xvr<&A+We$A#T26l4-e>^}iinfQ#S}hMMczIqM-1e`Eh+bW(pXhmO1N(Pp6@Yr$M=}9XWg_N>#Fvwo4#Y+M5mAxqqxpOXB;IUGp6O>ik@>Na~gLF7m~oLn8vdz>iPH#C*e$jE;deyQ|gpC<xYiD>5O+KI91NXHxfc?<_;}p@wBMqKza$uta)rf4f>YiR8w)JbU_3DwBRq<saVjFhJ}>r<DskIN;3G>k=fvC4=A4jb2#HA4vt7pctj#C<vJB)9yEghbxWOcGUrk|3~|4$?R=1*!D&;rt<7)`QTYO=j4XUrNEUsKSV#e*kj*E#1fwW-rZ_cDtuxuFBaJtuQLtvYeCj+l?loD0kT^<F+-f0N#(^CZk>xxvqAZ{o@zUrH&P@disrLNvT`HWZF>1X^&NmaD;bc{qZclwabtw4Dq1&s2Mwvmgph}ip{`WA=EP%AIC`^LOU@8tCl<**dhXi;az@d|R4C|@jxd*EE@PjPw7+%WK_(?DaYOyE{OeMoZ3Y69;kk)SGct2F|QIOOL$k|Kqf>Fp`5<-ARsvIU&Y;K>ayMGw`b+kKl$D#hu&}Ozx7`j=#kKw4<N;;B)8AxMjI8IKODHb;^g{AAcg`tdY(B>e@E5}0F!FnJAHQhdEaiqrPKwTTmF;G{L<JEW&Z<wX<5qGf@;;=&uWrK|dhdiX}Y=qiUr(wu$w$Irb4OF8bWY#D_y14TO4vd33*4He?v@xQJ``^g<1q%t$5O4AwLCE?sj^%EUF;_rGT9BJG>)dW0gE7fq2K80g>j-*TS}@uf%Y;BI+GvI=Af9CPju7i)G9Vm-3Q{4`h!T`#Dj-BS%W&od;!)Jo5rhnCp0WqztWNNvZDu+kgIY=!2wKi2k*1TqjM|Sw$)E}~fwI_UCg&|Aa+aR61rngX7&dIP*zJ=RG8FNPv|O;-1BwuMDN-oQS-et|6BooRMHwO0F@g|9oLXA6M_p{d7R0_Op?NEOO2nvfi07#5--X1pP{=ZF1+s<@V%+LJR3|T8yRopm;5y~DGP-??djF>Spig~}QJWS!A81onQg7*3^)3fp-Oi-4L5zES+FnN6zu5JFQ+a~XH8ARZo9Y&yx`k06+EjP?)SZmF3rZ$~t<Z)0nAH92sfWBnZ1ahs`Xh|4Ze7>pRWpgri|vu?rx{(vx~|?+!z4Cvub*LbmFv0&PaBiC4_sGim#jCYmZw|;Omgjd@&PZwsG1hrb}X+=T`}G&TP<_TJ#|dlen#84u07=)+iV%|wG7ZlPckj1z|*B0UQ@eHzkdGqc~3KwZ(7ekvUY;W?%m8D_GJ&#$4}9x&obHPHnT}zHc4A1XzL{=dvY_I@?}#@ww+0zTkL<JOTXb*cDRhMm)$P&NW20j=K!N?TI_j{9O^<mlh&}FX7biE$*qgs4|EwTr*EBKJ?}oq=nt&xTfH_$*9Oa{uXNw)TkUg~Ga38WGvE*=n?U&#{fhP0)an#n+QeiwuV=QeshO0H#UuX8darc7^3c6gtIxo+_|M`&@*F*UW{bd-86PNAUp{>O@TMZmr^s@NT~|E`YvMKg{dW4;ar(q*`V3&Wr|9XcTVQR#+XM*6wIBWr2u{JD(*jcP2*Z>Xfj`tziBD1D?%7ZPmNl0yJVEPEEDpS%pnG4P;~`u}*3_O}`smQw8T#32dU#|DQZmN{z8Qx<Cx7XZr^Yq8R_<{?6xn0vwxF7@Rp2vE{(`Oiu6E7-_O<($8PhS)3Meypj-GmsHcx_*N5Ceu1*M!6{ILn<;m@ex3jFC7T!r>|3wW2n58iq9ADnQjSI&BK-RJISdN0!CIDKjq6q~~b1ilFy5-xmG>c0Gqils|lo2T^t=vpKFjF}!h4+>qzdj#lq!C@GLKRtpW_%kFJhCegliRcScU_{t)bzfaeriV|_&tCGEHmo(#XGnU+@ezS%JMl*tu3W(3TR3w4$V!1L*(Ie@jP4%KRnNt>xci;=_tC{*jy<!X7~#moKY3)rIjDc1K5E6eI^V*T>=pHrazl~1TYT@dz8dUiUvfWz{j^5bj}bp@B4GL;4$?ovVESi-tiPK0nIgTvjQCk04%1~KaO4N|n-G7t_})?RyM;XTAur6IQ^1jiv(7F^v-SigiUhA|lqiN`7DuqmcIa2au4cMWFT9)kyx1vh$Cd==(-9wvb6oV5pM`hcbws6mw#((KwfIh@<WF^XSws`P7trsncaP<xl^kApuRFx=ST`<WxVA&xSebc*PgXdk3V2lq`Ya_A=R^Fpluw@?;fxoQq}nM#r2z#F0e}Ht6Yo?~i-6bAB3|PQPBAZlak5j!i3FIw%cv(f6R1jim`igekP42mx7I0lusm((+fnUs#}vT3sX*;im^ns7>=%~sm(J}_Ck^m^k|!|<1^iG33r!4o9=S7aOdQqzOU`(k0Q@ciehiHZI=k^3n$7yBn$3wjJaeWq@yXu|dX7(bXekSfc0$y<QaIQ*$i4#sXN&|dWeTw!+A(m~MtrAI*)gR=e0(?;m?XxEB?oZJ(1IoJYr$1FsPhq?hQ0f0h_8&X9LWgtn}#S|P!cKNyxk<8uog+rCk+LEIXq>4zoR^;3qoZ4lbVYrATtR*Ls3>c6b7|skx%~?Au(RDSjQ*q2r!yuQBg4MFczv&z}8qo4Ac?R@Njooen1?wcYHGxFUIlvp$?O!2!eVyP(7r-vf4*RXGn`N7@wfXZXSp35#2+E{^Py9hJir?d!@OskbBZ!Vd9(zy(xm-Dl~%gzV2Z|6^cCIsM`g!lEukBSc)LIK_579f3xsWztY`5)G;^=9XkfLH4y52X%L~il<iIF?5K@>`cee=%{E?&*sanlX24F3gDSQW7DuQw9D~GSG@LN?9`6`36df#u|0;uj@K{+2OB5AO&s-@q8WB>hBc6TW!H%Kffx(V46p`6MMcx4D$8U4|!^7+-*=2-5C!)sHQ4|HYxXWyIRB%i3#kYVZDa)9JvP_R!z$-)Sy$DTzM@9(n(O{k?*`65yOAGD;ofi{1O2&xdF-Ft)6~ugx&QZ1*Dgq?Ka{tjW_9#^d`_ZV5C?x}NHuIPz<Q_j4_HRUS%6g&H1_I2m-y`}IdxYE%4_Rmjze~v7Q(uGqk%k^3AfL5bMlI;|v8=S3pOt2L=(r$62jZYLvA`Yh>W7ej-cPXna~>eGQ_@#DUya*LG5S)BOiBr0w4zm^gV20;$jqoNAOLf>jy}-q%j%<3`a-;5?(2oO3*Chb45ZQMAsO9)CG7{>+>O$enQqb#syw&++{+6~Vt+>VLo7Mbi7&N3NDqZkk}_FU>sbw+K_-3QW_pV+y@g3XwAA?^Bg-XxU3y#UPGt-=>xMp${X19x^y-?JX*dkd?pHGz{hJxXzKmfe<HXWo!05U(uczEjaThV!HS5^}!Qv98p$nYdZ)4Jrf=1Iqjp`Uf)w*GyX9%#)OC4}T+EFa1<F5{^XH>c`GbvR|ZT?*2ieo*?>^=dwx-t_;t)1BHIN|F!L7#k<=`b&K`}O&54XrO**B|oeyzQQ>rLOmN2G<F<>FcNb89BH5SNpdFn0`_Kn3<KHha!Q#=pTzJ??~T}Z;7zfjE}@vMix}rws|CXde=*vy(aIxucTwm%;a~ibOl?WOD@plBt11p&tIb*&->;-2YE%@1P#sft%47N_rb8zcEX=s<kq~Iawo-OWQ<Kvr7O8#PM?03K4qr6F3_V^`r<5od7d_0`89#-ui^iYn(Z2OXTN57kXzugzkc=hRga7*Y+NrK_LAS9cxz&9o@wa^XY}AOlY4wK_pC4XER%bFMedK>^;yU_UJy*eAG2T@`jP2p1RsMV;#|QIUU3Lkh`&kC3_sH;`YhnjN#9w^`q_)L^&&kv<2y4$&)R7FRp0D2`n2P(GoITjgVSZJ981*Qh+mGUv%2pexL>}ZI_*~_vlos6&XztlvY~o52x0$<^5X_D@wWD1nT4J@Z@O1WcbMs_3qJKItr-1e>j0+IujIVk@%Uo_ECwg(r;i%<P*s~D)7jLk!oFX0q!GJUm<Ez><DJ>PLgId&2p&sJIpF8V38pmg^An>A6!=M_uoowO(jo@w_k^NerQ|)C1g2H8-YVj~RAp}|@m>KA)1@MC<VWrO%4bw(^BHeNkbz=Qc+;X{$>6MLJ|Z+{mEk)g@e2AKinF}~Ck?@<5W!H6Eab}M%$1;ol!f4nc6bPawghDM39#->%uJFz(bk8A+n^p}T8)!Lz%W93^$MS+;@cvRm8m?$XiT)y1Rb!~rKX!U*EvtNM@{F}ZDiGZslSkYN=r?TZSYpVlZ%3?ONl>8FcHLG;2?F65P>8AJ9+Ilg6_jbCixxkHw4C;=M522Z;0684e_JkgEy3PmW|%T^PW<pM>ObMkKR@_9%EyRHoxO=xB8GD)t)*D-&W2JZ;R7*0(@r!SSYMo7asO7sr9LAzdhtl{nj&#x_z+|%HZ@BOZBt@><-|-zQ@BiZFGKv7x&oc+yfg~O>2XHVFfSp@MC0O@%h41?3;Kgc2{OfApShTBq#0(age+x7lGq8hz!<5@;_iO5~YGlTfjL+(0FWQrtrJMpT~!SztQhXe0E@92pKv@fXHU%z~5NZrxboKR8K6b>uKROOtS3_XyF^Ej{a(@eVS@UQ%fsr*<n5aJ{Pc!xocca8(Ed!q(3);K|b)9>LFr~M#6SCN6|1wI3g0i8}W+(gF)$bf`EzeXijWI5cyDsz{KmPzK--Zh(sCzvuGO7)<%LlfIRkRXJ#peb;?2$^uyTkIDkdLM~_Zez#xpxP$MknR~j6NLNpQ&60_ae8;PZh;`iec{RO4SizdxG%oMaPwr?nM{R!GdB|^?Y98o}MB_}PN;8XfbJfsZ#ei;2QBNmS(4C_`JGfMmb>yZW9h&vj4h77Yalan@seF8$h%v%6ST~}ENI7j;oL>w~AQZwUV8MT!g`ezKYbG8Y?w8cU~dRV|>DsJH0k#t$(xiC;Z1aFQup5tcaNrH6f3)qJV>ZSHgO@U8Sz$6sX(!%X<Ldww7YQ#Z*8tse8FX~=Qc`^0Hv=`G~%y?0M16dnQVqemtUwlgNrDUAFMl1+qD467=a7wg5Oo<nSQ<4SIl=Mq_9J{XNlMIACSJD@;F`SfqQTnA62<h{sjK%cDj4=Tz16R_5X*o!zE@~Hbiz$n+yoihgS9FWXi>Zrgiy4d9qJ9w{laLDNnIhwazq*dwGs1Ta!I}!L<I}hmL5uQ9BS<9&;7BHbHltWr5}3VR=7(dPs|ohph`yc^JWRk_TIH1Qn3ovQjXUKL*KZ2cxmdXKcuwP_I(89Th;z!?vGe}}$rKg5&#WP}Vd;{QXEQ8`$Ot3hyuzcT+@aN!NUIC+JCsS~lu6j3Od5%EB#BB&;7qXLFIfc;a5XGzr4l%!m+n+XkHSkY2%z<Y+^KZLaW?WqXQDIyQUj=Mawd{mWS;`9Rd7<jki=;()0y-tl%0WANdqV;AhXj#60{s}E!P>(UITaKT2#bcEaS5~VXaokyqlb$axeKf_sieb{||)R*-^lmXWT$`h5Yl6Ec%*=+bf$=fL%`|jbt%L)>cB6LMsku+;wb37jd@+XJOkXP7lg==t0HT2+n-232)1_d|qPCIHw$Z-(`0zL)Ii08+NsajI_6pXP#7D56{Wn+aas@dQa8_;lZMv&&3?)bD>ilW2GYE011n?`JxGekz54Pkz8W#(FcPaUeDlbDLhlvoL<yAW4>{;3hNg%PR+&U-JU!6*6V`xx$j=Y0z>Z9V`KfC3lx=yL>cWfSEix!u_3s@8^)~AgoLzGmQnlUHN)S(@QPu2#xO$7O&1vrS19xBtc5CtmoAv?sIXylW@>iQa@A_TRvvElXmDQyCBTni-fA{Le#1;!r^m~OVK}+qZd#3YQ|mO?PkV+U^@E6KLJE4#1r!M3b#``ynwhZ&lp|Ifgg3V%hxdTihJfh7W;r=&AxA)~HtWo^LwA-Hp`ABar)Fm;yTL+H;b42)VcUcuH@$i2riViw<2ueqmr@!0*Lg7zvB;~vw%v6PVMbrWu0)wU6V(5LcR3oi$rn&C3KOETSOSantP2R?&^pQ@FkN;t6($|7SnU&FP{w8=&ULW(en?F03whNEm0HLFH2pzS5SfNWFm@0ATvNG4U>d_GAF49|bFS3BuhPJ<Cfdg~=s5I+LP+NCBff+0Blri=yN%Y`O=|*Y{oSz6=(EEWLEqbOZT?_ryXQ+H`78`&N7x*x6M6i>7jOv56Q6+&bhsQ$OeF1u7VlJdsIU>I?!-`fQY5dm*(pcW6ThfXl|%4lb+aV0Mz?~$-1&Ff^yL#Phuz&vCm3yg@a*N0ztd(cpIjMo<uclW?df4x4WljGiW4b~+v!C~=#9Mqr@bJWi{QZXVVs?T4Ohh3@vaMa-x<MIAFNzNgb^PjxE~1MIUKU^XG@jB0oSo{i%~pF6u^?0owI}CN3?$*9Af-3H4*kZH3a=m14>AYkA%o`NBt9zepJ0K_zD`>?*-aO7;m<@h*!H-8eM~K!Zk;$$~F|`eueVO9oIXSYHkuMZLdmi7rAS`QAQ_K{#;SD%YdKb8F1%L!^_LOIrkjQ#PDE}Gt(Bs%%x^_7B8@j8yZw-tN_MyEi|6gB`9j(8BrM;8Q2iVpZAGI6V~aK1Ys1}k))GyU9GNK*JZcbEuvNB8;XkXFs=wzyIe!B_R&ejKUb8nLx{y-2B0B?;amSu1ea>CSj+f=YlSI(Fat>(fzApLZJ6i8&JmD1UJxu0U>K!Qvo*XUBkeZ=JaZB(?3shJm*d!UWw>3|O1dcAu5f{H3IPo&0W_#|L4@uhbE5jBoYP`lbc>|ox;(;(U&CIS%EhjW`49<08_2XUw1Gs#RoCUDl2n9fF)Dv|&rdS`dN^3*Zgwi{CT2`v!~3F7({XX$Oc}<S$(hkP7<wMEuN{*p3VrLfZnCIw4t`2y5Hh;ZSZdp=9BUX^XgpvYD;hJ7f$4Q^(o%lKO4=uy3mw}0LYQGQ+RCld(-vyja@F2kNc|EIPU(QqPR&^YqA?gZ*U=O7E+?(FS%_EJ0d;6a)0Qhi>>l>K&<v+?89Rf^;7lzneU9~8YkbZ&H#!PdfkubCbPD{M$1RP84pHI4g3;I+NC-`PKpH_{o_}Nqi9TqQ2IL4PZsv;FYG*eJ2sRK9bs)%XRmfL7AVQQ7@)kG71!E(OM3y%8qm(0^*~sOQsTndLA}O<Vnz9H(A1WdXA~6(Rcp>b0e+>$x%Afd4MGYT?U#S!i(g#{VA0(&w(=%>0tv0>dvefR^rLUNluefsm;CX*R@oL-(zEa~N-cQNc5(xA)AJ*;js=syWBauMgvL(b#c-2QDLSMBd#%dcrk`Vd^kZNp!sg_?6qSUl41(ue%VqVp`+P<3U&o{2hL3`CJw)cyQSI0b(6}DkqU+J%|`-s5x_5OYB@V5i^AMSyPBe=hB7$%P6j|c)ZD8(x4R)iZVrT&!6t$a+E{>fGWrb)ZewA>U;#(bENykw{K<sQ*SLj40(>Wzfu1eefdVN|7?s%oFA`sb=zKmn;5Y;g7Yf~nM0h25*f;jt>Al_1_0;NZAT@`6^SyWm^>LkU0i6NO!Zg#O!?dyc>wi}+r*V@vq?v0%7$0zxA1NeRh#DWUL}z98D64QZqeXm`e2Mz+Is4!mBt4GCELG?5jEgdV_zLk`zj$itIL2=dEa1<82ip&&uylYn5tI2J#g5md#NBNLrs5+jph`FF5CB=K4IfYRy+h&1w!(2&}jg1gD#-b+DE9?LwZl+@i#36-itVPg3Fr6Mw?SeqEmbEHP*%I6}XVbWd|lIdJ7+=+wzBM!=GWSCR=r2aOffi&FB=Gg8id3|W)oEaGDSx&6{V*9&%qPJKO`xck*m#jk68d*pdMXt*@vWe>{_8cCmUkZ}?#dEmqc;2~ajLhTM@W~hRceA`A<49~$y`U0cPSwRCUQe2^&m2WK6BZJu(<8HJA(1nFCC-Fb1!QT|91}*3rp}qjJMv}D#2A@kB(FR+4~=6bS%t>B`fD8fJCLIWGoS|6AZxif;G0OkSj@xV=I~$VlYo(R&O}7T)JIb>EVCPJ%>~}LBP=!1aHyE3g*eblE$4m4ZIhZPBB7kf45wn-)2m56naP=NS*Q$Wz9IEb-1Bibi-ZGGQBoXkfA)XI{^ah^pFFf8<)d8TQ}rZkA#R6xRpE@|!TAAgfl-$1(Q1s?!PwC6NC`6vfLLb*LNKCEqrs8L3WQ1xA@NHy3%-Pqa9AIzbC2-~>SN?agpdwwR)=Ne!ZjGv5z&b-XvRMuM@7#*7MwRYlEZfkNuMC1;#r5-Fh<Qx8K`f<w%ianh$yZo28_xZ$e_*yh_PAw9h~|T$itk+gUYGLapC3+fN6wOkIaB>Zx}e@P;)XnP2Ig6?Tv;`M`Bp)#bU36n-k|74Z}u3Kr(Bl0AXmOpi<MJ;Z#3KS?zYqG#HfBn5&^MTOdoxJvUHBWIuHt^u+Mb5I4w?IAorOPa70dm6w+XBq5Pi!ZYW{l5^#uL!Kiee4kd(Rmw6o1DXz&HUOg3aLHnsg{?Vq!X-luPeSvoD{PkyV>6V2^O8>lo3L5zP?6=(Z_k0T!$K0XV)!b=?SMAUHaHAuLI5J%z|xXrxuI>+3hp&%K_q6mBjGs8FhFtNwQ|F}Bh3&N&uuGgg8akCyk%$3z;>YwJQK?kfPzNw$0h&g=MWy_-~Zls3lA7|2o9fRY?-jbnKUFkpx%Nr2TE3{|0W1QH$}YD;2aHz+4mn1O<f|bR3HuxVQ4y|cxkVMeAog43NRZ}C@5N3W@k(dNP?o&fHW+!6d^246tW>8LgtCk(QGpE)lfe~KpTQkByNQN^eZ^+3DRZ{$RMpgLRv@d0XaJjpq!KXci5f;ur%;2K#a^$)HGxYCPOSdtD7A~o{YhXfyjPjda>QE?S&U2{6j#&T?rg@PtHhis=<BP<|SCJU!z-*yxhCkf!P0Icb&VCu4-M|w^mH6`Zg5(A7<pc#@&~hjH-uNnKEfvx`Z#)`E?mLt}S14CA*UtUFoK-)~BoW40~%B-N7Xyl&N(K7+p!^JlU;%GxbiYr)e#bF}5+f_9fvjRC**sTRG-RTs`ixtPZ#@_%bSeDV2<-%AX8!mTW88D;+Bht{m5ptAo}QKN1m%Nsr`MqJ~Z`bsuxLxi5RP9*KwY=6bc>v9+Q5>iaosr`CFC&A^80=$1GkG2Nf0he6BzDd``S)_!}0uI-?UJN*SEfDy`0+Y({v1rITCdh$}+Ry+oZrmv>EhCDed=}c<f7KUp}yc&O2?yYO9*Is>YMffoRu6zi3UGmzfJMSA-5AHheG14hb8=B@V6{gE_sh6jhh%JE>+*qT#(X-sMsmb$c^4!DTc3P9Sp)tYB1Iq)h_6>~@JU^XQ?zXutbV}`prtYJ7EHRTE6q8G|+U*vs_WM$b8BIy_c;q8Vm!|C3a6Gn-<KW$VbOFbdX)8H&X4QtGdP|U~-2b4g!K-+e+$cM;dX7Fev?P0=H@H$?*WcE=uX%Hr?B@0CwzVWi-@d8u@#%XQeeaU|p%_cd_Nz0NYHsXb-cRc*JZT&1CVytp^5G9N%a#tK9@l#up6Ruo_dZAWkI*U4ZfMNEP=SfEp(=l%Qq#%%ygILp*0gS@+R%Bq`-<C2YxZrZ_J1UYoy-N(LFBqZm-o|I0~?B??<=%R<jRbD+<ls^KT2mD+fWQ{2_^iZaKL`1R{LuY046iF$=}ime-GooA_#3V5|Dpv#lbuJ2)?>cABnLP6jU(%{j{9dYFwAUQO~3mFSVhkD07dxkJBkN8=BhpHTo3`UAWJi=q0>W-s9fGYc*@OH4B~JyP@g(TTR-hFsxwur;k#0X|Kl9=BcAo_HSq!QG2ch&yc6Xo8)ct*3tQ<4NWVjp+-!jhq&?kAEX(VBxsmwJSI;Kt!da)?ORvvgC1VW{hvNcLj|Mc{Wh=^yd$gZNf5lVKe0z3dRLwe((hI^9nlGXklC8nn}PjEUDhYTek>66C}cmDNI~|G6J$p;q93PJ9Z3-VBtZnyKhep0Q$;^9l=o^x?`cFJ{a%KwPe{C%ujxHVymwFp(m$2R`qacvlW=ehh!EM~s15H-Wn~8bl?UX+{Kp|MSZx-95(b-dgct~|%-~|$wu=VKRjbVoU7R7xpM#jLFh}T}e?Euy6}Y%U-4wfoFCYXO4pne;aA3HjZ5UD;0iwU-WI)o^W$HiN(e6-iN}Z)%fEA?%16n+rsat44@9Q2K>h3=b$e7@s-)t1J9f;f!ZW<0Px2=IA=h;=9a~TW<G|`@$gbyk-%#0ZvDrBJ&+`M6dPKVkwiS}x65t0Kiqn!1VR!+~@Cm`sw9qc|c!;XS*%R}&8K++?$+z0i0EU6(45eY_uDnXJtGc|6bN|74`+>IpYU0TQ>rZcr7j3Tx=PPKI$9qu0J2i=x*uw;laD<DGAm#A;UZPE)5%V@mVXQ9~9F~c`=K^WZjI2K!n(dK&$wGi3J5rKf{1w=VO%^r*Gh=_*w;7yLh1GIHQQoLA{$9W+#rlicHmJ8<5O92@Rx@fsNYRqJ}-><+D#K^>CKr&*RFjv>rb2^DO`WrBH3<=p`97{B5sozIa3?9A=4@*MU8y;=`6K2~4m*hs%hrMbS1StpV8?f3{1S2L4$^%)!VT48q%lgq^Av?Y>)+G18L!tjz(jb}tOXQfp@fRq9<bW28{l7nc0edLNWLbYJ&HEdveoH8nHU6E#!YC|TV9{28x%YbSf9YSu9|=V=?JwiSGUKmQ0$KI1qyky#$I=uT*et=}<Jut{WMlBSH7Tf*6+S4c_B6e#*(mB<Rorh~Z1<;R+>)+JT{?FTlTx<W{eDW`tMQ9nA3_48b3@UED3PMOYWL|kGU=jyv}*r`q7hxpcTKp?(5lJ}MHM<PeYfy_5j}KvqxGEo)SDxBMmEY?=nLa?=>)B^ZYVB(kesr3*q@s7OH8F~SQ7a&b8lH!t!}YLz+~2JW*+cm9{66{n&7*K*M^wPZa}I83rIaVOlI9uT<BcnrkKp?NWQ{jW-|9J3E$VH-OlxEGTv7kT<Q&VKH3B-J!+4LPO0C}G{7u<p6ir{xcv;HuU(S+)p}R@y1LY#Tjohx&#hU__okw~W2Mw(b6MQga6|GGc^lV8*C_A7^#dpGTj|DA&|3Y%6g_>Jp1Dk4plGv=PO)!j=KPxU8~w}u?l$j%`!@RAv%XyO&ovi5guSTn5bilTrS9jN`mJp6^pEl|rHW1}yi2$bzoBqF?-~AHuGjkAa(aI^-F=!?o!L;F{e?R1eO2m8KAl~^p=$7_7+e*!u9{X=e^5}y+WZw1!(Rg${C(e3dry8h!yCT_MjP(oA1bsg0;pe?>rd9NT&1-|eqH(_iBK8;u@p<tT(`V54hnsF;QGKyyDOhj6m2TXeTwo8MWsKp@Y}hb@o$y-)CXzB!A~At5e2=V**9-=XS>xw#a?DUC~E#zfls~v=ZgKv54!QwM-H}vNLKiMQrgX$mCLWzGf6p%ZK!$y99>#fx}hlh8%4&7bu+Wd2dJdX8c26oR<6M8l@X8&9ka)2b-~XS1)pxkfyN%&+M#?%(R~oRXXwoAsltAE&~y;|{OF*pr=0k)G`+`2{5ThfX`=`pt7N?r;>V39L9c-LNfQoE-V=zxk>A*MG8kYGsu@Qj5*z_I<Jv@ucGLeL!|UAw2H}zL<9y!KyfWCZ0+Z5me6izqD~V$fUtW?UA&sDL=VEqMtjy!3bdE$s6=fSF;It=+HO42U9PeKNk8KcZq%Vju(wEKsB+AmpGH;ojnYB<AW^&3pZJ3)zEIKr>0b8`iZVL$w%z$N|ng!?3%?iSgP&P;(T$-7)M+{`zz(&D}OO9T%PXLa6bY|K%Gihl=RE&AnT8<hW305pJhHDN`$Q)<(+7-)%d8_4$;R0nP$1P~%HcuO(IyY+`x5OIdII7O}4jhKC(7kNihAH#(9O%w9_Bjj}uCa|&kfA4L-N<r6<<T=iS%7I2QD(urS%Qw04t?kbQI8O1z+;S~{yW_MXn6Q%xZ8awhyrOwd-(qq#;YC-Q2@rE`-5ci5`tac?)(5lZ*XqQ!A6O?{t4X6{+KnUS0u<9{keH)#q#GC!rv@}<B;c5<ZUPlwuB<UU!-Mjrd9gVDw(uuK!tM<l?yl2#Sb*eH@cU*SH?Fq1%Q(PE2ydsLK<fl(zU02>eIC1^e2xbvGn<;kEBtHSA_?6+h|qIhN6~t@p^1CK~w$ARv~uVBsA4w_wo}!`d*!^6({bs2tfL63<v4AaRR1=G8h9-nciAXyj_IDbh!u|`Qwy9dg?{&MZt^2i^3O0FN$wq_Q;3NV`|NB=o0}#+-;%xlHe)YCZ4cuf)sv9M2fy7ye^;w*9n_~;|C(<2)QNKcZHw(l9*FZdR<IPNEuX2k#eq5XHl?7ED9Gzi{eFWObiX8!6K^MeHn!DsqV&yO)V35RoP3733ET>E<{I>MLQr<=OG7h*lO>Zy8wP{_Mk~#O{FdJ%@0h2?|PP+fqHPnNlk&TowNnrMFEuuHQiI@(Fuq&)!c08J8cM_jabP@Gs9p-1FMP6b_GJ!T5X1o>JEctdX&003mr<~A~*x@gzW4?&5eTPh_s+Gk(L5V)A7OMeItjvhlWSG+u49RD$cdxfg>ILj#Q-AA7MY)P_N4&Y!i|k&p~g1vx6N&9m9azn4UMx!&Me~c*7M8b_d%1TPOo*wV5w~Rk?pIms8^?n;B$cQ2Ah|n~~Q9^i0M6{)In^vRhGvG{h}n^8KNhwOiRe7Ql5CXUF@@@hwQf^?0PyB(5i*Uv_sS?nZRL*i%Hkz)(z!h~{(8>AKql-A!j2(VEBVPCqB$#f6kxIU$X&Cpw9FoWfuF_8$EMB~y1onv5eA+b|%79L<n064N47&PF(e<M;w6w#8!77)~m`D1{g<p=XOc4a9yyNDopD4u^=hHyo_a>q#6Pz1XI-XKhF5L^`*c>*|XJo;RDzrwxx_o$gR8e^(S6=!wDO(?BLVB~j=R{H2oYVUGpQSAp$(M^eqzI>y|g<TK$@Xs)YAlEXd0z*+bmgORA(ohAk)YIa4o3ERwHtmhfi{XB0%#-WMp!X+DbD+#T~ogz}(1jp}SxXz(nzP+}c^FT|<sHLY~bvR#LJKwi@J&}yty^K@HwXv|`@LyPie|VR9k;+-|(!iRRep7fi;|*ch`{%Q-dGhErZ~F}5e1G~VyA$=rE*>3wEvX@~N%2CQGwx!?u3w^pzlDoOc+q7PQ1{IxFP4axYPM<O1uxy^M_d8x#qWhVq$UoB#A1NrFI7i4s2Hr4-{Gyt@?C8lzN;w;$%VUa8DecskWO3qyz-?{_Lsw3W%my|^b>abtgW%40&+X!R{O-<g>tadSByj9ZG}T@pSfh2HaIc?Lo{g}HN$Ax74y?%sOWr62_y#`afrSj7^<i$uQU>XyqE+06lHaw3e@jF;n*7}E(<~r6$G`;NMad~0Itgp^?CnB>=Xw6E6AT992xx(>ypW5tV)KLvg@poYVi)`!XH7<m^FEaavTV7o6v~|<ER6={+bBIQ5Of|qX{_pJcv>X$RP{LQcnTloXtXZ_EXQXrr0R>ydQ#bh^DRqA}`21y}*gH-X3O|Mp!{$P;ALkV=QIGu@MI6Jb~BirJ&nzmVbgGum2Jwa!t59(O*#by5+V7A{G`juW8o{I{k%3ug~3{bDw4k8@x^Hg@^qmrEk{Vsq-XzwHqY|0oRn5{}HPFFDQ237ffQ43=brQ$<L7xVTy=JM{0=5YiDWCNQidFksx@@z@TBU<7ls`t%Jp}fjl>u3S-vsqDz)*rSs;=xiI!jQ6U=3&^?fpwy^Y|(b4}KXbg-Lbg+T#Syk~t4_V5K<|ce?BW62w8oakVctC8OCXr(MsA;&Zi+Wvv?7sgD&T2HtzbOdLbnuRm4*E@a0oq#3Wpha1Xi6S^TaW_2`LbikI#vY1P-n&rLDO5?#LN{~{%ElHam430H#ZlK%}t~5^@YY=ixxQy#sii~n<dmDoF%Xx;KiZRp~!f^q2UtcAt8aWfU1FCX)QebMOa^e^#4fp9|5L8MgZMmV*#WZ$bwRJA&m1({U|IxK&UneL{w;UWH*4IYCe-V0+Lpg44(c|815GNl0@tXG^|O$caZi3E@|wFBZUfr(J9gv5QDD|Bm%PVj0gy3ClC})KrneJAVOBp0b=B0bwGxEN?;iz?+8eO+*3dvVVMF_7;AeF%(H;(=s<7pNN0C%2lZCi$XK(@WPoceAcS8r$I0bMKm0uSmCv&l0{*1rEx}<tvG#!`1!}Wbu5M_G9;6v=m9Lhwq7#2wgID6YMyHtkHT%8A-VC~`(_h@<FF){+NRZtOHSARnF=2YkQrjar25M%mW^Sfd_);r8gm;imtzc3QK}CD>n(0AS?k&fv!=3$R!JUFPir%caQ^6D;V6vK6#e4IX7}IAXWSW!i3rt4UQioq>aEpApGWXR`-F%PCSKPQ++~O;4@m{;HVT${itbwJj2kH5)iEj%x((9mkgXiiaF_xM0kX^tg9-&{*d>eike<&d`yYQvXkEB>e&h34mV0ME)CG(biRZizNcm+(#0q^mL1fJcFFLnPSJ?}wEI-Sw5k+SctBG5uw<}KZ-ZZp;BOEtQUOls{?t3OrGUaRz_Rx+v8TNt4&@Q_dwqF7bX`4nxRr)^g^Qm%zB&23z9Y&-`8k~{GZh#Lcc9>Sl)5Ll*5(92%zg%_{leemKHd;lW2rXCf*X5v=kZYn>PfIDp|u+p-ncJSWT+TG+vxyi3dVO8lHn({3Hp)K+2vp4lMK79?NuUip3NY}%VC%0NwTiiJt>1B7RH?Q5f=1sc0uqDL`ikCW9>X-W;6ji>dxTAO@ezWM1ujmj{)C#We_i6GUu#h&J8P&dw>d4#(#XZ$|jNa4l+JES{=b#7A&=*EG4wH0~g{~T-i^duK#HN16r=MZ;m;G4<(etUY6;3G$0j87;)7L!2B>I-6jz_BKDJAk!XiBwiYPx)yE~pJjIk2H=+7ipabEaqAYWix^-(-~gi%Q;<-H~~WOi|NHw?D&ht9P|`Go#j*QM)C;!Cdg0de-8=wCu&fydVVGt@tBCsL%Y!B*4_Vk5ynYLJNcD#~+u25&j6iP#EGRBY#~}{B@Gn6hHnr4byhxw5AINJ44rR!|R`Z$Ogiz4Vr#jc8}62)tj0cpQZ*y!mE93dkcKLUo>U+9l-A8SNGNvZ|gEa`t5pC68L#nZiL6WI&l1}Vw1LyAbxPL0G#}=z$ENbVfTw$Vb)Kw@IC|a6N4J2YfV^RDfV8ys1K98cR&g*{ge>(DJ4IZqO?lZrzd`zO2Bjm4%2#+Hi-I+lAq>FV7gS+w~zQ~odBjAaG2hQ${djOXAnOV#`o)ppXo#(JsgM|gewaxj-iU-x+!B<-M_-4;Ktzs9*F0VIuJiBT9a#(u<F{M!WHjF@bF`J_z66`2M=&5v_ZMyvxbN+l=`1gVx9X0>z*2}bl(J3{_O?qkpfFjxp8Ls%#CN3pK%R<?_7IeQ)}{RO^mi}QSv~m3uV%I^)b0}zqWEw=GW>LrN2l>UcCqfzp9oE#lf}Y4^)~>RjyB!%c$}fMGvHLbbOU3-z)GYdW@cQZyT*Rv>`QpEbPW*wI5;d_~?WHlO=6RQ+(1Cm(V@zRc=T-H>JHkY46Xa{jBd5m$a0HguPJh{dCcA>R1AJS1(U!>%N<a7UlD`5au3si;M?he{6A9Y!qSub7H{a*bo-6ZFd6hF_q7De3zIv3q(|XF{i%diRufZ>PtWK{Y6d!`fQLA#2EbP4x=P{qEV7KB~&e^KN3>@S^Gn2LbZ17wRrl%4n2)~qMk~f(x{$FpQ@+QC+exvNd((ffHSd^paf208Yh)t+(ipA8IsaXN~R<Wa)<)lj-4-r_`%>yk@NbIh@4@M8HDP=7jq{u5(@~&rg0(0u|7|NNCu=DM)M#w2ql-JqHuz_0PY|owZWLc$;k6i#-jS(6!ColeAePou|JZx<#z2P6|jcmdBxOA1)P868B%ySe*$v+us)mO@cyZ05zbL(3|j1S)U;vJY_l7J4tryBlZMHeaqF}J8Hhp6CVOfdr7V_dDAb>wG;`nz$_yr`v1~LzHUvi0Gfx_3u1s4f14JQZ^{f%Lj8kpMZXO#8RkKf6tds$;T@<GlY!}69uyLwEzrV(y)mK>E0V4#K!p=@X4KU!XY=)ew8bi<Aw4u7Py1vv<Rn=HqXE62UL^QGzh+5hm1Sk#Nxzs?-OoAhN<`LK|3;4;NgCk%$+dBpgt)~rE($L;9)E2@W?Wg`V3}yQ%in2nm=0%}~90!8;LR=}^Y-C`9S|Px-HW#AdLm;k&Ver_0g+^;FPujwTIU5)jn=QJLfM@`=91x+QXZhVM7AHZ9AYAiLm*r2D<&%c|uEzX6M-oh3Fyx;uHRN}L3x@nzM-r=G9_jAy95|0&akE2=1`Yng=WKQ;df|jZPtMxTO+)lHG(2czYS_SZl+`j#PF_QU6OaTamLvNtpasqw5E2_`W`rF;G#Nt-s*>d=BdjFiB3JOJXpM+Z9EN=0AhPp10mls4!$s8E#(0))K^UkA&@_&`FcO*zY-fGQ0zB9|G@b#;=-BuOHFG5(xnOm`1hoN)oc{;eoR3Y}0|L^{D#zouF@7w|r{;OQSkS=e+{=&zS`Z+edHgY4w%@-ExwH>gCb>z#+khO!vSLdh(iT4=B#B8|DtHOOOoCip`i;ruNkBepTOJaGF6m=2rcPfjdbxN@f+cD`l4B|9{&fAvM%dg(sL@BISXPcJ*LCrB#d;0|J<Z&=nc3pYY+*7FEyX>^%m#U5w@cP@nmi|&%;wF^HeY5Nli9H(Wb-C{IW_A!`#lts*|?c`$d`GD$!uMcZ^<!3$&%s&wQi;14-S5inR9D$b<&>#cs4;+@;@eLE>FCC5wN9Nh&Y;(^;(VViu;PMuwlKh*;~!zwru9M`*Pbiay$Kn<tSsbu-RAG%oHA6Re;CLEquN7cBwz(9B3{#?H|)}R*POOh5)7p2w<A~n$6wdY4DXCST8YoDdzv9?o9yOxXyFY84Lys2@oIw0^AAigt&>MBvO<p3*1CX6eWw4WLdUhiUU%VxX1%&gF!oW(}YUZYcg>ws<E%=)Q#yzx29|Nnn|2il9wo33m9+-A<C<g_%%&?+tQSJoyzz1z4M=0FaU;-<tFdmn%0@Y%sFRf&ib$4U(vQ)(H*Gh4pr<7S2f@p%T<m*l_OZyezEsf)h5VRaj_RMn~mFE+;XL9rWd__QPqroMUk4G{S$NZt-`KVLX}xIN1=w#E(;fxzMS`B-omk^l3>xcxwde1?W?<9+2wEU4OZ`-+kGRiXhn;1-!Wq&`O1a7g|x-trGcfcE9KYouN(a4heF0f=rhV2!e#bwSzWjcoir|v1<Km490-){x;`E#JN!|qDl6mTJ&I^o{p!wk1z}r<SeNXw8+oOOQ^_t9c$w@Q<}6@cvhRM}iHocpQ4q$AY3(O>XdX&*Gd6|bES!x^%erR2t~qQ-M_E>AboZ|NOJD<$(`_N1cPP8H)K!}nonKwoVM9OOOHJL;qIl0*vZG4*UJC{1t)=MtcZ(p?cdN8Jn$+Ljpg`BZyNQJJCdl*M7HzkRzD_An&g(P@=PC-$wRE>heLamrWv`oXYSDH#Q`ZaAx*MtMjWjxEw<_Z>B1Ds|FWooVWz<9}0V6R_8Z<HyaTEe#@X$d@-k?btXV64@9qj<)XB!>1aVW|)M+V(40SkK6jrQN+;n5+qBzkN|Txci5;6US}9&9NLh{(0xb==a(;Q?~B2=Saw4UUe1vR$<F!KT6B1m7nBGv*~LCs`9YD<9mnGVrE<3)aSEaoB|Nb^Z{RtR0-0k5Z{E6(KX50;Z;=l%NSQRqX)W2u3)ic;szedJwT%#_b`U1C0C_zp3N{T?sb8DZT5q;=z|syr6X`sIRBDQg4#z<U2G<l0{Y3@~C~|<P-@WhNz?00>eZ!Vid@fi>WGhA?5Am=_S|juxrROdP;OCYl(FoLw!8qIt^G)SpIrs@Hpz|_Wk?zb@mN74|MM9@7dE=i??4p8Oa=x!(c+4_9Aq^PenuQRw9ZR30I|vk=%YVbdm-4D-p&ic0Y-`8-mWM6g#KnC%TO{OqD^?I=^lm*C(X5<ff_keO)oY372s2MbGFA#IuGXYMv}w!;<L@+~laii7_y5pc2{3wHVN7!ynTm-W?$&_fzCFKn#&X#JbW(=d3Jr2N{F;LUGU>-U88*o_Dl^`N!+IYHMrlYW8)(?ma^9ojl>1VAHX(nc!{pPq9How5wi^1NQ_wbWYBJC^rf8x#a3i=$b9KYksWB22q5rI;5!yYj|P9^CckF^=I2Jm%Li}O66<y3sr&ajUmk@l=WH7In7M^@1-V+AH<dMbHuL+IW~KWWJqaHPoX_WP;Wm^CB=<Jtv$dkHn{@yDAt_BpvdC&#C>*R$myOKJb@SmkHq6J0Y&!j6H#OnEBKiviXw{$q0_Ucm#rHE){Q}H6WZ`N6xseo^*be32H!6C@7)(D@Bg5%{}aEa|L$#I?Qoo9Z7cOsS~K-$WGl5qxBedw&}%q6uxEdJH)zWC>>G$f>cxQ|_?4S=0oq$Kq~3o_Y~#cV{tnu>kw}Wv+wr`6-nsbTV!OYjIaIj$O7V9#qekxFp?YO^^e^x$%V*iq(RfrOG;G!s+P5X+S0NJ&MIJ+(?&A=1n}vAtT;N8f1W6nMYfKDIcw!nA58MG|{GR$xiICxO#s2}CbQ9O41r-aPS5Lokdbw_Apl;{&&B40;0rLUB{s7mqJ;LY>l=pm4*n?WNhub-SE5DGqq;(L~f_@A2=OjA$HjR=YX~U%mjom`U<07MRr(hJA^ifK!G(3uAhNC`NI}ynetw?4MBausypGFcTi4-e#X4I-p@-<XEB)N~0lQ1#jmohY#3jQf3C^KY+UuIINEnv>bMXXZY?-#~cYRT8BmeeW#RT^JH#Pqm&v+u_OOwz7eSe?))x#x4SDX$cdmFma;5^Q7Y1Q{4yfgGYtEJrex+o$NL1t61(5mTfDx(<;ehAEZAN>C*i8~7Uu<CD=#T9c0Avxo}>{S@8LA0-Qfq0d`!xWC=e+v&t4yL)JG41%LfOd!J1HiSvN78}g$*1IZ1Af9Aey~S%65d09i%@TVAw0|ZG2(DUqE;gh1k5mFL4VAF#;dQLim+v1ug$Q2!b>1{^i;ULiEnE95U1tEK0+Z96Y%034rgQX`%85&`|0?SH>xdYkPlKqsl9LccH?}{*(TF*DA@(=q6<BGI7e0s!81TFhH2@dD3ar>rurVJXad(Kh{?D*@|1OEaC_%5ZagkYkXz9R}jw_q|x}71-t`$W(I3Z*#>+%D-{5b~XAR%4V&CJ{jkIX*uQpr5?NA{QNUaSiiH@?xoWPbfnF!O=wF3d1(SUj-U?KifDblYwjGN1LH^UhTU4JGqu-#4sZQK-`M@1@i}78*a{f8u0t{M7QeFEH*4jz6_RAXdqNb<}N&xQwTlpLjCx#FHyviiM+-b}D*6x6P6};V?n&QsCmdaq+%5755ztk(uSssb4Hzv@D)l8ve^;-#m8R;@>+E+_vA}dcc2x@n^Y0=HXkW?CISzo2GYvtOvz7R@<(m5b61I$}rse1T!cU@43OnRWNP|>9+n@m-qb8ynVTNQ=oWLu(&x?usOk*LrsA*$6?feUvV^brV-atb2?STwK7LVM+^0iZXNpZ&L$Gwc&8bsEp#WPe&+!-y8f<8(V0rUt5Klq@1|0arfIu!sCTW+U76H-1`?gWmr0{ko;gY*<9Airo$%g%WS`QWG)`}rnoR45*)sioS^iRtl8bpBw`S|bH9AeQMyoj81Xo5vN_k5XmjsCY9J5$@ACQLMk`sEPmCF{pz)2S>dsHA|*KjsTE5KUU6G_$zfrooOo`*BWzojGyLHsQW^^5x{LYV!!`jDpKrY7y#)N`rl^}u=;CQ5P@I0lu`3}Re={$nAdGa4s|MmJY9M0)mIsozlO*A#xNg)2}7a1@N$?`sO?O2fu1;r<FmXbbORUjM}$$427Y#SS}lHD3cROm^DQpuSqGhVzZuHYIh9B2gMc6N=K5|4PIm6O+F#Wa23bG{%_1GDvtGI-W{9D|HK!xocN@cedm4!fB9p_Q(3`)q=U}F*k_SE63d<cG#Ohr-Smj0MZiBv~3<2J3cxwI93}6WgMY9_wC!W&r2WP+5f1m&rZkV81ENFXnf=u3`7YF4SSS~k317maqr<Zh$Dx)kfs%-W*-_dW*UF@%(G9QdwTBl!rAGkgNDt^hV22v_AAz)p=VkdPBqT#ct154@O8`PlryJh(mv1?ei-vBi6r1piM5v_?WbIj5OYdO9Ae{`Qy+Pc=uOmpMsHH~$<aw8*iwW={l~8srOEP$s16m$a!IHW)YZ`yBO^A*5HBswBITr|5kp+9-mJKFLcC*vZht7cOso%S>d^+SwcIr4ESt*$=CYu<f(HQFw0LrHgfm<To3f^R1sSRZ-`%`av}EE)g0Ly`_j<7O)N&Wcw*S47dg3*$!%Th40P%&iBs#rnpivq#LNvk%`FC!FB=r|OLqeNK@+jq|`bjcIjDbfA;=YMwGC!0<Danx{mm@}HPbRNVFltC%rx2E!Q9n-sq`9|Ll-%P!17STcOa;GP4#Bpz&zmD1O`~ps`oqv>Dvlav|3xXNh<{E%Jh6yY%oU|Q?J91h{SV0Z&!P?O-$U}t=(ZG5^UsdinliX?C4Ig(H*U~LZ`xqo9pRRnjI0ZFvvu!hY=3F^<%t(3mOA|9+o#o-X02SXE@&4mZ>j!L_f6g6Q&$fBu<NgTzt?+xn_u^ENOSmBwhfI_0RMU4Tt43>o>$Iye56(yQ&tG2HYIT-QVZkkPsrb-NmMd(s1D*;#L9s|)1#@Jc@v|^=1hnvIDSQOUath$Sa66@G7>Ptrzu$%9-0xM6Jt!0<a4VTO@fmg9d+#iuvlP~F+(d6yMSp5lL|7eAv9Kp6jO@RiDcM=vSe63VuRBqAf)lZJXDMZYUZ_BTp$c(Tp$d+w_4tG1WgDqoyVgc```odRV!Lqh|J_?C*!VSUJo@{UnC`(i*sd7iRQ%f%Uc+;z+<kIdtQrVKE9%ePQA4@4qVnLl(lQ)NyZ{EOlyM(iWA)<)DkNLFiK|uiCDsG;(a55xwObXUWybWn_(Ty=v%yICskXUNM2Hyyxh3?%|~8)By4uxrWBhpevy#_HUR&VR%8_{l5^x-*+tEK`h3%iIf1MyL|tYT%qa2UV~WBAs5$FG^KA26??Oh<R6X5s(`1?PTsSj(W?r|z1g(uh(*|@A_9KDYW0ns1jU6FfXE@KcP#Q4R`E_;wwyGDagxC7yj*)lDujO~TCl-hN#+Hz7OE|A!K^ZXBe4wkrJ6i2scNf+NwpA0)7q{7{zc9Ats;;If(CJm9BL!W)mP?}_*KBl~U45-g4OgnQ?HSayjT!BF>TNZN&fnJ4D3xc|rsH=%Dk&Y5bO(&nAai1}IAN-fWK}+r!Nl<MI5Hw4a`|(+s?S>>KR96yw%AU$dQ)xUvfes?C=(pPHx(Q5qO&eUmg0ToV?x+mr25`N1fMUKf=P>gj@K$P`ryW97<Gp@`bC!k=rKWE{xk_Y!JgSY(^|ZXa9Ds(E^S__^6R=nnjJT~d*+JfJxlh0p<{(0v^@&{!;kroO``Ls$!@Tn-%Iu=xI2m4hsc>6`4nVI^6rt`Rmp87xC<2C&7Xo4umNThfNroZzB_<EU_ar4MMQUYaX*ibamW5U=mU~%+7Ccu=W?5Ne#s^0MdusCZ;rh-#%;<0!y&)sP-1f_gy!1xnN?F<oE?QE5@(F+pO4?|PWU1Xoe*YIwqU!K_m=q_vAE&Qrq`O58wUc71Hr}v{^|qV7twMvb=!S@k&pB#e3VZqIJU-pSyoiB#fA8Ga$ybJh!eo1S1NZC?`09?IC}Mn7C25EIX$8V$TxK2riC?~YlReOg(4a4S?ohPpb_#pWskx1?CEo-mko6RL)~KP(!iC?*GGbe1Afhc#P}#;xW?xDZjGqri?kis-;*e^Pf&5XK)5Mc4#o%B<IX`LkbD<>gC(XTdjgF;*DHgK{r>9yBy+hhYO@h%LI9Q<a&tFcY7Z<Y#%WeWmCab5e1r4Q`=KZ^{*gq;16O0d@2{0H-xuou(GA~MN(k{_i+-%L!Vc&|d!TRD_m!uDrgFco{8wR(ZT9S4H}E3Q<lBgOMd=#a;>)DeQbqdJQI#cjN)_Ug)Fd~TkdyUEe7ALL>*OX1?oqQrj_8#{X-HmL&W>9lA(<r#SvftMk7Cr9H4<GFDU0@?^-&{IqBaGUOXXF-mKYVVl9Aw%`=a_jy@*hyd`j8RA0;Gkn%BPPglhr}mqCQ&whd2?F)kJaNC&aMrQ6nd=ET?}>tZ=mpFS3-@Gcgbk3EQz0T$+XMC0PKVd3N}JgB27R{x>rj81U)6Krh~b&oU)#wRR%7z^-Z?BkGpsFWf!^D7ru5A1gANkSk!W0$Fj0gPHe6y@Z;Ng}j}yVD1=;1W-2YP2ms*5%*a)cV%YmCEZILz^Cat^wmTJuv&gON}pYdvROH)DSv&X!+n{frF1N9~=%G9QKbK3m!a<2t`ZQg^}42Fif4_uwV&V)=%%asY`oy*STGD>V?t|AjFY{!>yY;wou{EZwToc!v)0)I|8N+e%%JaVyPuT+E0-n?Z;7;+v?gHh-(enb`y1Ni@rULdRs%H^S9Gzl>SC{%8Vn3LIMD3UbXKznYcw-=$K7EvBY65Ky-p^8WzvK7#Xd&5q|44Y=qIdhnQ6QQ#j4*C8R7BtHYJtQLa%NEguushl$*izmUQ$wFBCjt<BL7c&3QWbfe*iG1kGneMGoXgDww^4v!Am>NnL49YrNLAU4EJ)=FF*Mox~QTlEcG79OPyI8J8L<+k<h8L*w6WRKg9x>y%RC1OU0hh0G0A<l8k69?-A(_VNlr~`|exjLQb_lRqv_QY9RrH}<E1Us%@f)6Fp=9V4ib3SV8kA5W&_9mjjd9$L~xTX=X^RWSyV1J?)#ttqYg=yu*(h)7^Sb<)XB`G2PbgXbXO{jwVB*``yd*d-!03P8M03DHG;TX;GKzjN7*+qLWee1L;oSOb@%ej`Bqrud|`OWXAR%55TrjV|AMMW4b)A~CU2EAOju<6y7S6UWFgH_x8>l}V#TS(U)jbHtnrE~zXohL=dT?~6t5l0K;!Q{*o8$p_R44S|iORbdz3?=g&L4)0|vH#}jaKi`>t+&?FQUGtC6&K`Q%svV0%2{Du`HjA5Ca^>-<K%{|lSgYzcwZa5Z-K-#Qmzm*duD92R|gE$K|`%yQ_FpdtQITsA6y~X)=#-g+8KxpPf1iAgi|T8i%LzVYmHhmG0NCA5>YU^1TV5IscD+HtZ)Xc>ks$tY2Wpzt!JWU+%-PQp2dimHXI>cTw(@?JuYEUv}?HDN<ZadM~BZkqstn%mSCiYzZT&dcE+i_A}NvrYb-EqF?4Z`*u@D?Itks&aNR4&uhs?9*DbUxo(-luaJ>7O;S0xRkIiQVE$bFW-?uc~65t~RILY+P<#c->-5yG>0^H*0it?*FG-1wvUsrsQ@#~83x`CRyN*Wyn#MJ_=V;yzXPNGzvQh$p0tfJ}!14Qdu2DH30!P+*RobjxZ{XX<U6A=@NBi?8;k}ahrPP<&k$IkL*g%Xy0%{-rjp4cpMI%OE^e|GD#sXkz;51JbNx<-NeDhr!)pYNYf|LOt13DIn&nEEQaiy8W7vh#@NwOgq_)-_SDkz1)Z>8;d|Qcma8r{*olfe}*TBRNImqhd;hkJOYJAC*%Ysd-imgH+~I%CR|e?2C^+W=z5m<*ZSYDJdhQU87W{91xj=0ZLJT0iHz`NGpc*k+3Zy5q2zBju~Q7L^ZtJ{Zz^Q{3H_2)cg3N6h;SOmKc3BY}S<SGn7x0l-Fw|P+>kjV_=Mz(}n)tNKB>q(&UW#q|nEV0{$dzSR!!-j&r2tnemJ%gHOl7<xLqG<y1PpZXPp@o2N3cI|(XzIaBNb8Sp%x1XhqyPo+zqYLP7N>F&LZb;`6xE7i%=YZ9UE8hvUxs6C&_r}r605Yx<LUCtKT3I|DVklVsI@;>ezbENOczJ4F?Cw@0O=TorzeFoX^d19`qOkd`)jWRiOsAQ9z;J~L~axdoz-*q`(A{fY&0|%6BuqCn3Z_=Khu<*g;Ek27}FnOQRr;~<>LoKo`d9S11amciHA!GCDMx-FzMQE%QgP;Pn*OUUl7~AB&TMqaxUJRBL=1;+t<`BnvlFW9ikCa_4%9wJW70t{F$;{09O!G2p?Rn{w1?h{<<f&|?aw-S4k&3b7pmpnBpr&$A>*<*)Uk-NBuYO*}oOp&je^=CsR!g>G0i^Hks5?F;tbP*n%P(6tEoL;8NL}&If4C;-A1l_?E2*n|D%Z0|tgFVC8>gMEm8|-?BEeZF3afIT%I)Wm5`tm9_dSv8+~JyVu|WC>Kx8#1*hvp(3$VANi{oUw2X^<`c!0hr!@3_}j5(@cZ19M!%C`3`D$!t@WNjx#kGoDV!=M=v{r{o`y9NO^8De~Z#g&^2<A$FB@j9@=B#Mi6bQH1N;6gWv-)C&}NIZ<XM3NR!yUt+y8BUtU1(*2(P(@E-6W@Md)B3>!$g8YHFX*Lfk9x+(IBge@AMCe*|IRp!9`z{qN?4cLV)JThJ>w^!jGc@q;f|eTALcy7aAu()8Ej*A+BN7ti{qDg*SEJkvKOMD502ZqARfshr;o!!J(H-iM~;k6NPpM5&bTnFGUAay2+Wp{SaB`)h-fKxJB3BrVIaW&83#Y!hh8&<$K?a>zZ|X#0Tj+A_Hv7j%>e3KQ|ES#p)1uKuVA7DXlGnb=up6Qj(V4ZTx1w^CiY21-HD^_uxCIMP`Q;EJ!QjDr(278clnly$q836M8z4bIdQrM;QLyOy@uj#TkB9}lpdL6&TiwN152Z?ibnwMhFV*{%M%?M#op3l+v%gO31JM00~WWujTs#rn;fb2X2ErkRl2yKI`}SV;a;I6;?+D(;g3Iegl}o5*i26NdMR!`CyA}(M6c;sbPJp)j9^Zx3K4ZU5p8n8><-ba5ZkN+m&0BYeG1il%STe8LyEQ2Ah+S-=|T4|5dtvY8&L4480ijLERxbG4guDM?F`*VPkKhjBJ|MYiL(tHklu%42qtX3Xa*+j|ADjLQN$Q7<Z&|N--4^ZQeX(Zlgy|G0HDNHU~6bWtc)AL!+iuZ?1UJAYK)#Y%0x791)>H-G%$*tXl}73@EWzWkRM%&XoZeoB8r3E5yk1_9E=|YU){)MJ&kc7BU%_HPCT2jvHsssf;>Bqkc-e4kHKJ(@ADY<Hn|L60EXxb6fi^|>j>?pWzEK*X5)vOT9<~dG+*Bz+SETI%Dv|Wxwrq&;pIb*2M#^HeCTN4&{6;BSn$yJv@*<xGC&N~ymEdtXj(t54r@%)3NR0z*)h+2ps51A(wVQcE}JR?rpg7=!cfrEuxx4xm|B)LTrmYroy(?O0n@IaX*Vh>sZWh~<&nihON`&%9yE1KYvgXa{Pqr1#k6Kc*+*(yK1|P?IXX`*jD*rRtq`QXe5ojGOuwL>RnO@{#<GtobP0z5DxH65ey8797t*a?QPt=>$R8UEZsiouKOD%Zn^A}Jie|JcDir`DY`kH%%xgksI|rV&xFclV8n%_r^Z>G2R&&S<!RE4x!r8quZDDIRxMW^<YWAu5BO$9joL3GYbqj5anxzVVRa>~KZYg7hBJ!(l6J&nt9C?ciu)a|Ler|QRvU;xPW?rG+<_P7r{nV5<pYgKwMeEB2FBUASLq*L$wHAg8%D}f`p($9<I7fxEa&d^Gti_S#P2GV_-QnVOi&;w#q6akfkhcj%Q_h^`4xz}-T~QI)d6%>owa=#lieN$WQr1$6Kd=3Rtd5^&l>z9W?xJq~;KI>RR#P~;crN2o_QmY^rcibjAPtuCD1$AF-Yd=ib-khN-M7l?ma+o5ZGLmxM`?sHE1Xj~R{>tV3t6ugzET*pw*+&xEa!9vayo-KJFZjLGyFNd%Q^c3Is1Y+1JJ;g%X#YqdF#XG{IF%)(&?qqD^L5)2XE6<e#VUUj)t)0%vH{}FII#yTTn-)S1b*N&6(hfIoA_1m!pnMuULUx%b8Vy%&LXnVCLrOE<i@>xM8q{vs;&rE<Nnuaolemn^E4%Ee+?EgmX78DFeA%KT<2rX)6T83+hpz@$eChlTYpx6Imq~Wg^0(OnkDkfygYn*zpN!1AM%rBFu#lgQJ6lKzio3zcIE$D2@*D?#C8*A9zoI;gg2tkXiuAhvm42Ci6SGwA~wtcXBd%OR0CNE$IARDs{Jkc-K(XTTi^((w>KYe9w}xn<TzhY2K|NzPDA0u6&<#l%c#oD9_k!r+&~}h0cFiO83^Pe`wdhdA+uG8}-8$3T6FaD+%Y@;QU9VVmD0zHXl0ID0b_pAEn@PgL!v3^`jC6D*K}{63)vhIJeWg8`M9lRm1s4ZC@$%qiwl;h16eVlj!`f3Tc$a$hUQZEMz^!37hUeVn<Z06b&ncBZNd1$jR%JQy^<Tl>(WRq9;!&z#?)?Jw@H)d9sROk$=qbQF8JYx!^+4_ZVH<@lu48V>FoOU0fqy6ioh-<m=_$KU+>3^cni?{(I$KJ#9?hZxeLXl~QaKQ6eO9_o128v9xi+6peXaI;t#(Fbc^fFa5yLRooMEr8q`4ulAHl>{QhWFlVYM^;7EeHQX`AI<>LiHNn_CgCjg$cx>_rFdlo`>xGC-l|vFYk-hB=_F4&3aW|E-q~v0ra4d(8=Hdl=K#3Pg$Mw2c=j4Rb?P4LIa2^Nep=-krXdeS47evSRbq+Z9?(69rcoY-P0uO}Y%UW!9vqY2cBw|$jQTh=BE+4`85`f&yQH&sp2ViRScuz#*#E}o3&PW>niq0YY25c8lXMYeQr;ix8IE$!#ocKNL8cuMpL|5Dq4WL`$_)dR;0j<zaTuVg7SBYsXjfBSH=&AH*t^7Mk1pEp2{tl?9Vv;i*&}*A+@>{=e)^{_f=%teRqYEcPIUDa#L|MhlJ6_!J@}3v>ywUz<-)nuL()RF{ZCCWSDKcvhIo<tpUH;9Qx>para`4s1UU_V(J5<v-Q+%Ofw&MBHxiep_4Q1G`H%zyO4H=*$nmP5mPtV)mH&iWBZ>nEY`<r)#*7u^_=z?ZebHOlcm?vLqc)97trkA(Axb+PMWO>u@n&D=7&E=uR%B78=a>sM+7y7>3_s*Hyl%hW4mMQ->ttc%-R6@G#UsXhU^NsAX`JrI;x*1j2n!jwV2v{o?ltF8a-&lk8TcbHvIS6s7IOL@!-d46~(d0L7T-I$0=r&>bdDC4tD6^jFv~_ME-rb<>%B0?HP3tmJ?-^-y9<y(VGW4CiInf9h<VYO0qCP#syk-?XasvGuAv=giyRnK(-jSb*262%OWapDAsuZ%;?j%~pWt|YCFp7Y^5UuC@P9?0O`ovWpjD|P~PmFbY`4la&ZdWHbf@`9|>Ll*mT3&vV!n<>)#JO{)ddv6Xg=C<=-FD1%+6ADrXYm4qC(zhgTjl=#Hhb*=`>X&0i1>Lh=;1EZks{U!Vqoyv!9>)YBa+*zIn1vRQ9iTJo+5!$PjwzSIXcETJ&3E0=+KHY!9ZA9k9&xVu!_}kFA)hbTkR^2f$N1updS(sMrVh5xM{2sr!l9O+ZC%Sj$0`H4JPeNyuFWB+Y*M*oi}ak7B;+L4%s$cR04q6DnaRYlMqrommmLB&{{pC3<JV$QNUO<Um7x2gpJk<X|rkb%;M0SBd?7t9lgQ^H|-1*?)t#kyP}2~&~z!Re4~9y{d({9g8|ciziz+a=mezUOyyktT**utDE#CJLu~ZpSnp^gt~P4him9txbKCN%YgQ7SU(2Uaikl;524x5{sDO%hc3jKJG2VY8nYSEJMmceFQnp??v0hYGl@kMFu|`>SV%aI>Jxgh1O40W$rIjhAx@V~r*{@4QU#GrjS)I%iHTNu~XVUJopA6`2w2YBSXEGQQV`efL3u9%n04A2net}|gm|QG*hVwk^rIQb<4O4(YWeZ<WkLadSd}=n+mm;@XGB%)SptMxIzh>?taCVK$tywd7u}_nbJB2A>6e9|+9(0UMsoeVPOA*^9RbKLcxk6~ge!^bqZES;O39X8Idxh|JSl*VnOjd4Kf2Lvm__)0`q8;_P#xam4UMKs0i76nwOwPj@Sc0&p@rniu;MY*{OIYIBR{>B}>pnVp0+;scaO67M&d!6Kz5VPXAk9nf?|Hb>wqd<(e7xG$00(c{4#!?w1HOQNr*`!0>ukqXS?j&}eVtvM`#SsDJ8kQ$*L!vSoddSLot?e5JzZViH2BrNe_)_<AO4*RzXv)U=vQBaYVYm$W)5^dG+?V=U%jEaxS_aueRVzhD`p>qS4nF_8P``gG*mY>pc`I`khft|b#c9z*_$WU(ICA(0EXc$UR9aRw&P%nmmab8p@U+i*qbX9*cek$_x_%a7OxFGwS7-Vr>&uZds5@(;_61of_|dEVsExkylK7krT4jOy;{5t+0bvVLZ1@n{*3mL9Rl6S2@CPo;}oQb_Ec`K!9lbiqJ=J%=}oR9mC%t9dJN;#rp8L_xV>lq_M#|4nq&`DrJ#N2k1_H1q1ie|T~c3E&!;Zz3udhkn(LR%O#yRL(7bu6WU0Y#-ZrhhDQ40LnHEbH(Y;O6s^~qnaBrIaEEiSrRV(jNAa&ufVAj^4xpmpx9x%5D&7BZX+Hc-Dt-J+6Q1imN?6593tjiJ3)5B?qbe!L`knY!2!Ns)F`9t%&7M}3y>ceU47B((aELxW6#nVf!E1g%Gt{3}tyH~RH=_%9nM|p(Kh-!fN;QriAi=M^dC5Jy7e28zPri(YWEOjk4U#a(JcZPIbH&UY|HZ1O6+_8jiV83FGex_=U^`{pHG{w_&*pT_`ljokC+ZZ$yEgLEWhROx&Qnuev88o!}HSO3Ki#<TE1?*Lhu6|K1ntUh_@kq%kJ(X*aj)Gd70xNAFg$UX8Tx>uNg+6J(QgzfBeOf(CGW6#)jH)9+nd&CbR|)k^DLEu@pVFOzmTZlWV#sVvx^j2X_0*_YN>tSF42ix$pNw#xQfc8k<xEsmXiL%vUy2EAIf02Ph6Fds<?u<7o@8S|#?@lIXO8UTIik@VId|3=%mzitr>H?B#8bRgn6+mIPjkD@k+U9`8yITXa(Jd3E6Wf$F4*0Fg5BH5INL^ON*raZoQR1srs1NDol~45_^4kgO5!X5QNOS)BWuN;+gvQKuLI+&m>8D{<W(t&YZ0Z_WrB6prSO)FT(GY9Guq~!n5myrJl7P+X#2O@FzA0fEuDNt8KKZeqGVuigzj~;b@oPRy!UyHeUsw14^N()VC)piHaLQIseO)vUX#FH?By5_XfAtNB<1wzL}LRk7twW2oE+zFv+hU+&fmGu+1a;$x3hOoyQ7y|@td)!?7ou|0NIVPv?HnD1;Lk$82SOjvSV^cxM0K=_70A?ge$s(pu`e>rFBj)(z|-}TT)!tJ~rtVZgMt;oTvh?ChT#LN@z|9uT23zWW_O@j-FtT(6LeqKIX{&SW8}M-&8<Hm`EH?>F1hk#M>{M)&)%K7Fw38x&u|+*Gv6-9}JrIO>4qw8PilaJsU8Hil-gn^o*JMS@VUQ*_^NBO}E`NWCSzX{H2aiM%xF5wy?!IN6s=c)WuG~9xDDwLl{l7XTljdbM>=TbAz+B)9p7588<Tu{Dt+wj0V51A*{D9>q`RqlKJ+azH(ZzqEKrqu?IwXKvzD`F4X&Lu`wfDstD*R78D`a5YVrZfUab|Z9y5*)!^S{0bSYrk&w=ge?d^~`F$Z><*jJmkgftdX97}pre9a_fu{0TD-?lVfzR-PuHvp6)~#!_BdfiYc)QiqVT`qo6b06|$j>UUW~2bGa%JT30af=cEY&9pTBUmkYm~fsnyj$Ym>?`w$_Pu*PBNw)PnjaeQ>PT;x+#i79%fXR)e=F9l3lL=(TZSnL;I9m<Px;kXt(0Mfs3pG?*3ajK`71Ww{qTa3ZDc)k4Y2D@?{tUb|S_s4Db7t6C+?%F-9pOp7=c(yg0<fyZ@Ww-2ctq>b>m^EjGtV&twfoIy!|`9*K076Nv)uf3Jf_I_AZzSV~Go3_>YhdI~~~!BZ~YgB|?>IVb;XgqLk?$H5~biqR8@3BaYCqbINzeI%9tjiCTKU}*qxtyJp5PSJwPJ;+$R`Dn?EeObJ4@~_N`U<{lf77J&)X~FBtDGFzeqJ*{w?(T%d3(1p^_~;n_D;@+O?*4;tt&d(41i-+(q*G`wiEJkB&URS6mU-EX5sOHk?LOBHp4fAa=h;iAFP^^SyXd=V%m8&R$U5Jsc&lXT=#`V9hTShwFQ<JiE!2NFXnZ7W%(+cdwzNA0r8j)6A@u!ZK)3IPsd%9=WU2%Gpy`IC_$w1LRJhE(Q2OG-Gt|tkfYAoO%3pj0{n{Nc7Kh7f(OK7Q>J4MwTz|+|6fUk>+_0p4t>ud6de>E7z&hYJ4ulKJ{0$EVO#A%0efRR=0&mM_+Li4(;%zlfb=vkC>g`N@dnNUDF$w3DG)m>ow%;O>LxJPKM%aRwp*j1zq^L*W2%un86C|VdQ7EsR)3}D0Pio>E4y6E{5`a;D(rI~zLv5VHVT!j%bUv3%wNV^$W#}k2xDqhM)4__HA0M319x+-#cX%`R@lNWa6G8};Nydf8J14G`pfX3aV$Bg1H%s~u7l?=XGc*odh-!+^PC&9x^fZJl>>gUESkBWhm48R5N5bhzt`5McKFW{k6m82-bj>$1%Y&Jf(_J@A+2LZlf79-Owa;(t3#VHz<j&@PC4ai@MtS8$W?>{;R1z*I1%>}dw8C5s5NXxF!Vqc6h8b8gK4WSj{-C6V_?Fg@OI@Y(4hwbFNW!^=Mrq6lGl&>AidYw3-f~@W|6!o-KghCFLLOrUuR~+=({5w5#0fX~8<>*m2hc210j>?6MY8U>^6vyLyNos(ApSp1yQMIxLb+(jd-Ua5iRCZr1;hc88z=fHCAJ^VlUYB~B%8YdZQ~k#6EBEaPf%-niez*e8qp?{(`hK;bQ<a2W=x#hx(3}IH0u)gZdhf|G65>f5f<-`o}*|*U}F54@1_e1N3MMBiL=}eo11VQ+Y;h!7Oyv>u&HBDXm1LiXKZqWUB^)f`XTfvuwok?8ys=7$Dvbx2J1+H=rmc}7W2j!Ki`G7a11}x)X>ymPv<Pt;(Vsp+`^BDj?)abo$DXy*t35?5)XH0ylO?PKBD42g3BzYT#1-Ch<|>0<6c{W`z>?#2rPeEUQ24yHvO%x7y=v~oIME0urYi2lCYQ0$L!@LXfL;<O?TbV5M~QD|JpXYZN5BYvWJT*{f&DA)(8E@2SxAdaJu<I!EC|2#c!+(7gXM~=04wcX~)GK5O?z?s$j?L4#0DHV`NEi@}6&hx$kRzp@Yt#`SGwhXKw3lT9I$RWv@oZtlAY7kyX5GtqfQzSM-EF{|=$nr`<LZ`mDK}IrF8Qi#hY{&liUC%l-BH1EvFh-2s6NXbR_-UUo0mf8$iZwCRJWGPDf4a?>64#5GM@B|5xQukFmB-f7Wy>Zy0tBszarPj_alK?f|x!Ar>N3m}5Q*GPuCtc-ygkk3iS=Y;i-14d22o7c$V&1>(0H=n`*SlE>jjc3q({P^hD*j+_kmzS#R+0A|lecOPY#MZ-hB|8J-cow)^s;;ZYTX3+auVc@_fu4chPMhlqTkNb{Cvg^(;@IO+{YLD7rz8VD5$Q0)?U_6gH?$=XHVHS+rii$6D+-Oa>BqW!Gzg#VJJ<JqZdbUl1US&#I|QjOyCq!ikG*Wpn>*w;RUnS_UPA`Bo@eSe5N~K5nbddm4kL9ng+!-UjWkN-5$Vp8(l{nDXqYl$NI4N>RIuntS%cL~xrbd&TKryvsEOq7ArG&il<e%u%O~C0*<AVkJi2H5s3;W?wd~>O0W``vdN@lmCya<57Vq+NfTMqjc>1?b%15@-0+!lu)4alc^k^O)rI_`53X-R344v`kibTMSsF_W4@pp<w)jMdxE_<hhpapXn4mx8uy#_&>0fe_`fy3do<;FN($KL!r%!1!1_)sq(=IJ7D@@BdZ%s%kO!MFOaWL+-{ZQKh88eiKMI`CM~<ecu1Sj)_JEYt+8&C}gC4e4Ov^6XRRo|-!vGF0%!w9k9yyBGR{h4n#egWuQ?&MjVGuP6hiPQR{Gm^fWz^zsL~PCReANRH+DLR)^@I^tR>4e2^<J4Ib<q}#Sp*P2N<-$tVpbFeYOeQ_Q=E}ch;|6}G6^%>@o)T&XrhIpNnSR^W=a{-HesHhbRqviJpOB^kiBJuBu(sHTy2sfZhoEwJ(p*Q;$kTY`2{Qb?0h>|%uej++6VyGZ2!H}CDi6jt+dE#b>gak^w`z%b6--%8UmA2`#&XBM!?b#jYcFeRtZ=O3k?+#{HEjp%mgmjz2pMEbXz*B;5(-GHn+O`_%TBg3OlDbw*!g(d#R<lMZvY!#L`w3b}NxAVOC&*j__DT_zT*z7hDDGvCC0aXR^%a0{CkG{13x41%CBbLrC>4cQ-CT?RSXcqP+WLm3+V$wK-mZ?Q+>=AcU7m>A(dF#v>l}!r^zUik<?Pt8&#^nA=27k<sc5-`jM!4ZB`(H1$biD>jws<amh8pBm*{wii@`DH=n09mUwZi>jH^L@T;;;jTL=ykn`bxA?Ys2w#fKL%Ud?|cKWJ*2?g;CQpah*O1Ti{*3KRv>i-PGT^Nv7z`E(oH-g$24`Ce3hx<?p5g*QwEFlGulc!4iCavjCQ)ncuqmbzL)qEsGp^2<?p0WyjFNdgcSwW0NqJa#cD8}BH43iG(K6eun3zVZ~Ps?V$K6WBMqB0>Wrcs8OF>|mjjx*{~z386jsYp?+P5iQ7*l#z7j@F*x++(S;j2>b7Z9C=x@26>5rviXN`xFvBLYwXRJpm%rk<fT&EM}|$-Ws^N%vIk97Xm!XhnlJt8!%OD(H}_u24VZTOb-RU*LwWOy7k9ifbiL^9VRY*Q-EKVj`_P66@A6DhDe;olp`!j<nuDaiO`@}_B#lyeh67+8zo@)7%OO9>86s-P4HKQ$ZBuA7qVB2NR!Vf+%3+dGeqO`SYv{K5`T$P2AFWzG1*<`XBd6EKclyy6oK=-bHeqr4tHfcV<~O3>fXbB}q{TrY)w9+_b$RhaOh(!ITAZ@g(luW{^Tb@+bEgBAu76{PFySXqlxTMY6(c(a$v7?8y)=_?gdxs!3KGyha+*hhFyz&ae;kW<lJKhEfcFBAykEh9)oRm$AF>uLTWbT>+6C`&U2mYS_d4Sr*dMeWKs#AxKA2hBX2@`+W#)<5feR1MKKzwOW)wF~mY}7}U)dS5bbVmz3g_m{J$P}$mv@0lr42NXS@W8O^cPbX951H%vumf%00>jYufzbb>1Z(v8`2@#YdW{t{kB8zC?l?>t02uvfwWBPsHd*3Cs8WD+0F2an8YkkRzt^#wg_yYhfbb1SsXDCZzYJ@xv{B`#P787pw&ENtF5EW26pbX5jAs!vv~h8*Q<c+!XaQ{lczrsH92ueMR<>L@`WV=Y{}In=-6$%0GrZUZdNsLfS5}?p{lOu8fQG1OnG|t=^)S_eb?JiA}mFg8>UQHdMtO{K%hOdVKeb2xtaK;)<IKOl_W~#H<4461VTj=L~GXwyg7nq_}54bZ%$uU2?9!t26vxvX0S%HFgZCcYuzHMLEK7U27x%fM=f#$x{}d~L=o+iWoE@URryqG$332r)Ha4K^QnCF@g~5lTFXktN6W#r@Nn)5ISUz2o&=UfC$c!T_jpqoSdC~+$82lQoGJChz51&}&YU({{xkHGI%<qNrHMNE_%yN55wZ?L5{<W{MKcl%{Y^faF=Mmb%oixe!iyd%V_XHa9ucgCv4UZ5ObuC{8u6*38yJ%<iq*AGY5V!3giy-yHuWE!JT1V1o)|@xE{mb?$0tv@>Hs}qlv{c{lMp2sYvDl7%}do09kc)o&nqYyG@|5i|5>-kHD0^VH4NVRkkjFIyT*@<oqe>WrFU|WIXLP$x)%b~4vzI9GOV(gFTvxG)^<&@<L+X+Z_i0jP2b6}u`Q*;t$nW3HG7U6g8)l%xlszQ-^QXVF17=^)uUpy9WM6}JBq!_TZ{WKe1Pz!VE4<1$;A%;pcE{IGSD38aeR#@JswoH)We>1Z5bV|<nMD&sI=Q^Tu<1F_v|XRKM8m616<5rw2n?eDCH-Mi>C%y2o}LYhwxg;p}~nEFg0e_w>T_^j<!c_?UN@)T@2sOQs`AM8;ys5$iqcYUZFE=Lq`WEMmSR`PT7#r!G9C(M|{JZTPwr}7QdVeb~kpmR?wkpP#<%93x*rW#!upEhb=;QU<}59l@qdpyE`X@JuZR;M49!gq#&~ThN!vNKnuYK<lM+Cv1kKvt|BQ>@ot22x{q?wwI%Fj2H(IOiKx)ViH_{wV7P%3tZSH~)Kg-tcX@(6@f#%sd*aQ%gnjZ9)^z+rQ@Nrj*S3U>Ip89)s-V+%k}EpGR=QBSq*yT!>4momO?uk2V<m&IST8&@`_P5QW*-Y?mSLsvOPt$x{)_nwr$R-W!dbTYD!;YXZ>;?=sydl3_pfUSW^MtW=j`RovOs28FtcL1>m$IVe7^Wn#YN5?+Y-uIzj$Ej)cYGd!$#8u?W}gLe7-znw1Wq;rE<Ztpz)jQL&gTsD_fs)&vnncLWb&_x%roxE;e0y;Nk<98(-b_%C=x`%dF<Z=+%YBU~b)v=BC6YU$amXG&Mue1mlc(#yx*9q^nuhH3oEzi(Mhz7VLIkyKrjZD2JX2PT6_I;rzNq)xsHn(>{N0f7CPkS9elkyr`=d91D${yZ#!^GO!AN$&uNmC9c{!D$(IRt+uO~dM_iltC4!IhJ^D*8m01F&cBoK6kk-p7UPUs`x(@_QBhq=lAVl1J6ZC&Wo&Pw__c_oPF`A$ZXu<P&i5#v+`&0BO8?5@UQ4Nk&+?uSmL_T^tw#J_R3LATGf+v92=tW+LP#Aipx4C-==I(zv>LiRum&=&;lYz*o|q-I5^-SoX6HklG48h9k__YuUckBaHleO0Yb{$%O9h*KcHO5&%Ers)e^<yMWy31R{u$J4QLG{EPiNsJW7fDFX+-zfd;b7S+#5VAphGj$VEOed7!tuh6Ec*5S{N3p(&r3PT<zwChy9y-f|i}rJHiDOi`H;q??)7A?jr%{qmTU6ho1sMyFIHtmv}o@+rE{0yHwxaM7>>4!g&*o(ipte&m0F`inl7GLZxC5Gbw3+Z(e{!J%vN3z%e>HU*QAJ#{}v&fMX+vXoE+VWDE#Uro2&s^T^qVj*HbWJURx_D?A)xF-@0ZeJA58|0E?E6<vrt&oTE)TZ7hazp*<>{B9h2J~y9uLA#Cmx_&eDI=PMdCcP~dK~rq<Ke*2(m$2SZS)#%xYFH9t_`xDUMukg~MIzb_vRXX$O&U)y-27>h7D6-}7dk0^8lo<6xd9CuK!={i^xl!l$>ZRY>Xw_6>|1n9*oN3={J$w8n5ozaH32Jlcdz@#<kG1tXM@-tB1u=kLw>8Qf_Pc$&`^td2St5{L}yni8m00ME?@pN^hXR%f-26cK-w1ynZA&f>BjVhIoeJVjQR#y3xMy?aw1yx3N(DaOv6Vjq*76#jj_$&7_c_J(Y}=O`ktV*!*A?ZyXkM^rY|WY{urdMf2xm@zRCuMnfo<O1!<_5gbtu%I)Ikx09mzNOb28}+lz~&a>NZ-3k|YHN8b_M>#l)6w-!p^MM~bO`|VgfZP_QOp=-9rcFl%>b;BF|OF6GQuMA%w_8)Ktt&jVSkKb!@lvff9T8EZ;P47@re?g+Nt4bQB^83Sczm^_~*)dcJJBIfDcZ`_c$%?ia>jDOlYqcR)TnD|PjPD?sed4{?FhFZnoeDkD6x$<B0c+D+)Y8sx8?IY|*1dk?-g`}#(sJVKT8El?Rqs$xZ;|Nis)9!8f8x%_OlUEg?SuVpf?AOM{#x@uQjI~T)ur<wXx;5M?q0jq+3R#1^8A0U#+A@SL*RTBzXC}HctneHMAx0z*8bsI<Pa`pl4)lkhc3GpTfXu16>ZSE({J4QncDdeezWbIy;eJe(V(bCm2GJ|PlXCjDS22z<enHj;XXR)ky&gwlTaZ;lD=TSMawTX{<RjH*s8729W84vHhDqo0l)D8*Bu9i?(h#B2$UcEpzt8-k%Ro=&#gBa>eaMQLm55yo1~1g*P@JKI!a#OE#FZbCF&MB$`VK8@VD0>o0=7}WK$42sBkT^iLWvjx~Dm|do~8F8{ZgODtrA{(CY9T9iO6eINC`~{b^d<W*{rm`5f_CgMK6!9;^}PAf_YaV;#tKgc@^VF1NtP6~;E22v_Um^Cbz6!2S&#<Ewj*nhK#G8e;olTfn+4Xx;8NZs&U7fY<~5`vc_%J}5kZdf>oa_Ls`F;;=vU>uTt%wHjKo1;{otw*?6CgW%K8x&~S2*r?l+tntFoc$OHor&z8OnyN0gsj36k>L3=yCLvoeubZ7qd{w)ZdPy&d7V)2<?JQy&;9bsnf_0r5b)8Puh(C^90OTvElxa;^0D{&gzp*LFHhCj{n-p22|LfPV_9inwk>po=n*1>vt|o!7q5p$~jh>m5v@6#a|0~|A3~Os3S40QdMkhv`6O$g7+{XHo*s&i|do}b{U*g!m+`pLhjYpSjwg+mq2W#5iX}_)ucI;p7I2`CW9PD^BXno9Yd@Koj1v0qba%df?#MM--qnf&E);lVwt3@Q7SI{Vp5eSJ!xZnCUbhTV}%1Pp4ghrYKp%MKb6dD=vy37t89Yq8?=oz`5Y>2bTi70U|(jHj7C0lQtu;{1IiP<r8Pg?hS=toCvKh_1Tb#G9M9j|NOYFs+`?Ur}k*EhcH4O;j4jr)>x9ccJ}s|nj~<e*(w5AFvB63#Pel>ToM9MPXuaKtZoCTW|wPmYfdvS;~)PD1<qOkQO4e?#-<$u>V<)dm@fQA5Dm@J8dJ=k?7&YpdVbnq>96O2_TF;_7!z47iG|aqoNo*vQ%4(#h;@ldX2xgE&PnyJKnL44dnaj1;7WbT>#mhGpM0s)k~7*7z3v+V3(!GBkRw%15qIR>l(&dw41nBW#?1NQ`TdV2pKsI2sKjVQJ7taT_H|Lkd3>Nq%V{<CIRR-o{v?uCcSW!66SCLAK%1iNT4X(ZMkrECtvELooR2yW7;?+1uGZV8aodZC(5J>;_#DZ*p!s*xk9W6XH6yR*1FW<-LOaUm$SHbdH=vl({qZCbk~K+A9dPj>%O#?!kO4k}~QR#<oNeq2;X1{s58-kj#m!1GYi?d!c-cNL+E2WuJ$PFRbNQjY9%*?SNk`F8ZJ3PBTofTf9=rtZfOWXHK`RC^Y)aaAr1W%a=2&1DVyq%-R)#PG7fJ8qO)WRDH2Job}*sN|9^%g{5Hj=vR)d&_rg|M=ByKcg{WE^oPE1zHQ!m@sT;j$Em2)M@GVIx!L@{73Fu;SJnQW$3xA7GXq@h4S~#tQ04~z$mopXRzXF$z!okjzBF=i<kIBD$#6l*M_L+`+O$6H<4jZ)ev41;=m>K@K#6DGFq#2FJoA$~=6g7HKLiRaMO!QJJ2`E&#HDILgiO_-)2k*&8oGR~m~N|5U#n1~OV?_(Z7tNbCdhtmGYRJ{6r8te+Y6|-Rr>a9>TMGV=h-w$W0r4mjRD>w3Tve$?itj1ojj7jJ$#*$DaEOY+%@WyQ-(*Qmr(#!f|0R5w?=t`tcQ#`#zW@Qs=>wi&e|pTtV%|Vb|z<vC#+s_rgu?5m5KcOdVh$OMu{eb^ptAi$N#^6f5)%;`#=4NiYhLq)DwC4*J|QdtM8+nnn^{YEJZXpRozF6iDsDYR7S_>eI&$+1LVyYl#Br*4?t})9{7xLD`%3DKBgZ}o6=wu5Y0El-PI|+DW(bvWZtJJDOI5LX=P0&GeoMOEJ=T*_)-upkiwW?8K2PLS=hv*G^6vW)c8nQYrdsDnJ16L@X;(WEQwyV;1;!VEh;sNd^%NlCnlT8k);53ihF#yWRKU8MB>*VnqW{u6O_l$1iGjJCX*Q-qYay2>Ymb_Kg=DYG(lWF<x_e|J-P8w{urG{j9ljv&01j$@n)X-r}X{&Q9^g*oqUau1gh>oJ?a@cDo`Gr(cz#Zf;8;3(I{3GJgrh;YqgDW1*#E!a@KPckXgXc5#8X41t40YB|F-74^9k@xLBKK@VLtjF|r2P5jT#@bP}R-VMtVGN1Jo6W1!pSnmC0h95!kEEdE_MBb+y5EO8<l{w3TTq=U}E{lvDO-n1y5gKf}b<1l2t0|~(Rv%dhU1*j!&&Efve{(c;_dSLRnYr@95#3(;};8{$exp5<U3uLp4p{~8A!-qN@`yS=noVU@mi~fx%6lPAM<kv4Dp(wx-<x6r8!sJhj&7Q@X2t_T1k{b(Q1Ii{+kRH5?nIOU7wU#;J9Ort7EfJjv<jA}42?3uZCYWhaW+_5BC*7Q(r4|e=F}#073!{azCjFndf8d!AX9+(nqHqqOe{3XGLf@f^1o=f85g!(bcVdvVhs23Na&<2diGQd7BJsA4&}OeFnqtkD!np;PnlCml=T-%Bt1h>{+V@IdFn7zW=9cvOLVGZG{fy?8!8CLBeS_^*Ug4$gi`|!YU);S=xwt!+*EXXKn=BWaXPa^8q|G5y%}rbB{GmlEXxp%C+Z?cM4%)UX+Z+L#BWP=%?YU(ud0F$K=4Jhh`h}xQDgKUupl$z5Pq?6BHg!cs<lFv3^`nZo`j>6%1Ge>x+34nM_pQR>OJ^>gxiocgYT=<pZ?Ld!raN3vbm{2DqnE}njxTgC9=lTN?|vv)aA+nqY|XiFX7&ttcg#N-vNndxYnFPio3E>`Pxv1_>VIU^-*POFd)#k6zM>(jo2J{J-F0r)oFSmA{E2Sk4NKuyj!$=--?5^i^*hK!a$J$lkc-9P>|B7+@RvRs%zkV+dnAxO63iZ*X}eM1IA1(}@M~39O0V1BZ|nbNssGTCnOz^#P;5n~)Nc(N%>W;=Y^)0y>q5qQY|`2uGIrk4;E3#H^UVB#g@%RW3y=DZTSB_6m^`;5@_c?YP*4{xsFl#>xwu;VPB_pHrq0n@mqTpk@}`T-(xES>0;Rr#j8gAg@gp}Z_Ahq&%`MBuEdk>eAlLO<1#(_6U@f12Vt&YPTn8|R@&>G*2Pey}jXO6J?`<tY>30iqdRmF^Hm~ogr><9O(E0WHvYna4_bfT+?)U2Ho)-1@HmT9|@3m&^%%Hw+P@wDIPbc9#gM#x+?aocq_Y2Z?)>GfFrr}CG4OcedyPLJUDybhRa(9(bKgcKHyo5&S8uqb7ES&rr*0D9eDeKsYg8v=1v527%rGa*px0YwsJx5)(vB?oG_#>=lHut1$XTNP|aKgq%4z!JWVoXE<CWr+Nj{PDeKUc)XxaK{6xxgg}9>3h>8Cb>kU{?3ThRq`O-FX&UPd<I_>F3>-p1Sx{$WR;V-@n}daG?L;<^Cgq{v-aO;b8yBv{Ep%^qup~b<CG9)C3L9eoZqMY+jZF+(&*YZ(hayqasAbb#BE7YF??H6Nc1fN)myUl8?I)b=$(uUlIhHr<Fc3m4H|U9mKQr5PHIp;?WF_CrTzsnpK=PD^cDlT81vH;%FyuF@+qb<70Oir&J7$DNe-*7XV$!15hgC04P=7CVnW54Z1zHJ{v|6w@nVm4lN*4Mki_pPn-~jRW0ZAfkDlo!TP)=?6M3PdJGU>s4OB0H0)hE#&lTR`7tIQgC7@Bv2G7LdV&*l^6-w2VMtnG#Nh~s5$)jEn3F3)j;)3B2m_UM4IxSl#;ZF{U?aKn`*<(r1vVOO9S*Yr_)0<Ry6JAgJ{UlrDnq8Kur+%|dlRDi0VH=Qy&a5w*IjucoR@!T*Tr35-94j)pnmIaRn{+VTr6L#@K?6{jcLn#{fy&6_iXp??|k31#jo4)F^%%zqW|k>rY(YdVqMr`Unp8I`OP(cQ|$-3S}ba*yXywL_-EF)>513VP;!+_cWkAuW*FhT*xII1UfryK^R09nt-eO;(D^mJwym7HW}(}PsB5_-oEOn3wJSKO+BO9M8?rBO2XHS&hd~k_2=3y~@WqI-r>|>|onm(?c`sfrso?I?j{O}y1E^LlV9-;JUWn=n=jfnR;R6H`c!lI#LCMiO+%tB=VV(sQJPY=tEZ9o0RoKu7D7k+X^?UyUKmQF9@QGlJpn3qZn?0ov0&G5~5MnZ2gyegW{1qgANJ5bO6o=`A<d=|q09D<EvyUMu1r+@XNE#q{5AHq($!7Su6_O4}c0ket$!<s<gk%7chaq_slE)!oAQ^#V6p}GWCLjSvQuYiaPeSqxB>x4H8AvWb@`sST0LejkHCT1nKZ9fml5aus79@WG$yG?+!S4)-4u3wJ{ScDBf+PUR4M=_r$xk5pTS$HZ$v;5yKOngc$;Xg<0!aaMcPS(lkk}#VhU7s=`XM<8$stI#Ku3kJ0~P%I6G;9WB!36jegbEI3(3#$HAwy*l7EEcpCDO<<PIbsL-KEs{5vERtQ#~W8c0$g`91i`zlOVJ>`eek4kUSy6hLBwq!^MiNF0#trTKU~EMS-7Xb2d+n*AIk(~$fZNWKiobC6tsWFC^Q)4b0)=N$GrB!5oxHtN_!8k_54%TR2Oh;8Gr$riR4!d5BRHUjJTv5p#RJh8?M>uuP7gydI{;Kh<u36A<0?jLJ4{)prg687uwqJH{3v8rfS(Cb!rD)n^ZYJrko_mPgKOXvC#8A+Eel;FeC&}}%Z8dK@4)jW#cw5m&|A17DKdr0~yxq3iB(%V)w<#fyHUb2|pNv?L22D)jr*ocyH2TAAN?oy=C&8u0p^v2c4NhO`Rs#{O*C0B<@1(Z~w3q~VK$_r`hY8!cgq<4_3Clnfb^Qu`x7p_`zP)*GWI)6ozLT{d9ZWHLRl7;G@?^q$wVPW7l99BxLbkpL{3V{ySP59t{aQ|&Mt~My>qSX}qJR06HO@}V#;a61Co#bi;Nju3^6-igGs+8!ej-+ehrw?CT2gxJ}@7lC#BxyUJ3BI#5g?^Y^%~H}itGX2QJBu&Ac~zxBwOR1f)hNlp39f;l52Cg4U_?0>Q9d3~J{D0PiYO1`{~v-!q59LH2}ycA{M-PE1HB22-UJmsLar()xR3%5%%RbzrO|ZpY8rah?FI|Fwmu!cOo84>Q-RL*k!9#kA8PM5^0r1vcay6+1-*4OMM+y$(un+m1<O)q*jBb!{1HWFZu;ErRh5FST-EHR=!%ucRhe|loaZ)y4y&6UA?ZEjicfKfq%-DGyTftiltM+9F1l9;bXY<;RWMvsbjhkwNt@wO1E}p3(9S5`iC)2ks#>R|ZMQ8d+O}%c&=%<GlvT4HH9H!IJqjp=+EoKhbsG(_gXGVY{i{kP`c~A;Evq@Gt8S}OQNcXEf9#Od-BxMQHH(riyRCbaL>aeJ>F9oWD&4Y@Q%HA^bDk9fjtlf{d|YWGt+ahU6UK>swIKr)snnq)FB3IftrjH~E!{<~STtz7p>IQnRkId`B~ACCfs{&TKo?k6)9k3!0Wytlxm^rj$$hKv#qw7meTYxt`au!~X=0veSqpl|`fc!C3X0x*2aSL_ZjQsu9+HxQV*I&z2<f5uqV|g^Ql^I?C9*~;0j@-IPV;H0Uy*W^)~@gov9diMV9`=v(lW%CQYJbjIVBQJ^h|A1oSkSX8f2m|^^=V16k6^X^_R3h5<SDjXt<|IN@=kqHANbWNfI0+Rf6oNOQvs?cON{bl_2|>5{)sE=?$bY!5Ce9V2-E@psW;K?^B-BFloHQzDm$Gpw`Sy?zBIxnbuCH3{y<T=QUHRY0WUnn9!LT@f9){xMxT?*|tv&QLKg(QCYp@ZEf;E3=qNVvL%YXdzP?U`@H#w`v)BR2KMiL)W)8ia1Neios;fLyN!zu>dlJY9(6n2h~+rpWF{wEt=<&;qZXo%dutB&_Oy5Q^>;pMYi(_{?cLW|)9cvZ*WPX0*Lh%1y939XYVYoB-v#%*8PV+fZ~(v-8~a~TFW%L$u2Yl8T?|)i3L^GLC%AK4v<QUT;2D+C30o!SSJTS&!cO}UI8K_P?+oAoC~u36_q^WIZ|gkc8al}dsR!Lhk4z4-%qRr+9R2SgAXS$P<NxeR)(1q(6eLf9#@iT00d@{ej!m)&Vh$L6x4(|A{yz0Z#Pgm@%JE9)zjRfYR!tMb3PyoOgv2yOPUPT=!CXx?htV8YGc?v^ZaSx7H!v!O7^AWEhMdqtEsYj=PUFRM7*hT`#fxX#xixfQ(r-ayTZg`czQ>o)pZ-hE0?%xWwVa5~dnPr077IpI=XWIFY3lpD<<X(Sp+ATi${4R=@XYA=sMp0LEb+LjpFuDD`w9`#4n!POGGiD}Rh?5M1=R;+EIA-M3Gial#abaTlaa3pyr31r(t@GVR1%f9!mWz}f=dU&SqV@$qrqYSv=ER_sv3)mGUS%(b86X~auAZ>cquB8CC^QX?_8f!_8Y}5h0)<bUxwOUEw>RcdWoMmdMc9^4ZVtoy1^@vAjY+VagC>^3;E;XJfVS$@tC4Yx~y0qI!TnM1T+`Hhwf}5^reYM9K%qTX+rQ-c0HW^9G#s6ACu@f@0+v%#w25Nqb1(O0fmF|%zb?H1jHM#4MI#49)i$Y6fNkGT!(zPJX*PHVa+Xz=Ih7xN^7yP!YVI<aC)0g<M~$WbWTp-675`G^kU`Zwl!~7vI=0edhh*AL0iV5j+7?N>jDW_i_M-U!8yl#tWVT(HHg}(6{R5U0JSN*7jEn#q;Mj3O@wy3hnybvmO|(g+#MeZ)=Cj-@Wd#_V37o9`rPMugit5EoRfb!CvInNOLTXRg1X`0+pu6sE+v+I2jpd&xTsD)*4ZGS9Vl7I^L;A{tA0Bf&dOcRY6xUC1hY2G(BZ87OWKRt`SOM0U{=j?R%0NmF_^V+MtL(UcdqkN&&8hk;RPm`*Z6+kmPJo6YwL{ihBf!5+3L@FFl62rHs@fKM$?jV@zhfP74sF9-@GGa?7nHV@WF43LdMdY*@c(#F6PZM3mw7i`WY22gG2B6%^e|QXV{c|p=GvZ?r6|dv9S4l(}oqLDzhk@m3>KnQ6J9Rf3u)?p<}5uQ1U>qU_0WU@*U)@f})RTMSk(WQp)U{J848_mOtl#E2{6NTur&YIk<hl|A7Pktb-qzANm!TY874Vh-zuJllb{9OZ7`7e)G0v;{yTX16U2SoxJOAMV&I|$m_@_u5NS`pu^kdk`4>;c5^;Df5)Qe$f4fJBH=uTf;3;-v5k7CJgs9h_0DD*oe!|T4dXx!@&TBtBaQgK+Yflxd)Tv2;;!rWOtOO`u3AJ@^>|$4l@)_PuQ)k^2ptC9lM@xy6<%wFeaqC)pl9f4rOW>0)Rt3&tj)=`Rtz3MHCJ#y$K50D)+c#ds-@!4<jE*7(b(vaYr^fa9UXMrj<~RHnIpMud&gV=?t_MoXAsQ^_sJ8mHq=&Bk4~H#92*rX5-J$Qy7#fk3DCvk3<*^T&x}?zG3jw)eR)eoFJI4bmn19#gf8IF(UZK7>kOJZuK4$X5905LWmy;COL-=7C8HB3U9}Z_i;W!_lQxm?GW)m-l5ZC7^l%qsKLKDtyWo=K-GqCc+y&veuCZ2Ta_Ho^Yr+F!?anb5oVK0qVJa)QPOkB|&UjEKj}BL&+;;S@b`(u!b^u*&#qWLC$v*1y;nQ0F3;2FdS~+B_K|_PDdmPn0&ez>Nu)DVv4;#L2I2G&m=1J*wd<}F}{Gu5{8|ehv=!Yu6xBR01i)jLV^d&t$l2gPveR88=L^$fF4TuP)KCk&wnu0i&CLx-|9ru_fu?|!&4VA+vpO-~CCpo0=8gHYPQf*S&M?%FIqAc#^6p5x#FCj-sHXTu7GV~Cm6E%~lUA_to<=T1E;_@1j<Tb|SO;3_HBR1~~8Yyef4oJSlBw?<}WK6X@^@GYJG1BWG9!0G0BMP8kfeK~JU?k-x&r7M%OiXoJ5Y?%WQk~}uloA}ga|XuBh#nX?66qd{JDY`#-Dqs=MvJh|+1^wR2~iF|P{_sBqWdx?Z%oeRTv5zWl2ptP{ffLq8kSv$+Pc!GyjS02TGlM7D<7l#6-WguOd(<mbvSMw$=<xz$YXzSuYP$}@hmk&je_zsO}>YKZvKkmyirL^sqsB|)WT@YKMiB^ag1aUW+b(eFDgcFpO%eB4^y(%_>Q^;pj@Rd&@rP-u7r6+bgepPaEe$@5@SE{?a)Zv21ba8V=x@6POOWqlfQnfPUf4nlC>iGjb*+RrrgWDeTB5|fJZpLT^Y+|tn)Mo=O}*_09>=_Ykp~3boMdTIB&+9d1Kn~1ywAk;whEzCQ9HxX2|mg1fBycu&F6(N^v?qZ{1X?r(S$UrQ}=fzSLNL@!tCY=6X_}N<IGr?igd@D1B;m%u{RdlcXk&u=C_h>3q6lP098G;dy6?_~+Scc`oZF5hw9g3R@mP{(?B*oFb{E1K~rjbBbW=CGwvHx$QYwm|8|MSkB2J-uq&h)w2Yk(Su~oTNvHK+eA55i?E#+**Jx=lGDUuHU~37ppzAF92JP4(WwLnCV^Qo0$;*YsY4K*&%5)}aw<ngxDwGz@pXL+oJ$XZIhSyD-g0(BAiE)$y<tX$_yd1_cfiyQj7QGqrShdLe^y(_+#WVtKy5$w;B&jeX6v%KDqyZ!==#9ixS}S^JtSwTB5g8C=)V@B|77KMQ5oGC(yfMV<eV5eafIwA?25k8#|N;c99qt<V2wcTr>l4~9lpKT66lS#&)!5^#|FobFoWBG)N<!>O*5|mBfSM{&{qGxZAV~ZXK>>Ve_{9MI7KASeSnRC*LHaS-VVnA8U;9#BCzpbB69KsGw5--Yin!SMaT<bMiJ{T<i)QbGV!8Icxyx}o_n=6M6`paek=P0C0NR00~ExFo}BQsMpB|bP)^?9ww3)S@P5k`pEG=NY>a;lumx_!ydMT;`?sM&%GPR&Se@LfIsx`>)WtaYhk_{tWHQvo-j^VpmWq$r4Ol^}U?79%0iV6qn<M6OjA4L(;g;=`*I=uu!D15IkwKuEySy2d!zU*&B5kGpNg%;d4Nn7gEy^$4M<-A3$FF3!$y}^t>|6NDV4nkQUFRv(G?l=&w4Zc)Cdawo96MOUeO-;%>=o5dGA<AL(ZWpG5o2htw0l#;PdJ5oLCjih^Q!PSyU}7G<Y>bmf-WN##a21!L7e9a54RX_GM4mcd+;|=|A~gk(XQKn0s|GIm#gKXYPNbcHUO3JxLTpdIWXB)uO)T>ijtQ+PV$1ovEY?w3nW`fLCS)cBy6;RMKXn0EDvXYLJ5}3FTzlPQGjigI5Q<DFjG+{XZB4f7ld;CaP}{v00)~Ow_=qZ)bJ8Y>_#r03$_S{Fz4*k*y30iTM^nhGRQVWDChWaM9Dgjxg(lmZaj%u7R=sQJtc~JoSq}m1%X>ejq%3F+qd&;s#cu$-u3spQrw0m(~BN__jAPGLd@$lh=Duv;Q3wus-*QBKGG5T{E)8TLtQ2p?(U|wJ8aFpLsR;+k5z=he9m=#<W{uMilSb>8H6L|O(A2`O>^nOzL0tS4EZ6J@qBM^iTq3YoAlE0Q1edz{zLwzhgS&lFj;t`al_mbmrh<hIe#crShrN_FL(gm*iIJT*xWK-^m5sYWed7c@y07ke^Dp8(IsC(O=UXBI|P;9Mt-Cr%$azt-}nZzRR5QozPah!&96`RH+K57x<ck1;X)h4_x<YGRYH-u<svml&J~4o^X5~&`oPV+!uhI&!G-=sYSFQ{(Qo_zDm&JgwyyIz_hGJmFJNOJHo?X`j32y`kd#14Qk#VEFpz|hO-)-$gG=0!Kuky*SUX4C6tY$;)l|)0C-t&bs?mPL)hf-^G}UzLnl{;VZ+tUf3{g|9(thsp$eJaSwsWp+61t_@B<uUmIX?IJ-sA6l=lkyY9?dsOTND~~TW3INCEqAGJ@K81tsS$>;+8Un$SJbiG<g=Sm2Zs*&Suft944`GcgveCKWmj8?ss3Bdnq=;zm#yaCmlY~;Y&Dr!yV{Hgo^g~i}B|K+hM8n$chFOmd-)`WVHO(_V?^DZDNP_dbL-5f}PQCN4sKUf~i+3?33;8S<meAulIgoEDRgoE_$;lJS~}P<c4jRUzmU4m*<mZUGroFM#^KJ*wk-&c*vK}kwRJ5?0&JVOD-$Nrq~hct(Rvz<dXWxi(*NW0*K~OxB`f+qj1){t^q}+u$w>3pPzez?~T^R&U`re!DRdi;YfdC-%(-jfG}`eFg+m^J}KALUmlnrh_=L@Nz{2}+oVGGa-}n3_{Hv3z!W*dIcRRoPPwe&?dhLRW6N-Mj!oK{L|apgkZg}G+bV_X1M!h7LkofUapBNmq3Vca>tD3l(bj9LS)tJw>xJrTxn1v%3A@_kC$F5j-scwvjwJ^k7Y7~}jt?gW{6g=u!n0$-_?cAz&Ojd_oO>a8ZdyDytzg}{lR&78=qA<xlFEFzHV%6*GWQa<0VwJt?yPSIrS??-i!3QqsX`+B&$T>Y>xOsMOMuOVD8%ek|F6dA!I<a0&gi4Dz!eyu5NzF2sZTDoVxxKfFt!fFrqyQWy>*@XqL4^0h2q-C;YgcMxJ}Y;U(!1wMw}++a@l+t?w#9wcj8BA5ii)it-gBj`-%z#Kc+o--4^f%qo)AXKC$O^*J(a!q%qv>sYXqomNj=b5}%nMDt}f&U})Kg;8lyZ+f81rCUMyXaoMfK<wmWqhQ8Wr_f^x^%4yVct(rzH*J^OjYxUZmO7dD$MUR#Iqm@QwmoCL*PqQ+-bTfaw|K9u1rpVYXZ8}nTt|raJ0xD-q5zqO9mMkYrae>nT9D6<OqLHVvrpfWlOUns-UiEb51@{Jn%W|+O%QrH(4>32piZ1yF5&#+PYr0FiSGi?|6}X)ev+K5|MEe+A-wm_{Nya2HCc)Mi+b=PmBy&(?4oXbtEp|)TdYyI5_bzc(o_tq3r;Sv;lXpw+jqerphY{=Phg(+wG;Ec(x>iVNa4Q5;GX_^ktzit}REznF2^1KAVtL&X4oZfKbxj-8Hm`RP8^6hGqg4{qlw|gZ%$^&}zB}uE1frJfobR1B!QCDY#)k!Gce2VSR{8D;obT=g7RnYH4c-RuQG>QkPkyvJuZ<;t$I__$-&G471^*3*&8RQ^&u;n;9x6ZND*79br*j^1g85&q?7zt*ded0s*YwQ)bdlfj5EuD$HWTnbqOJC+!sA{~KejFy^mIOH>pwd-KJFjJ2SZu^ss42MDBFoq|Ile9<4lg*)Y{mD-<1>m4AVM}tq|P4A!KxAot9GiLG>y`$(bNjNXk@qZu|rpN@g*sW&)*5l|77>GaXv6%>E+Cq`0ARs+oLz6qDrYM6NF4m$;o9EqHH6`!sg_&{s>GL(x#_{_U6AlU$|9RZ5&){kG`_xBJezHk-a?k<()vWW&8o0Q3i%(&-Gp=K&r!SfK2lX0YJadLAJcc0mlAwO*S1h=K^FIREg7|HR4Q*r~wesdg8UB1a|zDSFud%;bp6ke(^kwo!HOQq6Bw)e)zu`+AyT{OT;YhP(7)5F#??XDN*z%eE7#oXq^FtjNWtn83tfI=fbGMjOmTW4#R@<Tlv8JjG^flflv8U-9^rm@idlnNzSFg9`k&u@4Abk3E)7OO(>x|IdQkP_Lh>amJu3KP^)^0^^V<=W_m*SEfR3a(=;U=PsQ~=2wdOm5F?Nr~~)VRq(rcx4_g%RQ(sMQ7$T<;i6S@d%whN>QRYlRnOP9i>B=fQ{zl7=3aR=-oob#+%}2XF0&?~^q|Ndl+BJAUo3atddqB|@kNLEmsP)?9nn3}hPXk{w@KXoFOB7VRl?{9wLcgJTNB|D#$6%bvT;iomF!7lt!S)G80$mb>J3`L&xfBBm>P+y{W7;OnOh;|R>+K<pN=)kc?IFds2RzBd74nW!T_4N*n6RO_7RCH`8#zU(ulvFBU##j*dWbb?77gBq|DbTbNIMOId4$rWlC+Fb%l>btg*>IQwLO?6G_Q~r-lNj2M2>RwkhvP(}Y52{ROf0P$sN-@MKy-4veL<NK=Co=O@y^AJnW5I7@ag2V}EfcWvxm>YnvFuD*{+>bKZRheKpA8hEB&)hjk?<3qs-fACjoOhyboP^k~e>60hUrirpdb)mtr$~PPepWaNxST#v$f<s7II~BC4j-!|W(eP;k{~LZb)d}&wFC+q3IUF1c1o6sC6%1~$t7D!{pU3Mv5R7f;E~<LdnpH$n`6tGLel;AM|MW-zsc9aSUOW1Z4jwt+>+|f#;rPztqj<D}M#n}*@CrJFFUL9kg1umqd*ykMU7a%<hWe^i^^a9wObq^{+Js}Uhyjj{75pK-v47#xt&OwqH#Usz=d#w#>e5O325dHfzRR?p8XKM*_3sUOG??k5)%7l#NyLvJ{0q>_fV{|FV3VL&1jWJ@SENY-jhh;0zr*)S!1Xz>D1-)T7jyDv&b~H%X*%2?<=Ew7$Lxt@u|q6&M5xQ`Jezd3h|ZSyw}gSGq~gID>Q(mtzF>_(^1u>cmq6YUC|UwW^^>c%uxbIdYnOm-RYO8Gqgd%HFNZkU;tCNLbr*Cqdqq$p0~XcLL(F(_!c8@KVktkB;C950-T>b8NH>AyCNSLuE`?xW!%eDAHd_R$SShAq-RD%FNcG*;0qD4uTM*L8bvr^iNuU>jUNE>s;Fhc1_ZuoiP>Jt*tIX*`+Et2%=2Z?rX9_r1DI08E*$)BKeV<*`6vI7h+i2JUl>!nTgnXj{Fplh6Q?a6R!a}}H0SHC=*DzW=3Q5?Y=pft=XZ=WILYTLwapb_7iWM{!7T$=*vP6pTP!>hUz=AO9k5GhM!)VQfX7(#8K*D`1K!wM0fUf8jOGu;WK)x}=DpW1h^HmB!D6(@6qpzNVPgTQ)6@cNYw+H$Oq%SImXh3l@Q`brJB9-?89}?B5k~_+Ghag}KXw!q*6vbd7)813OsLhB}7}y}2t!RF~A~bXZwwG>DXw-NQu{QiY3G3uyOQ<hJ)htuBNcn_ych&f;3mPxcVFe#snGQGj*rDr$;EI**aFAE3A%<>4$6oTv9*E$lFt^h{eyWEE{u>@@WjF'
-))))
+# -*- coding: utf-8 -*-
+import os as _os
+_os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
+_os.environ.setdefault('PYTHONUTF8', '1')
+import io as _io, sys as _sys
+try:
+    if hasattr(_sys.stdout, 'buffer'):
+        _sys.stdout = _io.TextIOWrapper(_sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if hasattr(_sys.stderr, 'buffer'):
+        _sys.stderr = _io.TextIOWrapper(_sys.stderr.buffer, encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
+import threading
+import time
+import hashlib
+import urllib.request
+import urllib.error
+import urllib.parse
+import base64
+import uuid
+import hmac
+import struct
+import webview
+import os
+import sys
+
+# Set DB path env var BEFORE DBManager import so it always uses EXE directory
+def _get_db_base():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath('.')
+_db_base_dir = _get_db_base()
+os.environ['AURUM_DB_DIR'] = _db_base_dir
+os.makedirs(os.path.join(_db_base_dir, 'database'), exist_ok=True)
+import json
+import random
+from datetime import datetime
+from pathlib import Path
+from database.db_manager import DBManager
+try:
+    from database.bastion_ai import BastionAI
+    _BASTION_AVAILABLE = True
+except ImportError:
+    _BASTION_AVAILABLE = False
+    class BastionAI:
+        def __init__(self, *a): pass
+        def start(self): pass
+        def stop(self): pass
+        def notify_write(self): pass
+        def notify_session_active(self, *a): pass
+        def get_weekly_report(self): return {}
+
+try:
+    from updater import check_for_update, download_and_install, CURRENT_VERSION
+except ImportError:
+    CURRENT_VERSION = '1.0.6'
+    def check_for_update(**kw): return None
+    def download_and_install(*a, **kw): pass
+from core.tag_engine import TagFactory
+
+HOT_RELOAD = False
+webview.settings['OPEN_DEVTOOLS_IN_DEBUG'] = False
+webview.settings['ALLOW_DOWNLOADS'] = True
+
+
+# -- PERSISTENT LOG FILE -------------------------------------------------------
+import logging as _logging
+_log_path = None
+
+def _safe(msg):
+    """Strip non-ASCII chars so Windows charmap codec never crashes."""
+    try:
+        return str(msg).encode('ascii', errors='replace').decode('ascii')
+    except Exception:
+        return repr(msg)
+def LOG(msg): _logging.info(_safe(msg))
+def ERR(msg): _logging.error(_safe(msg))
+
+def _init_log():
+    global _log_path
+    base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+    log_dir = os.path.join(base,'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    _log_path = os.path.join(log_dir,'aurumos.log')
+    if os.path.exists(_log_path) and os.path.getsize(_log_path) > 500_000:
+        open(_log_path,'w').close()
+    _logging.basicConfig(
+        filename=_log_path, level=_logging.DEBUG,
+        format='%(asctime)s %(levelname)s %(message)s',
+        encoding='utf-8', errors='replace'
+    )
+    # Console handler — force UTF-8 so box-drawing chars never crash on Windows
+    try:
+        import io as _io2
+        utf8_stdout = _io2.TextIOWrapper(
+            sys.stdout.buffer if hasattr(sys.stdout,'buffer') else open(os.devnull,'wb'),
+            encoding='utf-8', errors='replace', line_buffering=True
+        )
+        console_handler = _logging.StreamHandler(utf8_stdout)
+    except Exception:
+        console_handler = _logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(_logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+    _logging.getLogger().addHandler(console_handler)
+    # Ensure db_manager logger propagates to root (captures _dblog calls)
+    _logging.getLogger('aurumos.db').setLevel(_logging.DEBUG)
+    _logging.getLogger('aurumos.db').propagate = True
+    LOG('=== AurumOS Started ===')
+    LOG(f'=== Log file: {_log_path} ===')
+    LOG(f'=== Version : {CURRENT_VERSION} ===')
+    LOG(f'=== EXE     : {sys.executable} ===')
+    LOG(f'=== Frozen  : {getattr(sys,"frozen",False)} ===')
+
+_init_log()
+
+
+def get_asset_path(relative_path):
+    """
+    Locate UI/asset files.
+    Priority:
+      1. Project root (parent of dist/) -- updated files live here
+      2. sys._MEIPASS                   -- original bundled files (fallback)
+      3. cwd                            -- dev mode
+    """
+    if getattr(sys, 'frozen', False):
+        exe_dir      = os.path.dirname(sys.executable)
+        # Go up to project root if EXE is inside dist/ or dist/AurumOS/
+        parent_name  = os.path.basename(exe_dir).lower()
+        if parent_name in ('dist', 'aurumos'):
+            project_root = os.path.dirname(exe_dir)
+        else:
+            project_root = exe_dir
+        # Check project root first (updated files)
+        root_path = os.path.join(project_root, relative_path)
+        if os.path.exists(root_path):
+            return root_path
+        # Fallback to bundled original
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+def get_data_path(relative_path=""):
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.abspath(".")
+    return os.path.join(base, relative_path) if relative_path else base
+
+
+# -- LICENSE KEY ENCRYPTION ----------------------------------------------------
+def _derive_client_key(machine_id: str) -> bytes:
+    """PBKDF2 key from machine_id — used for E2E temp password encryption."""
+    return hashlib.pbkdf2_hmac('sha256', machine_id.encode('utf-8'),
+                                b'AurumOS-Salt-v1', 100_000, dklen=32)
+
+def _decrypt_temp_password(payload: str, machine_id: str):
+    """
+    AES-GCM decrypt — matches Web Crypto API used in Next.js dashboard.
+    Format: base64(iv[12] + ciphertext+tag[variable])
+    """
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        from cryptography.hazmat.primitives import hashes as _h
+        from cryptography.hazmat.backends import default_backend
+        import base64 as _b64
+
+        # Derive same key as dashboard
+        kdf = PBKDF2HMAC(algorithm=_h.SHA256(), length=32,
+                          salt=b'AurumOS-Salt-v1', iterations=100000,
+                          backend=default_backend())
+        key = kdf.derive(machine_id.encode('utf-8'))
+
+        raw = _b64.b64decode(payload.encode('ascii'))
+        iv  = raw[:12]
+        ct  = raw[12:]
+        return AESGCM(key).decrypt(iv, ct, None).decode('utf-8')
+    except ImportError:
+        # cryptography not installed — fallback XOR (dev only)
+        LOG("[DECRYPT] cryptography lib not found — using fallback")
+        import hmac as _hmac, base64 as _b64
+        try:
+            key = _derive_client_key(machine_id)
+            raw = _b64.b64decode(payload.encode('ascii'))
+            iv, mac, ct2 = raw[:16], raw[-8:], raw[16:-8]
+            expected = _hmac.new(key, iv+ct2, hashlib.sha256).digest()[:8]
+            if not _hmac.compare_digest(mac, expected): return None
+            def ks(k,iv,n):
+                s,b=b'',iv
+                while len(s)<n: b=hashlib.sha256(k+b).digest(); s+=b
+                return s[:n]
+            return bytes(a^b for a,b in zip(ct2,ks(key,iv,len(ct2)))).decode('utf-8')
+        except Exception: return None
+    except Exception as e:
+        LOG(f"[DECRYPT] Failed: {e}")
+        return None
+
+def _get_machine_key():
+    import uuid, hashlib
+    machine_id = str(uuid.getnode()).encode()
+    return hashlib.sha256(machine_id).digest()
+
+def _xor_cipher(data: bytes, key: bytes) -> bytes:
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+def encrypt_license_key(key_str: str) -> bytes:
+    raw = key_str.encode('utf-8')
+    enc = _xor_cipher(raw, _get_machine_key())
+    return b'\xAA\x01' + enc
+
+def decrypt_license_key(data: bytes) -> str:
+    try:
+        if not data.startswith(b'\xAA\x01'):
+            return ''
+        enc = data[3:]
+        raw = _xor_cipher(enc, _get_machine_key())
+        return raw.decode('utf-8')
+    except Exception:
+        return ''
+
+
+# -- SCALE READER --------------------------------------------------------------
+import re as _re
+
+class ScaleReader:
+    """
+    Robust serial scale reader.
+    - Auto-detects port if none specified
+    - Retries on read error
+    - Persists last used port in app_config
+    - Pushes weight to ALL open windows via __onScale
+    """
+    WEIGHT_PATTERNS = [
+        _re.compile(r'[+-]?\s*(\d+\.\d+)\s+G\s+S'),
+        _re.compile(r'ST[,\s]+GS[,\s]+[+-]?\s*(\d+\.\d+)'),
+        _re.compile(r'GS[,\s]+[+-]?\s*(\d+\.\d+)'),
+        _re.compile(r'[+-]?\s*(\d+\.\d+)\s*g', _re.I),
+        _re.compile(r'[+-]?\s*(\d+\.\d{2,3})\s*$'),
+        _re.compile(r'(\d+\.\d+)'),
+    ]
+    STABLE_MARKERS = ['ST,', 'ST ', 'STABLE', 'S,+', 'S,-', 'S +', 'S -', ',S,', ' S ']
+    COMMON_BAUDS   = [9600, 1200, 2400, 4800, 19200, 38400]
+
+    def __init__(self):
+        self._port    = None
+        self._baud    = 9600
+        self._last_wt_count = 0
+        self._last_wt_val   = None
+        self._running = False
+        self._thread  = None
+        self._serial  = None
+        self._window  = None
+        self._last_wt = None
+        self._cb      = None   # optional extra callback
+
+    def set_window(self, w):
+        self._window = w
+        LOG(f"[SCALE] set_window: {type(w).__name__ if w else 'None'}")
+
+    def get_last(self):
+        return self._last_wt
+
+    def parse(self, raw):
+        """Parse weight from any scale format. Returns (weight, stable)."""
+        try:    text = raw.decode('ascii', errors='ignore').strip()
+        except: text = ''
+        if not text: return None, False
+        t = text.upper()
+
+        # Hard unstable signals — if scale explicitly says unstable, honour it
+        is_unstable = bool(_re.search(r'UNSTABLE|UNST|\bMOT\b|MOTION|\bE\s*R\b', t))
+
+        for pat in self.WEIGHT_PATTERNS:
+            m = pat.search(text)
+            if m:
+                try:
+                    val = float(m.group(1))
+                    if val <= 0: continue
+                    # Any weight successfully parsed = stable
+                    # UNLESS scale explicitly says unstable
+                    stable = not is_unstable
+                    return round(val, 3), stable
+                except: pass
+        return None, False
+
+    def list_ports(self):
+        """Return all available COM ports."""
+        try:
+            import serial.tools.list_ports as _lp
+            ports = [{'port': p.device, 'desc': p.description} for p in _lp.comports()]
+            LOG(f"[SCALE] Available ports: {[p['port'] for p in ports]}")
+            return ports
+        except Exception as e:
+            ERR(f"[SCALE] list_ports error: {e}")
+            return []
+
+    def start(self, port=None, baud=None):
+        """
+        Connect to scale.
+        - If port given: use it
+        - If no port: try last saved port, then auto-scan all ports
+        - Tests port before starting thread
+        """
+        import serial as _ser
+
+        if baud: self._baud = int(baud)
+        if port: self._port = str(port).strip()
+
+        # Auto-detect if no port specified
+        if not self._port:
+            return {"status":"error","message":"No port selected. Choose a COM port."}
+
+        if self._running: self.stop(); time.sleep(0.3)
+
+        # ── Auto-detect baud rate ─────────────────────────────────
+        #  garbage = wrong baud. Try all common rates.
+        LOG(f"[SCALE] Auto-detecting baud for {self._port}...")
+        BAUDS = [1200, 2400, 4800, 9600, 19200]
+        detected_baud = None
+        for try_baud in BAUDS:
+            try:
+                t = _ser.Serial(self._port, try_baud,
+                    bytesize=8, parity='N', stopbits=1,
+                    timeout=1.5, xonxoff=False, rtscts=False)
+                t.flushInput()
+                raw = t.read(32)
+                t.close()
+                if raw:
+                    txt = raw.decode('ascii', errors='replace')
+                    has_digit = any(ch.isdigit() for ch in txt)
+                    has_garbage = txt.count('�') > len(txt) * 0.3
+                    LOG(f"[SCALE] Baud {try_baud}: {raw[:16]} ascii={has_digit} garbage={has_garbage}")
+                    if has_digit and not has_garbage:
+                        detected_baud = try_baud
+                        break
+                else:
+                    LOG(f"[SCALE] Baud {try_baud}: no data received")
+            except _ser.SerialException as e:
+                ERR(f"[SCALE] Baud {try_baud}: port error {e}")
+                return {"status":"error","message":str(e)}
+            except Exception as e:
+                LOG(f"[SCALE] Baud {try_baud}: {e}")
+
+        if detected_baud:
+            self._baud = detected_baud
+            LOG(f"[SCALE] ✓ Auto-detected baud: {self._baud}")
+        else:
+            LOG(f"[SCALE] Could not auto-detect baud, using {self._baud}")
+
+        self._running = True
+        self._thread  = threading.Thread(target=self._loop, daemon=True, name="ScaleReader")
+        self._thread.start()
+        LOG(f"[SCALE] Started: {self._port} @ {self._baud}")
+        return {"status":"success","port":self._port,"baud":self._baud}
+
+    def stop(self):
+        LOG("[SCALE] stop() called")
+        self._running = False
+        # Give thread 1s to exit cleanly
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
+        # Force close serial port
+        if self._serial:
+            try:
+                self._serial.cancel_read()
+            except: pass
+            try:
+                self._serial.close()
+                LOG("[SCALE] Serial port closed")
+            except Exception as e:
+                ERR(f"[SCALE] Serial close error: {e}")
+        self._serial  = None
+        self._thread  = None
+        self._running = False
+        time.sleep(0.5)  # Give OS time to release port
+        LOG("[SCALE] Stopped OK")
+
+    def _push(self, payload: str):
+        """Broadcast weight to ALL open webview windows."""
+        import webview as _wv
+        js = f'window.__onScale && window.__onScale({payload})'
+        sent = 0
+        try:
+            wins = _wv.windows
+            if not wins and self._window:
+                wins = [self._window]
+            for w in wins:
+                try:
+                    w.evaluate_js(js)
+                    sent += 1
+                except Exception as we:
+                    ERR(f"[SCALE] _push window error: {we}")
+            if sent:
+                LOG(f"[SCALE] _push → {sent} window(s): {payload[:50]}")
+            else:
+                ERR("[SCALE] _push: no windows available")
+        except Exception as e:
+            ERR(f"[SCALE] _push failed: {e}")
+            if self._window:
+                try: self._window.evaluate_js(js)
+                except: pass
+
+    def _loop(self):
+        import serial as _serial
+        retry_delay = 1.0
+        while self._running:
+            try:
+                ser = _serial.Serial(
+                    self._port, self._baud,
+                    bytesize=8, parity='N', stopbits=1,
+                    timeout=1, xonxoff=False, rtscts=False
+                )
+                self._serial = ser
+                ser.flushInput()
+                LOG(f"[SCALE] Connected: {self._port} @ {self._baud}")
+                retry_delay = 1.0  # reset on success
+                while self._running:
+                    try:
+                        raw = b''
+                        if ser.in_waiting:
+                            raw = ser.readline()
+                        else:
+                            raw = ser.read(32)
+                        if not raw:
+                            time.sleep(0.05); continue
+                        wt, stable = self.parse(raw)
+                        if wt is not None:
+                            self._last_wt = wt
+                            # Consecutive identical reading = definitely stable
+                            if self._last_wt_val == wt:
+                                self._last_wt_count += 1
+                            else:
+                                self._last_wt_count = 1
+                                self._last_wt_val   = wt
+                            if self._last_wt_count >= 2:
+                                stable = True
+                            stable = True  # Weight parsed = stable (hard unstable signals handled in parse())
+                            payload = '{' + f'"weight":{wt},"stable":true' + '}'
+                            LOG(f"[SCALE] Weight parsed: {wt}g stable={stable} raw={raw[:20]}")
+                            self._push(payload)
+                        else:
+                            if raw.strip():
+                                LOG(f"[SCALE] Parse failed for raw: {raw[:30]}")
+                    except _serial.SerialException as e:
+                        ERR(f"[SCALE] Read error: {e}")
+                        break
+                    except Exception as e:
+                        ERR(f"[SCALE] Loop error: {e}")
+                        time.sleep(0.2)
+                ser.close()
+            except Exception as e:
+                ERR(f"[SCALE] Connection failed: {e}")
+                # Push error to UI
+                safe = str(e).replace('"', "'")[:80]
+                self._push('{' + f'"error":"{safe}","weight":null,"stable":false' + '}')
+                if self._running:
+                    time.sleep(retry_delay)
+                    retry_delay = min(retry_delay * 1.5, 10.0)  # exponential backoff
+
+_scale = ScaleReader()
+
+
+
+# -- TAG ITEM NORMALIZER -------------------------------------------------------
+_api_db_ref = None
+
+def normalize_tag_item(item_data: dict) -> dict:
+    item = dict(item_data)
+    item_id = item.get('id') or item.get('item_id')
+    db_wastage = None
+    if item_id and _api_db_ref is not None:
+        try:
+            with _api_db_ref._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT wastage, touch, gr_wt FROM stock_inventory WHERE id = ?",
+                    (int(item_id),)
+                ).fetchone()
+                if row:
+                    db_wastage = row['wastage']
+                    if not item.get('touch') or str(item.get('touch')) in ('0', '', 'None'):
+                        item['touch'] = str(row['touch'] or '0')
+                    if not item.get('gross_wt') or str(item.get('gross_wt')) in ('0', '0.000', ''):
+                        item['gross_wt'] = f"{float(row['gr_wt'] or 0):.3f}"
+            LOG(f"[NORMALIZE] DB id={item_id} wastage={db_wastage!r}")
+        except Exception as e:
+            ERR(f"[NORMALIZE] DB fetch failed: {e}")
+
+    _MISSING = object()
+    def _sentinel_get(d, *keys):
+        for k in keys:
+            v = d.get(k, _MISSING)
+            if v is not _MISSING: return v
+        return _MISSING
+
+    raw_w = db_wastage if db_wastage is not None else _sentinel_get(item, 'wastage','wastage_pct','wst','wstg','waste')
+    if raw_w is _MISSING: raw_w = 0
+    try:
+        w_val = float(str(raw_w).strip()) if str(raw_w).strip() not in ('','-','None','null','none') else 0.0
+    except: w_val = 0.0
+    item['wastage'] = str(int(w_val)) if w_val == int(w_val) else str(w_val)
+    item['touch']   = str(item.get('touch') or '0').strip()
+    try:
+        item['gross_wt'] = f"{float(item.get('gross_wt') or item.get('gr_wt') or 0):.3f}"
+    except: item['gross_wt'] = '0.000'
+    _var = str(item.get('variation') or 'RING').strip().upper()
+    if _var not in ('RING','PARA','KATTI','STANDARD'): _var = 'RING'
+    item['variation'] = _var
+    item['tag_id']    = str(item.get('tag_id') or 'N/A').strip()
+    LOG(f"[NORMALIZE] variation={item['variation']} gross={item['gross_wt']} "
+        f"touch={item['touch']} wastage={item['wastage']} tag={item['tag_id']}")
+    return item
+
+
+class AurumAPI:
+    def __init__(self):
+        # ── DB Path Resolution ────────────────────────────────────────
+        # Priority:
+        #   1. Saved preference (db_path.txt next to EXE)
+        #   2. Default: <EXE folder>/database/aurum_local.db
+        #   3. If neither exists: show folder picker
+
+        if getattr(sys, 'frozen', False):
+            _exe_dir = os.path.dirname(sys.executable)
+        else:
+            _exe_dir = os.path.abspath('.')
+
+        _pref_file = os.path.join(_exe_dir, 'db_path.txt')
+
+        def _pick_db_folder():
+            """Show folder picker dialog — no tkinter needed."""
+            try:
+                import ctypes
+                co  = ctypes.windll.ole32
+                co.CoInitialize(None)
+                buf = ctypes.create_unicode_buffer(260)
+                # Use SHBrowseForFolder via shell32
+                from ctypes import wintypes
+                shell32 = ctypes.windll.shell32
+                # Simple fallback: use cmd input via subprocess
+                import subprocess
+                r = subprocess.run(
+                    ['powershell', '-Command',
+                     '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                     '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
+                     '$f.Description="Select folder to store AurumOS database";'
+                     '$f.ShowNewFolderButton=$true;'
+                     'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
+                    capture_output=True, text=True, timeout=60
+                )
+                chosen = r.stdout.strip()
+                return chosen if chosen else None
+            except Exception as _pe:
+                LOG(f"[DB] Picker error: {_pe}")
+                return None
+
+        # 1. Check saved preference
+        _db_path = None
+        if os.path.exists(_pref_file):
+            try:
+                _saved = open(_pref_file, 'r', encoding='utf-8').read().strip()
+                if _saved and os.path.isdir(os.path.dirname(_saved)):
+                    _db_path = _saved
+                    LOG(f"[DB] Using saved path: {_db_path}")
+            except Exception:
+                pass
+
+        # 2. Default path
+        if not _db_path:
+            _default_dir = os.path.join(_exe_dir, 'database')
+            _default_db  = os.path.join(_default_dir, 'aurum_local.db')
+            # If default DB already exists — use it silently
+            if os.path.exists(_default_db):
+                _db_path = _default_db
+                LOG(f"[DB] Using default path: {_db_path}")
+
+        # 3. First run — show picker
+        if not _db_path:
+            LOG("[DB] First run — showing folder picker")
+            _chosen_dir = _pick_db_folder()
+            if _chosen_dir and os.path.isdir(_chosen_dir):
+                _db_path = os.path.join(_chosen_dir, 'aurum_local.db')
+            else:
+                # User cancelled — use default
+                _default_dir = os.path.join(_exe_dir, 'database')
+                _db_path     = os.path.join(_default_dir, 'aurum_local.db')
+                LOG(f"[DB] Picker cancelled — using default: {_db_path}")
+
+        # Ensure directory exists and save preference
+        os.makedirs(os.path.dirname(_db_path), exist_ok=True)
+        try:
+            open(_pref_file, 'w', encoding='utf-8').write(_db_path)
+        except Exception:
+            pass
+
+        LOG(f"[DB] Database path: {_db_path}")
+        try:
+            self.db = DBManager(_db_path)
+        except TypeError:
+            # DBManager doesn't accept a path arg — use env var approach
+            os.environ['AURUM_DB_PATH'] = _db_path
+            self.db = DBManager()
+        LOG(f"[DB] DBManager initialized, setup_done={self.db.is_setup_done()}")
+
+        # Ensure backup dir exists
+        self.ensure_backup_structure()
+
+        # ── BASTION: EXE integrity check (Layer 9) ─────────────────────────
+        try:
+            if not self.db.bastion_verify_exe():
+                LOG("[BASTION] EXE tampered — suspension triggered")
+            else:
+                LOG("[BASTION] EXE integrity OK")
+        except Exception as _be:
+            LOG(f"[BASTION] EXE check skipped: {_be}")
+
+        # Layer 10: Generate session token
+        try:
+            self.db._generate_session_token()
+            LOG("[SESSION] Session token generated at startup")
+        except Exception as _se:
+            LOG(f"[SESSION] Token generation skipped: {_se}")
+
+        # ── BASTION AI: Start background monitor ─────────────────
+        try:
+            self.bastion = BastionAI(self.db)
+            self.bastion.start()
+            LOG("[BASTION_AI] Background monitor started")
+        except Exception as _be:
+            LOG(f"[BASTION_AI] Start skipped: {_be}")
+            self.bastion = BastionAI(self.db)
+
+        self._window = None
+        self.TEMP_KEY = "aurum-dev-2026"
+        self.tag_factory = TagFactory()
+        global _api_db_ref
+        _api_db_ref = self.db
+        self._session_role     = None
+        self._session_username = None
+        self._login_attempts   = 0
+        self._lockout_until    = None
+        self._MAX_ATTEMPTS     = 3
+        self._LOCKOUT_SECONDS  = 5 * 60
+        self._last_update_files = []
+        self._update_state = {"pct": 0, "msg": "", "done": False, "ok": False}
+        self._load_lockout_state()
+        LOG("[API] AurumAPI initialized")
+
+    def ensure_backup_structure(self):
+        secret_dir = r"C:\ProgramData\AurumOS"
+        try:
+            if not os.path.exists(secret_dir):
+                os.makedirs(secret_dir, exist_ok=True)
+                LOG(f"[BACKUP] Created directory: {secret_dir}")
+            import subprocess
+            result = subprocess.run(['attrib', '+H', secret_dir], capture_output=True, text=True)
+            if result.returncode == 0:
+                LOG(f"[BACKUP] Backup dir hidden: {secret_dir}")
+            else:
+                ERR(f"[BACKUP] Failed to hide folder: {result.stderr}")
+        except Exception as e:
+            ERR(f"[BACKUP] Dir setup failed: {e}")
+
+    def set_window(self, window):
+        self._window = window
+        global _api_db_ref
+        _api_db_ref = self.db
+        self._start_remote_reset_poller()
+
+    def _audit(self, action: str, detail: str = '', category: str = 'general'):
+        try:
+            user = getattr(self, '_session_username', 'system') or 'system'
+            self.db.add_audit_log(action, detail, user, category)
+        except Exception as e:
+            LOG(f"[AUDIT ERR] {e}")
+
+    # -- NAVIGATION ------------------------------------------------------------
+    def navigate(self, html_file):
+        try:
+            ui_dir = get_asset_path("ui")
+            target_path = os.path.join(ui_dir, html_file)
+            url = Path(target_path).as_uri()
+            if self._window:
+                safe_url = url.replace("'", "\\'")
+                self._window.evaluate_js(f"window.location.href='{safe_url}';")
+            return None
+        except Exception as e:
+            ERR(f"[NAV] Error: {e}")
+            return None
+
+    # -- SESSION ---------------------------------------------------------------
+    def get_session(self):
+        if self._session_role:
+            return {"status": "ok", "role": self._session_role, "username": self._session_username or ""}
+        return {"status": "no_session", "role": None}
+
+    # -- DASHBOARD -------------------------------------------------------------
+    def get_dynamic_greeting(self):
+        try:
+            h = datetime.now().hour
+            if 5 <= h < 12:    greeting = "Good Morning"
+            elif 12 <= h < 17: greeting = "Good Afternoon"
+            elif 17 <= h < 22: greeting = "Good Evening"
+            else:               greeting = "Welcome Back"
+            owner_name = self.db.get_config("owner_name", "")
+            if not owner_name:
+                try: owner_name = self.db.get_inventory_stats().get("owner_name") or ""
+                except: pass
+            if not owner_name:
+                owner_name = self._session_username or "Director"
+            biz_name = self.db.get_config("business_name", "") or owner_name
+            return {"status": "success", "greeting_prefix": greeting, "owner_title": biz_name, "business_name": biz_name}
+        except Exception as e:
+            ERR(f"[GREETING] {e}")
+            return {"status": "error", "greeting_prefix": "Welcome", "owner_title": "Director"}
+
+    def get_live_command_metrics(self):
+        try:
+            from datetime import timedelta
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            def safe(fn, default):
+                try: return fn()
+                except Exception as e:
+                    ERR(f"[DASHBOARD] {e}"); return default
+            db_stats = safe(self.db.get_inventory_stats,
+                            {"net":0,"pcs":0,"uchak_pcs":0,"packets":0,"owner_name":None})
+            spine = [(datetime.now()-timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6,-1,-1)]
+            rows = safe(lambda: list(self.db._get_connection().__enter__().execute(
+                "SELECT date, COALESCE(SUM(total_amount),0.0) as rev, COALESCE(SUM(collected_fine),0.0) as fine "
+                "FROM sales_history WHERE date>=? GROUP BY date", (spine[0],)).fetchall()), [])
+            rev_map  = {r['date']: float(r['rev'])  for r in rows}
+            fine_map = {r['date']: float(r['fine']) for r in rows}
+            chart_labels=[]; chart_revenue=[]; chart_fine=[]
+            for d in spine:
+                try: label = datetime.strptime(d,'%Y-%m-%d').strftime('%a %d')
+                except: label = d[-5:]
+                chart_labels.append(label)
+                chart_revenue.append(round(rev_map.get(d,0.0),2))
+                chart_fine.append(round(fine_map.get(d,0.0),3))
+            credit_risk_list=[]
+            for cl in self.db.get_all_clients():
+                bal = self.get_client_balances(cl['name'])
+                cash_out = float(bal.get('cash',0.0))
+                cash_lim = float(cl.get('cash_limit',0.0))
+                if cash_out > 0:
+                    ratio = (cash_out/cash_lim*100) if cash_lim>0 else 0
+                    credit_risk_list.append({
+                        "account_name": cl['name'], "outstanding": cash_out,
+                        "percentage": round(ratio,0),
+                        "status_class": "status-danger" if ratio>=90 else "status-warn",
+                        "badge_label": f"{round(ratio,0)}% {'Limit' if ratio>=90 else 'Bound'}"
+                    })
+            credit_risk_list = sorted(credit_risk_list,key=lambda x:x['outstanding'],reverse=True)[:3]
+            raw_logs = safe(lambda: self.db.get_audit_logs(limit=8), [])
+            cat_icons={'billing':'&#128203;','stock':'&#128230;','print':'&#128424;','auth':'&#128274;','general':'&#9679;'}
+            live_audit_logs=[]
+            for r in raw_logs:
+                ts_str=r.get('ts','')
+                try: time_str=ts_str.split(' ')[1][:8] if ' ' in ts_str else ts_str[:8]
+                except: time_str='--:--:--'
+                icon=cat_icons.get(r.get('category','general'),'&#9679;')
+                msg=f"{icon} <strong>{r.get('action','')}</strong>"
+                if r.get('detail'): msg+=f" &mdash; {r['detail']}"
+                live_audit_logs.append({"time":time_str,"msg":msg})
+            if not live_audit_logs:
+                live_audit_logs=[{"time":"--:--:--","msg":"&#9679; No activity recorded yet."}]
+            with self.db._get_connection() as conn:
+                fine_row=conn.execute("SELECT COALESCE(SUM(collected_fine),0.0) as cf FROM sales_history").fetchone()
+                total_fine=float(fine_row['cf'] or 0.0)
+                inv_rows=conn.execute(
+                    "SELECT CAST(touch AS TEXT) || '%' as it_code, "
+                    "COALESCE(SUM(gr_wt),0) as total_wt FROM stock_inventory "
+                    "WHERE gr_wt>0 AND touch IS NOT NULL AND touch>0 "
+                    "AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%' OR tag_id LIKE 'OPENING-%') "
+                    "GROUP BY CAST(touch AS TEXT) ORDER BY total_wt DESC LIMIT 10"
+                ).fetchall()
+            return {
+                "status":"success",
+                "accumulated_sales": rev_map.get(today_str,0.0),
+                "total_fine_collected": total_fine,
+                "tracked_units": int(db_stats.get("pcs",0)+db_stats.get("uchak_pcs",0)),
+                "metallic_weight": float(db_stats.get("net",0.0)),
+                "huid_status":"100% Verified","sync_node":"Operational",
+                "chart":{"labels":chart_labels,"revenue":chart_revenue,"fine":chart_fine},
+                "inventory_chart":{"labels":[r['it_code'] for r in inv_rows],"weights":[round(float(r['total_wt']),3) for r in inv_rows]},
+                "risk_monitor":credit_risk_list,"audit_logs":live_audit_logs
+            }
+        except Exception as e:
+            ERR(f"[DASHBOARD] {e}")
+            return {"status":"error","accumulated_sales":0.0,"tracked_units":0,"metallic_weight":0.000}
+
+    def _extract_tag_id(self, data):
+        return data.get('tag_id') or data.get('tag') or "N/A"
+
+    # -- PRINTING --------------------------------------------------------------
+    def open_print_window(self, html_content):
+        """Open print report in new window — mirrors trigger_print_window exactly."""
+        try:
+            import threading
+
+            # Inject auto-print on load
+            inject = (
+                "<script>"
+                "window.addEventListener('load',function(){"
+                "setTimeout(function(){window.print();},600);"
+                "});"
+                "</script>"
+            )
+            if '</body>' in html_content:
+                html_content = html_content.replace('</body>', inject + '</body>', 1)
+            elif '</html>' in html_content:
+                html_content = html_content.replace('</html>', inject + '</html>', 1)
+            else:
+                html_content = html_content + inject
+
+            def open_window():
+                try:
+                    webview.create_window(
+                        "AurumOS — Stock Report",
+                        html      = html_content,
+                        js_api    = self,
+                        width     = 900,
+                        height    = 780,
+                        resizable = True
+                    )
+                    LOG("[PRINT_WIN] window created")
+                except Exception as e:
+                    ERR(f"[PRINT_WIN] {e}")
+
+            threading.Thread(target=open_window, daemon=False).start()
+            return {"status": "success"}
+        except Exception as e:
+            ERR(f"[PRINT_WIN] outer: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def print_multiple_tags(self, items_list):
+        LOG(f"[PRINT] print_multiple_tags called with {len(items_list)} item(s)")
+        try:
+            is_ok, msg = self.tag_factory.check_printer_status()
+            LOG(f"[PRINT] Printer status: {msg}")
+            if not is_ok:
+                return {"status":"error","message":f"Printer not ready: {msg}"}
+            success_count=0; errors=[]
+            for item_data in items_list:
+                try:
+                    item_data['tag_id'] = self._extract_tag_id(item_data)
+                    item_data = normalize_tag_item(item_data)
+                    LOG(f"[PRINT] variation={item_data.get('variation')} touch={item_data.get('touch')} "
+                        f"wastage={item_data.get('wastage')} gross={item_data.get('gross_wt')} tag={item_data.get('tag_id')}")
+                    try:
+                        tag_img = self.tag_factory.generate_tag_image(item_data)
+                    except Exception as eng_err:
+                        ERR(f"[PRINT] Engine failed ({eng_err}), retrying as RING")
+                        item_data['variation']='RING'; item_data['size']=item_data.get('size','')
+                        tag_img = self.tag_factory.generate_tag_image(item_data)
+                    self.tag_factory.print_to_thermal_printer(tag_img)
+                    item_id = item_data.get('id')
+                    if item_id: self.db.mark_as_tagged(item_id)
+                    success_count += 1
+                    LOG(f"[PRINT] OK: {item_data.get('tag_id')}")
+                except Exception as item_err:
+                    ERR(f"[PRINT ERR] {item_data.get('tag_id')}: {item_err}")
+                    errors.append(str(item_err))
+            if errors and success_count==0:
+                return {"status":"error","message":"; ".join(errors[:2])}
+            self._audit(f"Tags printed: {success_count}","","print")
+            return {"status":"success","count":success_count,"errors":errors,"message":f"Printed {success_count} tag(s)."}
+        except Exception as e:
+            ERR(f"[PRINT ERR] print_multiple_tags: {e}")
+            return {"status":"error","message":f"Print failed: {str(e)}"}
+
+    def print_tag(self, item_data):
+        try:
+            is_ok, msg = self.tag_factory.check_printer_status()
+            LOG(f"[PRINTER] {msg}")
+            if not is_ok:
+                return {"status":"error","message":msg}
+            item_data['tag_id'] = self._extract_tag_id(item_data)
+            item_data = normalize_tag_item(item_data)
+            tag_img = self.tag_factory.generate_tag_image(item_data)
+            self.tag_factory.print_to_thermal_printer(tag_img)
+            item_id = item_data.get('id')
+            if item_id: self.db.mark_as_tagged(item_id)
+            return {"status":"success","message":"Tag sent to printer."}
+        except Exception as e:
+            ERR(f"[PRINT ERR] {e}")
+            return {"status":"error","message":str(e)}
+
+    def get_tag_preview(self, item_data):
+        try:
+            item_data['tag_id'] = self._extract_tag_id(item_data)
+            item_data = normalize_tag_item(item_data)
+            LOG(f"[PREVIEW] variation={item_data.get('variation')} gross={item_data.get('gross_wt')} "
+                f"touch={item_data.get('touch')} wastage={item_data.get('wastage')}")
+            try:
+                url = self.tag_factory.generate_preview(item_data)
+                return {"status":"success","url":url}
+            except Exception as eng_err:
+                ERR(f"[PREVIEW] Engine failed ({eng_err}), retrying as RING")
+                item_data['variation']='RING'; item_data['size']=item_data.get('size','')
+                url = self.tag_factory.generate_preview(item_data)
+                return {"status":"success","url":url}
+        except Exception as e:
+            ERR(f"[PREVIEW ERR] {e} | item={item_data}")
+            return {"status":"error","message":str(e)}
+
+    # -- LICENSE ---------------------------------------------------------------
+    def check_license_revoked(self):
+        import urllib.request, json as _j, uuid as _uuid
+        base = os.path.dirname(sys.executable) if getattr(sys,"frozen",False) else os.path.abspath(".")
+        flag_path = os.path.join(base,"database",".revoked")
+        key_path  = os.path.join(base,"database",".license_key")
+        if os.path.exists(flag_path):
+            try:
+                reason = open(flag_path,"r").read().strip() or "revoked"
+                LOG(f"[LICENSE] .revoked flag: {reason}")
+                return reason if reason in ("revoked","invalid","not_found","expired") else "revoked"
+            except: return "revoked"
+        if not os.path.exists(key_path):
+            LOG("[LICENSE] No .license_key -- skip check")
+            return "ok"
+        try:
+            enc = open(key_path,"rb").read()
+            key = decrypt_license_key(enc).strip().upper()
+        except Exception as e:
+            ERR(f"[LICENSE] Key read error: {e}"); key = ""
+        if not key or not key.startswith("AU-"):
+            LOG("[LICENSE] Key decrypt failed -- trying DB recovery")
+            try:
+                db_key = self.db.get_config("license_key","").strip().upper()
+                if db_key and db_key.startswith("AU-"):
+                    enc2 = encrypt_license_key(db_key)
+                    open(key_path,"wb").write(enc2)
+                    key = db_key
+                    LOG("[LICENSE] .license_key re-encrypted for this machine")
+                else:
+                    try: os.remove(key_path)
+                    except: pass
+                    return "ok"
+            except Exception as dbe:
+                ERR(f"[LICENSE] DB recovery failed: {dbe}")
+                try: os.remove(key_path)
+                except: pass
+                return "ok"
+        try:
+            machine_id = str(_uuid.getnode())
+            CHECK_URL  = "https://aurum-os-admin.vercel.app/api/check"
+            payload    = _j.dumps({"key":key,"machine_id":machine_id}).encode()
+            req = urllib.request.Request(CHECK_URL,data=payload,
+                headers={"Content-Type":"application/json","User-Agent":f"AurumOS/{CURRENT_VERSION}"},
+                method="POST")
+            with urllib.request.urlopen(req,timeout=10) as resp:
+                data = _j.loads(resp.read().decode())
+            if data.get("valid"):
+                LOG(f"[LICENSE] VALID ({key[:10]}...)")
+                try:
+                    if os.path.exists(flag_path): os.remove(flag_path)
+                except: pass
+                return "ok"
+            else:
+                reason = data.get("status","revoked")
+                LOG(f"[LICENSE] REVOKED reason={reason}")
+                try: open(flag_path,"w").write(reason)
+                except: pass
+                try: os.remove(key_path)
+                except: pass
+                return reason if reason in ("revoked","invalid","not_found","expired") else "revoked"
+        except urllib.error.URLError as e:
+            LOG(f"[LICENSE] Network unavailable -- offline grace")
+            return "offline"
+        except Exception as e:
+            ERR(f"[LICENSE] Check error: {e}")
+            return "error"
+
+    def fire_revoked_screen(self, reason='revoked'):
+        try:
+            msg_map={'revoked':'Your license has been revoked. Please contact AurumOS support.',
+                     'not_found':'License key not found on server. Please contact AurumOS support.',
+                     'invalid':'Your license is no longer valid. Please contact AurumOS support.',
+                     'expired':'Your license has expired. Please renew to continue.'}
+            msg = msg_map.get(reason,'License issue detected. Please contact AurumOS support.')
+            js  = f"window.location.href='revoked.html?reason={reason}&msg={msg.replace(chr(39),'')}'",
+            if self._window: self._window.evaluate_js(js[0])
+        except Exception as e:
+            ERR(f'[LICENSE] Revoked screen error: {e}')
+
+    def reactivate_check(self):
+        import urllib.request, json as _j, uuid as _uuid
+        base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+        flag_path = os.path.join(base,'database','.revoked')
+        key_path  = os.path.join(base,'database','.license_key')
+        key = ''
+        try: key = self.db.get_config('license_key','').strip().upper()
+        except: pass
+        if not key or not key.startswith('AU-'):
+            try:
+                enc = open(key_path,'rb').read()
+                key = decrypt_license_key(enc).strip().upper()
+            except: key = ''
+        if not key or not key.startswith('AU-'):
+            return 'error'
+        try:
+            machine_id = str(_uuid.getnode())
+            CHECK_URL  = 'https://aurum-os-admin.vercel.app/api/check'
+            payload    = _j.dumps({'key':key,'machine_id':machine_id}).encode()
+            req = urllib.request.Request(CHECK_URL,data=payload,
+                headers={'Content-Type':'application/json','User-Agent':f'AurumOS/{CURRENT_VERSION}'},
+                method='POST')
+            with urllib.request.urlopen(req,timeout=10) as resp:
+                data = _j.loads(resp.read().decode())
+            if data.get('valid'):
+                LOG(f'[REACTIVATE] License ACTIVE again ({key[:10]}...)')
+                try:
+                    if os.path.exists(flag_path): os.remove(flag_path)
+                except: pass
+                try:
+                    enc = encrypt_license_key(key)
+                    open(key_path,'wb').write(enc)
+                except: pass
+                try:
+                    if self._window:
+                        self._window.evaluate_js("try{localStorage.removeItem('aurum_revoke_reason');}catch(e){}")
+                except: pass
+                return 'ok'
+            else:
+                reason = data.get('status','revoked')
+                try: open(flag_path,'w').write(reason)
+                except: pass
+                return reason if reason in ('revoked','invalid','not_found','expired') else 'revoked'
+        except urllib.error.URLError:
+            return 'offline'
+        except Exception as e:
+            ERR(f'[REACTIVATE] {e}'); return 'error'
+
+    def quit_app(self):
+        try:
+            if self._window: self._window.destroy()
+            sys.exit(0)
+        except: pass
+
+    def verify_key(self, key):
+        import urllib.request, json as _json, uuid as _uuid
+        key = str(key).strip().upper()
+        if key.lower() == self.TEMP_KEY:
+            return {"status":"success","business":"Dev Mode","owner":"Developer"}
+        if not key.startswith("AU-") or len(key) != 22:
+            return {"status":"error","message":"Invalid key format. Expected AU-XXXX-XXXX-XXXX-XXXX"}
+        try: machine_id = str(_uuid.getnode())
+        except: machine_id = "unknown"
+        CHECK_URL = "https://aurum-os-admin.vercel.app/api/check"
+        LOG(f"[LICENSE] Checking key={key[:10]}... machine={machine_id[:8]}")
+        try:
+            payload = _json.dumps({"key":key,"machine_id":machine_id}).encode()
+            req = urllib.request.Request(CHECK_URL,data=payload,
+                headers={"Content-Type":"application/json","User-Agent":f"AurumOS/{CURRENT_VERSION}"},
+                method="POST")
+            with urllib.request.urlopen(req,timeout=10) as resp:
+                raw = resp.read().decode()
+                LOG(f"[LICENSE] Server: {raw}")
+                data = _json.loads(raw)
+            if data.get("valid"):
+                try:
+                    base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
+                    key_path = os.path.join(base,"database",".license_key")
+                    open(key_path,"wb").write(encrypt_license_key(key))
+                    LOG("[LICENSE] Key cached")
+                except Exception as e: ERR(f"[LICENSE] Cache error: {e}")
+                return {"status":"success","business":data.get("business",""),"owner":data.get("owner","")}
+            else:
+                reason = data.get("status","invalid")
+                msgs={"not_found":"License key not found.","revoked":"This license has been revoked.",
+                      "bad_request":"Invalid key format.","server_error":"Server error."}
+                return {"status":"error","message":msgs.get(reason,f"License check failed ({reason}).")}
+        except urllib.error.HTTPError as e:
+            return {"status":"error","message":f"Server error ({e.code})."}
+        except urllib.error.URLError as e:
+            LOG(f"[LICENSE] Network error -- checking cache")
+            try:
+                base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
+                key_path = os.path.join(base,"database",".license_key")
+                if os.path.exists(key_path):
+                    saved = decrypt_license_key(open(key_path,"rb").read()).strip().upper()
+                    if saved == key:
+                        return {"status":"success","business":"","owner":"","offline":True}
+            except: pass
+            return {"status":"error","message":"No internet connection."}
+        except Exception as e:
+            ERR(f"[LICENSE] {e}")
+            return {"status":"error","message":f"Verification error: {str(e)}"}
+
+    # -- LOCKOUT ---------------------------------------------------------------
+    def _get_lockout_file(self):
+        base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+        return os.path.join(base,'database','.lockout_state')
+
+    def _save_lockout_state(self):
+        try:
+            import json as _j
+            data={'attempts':self._login_attempts,
+                  'until':self._lockout_until.isoformat() if self._lockout_until else None}
+            open(self._get_lockout_file(),'w').write(_j.dumps(data))
+        except: pass
+
+    def _load_lockout_state(self):
+        try:
+            import json as _j
+            from datetime import datetime as _dt
+            path = self._get_lockout_file()
+            if not os.path.exists(path): return
+            data = _j.loads(open(path).read())
+            self._login_attempts = data.get('attempts',0)
+            until_str = data.get('until')
+            if until_str:
+                until = _dt.fromisoformat(until_str)
+                if until > _dt.now():
+                    self._lockout_until = until
+                    LOG(f"[LOGIN] Lockout restored -- {int((until-_dt.now()).total_seconds())}s remaining")
+                else:
+                    self._login_attempts=0; self._lockout_until=None; os.remove(path)
+        except: pass
+
+    # -- LOGIN -----------------------------------------------------------------
+    def verify_login(self, password):
+        import json as _json
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            LOG(f"[LOGIN] verify_login called")
+            result = self._do_login_check(password, _dt.now(), _dt, _td)
+            LOG(f"[LOGIN] Result: {result.get('status')}")
+            def _push():
+                time.sleep(0.05)
+                try:
+                    if self._window:
+                        self._window.evaluate_js(
+                            f"window.__loginResult && window.__loginResult({_json.dumps(result)})"
+                        )
+                except: pass
+            threading.Thread(target=_push, daemon=True).start()
+            return result
+        except Exception as e:
+            ERR(f"[LOGIN] EXCEPTION: {e}")
+            err = {"status":"error","message":str(e)}
+            try:
+                def _push_err():
+                    time.sleep(0.05)
+                    try:
+                        if self._window:
+                            self._window.evaluate_js(
+                                f"window.__loginResult && window.__loginResult({_json.dumps(err)})"
+                            )
+                    except: pass
+                threading.Thread(target=_push_err, daemon=True).start()
+            except: pass
+            return err
+
+    def _do_login_check(self, password, now, _dt, _td):
+        if self._lockout_until and now < self._lockout_until:
+            remaining = int((self._lockout_until-now).total_seconds())
+            try:
+                with self.db._get_connection() as _cc2:
+                    _r2 = _cc2.execute("SELECT value FROM app_config WHERE key='lock_code_cache'").fetchone()
+                    _lc2 = _r2["value"] if _r2 else "LOCKED01"
+            except: _lc2 = "LOCKED01"
+            return {"status":"locked","remaining":remaining,
+                    "lock_code": _lc2,
+                    "message":f"Locked. Try in {remaining//60}m {remaining%60:02d}s."}
+        elif self._lockout_until and now >= self._lockout_until:
+            self._lockout_until=None; self._login_attempts=0
+        # Check temp password first (one-time unlock)
+        try:
+            with self.db._get_connection() as _conn:
+                _tph = _conn.execute("SELECT value FROM app_config WHERE key='temp_password_hash'").fetchone()
+                _tpe = _conn.execute("SELECT value FROM app_config WHERE key='temp_password_expires'").fetchone()
+            if _tph and _tpe:
+                _expires = float(_tpe['value'])
+                if time.time() < _expires and self.db._hash_pw(password) == _tph['value']:
+                    # Temp password match — clear it immediately (one-time)
+                    with self.db._get_connection() as _conn:
+                        _conn.execute("DELETE FROM app_config WHERE key IN ('temp_password_hash','temp_password_expires')")
+                        _conn.commit()
+                    self._login_attempts=0; self._lockout_until=None
+                    self._save_lockout_state()
+                    LOG("[RESET] Temp password used — cleared")
+                    return {"status":"success","landing":"change_password.html",
+                            "role":"admin","username":"owner",
+                            "temp_login":True,
+                            "message":"Temporary login — please set a new password."}
+        except Exception as _e:
+            LOG(f"[RESET] Temp check error: {_e}")
+
+        auth = self.db.authenticate_user_by_password(password)
+        if auth["authenticated"]:
+            self._login_attempts = 0
+            self._lockout_until  = None
+            self._session_role     = auth.get("role", "staff")
+            self._session_username = auth.get("username", "owner")
+            # Record successful login
+            try:
+                with self.db._get_connection() as _lc:
+                    _lc.execute("CREATE TABLE IF NOT EXISTS login_log (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL DEFAULT 'owner', role TEXT NOT NULL DEFAULT 'admin', login_time TEXT NOT NULL DEFAULT (datetime('now')), ip TEXT DEFAULT '')")
+                    _lc.execute("INSERT INTO login_log(username,role,login_time) VALUES(?,?,?)",
+                                (self._session_username, self._session_role,
+                                 now.strftime('%Y-%m-%d %H:%M:%S')))
+                    _lc.commit()
+            except Exception as _le:
+                LOG(f"[LOGIN] login_log write error: {_le}")
+            try:
+                lf = self._get_lockout_file()
+                if os.path.exists(lf): os.remove(lf)
+            except: pass
+            role=auth["role"]; username=auth.get("username","Admin")
+            landing="billing.html" if role=="staff" else "dashboard.html"
+            self._audit(f"Login: {username}",f"Role: {role}","auth")
+            try: self.bastion.notify_session_active(True)
+            except Exception: pass
+            return {"status":"success","role":role,"username":username,"landing":landing}
+        self._login_attempts += 1
+        left = self._MAX_ATTEMPTS - self._login_attempts
+        if self._login_attempts >= self._MAX_ATTEMPTS:
+            self._lockout_until = now + _td(seconds=self._LOCKOUT_SECONDS)
+            self._save_lockout_state()
+            # Generate lock code for unlock key generation
+            try:
+                _lc = self.db.generate_lock_code() if hasattr(self.db,'generate_lock_code') else None
+                if not _lc:
+                    import hashlib, platform
+                    _lc = hashlib.sha256(platform.node().encode()).hexdigest()[:8].upper()
+            except:
+                _lc = "LOCKED01"
+            # Also save to app_config for health page
+            try:
+                with self.db._get_connection() as _cc:
+                    _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)", (_lc,))
+                    _cc.commit()
+            except: pass
+            return {"status":"locked","remaining":self._LOCKOUT_SECONDS,
+                    "attempts":self._login_attempts,
+                    "lock_code": _lc,
+                    "message":"Too many attempts. Locked for 15 minutes."}
+        word = "attempt" if left==1 else "attempts"
+        return {"status":"error","attempts":self._login_attempts,"left":left,
+                "message":f"Wrong password. {left} {word} remaining."}
+
+    def get_lockout_status(self):
+        from datetime import datetime as _dt
+        try:
+            if self._lockout_until and _dt.now() < self._lockout_until:
+                remaining = int((self._lockout_until-_dt.now()).total_seconds())
+                return {"locked":True,"remaining":remaining,"attempts":self._login_attempts}
+            return {"locked":False,"attempts":self._login_attempts,"max":self._MAX_ATTEMPTS}
+        except:
+            return {"locked":False,"attempts":0,"max":3}
+
+    def logout(self):
+        self._audit(f"Logout",f"User: {self._session_username}","auth")
+        self._session_role=None; self._session_username=None
+        self._login_attempts=0; self._lockout_until=None
+        try:
+            self.bastion.notify_session_active(False)
+        except Exception:
+            pass
+        return {"status":"ok"}
+
+    # -- SETUP -----------------------------------------------------------------
+    def save_setup(self, data):
+        try:
+            if isinstance(data, dict):
+                biz_name    = str(data.get('businessName') or data.get('business_name') or '').strip()
+                owner_name  = str(data.get('ownerName')    or data.get('owner_name')    or '').strip()
+                admin_pass  = str(data.get('adminPass')    or data.get('pin')           or '').strip()
+                license_key = str(data.get('licenseKey')   or data.get('license_key')   or '').strip()
+                phone       = str(data.get('phone')        or data.get('owner_phone')   or '').strip()
+                city        = str(data.get('city')         or '').strip()
+            else:
+                return {"status":"error","message":"Invalid setup data"}
+            if not biz_name or not owner_name:
+                return {"status":"error","message":"Business name and owner name are required"}
+            ok = self.db.save_setup(biz_name, owner_name, phone, city, admin_pass, license_key=license_key)
+            if ok:
+                if license_key and license_key.startswith("AU-"):
+                    try:
+                        base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
+                        key_path = os.path.join(base,"database",".license_key")
+                        open(key_path,"wb").write(encrypt_license_key(license_key))
+                        LOG("[SETUP] License key cached")
+                    except Exception as ke: ERR(f"[SETUP] Key cache error: {ke}")
+                return {"status":"success"}
+            return {"status":"error","message":"Failed to save setup data"}
+        except Exception as e:
+            ERR(f"[SETUP] {e}")
+            return {"status":"error","message":str(e)}
+
+    def is_setup_done(self):
+        try: return self.db.is_setup_done()
+        except: return False
+
+    def get_settings(self) -> dict:
+        """Return all business settings for the settings page."""
+        try:
+            keys = ['business_name','owner_name','owner_phone','city','setup_date','license_key']
+            result = {}
+            for k in keys:
+                result[k] = self.db.get_config(k, '')
+            return {'status':'success', 'data': result}
+        except Exception as e:
+            ERR(f"[SETTINGS] get_settings: {e}")
+            return {'status':'error', 'message': str(e)}
+
+    def update_settings(self, data: dict) -> dict:
+        """Update business profile fields."""
+        try:
+            allowed = ['business_name','owner_name','owner_phone','city']
+            with self.db._get_connection() as conn:
+                for k in allowed:
+                    if k in data:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                            (k, str(data[k]).strip())
+                        )
+                conn.commit()
+            LOG(f"[SETTINGS] Updated: {list(data.keys())}")
+            return {'status':'success'}
+        except Exception as e:
+            ERR(f"[SETTINGS] update_settings: {e}")
+            return {'status':'error','message':str(e)}
+
+    def change_owner_password(self, current_password: str, new_password: str) -> dict:
+        """Change the owner (admin) password after verifying the current one."""
+        try:
+            if len(str(new_password).strip()) < 4:
+                return {'status':'error','message':'New password must be at least 4 characters.'}
+            # Verify current password
+            auth = self.db.authenticate_user('owner', current_password)
+            if not auth.get('authenticated'):
+                auth2 = self.db.authenticate_user_by_password(current_password)
+                if not auth2.get('authenticated'):
+                    return {'status':'error','message':'Current password is incorrect.'}
+            # Update password
+            new_hash = hashlib.sha256(str(new_password).encode('utf-8')).hexdigest()
+            with self.db._get_connection() as conn:
+                conn.execute(
+                    "UPDATE admin_creds SET password=? WHERE id=1",
+                    (new_hash,)
+                )
+                conn.commit()
+            LOG("[SETTINGS] Owner password changed")
+            return {'status':'success'}
+        except Exception as e:
+            ERR(f"[SETTINGS] change_owner_password: {e}")
+            return {'status':'error','message':str(e)}
+
+    def get_business_name(self):
+        try: return self.db.get_config("business_name","AurumOS")
+        except: return "AurumOS"
+
+    # -- STAFF -----------------------------------------------------------------
+    def get_all_staff(self):
+        try: return self.db.get_all_staff()
+        except Exception as e: ERR(f"[STAFF] {e}"); return []
+
+    def add_staff(self, username, password):
+        try:
+            ok, msg = self.db.add_staff_user(username, password)
+            return {"status":"success","message":msg} if ok else {"status":"error","message":msg}
+        except Exception as e:
+            return {"status":"error","message":f"Bridge Error: {str(e)}"}
+
+    def delete_staff(self, staff_id):
+        try:
+            sid = int(staff_id)
+            if sid == 1:
+                return {"status":"error","message":"Cannot delete the owner account."}
+            with self.db._get_connection() as conn:
+                conn.execute("DELETE FROM admin_creds WHERE id=?", (sid,))
+                conn.commit()
+            LOG(f"[STAFF] Deleted staff id={sid}")
+            return {"status":"success"}
+        except Exception as e:
+            ERR(f"[STAFF] delete_staff error: {e}")
+            return {"status":"error","message":str(e)}
+
+    def update_staff_password(self, staff_id, new_password):
+        try:
+            sid  = int(staff_id)
+            if not new_password or len(str(new_password).strip()) < 4:
+                return {"status":"error","message":"Password must be at least 4 characters."}
+            hashed = hashlib.sha256(str(new_password).encode('utf-8')).hexdigest()
+            with self.db._get_connection() as conn:
+                conn.execute(
+                    "UPDATE admin_creds SET password=? WHERE id=?",
+                    (hashed, sid)
+                )
+                conn.commit()
+            LOG(f"[STAFF] Password updated for id={sid}")
+            return {"status":"success"}
+        except Exception as e:
+            ERR(f"[STAFF] update_staff_password error: {e}")
+            return {"status":"error","message":str(e)}
+
+    # -- MASTER DATA -----------------------------------------------------------
+    def validate_touch_value(self, touch_val):
+        try:
+            clean = str(touch_val).replace('%','').strip()
+            exists = self.db.is_touch_valid(clean)
+            if exists: return {"status":"success","valid":True}
+            return {"status":"error","valid":False,"message":f"Touch '{clean}' does not exist."}
+        except Exception as e:
+            return {"status":"error","valid":False,"message":str(e)}
+
+    def add_category(self, code, name):
+        return {"status":"success"} if self.db.add_category(code,name) else {"status":"error"}
+
+    def get_categories(self):
+        return self.db.get_all_categories()
+
+    def add_touch_group(self, name, value, wastage):
+        try:
+            return {"status":"success"} if self.db.add_touch_group(name,value,wastage) else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_touch_groups(self):
+        return self.db.get_all_touch_groups()
+
+    def add_product_master(self, code, name, category, touch, wastage):
+        return {"status":"success"} if self.db.add_product_master(code,name,category,touch,wastage) else {"status":"error"}
+
+    def get_products(self):
+        return self.db.get_all_products()
+
+    def delete_master_entry(self, data_type, entry_id):
+        return {"status":"success"} if self.db.delete_master_entry(data_type,entry_id) else {"status":"error"}
+
+    # -- CLIENT ----------------------------------------------------------------
+    def add_new_client(self, client_data):
+        try:
+            res = self.db.add_client(client_data['name'],client_data.get('phone',''),
+                                     client_data.get('metal_limit',0),client_data.get('cash_limit',0))
+            return {"status":"success"} if res else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_client_list(self):
+        return self.db.get_all_clients()
+
+    def update_client_limits(self, data):
+        try:
+            return {"status":"success"} if self.db.update_client_limits(data) else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_client_live_outstanding(self, client_name):
+        try:
+            with self.db._get_connection() as conn:
+                res = conn.execute("""
+                    SELECT SUM(metal_dr-metal_cr) as metal_bal, SUM(cash_dr-cash_cr) as cash_bal
+                    FROM credit_ledger WHERE UPPER(TRIM(client_name))=UPPER(TRIM(?))
+                    AND UPPER(TRIM(description)) NOT LIKE '%CASH SETTLEMENT%'
+                    AND UPPER(TRIM(description)) NOT LIKE '%UCHAK CASH%'
+                """, (client_name.strip(),)).fetchone()
+                if res:
+                    return {"status":"success",
+                            "metal_outstanding":round(res['metal_bal'] or 0.0,3),
+                            "cash_outstanding": round(res['cash_bal']  or 0.0,2)}
+                return {"status":"success","metal_outstanding":0.000,"cash_outstanding":0.00}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    # -- LEDGER ----------------------------------------------------------------
+    def get_ledger_summary(self):
+        try:
+            with self.db._get_connection() as conn:
+                res = conn.execute("SELECT SUM(metal_dr) as m_dr,SUM(metal_cr) as m_cr,"
+                                   "SUM(cash_dr) as c_dr,SUM(cash_cr) as c_cr FROM credit_ledger").fetchone()
+                return {"metal_dr":round(res['m_dr'] or 0.0,3),"metal_cr":round(res['m_cr'] or 0.0,3),
+                        "cash_dr":round(res['c_dr'] or 0.0,2),"cash_cr":round(res['c_cr'] or 0.0,2),
+                        "metal":round((res['m_dr'] or 0.0)-(res['m_cr'] or 0.0),3),
+                        "cash":round((res['c_dr'] or 0.0)-(res['c_cr'] or 0.0),2)}
+        except:
+            return {"metal_dr":0,"metal_cr":0,"cash_dr":0,"cash_cr":0,"metal":0,"cash":0}
+
+    def get_full_ledger_stream(self):
+        try:
+            with self.db._get_connection() as conn:
+                return [dict(r) for r in conn.execute("SELECT * FROM credit_ledger ORDER BY id DESC").fetchall()]
+        except: return []
+
+    def post_journal_entry(self, data):
+        try:
+            res = self.db.post_ledger_entry(
+                client_name=data.get('account_type','MARKET'),
+                vch_id="JRNL-"+datetime.now().strftime('%M%S'),
+                desc=data.get('description','Journal Entry'),
+                metal_dr=float(data.get('m_dr',0)),metal_cr=float(data.get('m_cr',0)),
+                cash_dr=float(data.get('c_dr',0)),cash_cr=float(data.get('c_cr',0)),gold_rate=0)
+            return {"status":"success"} if res else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def post_to_ledger(self, entry_data):
+        try:
+            return {"status":"success"} if self.db.post_ledger_entry(**entry_data) else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_ledger_statement(self, client_name):
+        return self.db.get_client_statement(client_name)
+
+    def get_client_balances(self, client_name):
+        try:
+            res = self.db.fetch_one(
+                "SELECT SUM(metal_dr-metal_cr) as metal_bal,SUM(cash_dr-cash_cr) as cash_bal "
+                "FROM credit_ledger WHERE client_name=? "
+                "AND UPPER(TRIM(description)) NOT LIKE '%CASH SETTLEMENT%' "
+                "AND UPPER(TRIM(description)) NOT LIKE '%UCHAK CASH%'", (client_name,))
+            return {"metal":round(res['metal_bal'] or 0.0,3),"cash":round(res['cash_bal'] or 0.0,2)} if res else {"metal":0,"cash":0}
+        except: return {"metal":0,"cash":0}
+
+    # -- STOCK LEDGER ----------------------------------------------------------
+    def add_stock_entry(self, data):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            import time as _time
+            LOG(f"[STOCK] Received: {data}")
+            tag = str(data.get('tag_id') or '').strip()
+            if not tag or tag in ('N/A','','---','-'):
+                data['tag_id'] = 'OPENING-'+str(int(_time.time()*1000))[-8:]
+            # Strip fields not in DB schema
+            DB_FIELDS = {'it_code','it_name','tag_id','pkg_wt','para_stone_wt','size','design',
+                         'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid'}
+            clean = {k:v for k,v in data.items() if k in DB_FIELDS}
+            success = self.db.add_stock_entry(**clean)
+            if success:
+                LOG(f"[STOCK] Saved: {clean.get('it_code')} gr_wt={clean.get('gr_wt')}")
+                self._audit(f"Stock added: {clean.get('it_code','')}",
+                            f"Wt: {clean.get('gr_wt','')}g | Tag: {clean.get('tag_id','')}","stock")
+                return {"status":"success"}
+            ERR(f"[STOCK] DB returned False for: {clean}")
+            return {"status":"error","message":"DB save returned False"}
+        except Exception as e:
+            ERR(f"[STOCK] Exception: {e}")
+            return {"status":"error","message":str(e)}
+
+    def add_uchak_stock_entry(self, data):
+        try:
+            success = self.db.add_uchak_stock_entry_raw(
+                str(data.get('it_code','')).strip(), str(data.get('it_name','')).strip(),
+                int(data.get('pcs') or 1), str(data.get('price','0.00')))
+            return {"status":"success"} if success else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def update_stock_entry(self, entry_id, data):
+        try:
+            cols   = ", ".join([f"{k}=?" for k in data.keys()])
+            values = list(data.values())+[entry_id]
+            return {"status":"success"} if self.db.execute_query(
+                f"UPDATE stock_inventory SET {cols} WHERE id=?", tuple(values)) else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def delete_stock_entry(self, entry_id):
+        self._audit(f"Stock entry deleted",f"Entry ID: {entry_id}","stock")
+        try:
+            return {"status":"success"} if self.db.execute_query(
+                "DELETE FROM stock_inventory WHERE id=?", (entry_id,)) else {"status":"error"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_stock_ledger(self):                      return self.db.get_stock_ledger()
+    def get_opening_stock(self):                     return self.db.get_opening_stock()
+    def get_stock_ledger_by_date(self, d):           return self.db.fetch_stock_ledger_by_date(d)
+    def get_ledger_dates(self):                      return self.db.get_available_ledger_dates()
+    def get_product_by_tag(self, tag_id):            return self.db.get_product_by_tag(tag_id)
+    def get_inventory_stats(self):                   return self.db.get_inventory_stats()
+    def get_analytics_payload(self):                 return self.db.get_analytics_payload()
+    def get_velocity_products(self):                 return self.db.get_velocity_products()
+    def get_untagged_items(self):                    return self.db.get_untagged_items()
+
+    # -- KATTI -----------------------------------------------------------------
+    def get_katti_vch_id(self):
+        return self.db.get_next_vch_id()
+
+    def save_katti_voucher(self, vch_id, total_wt, total_packets, note, items):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            box_id=None
+            if items and isinstance(items,list):
+                for item in items:
+                    if isinstance(item,dict):
+                        c=str(item.get('box') or '').strip()
+                        if c and c not in ('','-','None','N/A'):
+                            box_id=c; break
+            success=self.db.save_katti_batch(str(vch_id),float(total_wt or 0),int(total_packets or 0),str(note or ""),items,box_id)
+            return {"status":"success"} if success else {"status":"error","message":"DB save failed"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+
+    def get_all_katti_vouchers(self):
+        return self.db.get_all_katti_vouchers()
+
+    def delete_katti_voucher(self, vch_id):
+        return self.db.delete_katti_voucher(vch_id)
+
+    def update_katti_voucher(self, vch_id, note, items):
+        return self.db.update_katti_voucher(vch_id, note, items)
+
+    def get_voucher_history(self, vch_id):
+        try:
+            data=self.db.get_katti_voucher_details(str(vch_id).strip().zfill(4))
+            if data: return {"status":"success","voucher":data.get('voucher'),"items":data.get('items',[])}
+            return {"status":"empty"}
+        except: return {"status":"error"}
+
+    # -- UCHAK INWARD ----------------------------------------------------------
+    def get_next_uchak_inward_vch_id(self):         return self.db.get_last_uchak_inward_vch_id()
+
+    def get_uchak_inward_voucher_details(self, vch_id):
+        data=self.db.get_uchak_inward_voucher_details(vch_id)
+        if data: return {"status":"success","voucher":data["voucher"],"items":data["items"]}
+        return {"status":"error","message":"Voucher not found."}
+
+    def save_uchak_inward_batch(self, payload):
+        try:
+            vch_id=str(payload.get('vch_id','UCHK-IN-001')).strip()
+            items=payload.get('items',[])
+            if not items: return {"status":"error","message":"Batch array queue is empty."}
+            success=self.db.save_uchak_inward_transaction(
+                vch_id,len(items),sum(int(i['pcs'] or 0) for i in items),
+                sum((int(i['pcs'] or 0)*float(i['price'] or 0.0)) for i in items),items)
+            return {"status":"success"} if success else {"status":"error","message":"Database transaction failed."}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    # -- BILLING ---------------------------------------------------------------
+    def get_sales_vch_id(self):
+        try:
+            with self.db._get_connection() as conn:
+                res=conn.execute("SELECT MAX(CAST(SUBSTR(vch_id,5) AS INTEGER)) FROM sales_history WHERE vch_id LIKE 'VCH-%'").fetchone()
+                return f"VCH-{(res[0] or 0)+1:03d}"
+        except: return "VCH-001"
+
+    def get_next_uchak_vch_id(self):
+        try:
+            with self.db._get_connection() as conn:
+                res=conn.execute("SELECT MAX(CAST(SUBSTR(vch_id,6) AS INTEGER)) FROM sales_history WHERE vch_id LIKE 'UCHK-%'").fetchone()
+                return f"UCHK-{(res[0] or 0)+1:03d}"
+        except: return "UCHK-001"
+
+    def get_live_invoice_print_payload(self, voucher_id):
+        try:
+            sh_row=self.db.fetch_one("SELECT * FROM sales_history WHERE vch_id=?",(str(voucher_id).strip(),))
+            if not sh_row: return {"status":"error","message":f"Voucher {voucher_id} not found."}
+            try: items_array=json.loads(sh_row.get('items') or '[]')
+            except: items_array=[]
+            bill={"vch_id":sh_row.get('vch_id','---'),"customer":sh_row.get('customer','Walking Customer'),
+                  "status":sh_row.get('status','PAID'),"is_credit":sh_row.get('status')=='CREDIT',
+                  "is_uchak":'UCHAK' in str(sh_row.get('status','')).upper(),
+                  "totalLedgerFine":float(sh_row.get('ledger_fine') or 0.0),
+                  "remainingFine":float(sh_row.get('remaining_fine') or 0.0),
+                  "collectedFine":float(sh_row.get('collected_fine') or 0.0),
+                  "fine995":float(sh_row.get('fine_995') or 0.0),
+                  "fineDhal":float(sh_row.get('fine_dhal') or 0.0),
+                  "goldRate":float(sh_row.get('gold_rate') or 0.0),
+                  "totalAmount":float(sh_row.get('total_amount') or 0.0),
+                  "discountType":sh_row.get('discount_type','none'),
+                  "discountTouch":float(sh_row.get('discount_touch') or 0.0),
+                  "discountFine":float(sh_row.get('discount_fine') or 0.0),
+                  "discountAmount":float(sh_row.get('discount_amount') or 0.0),"items":items_array}
+            return {"status":"success","bill":bill}
+        except Exception as e:
+            ERR(f"[BILL PRINT] {e}")
+            return {"status":"error","message":str(e)}
+
+    def trigger_print_window(self, voucher_id, copies=1):
+        try:
+            copies=int(copies) if copies else 1
+            ui_dir=get_asset_path("ui")
+            print_path=os.path.join(ui_dir,"bill_print.html")
+            if not os.path.exists(print_path):
+                return {"status":"error","message":"bill_print.html not found"}
+            with open(print_path,'r',encoding='utf-8') as f:
+                html_content=f.read()
+            inject=f"<script>window.__VCH_ID__='{voucher_id}';window.__COPIES__={copies};</script>"
+            if '<!DOCTYPE html>' in html_content:
+                html_content=html_content.replace('<!DOCTYPE html>','<!DOCTYPE html>'+inject,1)
+            else:
+                html_content=inject+html_content
+            def open_window():
+                try:
+                    webview.create_window(f"Bill -- {voucher_id}",html=html_content,js_api=self,width=600,height=820,resizable=True)
+                except Exception as e:
+                    ERR(f"[PRINT WIN] {e}")
+            threading.Thread(target=open_window,daemon=True).start()
+            return {"status":"success"}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_bill_details(self, vch_id):
+        try:
+            res=self.db.fetch_one("SELECT * FROM sales_history WHERE UPPER(TRIM(vch_id))=?",(str(vch_id).strip().upper(),))
+            if res:
+                try: items_list=json.loads(res.get('items','[]'))
+                except: items_list=[]
+                return {"status":"success","voucher":{
+                    "vch_id":res.get('vch_id'),"customer":res.get('customer'),"status":res.get('status'),
+                    "ledger_fine":float(res.get('ledger_fine') or 0.0),
+                    "collected_fine":float(res.get('collected_fine') or 0.0),
+                    "fine_995":float(res.get('fine_995') or 0.0),"fine_dhal":float(res.get('fine_dhal') or 0.0),
+                    "remaining_fine":float(res.get('remaining_fine') or 0.0),
+                    "gold_rate":float(res.get('gold_rate') or 0.0),
+                    "total_amount":float(res.get('total_amount') or 0.0),
+                    "date":res.get('date'),"time_stamp":res.get('time_stamp')},"items":items_list}
+            return {"status":"error","message":"Sales record not found."}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def fetch_history(self):
+        try: return self.db.fetch_history()
+        except: return []
+
+    def generate_bill(self, bill_data):
+        try:
+            # Notify BASTION AI this is a legitimate write
+            try: self.bastion.notify_write()
+            except Exception: pass
+            vch_id=str(bill_data.get('vch_id','VCH-000')).strip()
+            customer=str(bill_data.get('customer','Walking Customer')).strip()
+            status=str(bill_data.get('status','CREDIT')).upper().strip()
+            l_fine=float(bill_data.get('totalLedgerFine') or 0.0)
+            coll=float(bill_data.get('collectedFine') or 0.0)
+            f995=float(bill_data.get('fine995') or 0.0)
+            dhal=float(bill_data.get('fineDhal') or 0.0)
+            rem=float(bill_data.get('remainingFine') or 0.0)
+            rate=float(bill_data.get('goldRate') or 0.0)
+            is_uchak=bool(bill_data.get('is_uchak',False)) or vch_id.startswith('UCHK-')
+            clean_cash_amt=float(str(bill_data.get('totalAmount') or '0.00').replace('?','').replace(',','').strip())
+            items_json=json.dumps(bill_data.get('items',[]))
+            disc_type=str(bill_data.get('discountType') or 'none')
+            disc_touch=float(bill_data.get('discountTouch') or 0.0)
+            disc_fine=float(bill_data.get('discountFine') or 0.0)
+            disc_amount=float(bill_data.get('discountAmount') or 0.0)
+            resolved_status=('UCHAK_UNPAID' if (status=='CREDIT' and is_uchak) else
+                             'UCHAK_PAID'   if (status=='PAID'   and is_uchak) else status)
+            self.db.record_sale(vch_id,customer,resolved_status,l_fine,coll,f995,dhal,rem,rate,clean_cash_amt,items_json,disc_type,disc_touch,disc_fine,disc_amount)
+            self.db.deduct_stock_after_sale(items_json)
+            is_cash_settled=(status in ('PAID','CASH','UCHAK_PAID','UCHAK_MAINTAINED'))
+            if is_uchak:
+                if is_cash_settled: metal_debit=0.0;metal_credit=0.0;cash_debit=0.0;cash_credit=clean_cash_amt;ledger_desc="Uchak Cash Invoice Paid"
+                else: metal_debit=0.0;metal_credit=0.0;cash_debit=clean_cash_amt;cash_credit=0.0;ledger_desc="Uchak Credit Udhar"
+            else:
+                if is_cash_settled: metal_debit=0.0;metal_credit=float(coll or 0);cash_debit=0.0;cash_credit=clean_cash_amt;ledger_desc=f"Sales Invoice Paid -- Rs{clean_cash_amt:.0f}"
+                elif rate>0: metal_debit=0.0;metal_credit=0.0;cash_debit=clean_cash_amt;cash_credit=0.0;ledger_desc="Sales Credit -- Cash Due"
+                else: metal_debit=float(rem or 0);metal_credit=0.0;cash_debit=0.0;cash_credit=0.0;ledger_desc=f"Sales Credit -- Fine Due {rem:.3f}g"
+            self.post_to_ledger({"client_name":customer,"vch_id":vch_id,"gold_rate":rate,"desc":ledger_desc,
+                                 "metal_dr":metal_debit,"metal_cr":metal_credit,"cash_dr":cash_debit,"cash_cr":cash_credit})
+            self._audit(f"Bill: {vch_id}",f"Customer: {customer} | Status: {status}","billing")
+            return {"status":"success"}
+        except Exception as e:
+            ERR(f"[BILL] {e}")
+            return {"status":"error","message":str(e)}
+
+    def delete_bill(self, vch_id):
+        try:
+            safe_vch_id=str(vch_id).strip()
+            res=self.db.fetch_one("SELECT items FROM sales_history WHERE vch_id=?",(safe_vch_id,))
+            if not res: return {"status":"error","message":"Bill not found."}
+            try: items=json.loads(res.get('items') or '[]')
+            except: items=[]
+            with self.db._get_connection() as conn:
+                cursor=conn.cursor()
+                for item in items:
+                    tag_id=str(item.get('tag_id') or '').strip()
+                    it_code=str(item.get('it_code') or item.get('code') or '').strip()
+                    weight=float(item.get('weight') or item.get('gr_wt') or 0.0)
+                    touch=float(item.get('touch') or 0.0)
+                    pcs=int(item.get('pcs') or 1)
+                    is_weight=(not tag_id or tag_id in ('','N/A') or tag_id.startswith('KATTI-%'))
+                    is_uchak='amount' in item or 'price' in item
+                    if is_weight and weight>0:
+                        row=cursor.execute(
+                            "SELECT id,gr_wt FROM stock_inventory WHERE TRIM(it_code)=? AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%') LIMIT 1",
+                            (it_code,)).fetchone()
+                        if row:
+                            restored=round((row['gr_wt'] or 0)+weight,3)
+                            cursor.execute("UPDATE stock_inventory SET gr_wt=?,nt_wt=? WHERE id=?",(restored,restored,row['id']))
+                        else:
+                            cursor.execute("INSERT INTO stock_inventory (it_code,it_name,tag_id,pcs,gr_wt,ls_wt,nt_wt,touch,wastage,is_tagged,entry_date) VALUES (?,?,?,0,?,0,?,?,0,0,date('now'))",
+                                (it_code,item.get('it_name') or it_code,f"KATTI-RESTORE-{it_code}",weight,weight,touch))
+                    elif is_uchak and pcs>0:
+                        piece_code=str(item.get('it_code') or item.get('name') or '').strip()
+                        row=cursor.execute("SELECT id,pcs FROM stock_inventory WHERE TRIM(it_code)=? AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A') LIMIT 1",(piece_code,)).fetchone()
+                        if row:
+                            cursor.execute("UPDATE stock_inventory SET pcs=? WHERE id=?",((row['pcs'] or 0)+pcs,row['id']))
+                cursor.execute("DELETE FROM sales_history WHERE vch_id=?",(safe_vch_id,))
+                cursor.execute("DELETE FROM credit_ledger WHERE vch_reference=?",(safe_vch_id,))
+                conn.commit()
+            return {"status":"success","message":f"Bill {safe_vch_id} deleted and stock restored."}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_low_stock_items(self, threshold=10.0):
+        try: return self.db.get_low_stock_items(float(threshold))
+        except Exception as e: ERR(f"[LOW STOCK] {e}"); return []
+
+    def get_low_stock_uchak_items(self, threshold=5):
+        try:
+            result=self.db.get_low_stock_uchak_items(int(threshold))
+            return result if result is not None else []
+        except Exception as e: ERR(f"[UCHAK LOW STOCK] {e}"); return []
+
+    def get_out_of_stock_items(self):
+        try: return self.db.get_out_of_stock_items()
+        except Exception as e: ERR(f"[OOS] {e}"); return []
+
+    # -- UPDATE ----------------------------------------------------------------
+    def check_for_update(self):
+        result = check_for_update(timeout=8)
+        if result:
+            self._last_update_files = result.pop("_changed", None)
+        return result
+
+    # ── UPDATE STATE (polled by JS every 500ms) ──────────────────────────────
+    _update_state = {"pct": 0, "status": "idle", "done": False,
+                     "success": False, "message": ""}
+
+    def get_update_state(self):
+        """JS polls this every 500ms to get progress. No push needed."""
+        return dict(self._update_state)
+
+    def start_update_with_info(self, version_info):
+        """
+        Download changed files directly — no _run() wrapper, no bat file complexity.
+        Progress fires via threading.Timer every 200ms into JS.
+        """
+        import queue as _q_mod
+        import urllib.request as _ur
+        import hashlib as _hl
+
+        try:
+            from updater import sha256 as _sha256, get_app_root, _is_protected, set_installed_version
+        except Exception as e:
+            ERR(f"[UPDATE] import error: {e}")
+            return {"status": "error", "message": str(e)}
+
+        q = _q_mod.Queue()
+
+        def fire(js):
+            try:
+                if self._window:
+                    self._window.evaluate_js(js)
+            except Exception:
+                pass
+
+        def safe_str(s):
+            return (str(s)
+                    .encode('ascii', errors='replace')
+                    .decode('ascii')
+                    .replace("'", " ")
+                    .replace('"', ' ')
+                    .replace('\n', ' '))
+
+        def push_progress(pct, msg):
+            LOG(f"[UPDATE] {int(pct)}% {msg}")
+            q.put(('p', int(pct), safe_str(msg)))
+
+        def push_done(ok, msg):
+            LOG(f"[UPDATE] done ok={ok} {msg}")
+            q.put(('d', ok, safe_str(msg)))
+
+        def drain():
+            try:
+                while True:
+                    item = q.get_nowait()
+                    if item[0] == 'p':
+                        _, pct, msg = item
+                        fire(
+                            "var f=document.getElementById('uprog-fill'),"
+                            "s=document.getElementById('uprog-status');"
+                            "if(f)f.style.width='" + str(pct) + "%';"
+                            "if(s)s.innerText='" + msg + "';"
+                        )
+                    elif item[0] == 'd':
+                        _, ok, msg = item
+                        val = 'true' if ok else 'false'
+                        fire(
+                            "window.dispatchEvent(new CustomEvent('aurum-update-done',"
+                            "{detail:{success:" + val + ",message:'" + msg + "'}}))"
+                        )
+                        self._update_running = False
+                        return
+            except _q_mod.Empty:
+                pass
+            if getattr(self, '_update_running', False):
+                threading.Timer(0.25, drain).start()
+
+        def download_all(changed, app_root):
+            total = len(changed)
+            LOG(f"[UPDATE] _download_all: {total} files, app_root={app_root}")
+
+            for i, entry in enumerate(changed, 1):
+                rel  = entry.get('path', '').replace('\\', '/')
+                url  = entry.get('url', '')
+                size = entry.get('size', entry.get('size_bytes', 0))
+
+                push_progress(
+                    int(5 + (i - 1) / total * 85),
+                    f"[{i}/{total}] {rel}"
+                )
+
+                LOG(f"[UPDATE] Downloading [{i}/{total}] {rel} from {url[:60]}")
+
+                # Simple direct download — no wrapper, no retries complexity
+                try:
+                    req = _ur.Request(
+                        url,
+                        headers={
+                            'User-Agent': f'AurumOS/{CURRENT_VERSION}',
+                            'Accept': '*/*',
+                        }
+                    )
+                    with _ur.urlopen(req, timeout=30) as resp:
+                        data = resp.read()
+                    LOG(f"[UPDATE]   {len(data):,} bytes OK")
+                except Exception as e:
+                    err = safe_str(str(e))
+                    ERR(f"[UPDATE]   FAILED: {err}")
+                    push_done(False, f"Download failed [{i}/{total}]: {err}")
+                    return
+
+                # Write directly to app_root (no temp dir)
+                dst = app_root / rel
+                try:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_bytes(data)
+                    LOG(f"[UPDATE]   Written: {dst}")
+                except Exception as e:
+                    err = safe_str(str(e))
+                    ERR(f"[UPDATE]   Write failed: {err}")
+                    push_done(False, f"Write failed {rel}: {err}")
+                    return
+
+                push_progress(
+                    int(5 + i / total * 85),
+                    f"[{i}/{total}] OK {rel}"
+                )
+
+            # Set new version — read from version_info passed by JS
+            # NEVER use installed_version from DB (could be stale 1.1.0)
+            push_progress(95, "Saving version...")
+            try:
+                info_dict  = version_info if isinstance(version_info, dict) else {}
+                remote_ver = str(info_dict.get('version', '') or '').strip()
+
+                # Validate: must be X.Y.Z format and NEWER than current
+                import re as _re
+                if _re.match(r'^\d+\.\d+\.\d+$', remote_ver):
+                    new_ver = remote_ver
+                else:
+                    new_ver = CURRENT_VERSION
+                    LOG(f"[UPDATE] Bad remote version {remote_ver!r}, keeping {CURRENT_VERSION}")
+
+                set_installed_version(new_ver)
+                LOG(f"[UPDATE] version.lock written for {new_ver}")
+                LOG(f"[UPDATE] Version set to {new_ver}")
+            except Exception as e:
+                new_ver = CURRENT_VERSION
+                LOG(f"[UPDATE] Version save error: {e}")
+
+            push_progress(100, f"Done! {total} file(s) updated. Click Restart.")
+            push_done(True, f"Update ready. v{new_ver} installed. Click Restart.")
+            # Update badge immediately
+            try:
+                if self._window:
+                    self._window.evaluate_js(
+                        "var _ve=document.getElementById('sb-ver');"
+                        "if(_ve)_ve.innerText='v" + new_ver + " ↻';"
+                    )
+            except Exception:
+                pass
+
+        # Build changed list
+        try:
+            info      = version_info if isinstance(version_info, dict) else {}
+            all_files = info.get('files', [])
+            app_root  = get_app_root()
+
+            LOG(f"[UPDATE] -- start_update_with_info -----------------")
+            LOG(f"[UPDATE] files count: {len(all_files)}")
+            LOG(f"[UPDATE] app_root: {app_root}")
+            LOG(f"[UPDATE] app_root exists: {app_root.exists() if hasattr(app_root,'exists') else 'n/a'}")
+
+            changed = []
+            for entry in all_files:
+                rel         = entry.get('path', '').replace(chr(92), '/')
+                remote_hash = entry.get('sha256', '')
+                url         = entry.get('url', '')
+                size        = entry.get('size_bytes', 0)
+                if not rel or not url:
+                    continue
+                if _is_protected(rel):
+                    LOG(f"[UPDATE]   PROTECTED: {rel}")
+                    continue
+                local_hash = _sha256(app_root / rel)
+                if local_hash != remote_hash:
+                    tag = 'NEW' if local_hash == '' else 'CHANGED'
+                    LOG(f"[UPDATE]   [{tag}] {rel}  local={local_hash[:12] or 'MISSING'}  remote={remote_hash[:12]}")
+                    changed.append({'path': rel, 'sha256': remote_hash, 'url': url, 'size': size})
+                else:
+                    LOG(f"[UPDATE]   [OK]      {rel}")
+
+            LOG(f"[UPDATE] --- result: {len(changed)} of {len(all_files)} need update ---")
+
+            if not changed:
+                push_done(False, "Already up to date.")
+                return {"status": "nothing_to_do"}
+
+            self._last_update_files = changed
+            self._update_running    = True
+            LOG(f"[UPDATE] Starting download thread for {len(changed)} file(s)")
+
+            threading.Thread(
+                target=download_all,
+                args=(changed, app_root),
+                daemon=True
+            ).start()
+
+            threading.Timer(0.25, drain).start()
+            return {"status": "started", "files": len(changed)}
+
+        except Exception as e:
+            err = safe_str(str(e))
+            ERR(f"[UPDATE] EXCEPTION: {err}")
+            import traceback; traceback.print_exc()
+            push_done(False, f"Error: {err}")
+            return {"status": "error"}
+
+
+    def reset_lockout(self) -> dict:
+        """
+        Developer/admin unlock — resets failed attempts and clears lockout.
+        Call from Python console: app_api.reset_lockout()
+        Or via pywebview bridge for an admin unlock page.
+        """
+        try:
+            self._login_attempts = 0
+            self._lockout_until  = None
+            self._save_lockout_state()
+            # Also delete the lockout file entirely for clean state
+            try:
+                lk_path = self._get_lockout_file()
+                if os.path.exists(lk_path):
+                    os.remove(lk_path)
+            except Exception:
+                pass
+            LOG("[LOGIN] Lockout manually reset by admin/developer")
+            return {"status": "success", "message": "Lockout cleared. Account unlocked."}
+        except Exception as e:
+            LOG(f"[LOGIN] reset_lockout error: {e}")
+            return {"status": "error", "message": str(e)}
+
+
+
+
+
+    def _start_remote_reset_poller(self):
+        """
+        Polls private GitHub Gist every 30s.
+        Only processes commands WHERE target_machine == MY machine_id.
+        Temp password is E2E encrypted — only this machine can decrypt.
+        """
+        GIST_ID    = os.environ.get('AURUM_GIST_ID',    '').strip()
+        GIST_TOKEN = os.environ.get('AURUM_GIST_TOKEN', '').strip()
+        POLL_FILE  = 'aurum_reset_commands.json'
+        INTERVAL   = 30
+
+        if not GIST_ID or not GIST_TOKEN:
+            LOG("[RESET] Env vars not set — poller disabled"); return
+
+        my_id = self.get_machine_id()
+        LOG(f"[RESET] Poller started — machine={my_id[:8]}…")
+
+        def poll():
+            while True:
+                try:
+                    time.sleep(INTERVAL)
+                    req = urllib.request.Request(
+                        f'https://api.github.com/gists/{GIST_ID}',
+                        headers={'Authorization':f'token {GIST_TOKEN}',
+                                 'Accept':'application/vnd.github.v3+json',
+                                 'User-Agent':'AurumOS/1.0'})
+                    with urllib.request.urlopen(req, timeout=10) as r:
+                        gist = json.loads(r.read().decode())
+
+                    files = gist.get('files', {})
+                    if POLL_FILE not in files: continue
+                    all_cmds = json.loads(files[POLL_FILE].get('content','[]'))
+                    if not isinstance(all_cmds, list): all_cmds = [all_cmds]
+
+                    # Find MY command
+                    my_cmd = next((c for c in all_cmds
+                                   if c.get('target_machine') == my_id
+                                   and c.get('command') == 'temp_reset'
+                                   and not c.get('used', False)), None)
+                    if not my_cmd: continue
+
+                    # Decrypt — only works on THIS machine
+                    temp_pass = _decrypt_temp_password(
+                        my_cmd.get('encrypted_password',''), my_id)
+                    if not temp_pass:
+                        LOG("[RESET] Decryption failed"); continue
+
+                    # Save temp password (one-time, expires 1h)
+                    ph = self.db._hash_pw(temp_pass)
+                    with self.db._get_connection() as conn:
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('temp_password_hash',?)",(ph,))
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('temp_password_expires',?)",(str(time.time()+3600),))
+                        conn.commit()
+
+                    # Clear lockout
+                    self._login_attempts = 0; self._lockout_until = None
+                    self._save_lockout_state()
+                    try:
+                        lk = self._get_lockout_file()
+                        if os.path.exists(lk): os.remove(lk)
+                    except Exception: pass
+
+                    # Mark used in Gist
+                    my_cmd['used'] = True
+                    my_cmd['used_at'] = datetime.now().isoformat()
+                    patch = urllib.request.Request(
+                        f'https://api.github.com/gists/{GIST_ID}',
+                        data=json.dumps({'files':{POLL_FILE:{'content':json.dumps(all_cmds,indent=2)}}}).encode(),
+                        method='PATCH',
+                        headers={'Authorization':f'token {GIST_TOKEN}',
+                                 'Accept':'application/vnd.github.v3+json',
+                                 'Content-Type':'application/json',
+                                 'User-Agent':'AurumOS/1.0'})
+                    with urllib.request.urlopen(patch, timeout=10): pass
+
+                    LOG("[RESET] Temp password applied ✓")
+
+                    # Tell login screen — pass the temp password for display
+                    try:
+                        if self._window:
+                            import json as _j2
+                            safe_pass = _j2.dumps(temp_pass)  # safely escaped
+                            self._window.evaluate_js(
+                                f"if(typeof window.showTempPasswordUnlock==='function')"
+                                f"window.showTempPasswordUnlock({safe_pass});"
+                                f"else window.location.reload();"
+                            )
+                    except Exception: pass
+
+                except Exception as e:
+                    LOG(f"[RESET] Poll error: {e}")
+
+        threading.Thread(target=poll, daemon=True, name="ResetPoller").start()
+
+    def get_last_login_info(self) -> dict:
+        """
+        Return last successful login info for login screen display.
+        - Admin: shows real owner name from app_config
+        - Staff: shows their username from admin_creds
+        - Time:  local machine time, formatted as "13 Jun 2026, 11:45 AM"
+        """
+        try:
+            with self.db._get_connection() as conn:
+
+                # Ensure table exists
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS login_log ("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    "username TEXT NOT NULL DEFAULT 'owner', "
+                    "role TEXT NOT NULL DEFAULT 'admin', "
+                    "login_time TEXT NOT NULL DEFAULT (datetime('now')), "
+                    "ip TEXT DEFAULT '')"
+                )
+                conn.commit()
+
+                # Get last login row
+                row = conn.execute(
+                    "SELECT username, role, login_time "
+                    "FROM login_log ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+
+                if not row:
+                    return {}
+
+                db_username = str(row['username'] or '').strip()
+                role        = str(row['role']     or 'admin').strip()
+                login_time  = str(row['login_time'] or '').strip()
+
+                # ── Resolve display name ───────────────────────────────
+                # Admin (id=1) → show owner_name from setup (e.g. "Jenil Dholakiya")
+                # Staff        → show their username from admin_creds as-is
+                display_name = db_username
+
+                if role == 'admin':
+                    # First try: owner_name from app_config (set during setup)
+                    cfg_row = conn.execute(
+                        "SELECT value FROM app_config WHERE key='owner_name' LIMIT 1"
+                    ).fetchone()
+                    if cfg_row and str(cfg_row['value'] or '').strip():
+                        display_name = cfg_row['value'].strip()
+                    else:
+                        # Fallback: business_name
+                        biz_row = conn.execute(
+                            "SELECT value FROM app_config WHERE key='business_name' LIMIT 1"
+                        ).fetchone()
+                        if biz_row and str(biz_row['value'] or '').strip():
+                            display_name = biz_row['value'].strip()
+                        else:
+                            display_name = db_username or 'Owner'
+                else:
+                    # Staff — use their actual username stored in login_log
+                    # If username is blank/generic use db_username
+                    display_name = db_username if db_username else 'Staff'
+
+                # ── Format time (local machine time) ──────────────────
+                # Stored as: "2026-06-13 11:30:45" (Python local time)
+                # Display as: "13 Jun 2026, 11:30 AM"
+                friendly_time = login_time
+                try:
+                    from datetime import datetime as _dt
+                    # Handle both formats just in case
+                    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+                        try:
+                            dt = _dt.strptime(login_time, fmt)
+                            friendly_time = dt.strftime('%d %b %Y, %I:%M %p')
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    pass
+
+                LOG(f"[LOGIN_INFO] name={display_name} role={role} time={friendly_time}")
+
+                return {
+                    'username':      display_name,
+                    'role':          role,
+                    'time':          login_time,
+                    'friendly_time': friendly_time,
+                    'display':       'Last login: ' + display_name + ' on ' + friendly_time
+                }
+
+        except Exception as e:
+            LOG(f"[API] get_last_login_info error: {e}")
+        return {}
+
+    def check_weight_stock_available(self, items_json: str) -> dict:
+        """Check if weight-based stock is sufficient before committing bill."""
+        try:
+            return self.db.check_weight_stock_available(items_json)
+        except Exception as e:
+            LOG(f"[API] check_weight_stock_available error: {e}")
+            return {'status': 'ok'}
+
+    def get_current_version(self):
+        """Return effective version: version.lock if newer, else baked CURRENT_VERSION."""
+        try:
+            from updater import get_installed_version
+            return get_installed_version()
+        except Exception:
+            return CURRENT_VERSION
+
+    def restart_app(self):
+        import subprocess
+        LOG("[UPDATE] Restarting AurumOS...")
+        subprocess.Popen([sys.executable]+sys.argv[:])
+        sys.exit(0)
+
+    def get_stocksync_snapshot(self):
+        try:    return self.db.get_stocksync_snapshot()
+        except Exception as e: return {'status':'error','message':str(e),'data':[]}
+
+    def get_touch_stock_report(self):
+        try: return self.db.get_touch_stock_report()
+        except Exception as e: ERR(f"[TOUCH REPORT] {e}"); return []
+
+    def get_stagnant_report(self, threshold):
+        try: return {"status":"success","data":self.db.get_stagnant_report(threshold)}
+        except Exception as e: return {"status":"error","message":str(e)}
+
+    def scale_connect(self, port, baud=9600):
+        LOG(f"[SCALE_API] scale_connect called: port={port!r} baud={baud}")
+        try:
+            _scale.set_window(self._window)
+            result = _scale.start(str(port).strip(), int(baud))
+            LOG(f"[SCALE_API] scale_connect result: {result}")
+            # Save last used port/baud to app_config for all pages to read
+            if result.get('status') == 'success':
+                try:
+                    with self.db._get_connection() as conn:
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('scale_port',?)", (str(port).strip(),))
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('scale_baud',?)", (str(result.get('baud', baud)),))
+                        conn.commit()
+                    LOG(f"[SCALE_API] Saved port={port} baud={result.get('baud',baud)} to app_config")
+                except: pass
+            return result
+        except Exception as e:
+            ERR(f"[SCALE_API] scale_connect exception: {e}")
+            import traceback; ERR(traceback.format_exc())
+            return {"status": "error", "message": str(e)}
+
+    def scale_disconnect(self):
+        LOG("[SCALE_API] scale_disconnect called")
+        _scale.stop()
+        # Clear saved port so it does not auto-reconnect next startup
+        try:
+            with self.db._get_connection() as conn:
+                conn.execute("DELETE FROM app_config WHERE key IN ('scale_port','scale_baud')")
+                conn.commit()
+        except Exception: pass
+        return {"status": "ok"}
+
+    def js_log(self, msg, level='INFO'):
+        """Called from JS via pywebview.api.js_log(msg) to log JS events in terminal."""
+        safe = str(msg).encode('ascii', errors='replace').decode('ascii')
+        if level == 'ERROR':
+            ERR(f"[JS] {safe}")
+        else:
+            LOG(f"[JS] {safe}")
+
+    def scale_get_ports(self):
+        LOG("[SCALE_API] scale_get_ports called")
+        try:
+            ports = _scale.list_ports()
+            LOG(f"[SCALE_API] scale_get_ports result: {ports}")
+            return ports
+        except Exception as e:
+            ERR(f"[SCALE_API] scale_get_ports exception: {e}")
+            return []
+
+    def scale_is_connected(self):
+        """Check if scale is currently running."""
+        running = _scale._running and _scale._serial is not None
+        LOG(f"[SCALE_API] is_connected: {running} port={_scale._port} baud={_scale._baud}")
+        return {
+            "connected": running,
+            "port": _scale._port or "",
+            "baud": _scale._baud or 1200,
+        }
+
+    def scale_get_saved_config(self):
+        """Return last successfully used port and baud."""
+        try:
+            with self.db._get_connection() as conn:
+                rows = {r['key']:r['value'] for r in conn.execute(
+                    "SELECT key,value FROM app_config WHERE key IN ('scale_port','scale_baud')"
+                ).fetchall()}
+            port = rows.get('scale_port','')
+            baud = int(rows.get('scale_baud', 1200))
+            LOG(f"[SCALE_API] saved config: port={port} baud={baud}")
+            return {"port": port, "baud": baud}
+        except Exception as e:
+            ERR(f"[SCALE_API] scale_get_saved_config: {e}")
+            return {"port": "", "baud": 1200}
+
+    def scale_get_last(self):
+        w = _scale.get_last()
+        connected = _scale._running
+        LOG(f"[SCALE_API] scale_get_last: w={w} connected={connected}")
+        return {"weight": w, "stable": True, "connected": connected} if w else {"weight": None, "stable": False, "connected": connected}
+
+    def scale_is_connected(self):
+        """Check if scale is currently running without reconnecting."""
+        return {"connected": _scale._running, "port": _scale._port, "baud": _scale._baud}
+
+    def get_weight_stock_it_codes(self):    return self.db.get_weight_stock_it_codes()
+    def get_touch_ledger_details(self, touch_value, mode='weight', from_date='', to_date=''):
+        return self.db.get_touch_ledger_details(touch_value, mode, from_date, to_date)
+    def mark_as_tagged(self, entry_id):     return self.db.mark_as_tagged(entry_id)
+
+    def get_machine_id(self):
+        try:
+            import uuid
+            return str(uuid.getnode())
+        except: return 'unknown'
+
+    def open_log_folder(self):
+        """Open the logs folder in Windows Explorer."""
+        try:
+            import subprocess
+            base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+            log_dir = os.path.join(base, 'logs')
+            os.makedirs(log_dir, exist_ok=True)
+            subprocess.Popen(['explorer', log_dir])
+            return {"status": "ok", "path": log_dir}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    # ── BASTION SECURITY API WRAPPERS ────────────────────────────────────────
+    def bastion_get_status(self):
+        return self.db.bastion_get_status()
+
+    def bastion_unlock(self, admin_key, lock_code=None):
+        """
+        Clear BASTION suspension using BASTION-specific 16-char admin key.
+        Regular 12-char unlock key does NOT work here — different salt.
+        Only the BASTION key from unlock_keygen.py (BASTION mode) works.
+        """
+        result = self.db.bastion_clear(admin_key, lock_code)
+        if result.get('status') == 'success':
+            LOG("[BASTION] Suspension cleared by admin")
+        else:
+            LOG(f"[BASTION] Clear failed: {result.get('message')}")
+        return result
+
+        # ── SECURITY API WRAPPERS ─────────────────────────────────────────────────
+    def do_stock_med(self, data):
+        return self.db.do_stock_med(data)
+
+    def get_lock_status(self):
+        return self.db.get_lock_status()
+
+    def record_failed_attempt(self):
+        return self.db.record_failed_attempt()
+
+    def verify_unlock_key(self, unlock_key, lock_code=None):
+        result = self.db.verify_unlock_key(unlock_key, lock_code)
+        if result and result.get('status') == 'success':
+            # Reset in-memory lock state so login works immediately
+            self._lockout_until  = None
+            self._login_attempts = 0
+            try: self._save_lockout_state()
+            except Exception: pass
+            LOG("[LOCK] In-memory lock state cleared after unlock")
+        return result
+
+    def bastion_get_weekly_report(self):
+        try:
+            return self.bastion.get_weekly_report()
+        except Exception as e:
+            return {'error': str(e)}
+
+    def generate_protected_pdf(self, html_content, password, audit_id='AUDIT'):
+        """
+        Generate password-protected PDF from HTML content.
+        Uses reportlab + PyPDF2 or pikepdf if available.
+        Falls back to saving HTML file with password hint if no PDF lib.
+        """
+        import os, sys, tempfile, subprocess, hashlib
+
+        base     = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        pdf_dir  = os.path.join(base, 'exports')
+        os.makedirs(pdf_dir, exist_ok=True)
+        safe_id  = str(audit_id).replace('/', '-').replace('\\', '-').strip()
+        pdf_path = os.path.join(pdf_dir, f"StockSync_{safe_id}.pdf")
+        html_tmp = os.path.join(pdf_dir, f"StockSync_{safe_id}.html")
+
+        try:
+            # Step 1: Save HTML to temp file
+            with open(html_tmp, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            LOG(f"[PDF] HTML saved: {html_tmp}")
+
+            # Step 2: Try pikepdf for password protection
+            try:
+                import pikepdf
+                # First generate PDF without password using weasyprint or wkhtmltopdf
+                pdf_tmp = pdf_path + '.tmp.pdf'
+                generated = False
+
+                # Try weasyprint
+                try:
+                    from weasyprint import HTML as WH
+                    WH(filename=html_tmp).write_pdf(pdf_tmp)
+                    generated = True
+                    LOG("[PDF] Generated via weasyprint")
+                except ImportError:
+                    pass
+
+                # Try wkhtmltopdf
+                if not generated:
+                    wk = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    if os.path.exists(wk):
+                        r = subprocess.run([wk, html_tmp, pdf_tmp],
+                            capture_output=True, timeout=30)
+                        if r.returncode == 0:
+                            generated = True
+                            LOG("[PDF] Generated via wkhtmltopdf")
+
+                if generated and os.path.exists(pdf_tmp):
+                    # Apply password with pikepdf
+                    if password:
+                        pdf = pikepdf.open(pdf_tmp)
+                        pdf.save(pdf_path, encryption=pikepdf.Encryption(
+                            owner=password, user=password, R=4
+                        ))
+                        pdf.close()
+                        LOG(f"[PDF] Password protected: {pdf_path}")
+                    else:
+                        import shutil
+                        shutil.copy2(pdf_tmp, pdf_path)
+                    try: os.remove(pdf_tmp)
+                    except: pass
+                    # Open folder
+                    try: subprocess.Popen(['explorer', '/select,', pdf_path])
+                    except: pass
+                    return {'status': 'success', 'path': pdf_path}
+
+            except ImportError:
+                LOG("[PDF] pikepdf not available — falling back")
+
+            # Step 3: Fallback — save as HTML, open print window
+            # Write password hint into HTML if provided
+            if password:
+                pw_hash = hashlib.sha256(password.encode()).hexdigest()[:12].upper()
+                hint_html = html_content.replace(
+                    '</body>',
+                    f'<div style="display:none" data-pw-hash="{pw_hash}"></div></body>'
+                )
+                with open(html_tmp, 'w', encoding='utf-8') as f:
+                    f.write(hint_html)
+
+            # Open print window — user prints to PDF manually
+            result = self.open_print_window(html_content)
+            note   = ''
+            if password:
+                note = f' Password hint saved. Set password "{password}" when saving PDF from print dialog.'
+            return {
+                'status':  'success',
+                'path':    html_tmp,
+                'message': 'PDF opened for printing.' + note
+            }
+
+        except Exception as e:
+            ERR(f"[PDF] generate_protected_pdf error: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── NETWORK BRIDGE — PC2 tag print via PC1 ───────────────────────────
+    def print_tag_network(self, tags):
+        """Send tag print job to PC1 bridge (called from PC2)."""
+        try:
+            cfg_path = os.path.join(os.path.dirname(sys.executable)
+                       if getattr(sys,'frozen',False) else '.', 'config.json')
+            import json as _j
+            cfg = _j.load(open(cfg_path)) if os.path.exists(cfg_path) else {}
+            if cfg.get('mode') == 'network' and cfg.get('printer_on_server'):
+                sys.path.insert(0, os.path.join(os.path.dirname(
+                    sys.executable if getattr(sys,'frozen',False) else __file__
+                ), 'database'))
+                from network_client import BridgeClient
+                client = BridgeClient(cfg)
+                return client.print_tag(tags)
+        except Exception as e:
+            LOG(f'[NET_PRINT] fallback to local: {e}')
+        # Fallback: print locally
+        return self.print_tag_local(tags)
+
+    def print_tag_local(self, tags):
+        """Print TSC jewellery tag locally (USB)."""
+        try:
+            results = []
+            for tag in (tags if isinstance(tags, list) else [tags]):
+                tspl = self._build_tspl(tag)
+                self._send_to_tsc(tspl)
+                results.append({'ok': True, 'tag_id': tag.get('tag_id','')})
+            return {'status': 'success', 'printed': len(results), 'results': results}
+        except Exception as e:
+            ERR(f'[PRINT] {e}')
+            return {'status': 'error', 'message': str(e)}
+
+    def _build_tspl(self, tag: dict) -> bytes:
+        """Build TSPL command for TSC jewellery tag (40x20mm)."""
+        item_name = str(tag.get('item_name', '')).upper()[:18]
+        tag_id    = str(tag.get('tag_id',    ''))[:16]
+        touch     = str(tag.get('touch',     ''))
+        gr_wt     = str(tag.get('gr_wt',     ''))
+        nt_wt     = str(tag.get('nt_wt',     ''))
+        huid      = str(tag.get('huid',      ''))[:14]
+        price     = str(tag.get('price',     ''))
+        shop      = str(tag.get('shop_name', 'AURUM JEWELS')).upper()[:20]
+        lines = [
+            "SIZE 40 mm, 20 mm",
+            "GAP 2 mm, 0 mm",
+            "DIRECTION 0",
+            "REFERENCE 0,0",
+            "SET PEEL OFF",
+            "SET CUTTER OFF",
+            "SET TEAR ON",
+            "CLS",
+            f'TEXT 10,4,"2",0,1,1,"{shop}"',
+            "BAR 0,22,320,1",
+            f'TEXT 10,26,"1",0,1,1,"{item_name}"',
+            f'TEXT 10,42,"1",0,1,1,"Touch:{touch}%  GW:{gr_wt}g NW:{nt_wt}g"',
+        ]
+        if huid:
+            lines.append(f'TEXT 10,56,"1",0,1,1,"HUID:{huid}"')
+        if tag_id:
+            lines.append(f'BARCODE 220,26,"39",30,1,0,2,2,"{tag_id}"')
+        if price:
+            lines.append(f'TEXT 10,70,"2",0,1,1,"Rs.{price}"')
+        lines += ["PRINT 1,1", ""]
+        return "\r\n".join(lines).encode("ascii", errors="replace")
+
+    def _send_to_tsc(self, tspl: bytes):
+        """Send raw TSPL bytes to TSC printer via USB."""
+        import win32print
+        # Find TSC printer
+        printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
+        tsc = None
+        for p in printers:
+            nm = p[2].upper()
+            if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
+                tsc = p[2]; break
+        if not tsc and printers:
+            tsc = printers[0][2]
+        if not tsc:
+            raise RuntimeError('No printer found')
+        hp = win32print.OpenPrinter(tsc)
+        try:
+            win32print.StartDocPrinter(hp, 1, ('Tag', None, 'RAW'))
+            win32print.StartPagePrinter(hp)
+            win32print.WritePrinter(hp, tspl)
+            win32print.EndPagePrinter(hp)
+            win32print.EndDocPrinter(hp)
+        finally:
+            win32print.ClosePrinter(hp)
+        LOG(f'[PRINT] Printed to {tsc}')
+
+    def bridge_discover(self):
+        """PC2: Auto-discover PC1 bridge server on LAN."""
+        try:
+            sys.path.insert(0, os.path.join(
+                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                'database'
+            ))
+            from network_client import discover_server, _save_config, _load_config
+            info = discover_server(timeout=3.0)
+            if info:
+                cfg = _load_config()
+                cfg['server_ip']   = info['ip']
+                cfg['server_port'] = info['port']
+                cfg['mode']        = 'network'
+                _save_config(cfg)
+                return {'status': 'success', 'ip': info['ip'], 'port': info['port']}
+            return {'status': 'error', 'message': 'No bridge server found on LAN'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def bridge_ping(self):
+        """Check if PC1 bridge is reachable."""
+        try:
+            from network_client import get_bridge_client
+            client = get_bridge_client()
+            if not client:
+                return {'status': 'local', 'message': 'Running in local mode'}
+            ok = client.ping()
+            return {'status': 'ok' if ok else 'error',
+                    'reachable': ok,
+                    'server': client._base}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def start_bridge_server(self):
+        """Start FastAPI bridge server on PC1 in background thread."""
+        try:
+            import subprocess, sys
+            bridge = os.path.join(
+                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                'network_bridge.py'
+            )
+            if not os.path.exists(bridge):
+                return {'status':'error','message':'network_bridge.py not found'}
+            subprocess.Popen(
+                [sys.executable, bridge],
+                creationflags=0x08000000,
+                stdout=open(os.path.join(
+                    os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                    'logs','bridge.log'),'a'),
+                stderr=subprocess.STDOUT,
+            )
+            import time; time.sleep(1.5)
+            return {'status':'success','message':'Bridge server started on port 7272'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def stop_bridge_server(self):
+        try:
+            import subprocess
+            subprocess.run(['taskkill','/F','/IM','network_bridge.py'],
+                capture_output=True)
+            subprocess.run(['taskkill','/F','/FI','WINDOWTITLE eq network_bridge*'],
+                capture_output=True)
+            return {'status':'success'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def get_network_config(self):
+        import json as _j
+        try:
+            base = os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__)
+            cfg_path = os.path.join(base, 'config.json')
+            if os.path.exists(cfg_path):
+                return _j.load(open(cfg_path,'r'))
+            return {'mode':'local','server_ip':'','server_port':7272}
+        except Exception as e:
+            return {'mode':'local','server_ip':'','server_port':7272}
+
+    def save_network_config(self, cfg: dict):
+        import json as _j
+        try:
+            base = os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__)
+            cfg_path = os.path.join(base, 'config.json')
+            _j.dump(cfg, open(cfg_path,'w'), indent=2)
+            return {'status':'success'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def get_local_ip(self):
+        import socket as _s
+        try:
+            sock = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            sock.connect(('8.8.8.8', 80))
+            ip = sock.getsockname()[0]
+            sock.close()
+            return ip
+        except Exception:
+            return '127.0.0.1'
+
+    def get_printer_status(self):
+        try:
+            name = self._find_tsc_printer()
+            return {'ready': bool(name), 'printer_name': name or 'Not found'}
+        except Exception as e:
+            return {'ready': False, 'printer_name': 'Error', 'error': str(e)}
+
+    def _find_tsc_printer(self):
+        try:
+            import win32print
+            printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
+            for p in printers:
+                nm = p[2].upper()
+                if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
+                    return p[2]
+            if printers: return printers[0][2]
+        except Exception:
+            pass
+        return ''
+
+    def get_db_path(self):
+        """Return current DB path."""
+        try:
+            return str(self.db.db_path) if hasattr(self.db, 'db_path') else ''
+        except Exception:
+            return ''
+
+    def change_db_location(self):
+        """Show folder picker and move/repoint DB to new location."""
+        import subprocess, shutil as _sh
+        try:
+            r = subprocess.run(
+                ['powershell', '-Command',
+                 '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                 '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
+                 '$f.Description="Select folder for AurumOS database";'
+                 '$f.ShowNewFolderButton=$true;'
+                 'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
+                capture_output=True, text=True, timeout=60
+            )
+            chosen = r.stdout.strip()
+            if not chosen or not os.path.isdir(chosen):
+                return {'status': 'cancelled'}
+
+            new_db = os.path.join(chosen, 'aurum_local.db')
+            cur_db = self.get_db_path()
+
+            # Copy existing DB to new location if it exists
+            if cur_db and os.path.exists(cur_db) and cur_db != new_db:
+                _sh.copy2(cur_db, new_db)
+                LOG(f"[DB] Copied DB to {new_db}")
+
+            # Save new preference
+            if getattr(sys, 'frozen', False):
+                _exe_dir = os.path.dirname(sys.executable)
+            else:
+                _exe_dir = os.path.abspath('.')
+            pref = os.path.join(_exe_dir, 'db_path.txt')
+            open(pref, 'w', encoding='utf-8').write(new_db)
+
+            LOG(f"[DB] DB location changed to {new_db}")
+            return {
+                'status':  'success',
+                'new_path': new_db,
+                'message': f'Database moved to {chosen}. Restart AurumOS to apply.'
+            }
+        except Exception as e:
+            ERR(f"[DB] change_db_location: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def reset_db_location(self):
+        """Reset to default DB location (next to EXE)."""
+        try:
+            if getattr(sys, 'frozen', False):
+                _exe_dir = os.path.dirname(sys.executable)
+            else:
+                _exe_dir = os.path.abspath('.')
+            pref = os.path.join(_exe_dir, 'db_path.txt')
+            if os.path.exists(pref):
+                os.remove(pref)
+            default = os.path.join(_exe_dir, 'database', 'aurum_local.db')
+            return {'status': 'success', 'path': default,
+                    'message': 'Reset to default. Restart AurumOS to apply.'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    # ── TAG AUDIT API ────────────────────────────────────────────────────
+    def tag_audit_start(self, started_by='Admin', touch_filter='ALL'):
+        try:    return self.db.tag_audit_start(started_by, touch_filter)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_scan(self, session_id, tag_id, book_tags):
+        try:    return self.db.tag_audit_scan(int(session_id), tag_id, book_tags)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_get_status(self, session_id):
+        try:    return self.db.tag_audit_get_status(int(session_id))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_mark_absent(self, session_id, tag_id, reason, marked_by='Admin'):
+        try:    return self.db.tag_audit_mark_absent(int(session_id), tag_id, reason, marked_by)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_remove_absence(self, session_id, tag_id):
+        try:    return self.db.tag_audit_remove_absence(int(session_id), tag_id)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_remove_scan(self, session_id, tag_id):
+        try:    return self.db.tag_audit_remove_scan(int(session_id), tag_id)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_close(self, session_id, closed_by='Admin'):
+        try:    return self.db.tag_audit_close(int(session_id), closed_by)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_start_snapshot(self, session_id, touch_filter='ALL'):
+        try:    return self.db.tag_audit_start_snapshot(int(session_id), touch_filter)
+        except Exception as e: return {'status':'error','message':str(e),'snapshot':[]}
+
+    def tag_audit_get_sessions(self, limit=20):
+        try:    return self.db.tag_audit_get_sessions(int(limit))
+        except Exception as e: return {'status':'error','message':str(e),'sessions':[]}
+
+    def tag_audit_get_available_touches(self):
+        try:    return self.db.tag_audit_get_available_touches()
+        except Exception as e: return {'status':'error','message':str(e),'touches':[]}
+
+    # ── YEAR-END BALANCE TRANSFER API ──────────────────────────────
+    def get_year_list(self):
+        try:    return self.db.get_year_list()
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_year_close_preview(self):
+        try:    return self.db.get_year_close_preview()
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def do_year_close(self, new_year, closing_note=''):
+        try:    return self.db.do_year_close(str(new_year).strip(), str(closing_note).strip())
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_archive_data(self, year, table, limit=500):
+        try:    return self.db.get_archive_data(str(year), str(table), int(limit))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_archive_summary(self, year):
+        try:    return self.db.get_archive_summary(str(year))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_active_year(self):
+        """Return currently active financial year and DB path."""
+        try:
+            yr = None
+            try:
+                with self.db._get_connection() as conn:
+                    row = conn.execute(
+                        "SELECT value FROM app_config WHERE key='financial_year'"
+                    ).fetchone()
+                    if row and row['value']:
+                        yr = row['value']
+            except Exception:
+                pass
+            if not yr:
+                yr = self.db._guess_financial_year() if hasattr(self.db, '_guess_financial_year') else ''
+            return {
+                'status':     'success',
+                'year':       yr,
+                'db_path':    self.db.db_path,
+                'is_archive': False,
+            }
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def switch_year(self, year):
+        """
+        Switch active DB to a different year.
+        'current' = live DB, anything else = archived DB.
+        DBManager takes no args — uses AURUM_DB_PATH env var.
+        """
+        import os as _os
+        try:
+            if getattr(sys, 'frozen', False):
+                _exe_dir = _os.path.dirname(sys.executable)
+            else:
+                _exe_dir = _os.path.abspath('.')
+
+            if year == 'current':
+                # Reset to live DB path
+                pref_file = _os.path.join(_exe_dir, 'db_path.txt')
+                if _os.path.exists(pref_file):
+                    live_path = open(pref_file, 'r').read().strip()
+                else:
+                    live_path = _os.path.join(_exe_dir, 'database', 'aurum_local.db')
+                target_path = live_path
+            else:
+                # Resolve archive path
+                pref_file = _os.path.join(_exe_dir, 'db_path.txt')
+                if _os.path.exists(pref_file):
+                    live_path = open(pref_file, 'r').read().strip()
+                    base_dir  = _os.path.dirname(live_path)
+                else:
+                    base_dir = _os.path.join(_exe_dir, 'database')
+                target_path = _os.path.join(base_dir, 'archives', year, 'aurum_local.db')
+                if not _os.path.exists(target_path):
+                    return {'status': 'error', 'message': f'Archive for {year} not found at {target_path}'}
+
+            # Switch DB — set env var BEFORE instantiating DBManager
+            # DBManager.__init__ reads AURUM_DB_PATH on startup
+            _os.environ['AURUM_DB_PATH'] = target_path
+            from database.db_manager import DBManager
+            self.db = DBManager()
+
+            # Get active year label
+            try:
+                with self.db._get_connection() as _c:
+                    _r = _c.execute("SELECT value FROM app_config WHERE key='financial_year'").fetchone()
+                    active_year = _r['value'] if _r else (year if year != 'current' else 'current')
+            except Exception:
+                active_year = year if year != 'current' else 'current'
+            # Regenerate session token on new DBManager instance
+            try:
+                self.db._generate_session_token()
+                LOG(f"[SESSION] Token regenerated after year switch")
+            except Exception as _te:
+                ERR(f"[SESSION] Token regen failed: {_te}")
+
+            LOG(f"[YEAR] Switched to {year}: {target_path}")
+            return {
+                'status':     'success',
+                'year':       active_year,
+                'is_archive': year != 'current',
+                'landing':    'dashboard.html',
+            }
+        except Exception as e:
+            ERR(f"[YEAR] switch_year: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_log_path(self):
+        """Return the log file path so JS can display it."""
+        base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath('.')
+        return os.path.join(base, 'logs', 'aurumos.log')
+
+    def get_recent_logs(self, lines=50):
+        """Return last N lines of the log file for in-app display."""
+        try:
+            log_path = self.get_log_path()
+            if not os.path.exists(log_path):
+                return []
+            with open(log_path, encoding='utf-8', errors='replace') as f:
+                all_lines = f.readlines()
+            return [l.rstrip() for l in all_lines[-lines:]]
+        except Exception as e:
+            return [f"Error reading log: {e}"]
+
+
+def run_aur_os():
+    LOG("[STARTUP] run_aur_os() called")
+    api      = AurumAPI()
+    is_ready = api.db.is_setup_done()
+    LOG(f"[STARTUP] is_setup_done={is_ready}")
+
+    if not is_ready:
+        initial_file="setup.html"; startup_reason=None
+    else:
+        LOG("[LICENSE] === PRE-LAUNCH REVOCATION CHECK ===")
+        revoke_status = api.check_license_revoked()
+        LOG(f"[LICENSE] Result: {revoke_status}")
+        if revoke_status in ("revoked","invalid","not_found","expired"):
+            initial_file="revoked.html"; startup_reason=revoke_status
+        else:
+            initial_file="login.html"; startup_reason=None
+            LOG(f"[LICENSE] Opening login (status={revoke_status})")
+
+    ui_dir       = get_asset_path("ui")
+    initial_path = os.path.join(ui_dir, initial_file)
+    initial_url  = Path(initial_path).as_uri()
+    LOG(f"[STARTUP] Loading: {initial_url}")
+
+    window = webview.create_window(
+        "AurumOS Executive Dashboard", initial_url, js_api=api,
+        width=1350, height=950, background_color='#ffffff'
+    )
+    api.set_window(window)
+
+    def _on_start(w):
+        w.maximize()
+        LOG("[STARTUP] Window started and maximized")
+
+        # ── Auto-connect scale from saved config ──────────────────
+        def _auto_connect_scale():
+            import time as _sc_t
+            _sc_t.sleep(2)  # Let page load first
+            try:
+                saved = api.scale_get_saved_config()
+                port  = saved.get('port', '').strip()
+                baud  = int(saved.get('baud', 1200) or 1200)
+                if not port:
+                    LOG("[STARTUP] No saved scale port — skipping auto-connect")
+                    return
+                LOG(f"[STARTUP] Auto-connecting scale: {port} @ {baud}")
+                _scale.set_window(w)
+                result = _scale.start(port, baud)
+                LOG(f"[STARTUP] Scale auto-connect result: {result}")
+                if result.get('status') == 'success':
+                    # Notify all open pages
+                    try:
+                        w.evaluate_js(
+                            "window.__onScaleConnected && window.__onScaleConnected("
+                            + repr({'port': port, 'baud': baud})
+                            + ")"
+                        )
+                    except: pass
+                else:
+                    LOG(f"[STARTUP] Scale auto-connect failed: {result.get('message')}")
+            except Exception as e:
+                ERR(f"[STARTUP] Scale auto-connect error: {e}")
+
+        threading.Thread(target=_auto_connect_scale, daemon=True).start()
+
+        if initial_file=="revoked.html" and startup_reason:
+            import time as _ti; _ti.sleep(1.2)
+            js = (
+                "try{localStorage.setItem('aurum_revoke_reason','"+startup_reason+"');}catch(e){};"
+                "var _r='"+startup_reason+"';"
+                "var _msgs={revoked:'Your AurumOS license has been revoked. Please contact support.',"
+                "invalid:'Your license is no longer valid. Please contact AurumOS support.',"
+                "not_found:'License key not found on server. Please contact support.',"
+                "expired:'Your license has expired. Please renew to continue.'};"
+                "var _lbls={revoked:'License Revoked',invalid:'License Invalid',"
+                "not_found:'License Not Found',expired:'License Expired'};"
+                "var _el=document.getElementById('reason-text');if(_el)_el.innerText=_lbls[_r]||_lbls.revoked;"
+                "var _ml=document.getElementById('revoke-msg');if(_ml)_ml.innerHTML=_msgs[_r]||_msgs.revoked;"
+            )
+            try: w.evaluate_js(js)
+            except Exception as je: ERR(f"[LICENSE] Revoked JS error: {je}")
+
+        def _bg_check():
+            import time as _t, json as _j
+            _t.sleep(3)
+
+            def run_revoke_check():
+                status = api.check_license_revoked()
+                if status in ('revoked','invalid','not_found','expired'):
+                    LOG(f'[LICENSE] Background: Revoked! {status}')
+                    _t.sleep(1)
+                    api.fire_revoked_screen(status)
+            run_revoke_check()
+
+            threading.Thread(
+                target=lambda: [_t.sleep(6*60*60) or run_revoke_check()],
+                daemon=True
+            ).start()
+
+            _t.sleep(5)
+            try:
+                LOG("[UPDATE] Checking for updates...")
+                r = check_for_update(timeout=10)
+                # Full debug log so we can see exactly why banner shows or not
+                LOG(f"[UPDATE] check result: available={r.get('available') if r else None} "
+                    f"version={r.get('version') if r else None} "
+                    f"file_count={r.get('file_count') if r else None} "
+                    f"current={r.get('current') if r else None}")
+                if r:
+                    LOG(f"[UPDATE] full result keys: {list(r.keys())}")
+                    for k,v in r.items():
+                        if k != '_changed':
+                            LOG(f"[UPDATE]   {k} = {v!r}")
+                # Skip banner if update already applied (session flag OR marker file)
+                _applied = getattr(api, '_update_applied_version', None)
+                if not _applied:
+                    try:
+                        from updater import get_app_root as _gar2
+                        _mf = _gar2() / '.update_applied'
+                        if _mf.exists():
+                            _applied = _mf.read_text(encoding='utf-8').strip()
+                            LOG(f"[UPDATE] Marker file found: applied={_applied}")
+                    except Exception:
+                        pass
+                if _applied and r and _applied == r.get('version'):
+                    LOG(f"[UPDATE] Already applied v{_applied} -- skip banner")
+                    r['available'] = False
+
+                if r and r.get("available"):
+                    r_js     = {k:v for k,v in r.items() if k!="_changed"}
+                    json_str = _j.dumps(r_js)
+                    js = ("(function(){var d="+json_str+";"
+                          "if(window.__showUpdate) window.__showUpdate(d);"
+                          "window.dispatchEvent(new CustomEvent('aurum-update-available',{detail:d}));})()")
+                    LOG(f"[UPDATE] v{r['version']} available, {r.get('file_count',0)} files")
+                    api._last_update_files = r.get("_changed",[])
+                    for attempt in range(5):
+                        try:
+                            if api._window:
+                                api._window.evaluate_js(js)
+                                LOG(f"[UPDATE] Banner fired (attempt {attempt+1})")
+                                break
+                        except Exception as e:
+                            ERR(f"[UPDATE] Attempt {attempt+1} failed: {e}")
+                            _t.sleep(3)
+                else:
+                    LOG(f"[UPDATE] Up to date. local={CURRENT_VERSION} remote={r and r.get('version')} changed={r and r.get('file_count',0)}")
+            except Exception as e:
+                ERR(f"[UPDATE] Check error: {e}")
+                import traceback as _tb; _tb.print_exc()
+
+        threading.Thread(target=_bg_check, daemon=True).start()
+
+    def _on_closing():
+        try:
+            api.bastion.notify_session_active(False)
+            api.bastion.stop()
+            LOG("[BASTION_AI] Stopped")
+        except Exception:
+            pass
+        try:
+            api.db._cleanup_session()
+            LOG("[SESSION] Session cleaned up on close")
+        except Exception:
+            pass
+    window.events.closing += _on_closing
+    webview.start(_on_start, window, gui='edgechromium', debug=False)
+
+
+if __name__ == '__main__':
+    run_aur_os()

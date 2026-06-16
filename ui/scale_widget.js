@@ -245,53 +245,84 @@ var ScaleWidget = (function() {
         }
     }
 
-    function _updateWeight(wt, stable) {
-        _lastWeight = wt;
-        _stable     = stable;
+    // ── CONFIG ────────────────────────────────────────────────────
+var _smoothingFactor = 0.25; // 0 = very slow/stable, 1 = instant/jittery
+var _noiseThreshold  = 0.05; // Ignore changes smaller than 0.02g
+var _smoothedWeight  = null;
+var _zeroThreshold   = 0.05; // Anything below this is forced to zero
 
-        var val   = document.getElementById('sw-wt-val');
-        var badge = document.getElementById('sw-wt-badge');
-        if (val) {
-            val.innerText  = wt ? wt.toFixed(3) : '\u2014\u00a0';
-            val.className  = 'sw-wt-val' + (stable && wt ? ' stable' : '');
-        }
-        if (badge) {
-            badge.innerText  = stable ? 'STABLE' : 'UNSTABLE';
-            badge.className  = 'sw-wt-badge' + (stable && wt ? ' stable' : '');
-        }
+function _updateWeight(wt, stable) {
+    // ── PERMANENT ZERO-DRIFT FIX ──────────────────────────────
+    // If reading is within the dead-zone, force to zero and reset smoothing
+    if (wt !== null && wt < _zeroThreshold) {
+        wt = 0.000;
+        _smoothedWeight = 0.000;
+    }
+    // ──────────────────────────────────────────────────────────
 
-        // Update all mini widgets
-        var minis = document.querySelectorAll('.sw-mini');
-        for (var i = 0; i < minis.length; i++) {
-            var dot = minis[i].querySelector('.sw-mini-dot');
-            var val2 = minis[i].querySelector('.sw-mini-val');
-            if (dot) dot.className = 'sw-mini-dot' + (stable ? ' stable' : '');
-            if (val2) val2.innerText = wt ? wt.toFixed(3) + 'g' : '\u2014';
-            minis[i].className = 'sw-mini' + (_connected ? ' connected' : '') + (stable && wt ? ' has-weight' : '');
-        }
+    _lastWeight = wt;
+    _stable     = stable;
 
-        // Auto-fill registered fields
-        if (stable && wt) {
-            var keys = Object.keys(_miniTargets);
-            for (var j = 0; j < keys.length; j++) {
-                var fieldId = _miniTargets[keys[j]];
-                var el = document.getElementById(fieldId);
-                if (el && document.activeElement !== el) {
-                    el.value = wt.toFixed(3);
-                    // Trigger oninput for any auto-calc
+    // 1. Noise Filtering: If the change is tiny, keep the previous value
+    if (_smoothedWeight !== null && Math.abs(wt - _smoothedWeight) < _noiseThreshold) {
+        wt = _smoothedWeight;
+    }
+
+    // 2. Exponential Smoothing
+    if (_smoothedWeight === null) {
+        _smoothedWeight = wt;
+    } else {
+        _smoothedWeight = (_smoothingFactor * wt) + ((1 - _smoothingFactor) * _smoothedWeight);
+    }
+
+    var displayWt = _smoothedWeight;
+
+    var val   = document.getElementById('sw-wt-val');
+    var badge = document.getElementById('sw-wt-badge');
+
+    if (val) {
+        // Use toFixed(3) to ensure you always see 0.000 instead of 0
+        val.innerText  = displayWt !== null ? displayWt.toFixed(3) : '\u2014\u00a0';
+        val.className  = 'sw-wt-val' + (_stable && displayWt > 0 ? ' stable' : '');
+    }
+    if (badge) {
+        badge.innerText  = _stable ? 'STABLE' : 'UNSTABLE';
+        badge.className  = 'sw-wt-badge' + (_stable && displayWt > 0 ? ' stable' : '');
+    }
+
+    // Update all mini widgets
+    var minis = document.querySelectorAll('.sw-mini');
+    for (var i = 0; i < minis.length; i++) {
+        var dot = minis[i].querySelector('.sw-mini-dot');
+        var val2 = minis[i].querySelector('.sw-mini-val');
+        if (dot) dot.className = 'sw-mini-dot' + (_stable ? ' stable' : '');
+        if (val2) val2.innerText = displayWt !== null ? displayWt.toFixed(3) + 'g' : '\u2014';
+        minis[i].className = 'sw-mini' + (_connected ? ' connected' : '') + (_stable && displayWt > 0 ? ' has-weight' : '');
+    }
+
+    // Auto-fill registered fields using the smoothed value
+    // Only auto-fill if weight > 0 to prevent filling fields with 0.000
+    if (_stable && displayWt > 0) {
+        var keys = Object.keys(_miniTargets);
+        for (var j = 0; j < keys.length; j++) {
+            var fieldId = _miniTargets[keys[j]];
+            var el = document.getElementById(fieldId);
+            if (el && document.activeElement !== el) {
+                // Only update if the field is significantly different
+                if (Math.abs(parseFloat(el.value || 0) - displayWt) > 0.001) {
+                    el.value = displayWt.toFixed(3);
                     if (el.oninput) el.oninput();
-                    if (el.dispatchEvent) {
-                        try { el.dispatchEvent(new Event('input')); } catch(e) {}
-                    }
+                    try { el.dispatchEvent(new Event('input')); } catch(e) {}
                 }
             }
         }
-
-        // Fire callbacks
-        for (var k = 0; k < _callbacks.length; k++) {
-            try { _callbacks[k](wt, stable); } catch(e) {}
-        }
     }
+
+    // Fire callbacks
+    for (var k = 0; k < _callbacks.length; k++) {
+        try { _callbacks[k](displayWt, _stable); } catch(e) {}
+    }
+}
 
     // ── GLOBAL SCALE RECEIVER ─────────────────────────────────────
     // pywebview broadcasts to window.__onScale on every weight reading
