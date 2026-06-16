@@ -512,15 +512,85 @@ def normalize_tag_item(item_data: dict) -> dict:
 
 class AurumAPI:
     def __init__(self):
-        # Always use DB next to EXE (dist/database/) — never project root
-        # This is the ONLY correct path for client installs
+        # ── DB Path Resolution ────────────────────────────────────────
+        # Priority:
+        #   1. Saved preference (db_path.txt next to EXE)
+        #   2. Default: <EXE folder>/database/aurum_local.db
+        #   3. If neither exists: show folder picker
+
         if getattr(sys, 'frozen', False):
-            _db_base = os.path.dirname(sys.executable)
+            _exe_dir = os.path.dirname(sys.executable)
         else:
-            _db_base = os.path.abspath('.')
-        _db_dir  = os.path.join(_db_base, 'database')
-        os.makedirs(_db_dir, exist_ok=True)
-        _db_path = os.path.join(_db_dir, 'aurum_local.db')
+            _exe_dir = os.path.abspath('.')
+
+        _pref_file = os.path.join(_exe_dir, 'db_path.txt')
+
+        def _pick_db_folder():
+            """Show folder picker dialog — no tkinter needed."""
+            try:
+                import ctypes
+                co  = ctypes.windll.ole32
+                co.CoInitialize(None)
+                buf = ctypes.create_unicode_buffer(260)
+                # Use SHBrowseForFolder via shell32
+                from ctypes import wintypes
+                shell32 = ctypes.windll.shell32
+                # Simple fallback: use cmd input via subprocess
+                import subprocess
+                r = subprocess.run(
+                    ['powershell', '-Command',
+                     '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                     '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
+                     '$f.Description="Select folder to store AurumOS database";'
+                     '$f.ShowNewFolderButton=$true;'
+                     'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
+                    capture_output=True, text=True, timeout=60
+                )
+                chosen = r.stdout.strip()
+                return chosen if chosen else None
+            except Exception as _pe:
+                LOG(f"[DB] Picker error: {_pe}")
+                return None
+
+        # 1. Check saved preference
+        _db_path = None
+        if os.path.exists(_pref_file):
+            try:
+                _saved = open(_pref_file, 'r', encoding='utf-8').read().strip()
+                if _saved and os.path.isdir(os.path.dirname(_saved)):
+                    _db_path = _saved
+                    LOG(f"[DB] Using saved path: {_db_path}")
+            except Exception:
+                pass
+
+        # 2. Default path
+        if not _db_path:
+            _default_dir = os.path.join(_exe_dir, 'database')
+            _default_db  = os.path.join(_default_dir, 'aurum_local.db')
+            # If default DB already exists — use it silently
+            if os.path.exists(_default_db):
+                _db_path = _default_db
+                LOG(f"[DB] Using default path: {_db_path}")
+
+        # 3. First run — show picker
+        if not _db_path:
+            LOG("[DB] First run — showing folder picker")
+            _chosen_dir = _pick_db_folder()
+            if _chosen_dir and os.path.isdir(_chosen_dir):
+                _db_path = os.path.join(_chosen_dir, 'aurum_local.db')
+            else:
+                # User cancelled — use default
+                _default_dir = os.path.join(_exe_dir, 'database')
+                _db_path     = os.path.join(_default_dir, 'aurum_local.db')
+                LOG(f"[DB] Picker cancelled — using default: {_db_path}")
+
+        # Ensure directory exists and save preference
+        os.makedirs(os.path.dirname(_db_path), exist_ok=True)
+        try:
+            open(_pref_file, 'w', encoding='utf-8').write(_db_path)
+        except Exception:
+            pass
+
         LOG(f"[DB] Database path: {_db_path}")
         try:
             self.db = DBManager(_db_path)
@@ -1905,7 +1975,7 @@ class AurumAPI:
                 if self._window:
                     self._window.evaluate_js(
                         "var _ve=document.getElementById('sb-ver');"
-                        "if(_ve)_ve.innerText='v" + new_ver + " ↻';" 
+                        "if(_ve)_ve.innerText='v" + new_ver + " ↻';"
                     )
             except Exception:
                 pass
@@ -2237,6 +2307,12 @@ class AurumAPI:
     def scale_disconnect(self):
         LOG("[SCALE_API] scale_disconnect called")
         _scale.stop()
+        # Clear saved port so it does not auto-reconnect next startup
+        try:
+            with self.db._get_connection() as conn:
+                conn.execute("DELETE FROM app_config WHERE key IN ('scale_port','scale_baud')")
+                conn.commit()
+        except Exception: pass
         return {"status": "ok"}
 
     def js_log(self, msg, level='INFO'):
@@ -2452,6 +2528,433 @@ class AurumAPI:
 
         except Exception as e:
             ERR(f"[PDF] generate_protected_pdf error: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── NETWORK BRIDGE — PC2 tag print via PC1 ───────────────────────────
+    def print_tag_network(self, tags):
+        """Send tag print job to PC1 bridge (called from PC2)."""
+        try:
+            cfg_path = os.path.join(os.path.dirname(sys.executable)
+                       if getattr(sys,'frozen',False) else '.', 'config.json')
+            import json as _j
+            cfg = _j.load(open(cfg_path)) if os.path.exists(cfg_path) else {}
+            if cfg.get('mode') == 'network' and cfg.get('printer_on_server'):
+                sys.path.insert(0, os.path.join(os.path.dirname(
+                    sys.executable if getattr(sys,'frozen',False) else __file__
+                ), 'database'))
+                from network_client import BridgeClient
+                client = BridgeClient(cfg)
+                return client.print_tag(tags)
+        except Exception as e:
+            LOG(f'[NET_PRINT] fallback to local: {e}')
+        # Fallback: print locally
+        return self.print_tag_local(tags)
+
+    def print_tag_local(self, tags):
+        """Print TSC jewellery tag locally (USB)."""
+        try:
+            results = []
+            for tag in (tags if isinstance(tags, list) else [tags]):
+                tspl = self._build_tspl(tag)
+                self._send_to_tsc(tspl)
+                results.append({'ok': True, 'tag_id': tag.get('tag_id','')})
+            return {'status': 'success', 'printed': len(results), 'results': results}
+        except Exception as e:
+            ERR(f'[PRINT] {e}')
+            return {'status': 'error', 'message': str(e)}
+
+    def _build_tspl(self, tag: dict) -> bytes:
+        """Build TSPL command for TSC jewellery tag (40x20mm)."""
+        item_name = str(tag.get('item_name', '')).upper()[:18]
+        tag_id    = str(tag.get('tag_id',    ''))[:16]
+        touch     = str(tag.get('touch',     ''))
+        gr_wt     = str(tag.get('gr_wt',     ''))
+        nt_wt     = str(tag.get('nt_wt',     ''))
+        huid      = str(tag.get('huid',      ''))[:14]
+        price     = str(tag.get('price',     ''))
+        shop      = str(tag.get('shop_name', 'AURUM JEWELS')).upper()[:20]
+        lines = [
+            "SIZE 40 mm, 20 mm",
+            "GAP 2 mm, 0 mm",
+            "DIRECTION 0",
+            "REFERENCE 0,0",
+            "SET PEEL OFF",
+            "SET CUTTER OFF",
+            "SET TEAR ON",
+            "CLS",
+            f'TEXT 10,4,"2",0,1,1,"{shop}"',
+            "BAR 0,22,320,1",
+            f'TEXT 10,26,"1",0,1,1,"{item_name}"',
+            f'TEXT 10,42,"1",0,1,1,"Touch:{touch}%  GW:{gr_wt}g NW:{nt_wt}g"',
+        ]
+        if huid:
+            lines.append(f'TEXT 10,56,"1",0,1,1,"HUID:{huid}"')
+        if tag_id:
+            lines.append(f'BARCODE 220,26,"39",30,1,0,2,2,"{tag_id}"')
+        if price:
+            lines.append(f'TEXT 10,70,"2",0,1,1,"Rs.{price}"')
+        lines += ["PRINT 1,1", ""]
+        return "\r\n".join(lines).encode("ascii", errors="replace")
+
+    def _send_to_tsc(self, tspl: bytes):
+        """Send raw TSPL bytes to TSC printer via USB."""
+        import win32print
+        # Find TSC printer
+        printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
+        tsc = None
+        for p in printers:
+            nm = p[2].upper()
+            if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
+                tsc = p[2]; break
+        if not tsc and printers:
+            tsc = printers[0][2]
+        if not tsc:
+            raise RuntimeError('No printer found')
+        hp = win32print.OpenPrinter(tsc)
+        try:
+            win32print.StartDocPrinter(hp, 1, ('Tag', None, 'RAW'))
+            win32print.StartPagePrinter(hp)
+            win32print.WritePrinter(hp, tspl)
+            win32print.EndPagePrinter(hp)
+            win32print.EndDocPrinter(hp)
+        finally:
+            win32print.ClosePrinter(hp)
+        LOG(f'[PRINT] Printed to {tsc}')
+
+    def bridge_discover(self):
+        """PC2: Auto-discover PC1 bridge server on LAN."""
+        try:
+            sys.path.insert(0, os.path.join(
+                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                'database'
+            ))
+            from network_client import discover_server, _save_config, _load_config
+            info = discover_server(timeout=3.0)
+            if info:
+                cfg = _load_config()
+                cfg['server_ip']   = info['ip']
+                cfg['server_port'] = info['port']
+                cfg['mode']        = 'network'
+                _save_config(cfg)
+                return {'status': 'success', 'ip': info['ip'], 'port': info['port']}
+            return {'status': 'error', 'message': 'No bridge server found on LAN'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def bridge_ping(self):
+        """Check if PC1 bridge is reachable."""
+        try:
+            from network_client import get_bridge_client
+            client = get_bridge_client()
+            if not client:
+                return {'status': 'local', 'message': 'Running in local mode'}
+            ok = client.ping()
+            return {'status': 'ok' if ok else 'error',
+                    'reachable': ok,
+                    'server': client._base}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def start_bridge_server(self):
+        """Start FastAPI bridge server on PC1 in background thread."""
+        try:
+            import subprocess, sys
+            bridge = os.path.join(
+                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                'network_bridge.py'
+            )
+            if not os.path.exists(bridge):
+                return {'status':'error','message':'network_bridge.py not found'}
+            subprocess.Popen(
+                [sys.executable, bridge],
+                creationflags=0x08000000,
+                stdout=open(os.path.join(
+                    os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
+                    'logs','bridge.log'),'a'),
+                stderr=subprocess.STDOUT,
+            )
+            import time; time.sleep(1.5)
+            return {'status':'success','message':'Bridge server started on port 7272'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def stop_bridge_server(self):
+        try:
+            import subprocess
+            subprocess.run(['taskkill','/F','/IM','network_bridge.py'],
+                capture_output=True)
+            subprocess.run(['taskkill','/F','/FI','WINDOWTITLE eq network_bridge*'],
+                capture_output=True)
+            return {'status':'success'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def get_network_config(self):
+        import json as _j
+        try:
+            base = os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__)
+            cfg_path = os.path.join(base, 'config.json')
+            if os.path.exists(cfg_path):
+                return _j.load(open(cfg_path,'r'))
+            return {'mode':'local','server_ip':'','server_port':7272}
+        except Exception as e:
+            return {'mode':'local','server_ip':'','server_port':7272}
+
+    def save_network_config(self, cfg: dict):
+        import json as _j
+        try:
+            base = os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__)
+            cfg_path = os.path.join(base, 'config.json')
+            _j.dump(cfg, open(cfg_path,'w'), indent=2)
+            return {'status':'success'}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def get_local_ip(self):
+        import socket as _s
+        try:
+            sock = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            sock.connect(('8.8.8.8', 80))
+            ip = sock.getsockname()[0]
+            sock.close()
+            return ip
+        except Exception:
+            return '127.0.0.1'
+
+    def get_printer_status(self):
+        try:
+            name = self._find_tsc_printer()
+            return {'ready': bool(name), 'printer_name': name or 'Not found'}
+        except Exception as e:
+            return {'ready': False, 'printer_name': 'Error', 'error': str(e)}
+
+    def _find_tsc_printer(self):
+        try:
+            import win32print
+            printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
+            for p in printers:
+                nm = p[2].upper()
+                if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
+                    return p[2]
+            if printers: return printers[0][2]
+        except Exception:
+            pass
+        return ''
+
+    def get_db_path(self):
+        """Return current DB path."""
+        try:
+            return str(self.db.db_path) if hasattr(self.db, 'db_path') else ''
+        except Exception:
+            return ''
+
+    def change_db_location(self):
+        """Show folder picker and move/repoint DB to new location."""
+        import subprocess, shutil as _sh
+        try:
+            r = subprocess.run(
+                ['powershell', '-Command',
+                 '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                 '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
+                 '$f.Description="Select folder for AurumOS database";'
+                 '$f.ShowNewFolderButton=$true;'
+                 'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
+                capture_output=True, text=True, timeout=60
+            )
+            chosen = r.stdout.strip()
+            if not chosen or not os.path.isdir(chosen):
+                return {'status': 'cancelled'}
+
+            new_db = os.path.join(chosen, 'aurum_local.db')
+            cur_db = self.get_db_path()
+
+            # Copy existing DB to new location if it exists
+            if cur_db and os.path.exists(cur_db) and cur_db != new_db:
+                _sh.copy2(cur_db, new_db)
+                LOG(f"[DB] Copied DB to {new_db}")
+
+            # Save new preference
+            if getattr(sys, 'frozen', False):
+                _exe_dir = os.path.dirname(sys.executable)
+            else:
+                _exe_dir = os.path.abspath('.')
+            pref = os.path.join(_exe_dir, 'db_path.txt')
+            open(pref, 'w', encoding='utf-8').write(new_db)
+
+            LOG(f"[DB] DB location changed to {new_db}")
+            return {
+                'status':  'success',
+                'new_path': new_db,
+                'message': f'Database moved to {chosen}. Restart AurumOS to apply.'
+            }
+        except Exception as e:
+            ERR(f"[DB] change_db_location: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def reset_db_location(self):
+        """Reset to default DB location (next to EXE)."""
+        try:
+            if getattr(sys, 'frozen', False):
+                _exe_dir = os.path.dirname(sys.executable)
+            else:
+                _exe_dir = os.path.abspath('.')
+            pref = os.path.join(_exe_dir, 'db_path.txt')
+            if os.path.exists(pref):
+                os.remove(pref)
+            default = os.path.join(_exe_dir, 'database', 'aurum_local.db')
+            return {'status': 'success', 'path': default,
+                    'message': 'Reset to default. Restart AurumOS to apply.'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    # ── TAG AUDIT API ────────────────────────────────────────────────────
+    def tag_audit_start(self, started_by='Admin', touch_filter='ALL'):
+        try:    return self.db.tag_audit_start(started_by, touch_filter)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_scan(self, session_id, tag_id, book_tags):
+        try:    return self.db.tag_audit_scan(int(session_id), tag_id, book_tags)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_get_status(self, session_id):
+        try:    return self.db.tag_audit_get_status(int(session_id))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_mark_absent(self, session_id, tag_id, reason, marked_by='Admin'):
+        try:    return self.db.tag_audit_mark_absent(int(session_id), tag_id, reason, marked_by)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_remove_absence(self, session_id, tag_id):
+        try:    return self.db.tag_audit_remove_absence(int(session_id), tag_id)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_remove_scan(self, session_id, tag_id):
+        try:    return self.db.tag_audit_remove_scan(int(session_id), tag_id)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_close(self, session_id, closed_by='Admin'):
+        try:    return self.db.tag_audit_close(int(session_id), closed_by)
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def tag_audit_start_snapshot(self, session_id, touch_filter='ALL'):
+        try:    return self.db.tag_audit_start_snapshot(int(session_id), touch_filter)
+        except Exception as e: return {'status':'error','message':str(e),'snapshot':[]}
+
+    def tag_audit_get_sessions(self, limit=20):
+        try:    return self.db.tag_audit_get_sessions(int(limit))
+        except Exception as e: return {'status':'error','message':str(e),'sessions':[]}
+
+    def tag_audit_get_available_touches(self):
+        try:    return self.db.tag_audit_get_available_touches()
+        except Exception as e: return {'status':'error','message':str(e),'touches':[]}
+
+    # ── YEAR-END BALANCE TRANSFER API ──────────────────────────────
+    def get_year_list(self):
+        try:    return self.db.get_year_list()
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_year_close_preview(self):
+        try:    return self.db.get_year_close_preview()
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def do_year_close(self, new_year, closing_note=''):
+        try:    return self.db.do_year_close(str(new_year).strip(), str(closing_note).strip())
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_archive_data(self, year, table, limit=500):
+        try:    return self.db.get_archive_data(str(year), str(table), int(limit))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_archive_summary(self, year):
+        try:    return self.db.get_archive_summary(str(year))
+        except Exception as e: return {'status':'error','message':str(e)}
+
+    def get_active_year(self):
+        """Return currently active financial year and DB path."""
+        try:
+            yr = None
+            try:
+                with self.db._get_connection() as conn:
+                    row = conn.execute(
+                        "SELECT value FROM app_config WHERE key='financial_year'"
+                    ).fetchone()
+                    if row and row['value']:
+                        yr = row['value']
+            except Exception:
+                pass
+            if not yr:
+                yr = self.db._guess_financial_year() if hasattr(self.db, '_guess_financial_year') else ''
+            return {
+                'status':     'success',
+                'year':       yr,
+                'db_path':    self.db.db_path,
+                'is_archive': False,
+            }
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def switch_year(self, year):
+        """
+        Switch active DB to a different year.
+        'current' = live DB, anything else = archived DB.
+        DBManager takes no args — uses AURUM_DB_PATH env var.
+        """
+        import os as _os
+        try:
+            if getattr(sys, 'frozen', False):
+                _exe_dir = _os.path.dirname(sys.executable)
+            else:
+                _exe_dir = _os.path.abspath('.')
+
+            if year == 'current':
+                # Reset to live DB path
+                pref_file = _os.path.join(_exe_dir, 'db_path.txt')
+                if _os.path.exists(pref_file):
+                    live_path = open(pref_file, 'r').read().strip()
+                else:
+                    live_path = _os.path.join(_exe_dir, 'database', 'aurum_local.db')
+                target_path = live_path
+            else:
+                # Resolve archive path
+                pref_file = _os.path.join(_exe_dir, 'db_path.txt')
+                if _os.path.exists(pref_file):
+                    live_path = open(pref_file, 'r').read().strip()
+                    base_dir  = _os.path.dirname(live_path)
+                else:
+                    base_dir = _os.path.join(_exe_dir, 'database')
+                target_path = _os.path.join(base_dir, 'archives', year, 'aurum_local.db')
+                if not _os.path.exists(target_path):
+                    return {'status': 'error', 'message': f'Archive for {year} not found at {target_path}'}
+
+            # Switch DB — set env var BEFORE instantiating DBManager
+            # DBManager.__init__ reads AURUM_DB_PATH on startup
+            _os.environ['AURUM_DB_PATH'] = target_path
+            from database.db_manager import DBManager
+            self.db = DBManager()
+
+            # Get active year label
+            try:
+                with self.db._get_connection() as _c:
+                    _r = _c.execute("SELECT value FROM app_config WHERE key='financial_year'").fetchone()
+                    active_year = _r['value'] if _r else (year if year != 'current' else 'current')
+            except Exception:
+                active_year = year if year != 'current' else 'current'
+            # Regenerate session token on new DBManager instance
+            try:
+                self.db._generate_session_token()
+                LOG(f"[SESSION] Token regenerated after year switch")
+            except Exception as _te:
+                ERR(f"[SESSION] Token regen failed: {_te}")
+
+            LOG(f"[YEAR] Switched to {year}: {target_path}")
+            return {
+                'status':     'success',
+                'year':       active_year,
+                'is_archive': year != 'current',
+                'landing':    'dashboard.html',
+            }
+        except Exception as e:
+            ERR(f"[YEAR] switch_year: {e}")
             return {'status': 'error', 'message': str(e)}
 
     def get_log_path(self):

@@ -40,21 +40,25 @@ def _dberr(msg):
 class DBManager:
     def __init__(self):
         import sys as _sys
-        # Always use exe-adjacent directory -- never _MEIPASS (read-only bundle)
-        if getattr(_sys, 'frozen', False):
-            app_dir = os.path.dirname(_sys.executable)
+        # Priority: AURUM_DB_PATH env var (used by switch_year) → db_path.txt → default
+        env_path = os.environ.get('AURUM_DB_PATH', '').strip()
+        if env_path and os.path.exists(os.path.dirname(env_path) or '.'):
+            self.db_path = env_path
+            self.db_dir = os.path.dirname(env_path)
         else:
-            app_dir = os.path.abspath('.')
-
-        self.db_dir = os.path.join(app_dir, 'database')
-        self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
+            if getattr(_sys, 'frozen', False):
+                app_dir = os.path.dirname(_sys.executable)
+            else:
+                app_dir = os.path.abspath('.')
+            self.db_dir = os.path.join(app_dir, 'database')
+            self.db_path = os.path.join(self.db_dir, 'aurum_local.db')
 
         try:
             os.makedirs(self.db_dir, exist_ok=True)
         except Exception as e:
-            _dblog('[DB] Cannot create database dir: {e}')
+            _dblog(f'[DB] Cannot create database dir: {e}')
 
-        _dblog('[DB] Path: {self.db_path}')
+        _dblog(f'[DB] Path: {self.db_path}')
         print(f"[DB] Dir exists: {os.path.exists(self.db_dir)}")
         print(f"[DB] Dir writable: {os.access(self.db_dir, os.W_OK)}")
         self.initialize_tables()
@@ -195,62 +199,15 @@ class DBManager:
 
                 # App config -- setup status, business profile
                 conn.execute("""
-                    CREATE TABLE IF NOT EXISTS app_config (
-                        key   TEXT PRIMARY KEY,
-                        value TEXT
-                    )
-                """)
-                # mac_lock: stores the machine fingerprint inside the DB file itself
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS mac_lock (
-                        id          INTEGER PRIMARY KEY CHECK (id=1),
-                        fingerprint TEXT    NOT NULL DEFAULT '',
-                        locked_at   TEXT    DEFAULT (datetime('now')),
-                        hostname    TEXT    DEFAULT ''
-                    )
-                """)
-                conn.commit()
-                # ── BASTION AI tables ─────────────────────────────────
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS bastion_events (
-                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ts           TEXT    DEFAULT (datetime('now')),
-                        event_type   TEXT    NOT NULL,
-                        severity     TEXT    DEFAULT 'LOW',
-                        score        INTEGER DEFAULT 0,
-                        detail       TEXT    DEFAULT '',
-                        actor        TEXT    DEFAULT 'system',
-                        action_taken TEXT    DEFAULT 'LOGGED',
-                        auto_healed  INTEGER DEFAULT 0,
-                        sent         INTEGER DEFAULT 0
-                    )
-                """)
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS bastion_learning (
-                        key        TEXT PRIMARY KEY,
-                        value      TEXT,
-                        updated_at TEXT DEFAULT (datetime('now'))
-                    )
-                """)
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS bastion_alerts (
-                        id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ts       TEXT DEFAULT (datetime('now')),
-                        subject  TEXT,
-                        body     TEXT,
-                        sent     INTEGER DEFAULT 0,
-                        sent_at  TEXT
-                    )
-                """)
-                conn.commit()
-                # Audit log -- tracks all staff/owner actions
-                conn.execute("""
                     CREATE TABLE IF NOT EXISTS login_log (
                         id         INTEGER PRIMARY KEY AUTOINCREMENT,
                         username   TEXT    NOT NULL DEFAULT 'owner',
                         role       TEXT    NOT NULL DEFAULT 'admin',
                         login_time TEXT    NOT NULL DEFAULT (datetime('now')),
-                        ip         TEXT    DEFAULT '');
+                        ip         TEXT    DEFAULT ''
+                    )
+                """)
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS audit_log (
                         id         INTEGER PRIMARY KEY AUTOINCREMENT,
                         ts         TEXT    NOT NULL,
@@ -525,8 +482,9 @@ class DBManager:
                 tag_id = self.generate_unique_tag_id()
 
             with self._get_connection() as conn:
-                conn.execute("""
-                    INSERT INTO stock_inventory
+                sql = "INSERT OR REPLACE INTO stock_inventory" if tag_id.startswith(
+                    'OPENING-') else "INSERT INTO stock_inventory"
+                conn.execute(sql + """
                         (it_code,it_name,tag_id,pkg_wt,para_stone_wt,size,design,
                          pcs,gr_wt,ls_wt,nt_wt,ghat_wt,touch,wastage,huid,is_tagged,entry_date)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,date('now'))""",
@@ -551,6 +509,20 @@ class DBManager:
             return True
         except Exception as e:
             print(f"? [DB STOCK ENTRY ERROR] {e}")
+            return False
+
+    def delete_stock_entry(self, entry_id):
+        """Delete an opening stock entry by ID."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "DELETE FROM stock_inventory WHERE id=? AND tag_id LIKE 'OPENING-%'",
+                    (int(entry_id),)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[OPENING STOCK] delete: {e}")
             return False
 
     def update_stock_entry(self, entry_id, data):
@@ -1177,13 +1149,9 @@ class DBManager:
 
     def record_sale(self, vch_id, customer, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0):
-        # Layer 10: verify session token before any sale write
+        # Session token check before sale write
         if not self._verify_session_token():
             _dberr("[SALE] Session token invalid — sale BLOCKED")
-            return False
-        # Layer 10: Session token check
-        if not self._verify_session_token():
-            _dberr("[SALE] Session invalid — BLOCKED")
             return False
         try:
             safe_vch_id = str(vch_id).strip()
@@ -1403,6 +1371,7 @@ class DBManager:
             return []
 
     def get_available_ledger_dates(self):
+        from datetime import datetime as _dt
         try:
             with self._get_connection() as conn:
                 rows = conn.execute("""
@@ -1410,9 +1379,10 @@ class DBManager:
                     WHERE tag_id NOT IN ('N/A','') AND tag_id NOT LIKE 'KATTI-%' AND tag_id NOT LIKE 'OPENING-%'
                     ORDER BY entry_date ASC
                 """).fetchall()
-                return [r['entry_date'] for r in rows] if rows else [datetime.now().strftime('%Y-%m-%d')]
-        except:
-            return [datetime.now().strftime('%Y-%m-%d')]
+                return [r['entry_date'] for r in rows] if rows else [_dt.now().strftime('%Y-%m-%d')]
+        except Exception:
+            from datetime import datetime as _dt2
+            return [_dt2.now().strftime('%Y-%m-%d')]
 
     def get_product_by_tag(self, tag_id):
         try:
@@ -1530,17 +1500,26 @@ class DBManager:
         try:
             with self._get_connection() as conn:
 
-                # All live stock per touch (any tag)
-                live = conn.execute('''
+                # Opening stock rows (OPENING- tagged) per touch
+                opening = conn.execute("""
+                    SELECT ROUND(touch,2) as touch,
+                           COALESCE(SUM(gr_wt),0) as wt
+                    FROM stock_inventory
+                    WHERE tag_id LIKE 'OPENING-%'
+                      AND touch IS NOT NULL AND touch > 0
+                    GROUP BY ROUND(touch,2)
+                """).fetchall()
+
+                # All live stock per touch (includes opening + katti + tagged)
+                live = conn.execute("""
                     SELECT ROUND(touch,2) as touch,
                            COALESCE(SUM(gr_wt),0) as wt,
                            COALESCE(COUNT(*),0)   as cnt
                     FROM stock_inventory
                     WHERE touch IS NOT NULL AND touch > 0
-                      AND gr_wt > 0
                     GROUP BY ROUND(touch,2)
                     ORDER BY touch
-                ''').fetchall()
+                """).fetchall()
 
                 # Katti inward
                 katti = conn.execute('''
@@ -1577,21 +1556,24 @@ class DBManager:
                     except:
                         pass
 
+                open_wt = {round(float(r['touch']), 2): float(r['wt']) for r in opening}
                 live_wt = {round(float(r['touch']), 2): float(r['wt']) for r in live}
                 live_cnt = {round(float(r['touch']), 2): int(r['cnt']) for r in live}
                 kat_wt = {round(float(r['touch']), 2): float(r['wt']) for r in katti}
 
-                all_tv = sorted(set(list(live_wt) + list(kat_wt) + list(out)))
+                # Include ALL touches — even those with 0 opening after stock med
+                all_tv = sorted(set(list(open_wt) + list(live_wt) + list(kat_wt) + list(out)))
                 result = []
                 for tv in all_tv:
-                    lw = round(live_wt.get(tv, 0), 3)
-                    kw = round(kat_wt.get(tv, 0), 3)
-                    ow = round(out.get(tv, 0), 3)
+                    ow_val = round(open_wt.get(tv, 0), 3)  # opening stock weight
+                    lw = round(live_wt.get(tv, 0), 3)  # total live stock
+                    kw = round(kat_wt.get(tv, 0), 3)  # katti inward
+                    ow = round(out.get(tv, 0), 3)  # sales outward
                     cnt = live_cnt.get(tv, 0)
-                    _dblog(f"[STOCKSYNC] touch={tv} live={lw} katti={kw} sold={ow}")
+                    _dblog(f"[STOCKSYNC] touch={tv} opening={ow_val} live={lw} katti={kw} sold={ow}")
                     result.append({
                         'touch': tv,
-                        'wt_opening': lw,
+                        'wt_opening': ow_val,
                         'wt_inward': kw,
                         'wt_outward': ow,
                         'wt_book_close': lw,
@@ -1601,7 +1583,7 @@ class DBManager:
                         'pc_opening': 0,
                         'pc_inward': 0,
                         'pc_outward': 0,
-                        'opening': lw,
+                        'opening': ow_val,
                         'inward': kw,
                         'outward': ow,
                         'book_close': lw,
@@ -2027,11 +2009,22 @@ class DBManager:
 
     def add_audit_log(self, action: str, detail: str = '',
                       username: str = 'system', category: str = 'general'):
-        """Write one audit log entry. Call this from every user action."""
+        """Write one audit log entry. Auto-creates table if missing."""
         try:
             from datetime import datetime as _dt
             ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
             with self._get_connection() as conn:
+                # Auto-create table — safe for old DBs
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS audit_log (
+                        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts         TEXT    NOT NULL,
+                        username   TEXT    NOT NULL DEFAULT 'system',
+                        action     TEXT    NOT NULL,
+                        detail     TEXT    DEFAULT '',
+                        category   TEXT    DEFAULT 'general',
+                        ip         TEXT    DEFAULT '')
+                """)
                 conn.execute(
                     "INSERT INTO audit_log(ts,username,action,detail,category)"
                     " VALUES(?,?,?,?,?)",
@@ -2282,17 +2275,17 @@ class DBManager:
         """
         try:
             with self._get_connection() as conn:
-                return [dict(r) for r in conn.execute("""
+                rows = conn.execute("""
                     SELECT id, it_code, it_name, tag_id,
                            gr_wt, ls_wt, nt_wt, touch, wastage,
                            pcs, entry_date
                     FROM stock_inventory
                     WHERE tag_id LIKE 'OPENING-%'
-                    AND gr_wt > 0
                     ORDER BY id DESC
-                """).fetchall()]
+                """).fetchall()
+                return [dict(r) for r in rows]
         except Exception as e:
-            print(f"? [OPENING STOCK ERROR] {e}");
+            _dberr(f"[OPENING STOCK] get: {e}");
             return []
 
     def get_untagged_items(self):
@@ -2878,13 +2871,783 @@ class DBManager:
             _dberr(f'[LOCK] verify_unlock_key: {e}')
             return {'status': 'error', 'message': str(e)}
 
+    # ══════════════════════════════════════════════════════════
+    # TAG AUDIT MODULE
+    # ══════════════════════════════════════════════════════════
+
+    def tag_audit_init_tables(self):
+        """Create tag audit tables if not exist."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS tag_audit_sessions (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_ref TEXT UNIQUE,
+                        started_at  TEXT DEFAULT (datetime('now')),
+                        ended_at    TEXT,
+                        started_by  TEXT,
+                        touch_filter TEXT DEFAULT 'ALL',
+                        status      TEXT DEFAULT 'active',
+                        total_book  INTEGER DEFAULT 0,
+                        total_scanned INTEGER DEFAULT 0,
+                        total_found INTEGER DEFAULT 0,
+                        total_missing INTEGER DEFAULT 0,
+                        total_extra INTEGER DEFAULT 0
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS tag_audit_scans (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id  INTEGER,
+                        tag_id      TEXT,
+                        scanned_at  TEXT DEFAULT (datetime('now')),
+                        status      TEXT,
+                        it_name     TEXT,
+                        touch       REAL,
+                        gr_wt       REAL
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS tag_audit_absences (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id  INTEGER,
+                        tag_id      TEXT,
+                        reason      TEXT,
+                        marked_by   TEXT,
+                        marked_at   TEXT DEFAULT (datetime('now'))
+                    )
+                """)
+                conn.commit()
+                _dblog("[TAG_AUDIT] Tables ready")
+                return True
+        except Exception as e:
+            _dberr(f"[TAG_AUDIT] init_tables: {e}")
+            return False
+
+    def tag_audit_start(self, started_by='Admin', touch_filter='ALL'):
+        """Start new tag audit session."""
+        import datetime as _datetime
+        try:
+            self.tag_audit_init_tables()
+            with self._get_connection() as conn:
+                # Build snapshot from stock_inventory — real tagged pieces only
+                q = """
+                    SELECT id, tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid, pcs
+                    FROM stock_inventory
+                    WHERE tag_id IS NOT NULL
+                      AND tag_id != ''
+                      AND tag_id != 'N/A'
+                      AND tag_id NOT LIKE 'OPENING-%'
+                      AND tag_id NOT LIKE 'KATTI-%'
+                      AND touch IS NOT NULL AND touch > 0
+                """
+                params = []
+                if touch_filter and touch_filter != 'ALL':
+                    q += " AND ROUND(touch,2) = ?"
+                    params.append(round(float(touch_filter), 2))
+                q += " ORDER BY touch, tag_id"
+                rows = conn.execute(q, params).fetchall()
+
+                total_book = len(rows)
+                ref = 'TA-' + _datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+
+                conn.execute("""
+                    INSERT INTO tag_audit_sessions
+                    (session_ref, started_by, touch_filter, status, total_book)
+                    VALUES (?,?,?,?,?)
+                """, (ref, started_by, touch_filter, 'active', total_book))
+                conn.commit()
+
+                session_id = conn.execute(
+                    "SELECT id FROM tag_audit_sessions WHERE session_ref=?", (ref,)
+                ).fetchone()['id']
+
+                # Build snapshot dict
+                snapshot = []
+                touches = {}
+                for r in rows:
+                    tv = round(float(r['touch'] or 0), 2)
+                    snapshot.append({
+                        'tag_id': r['tag_id'],
+                        'it_name': r['it_name'] or r['it_code'] or 'Unknown',
+                        'touch': tv,
+                        'gr_wt': float(r['gr_wt'] or 0),
+                        'nt_wt': float(r['nt_wt'] or 0),
+                        'huid': r['huid'] or '',
+                    })
+                    if tv not in touches:
+                        touches[tv] = 0
+                    touches[tv] += 1
+
+                _dblog(f"[TAG_AUDIT] Session {ref} started — {total_book} tags, filter={touch_filter}")
+                return {
+                    'status': 'success',
+                    'session_id': session_id,
+                    'session_ref': ref,
+                    'total_book': total_book,
+                    'snapshot': snapshot,
+                    'touches': {str(k): v for k, v in sorted(touches.items())},
+                }
+        except Exception as e:
+            _dberr(f"[TAG_AUDIT] start: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_start_snapshot(self, session_id, touch_filter='ALL'):
+        """Get snapshot for an existing session — used when resuming."""
+        try:
+            q = """
+                SELECT tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid
+                FROM stock_inventory
+                WHERE tag_id IS NOT NULL AND tag_id != ''
+                  AND tag_id != 'N/A'
+                  AND tag_id NOT LIKE 'OPENING-%'
+                  AND tag_id NOT LIKE 'KATTI-%'
+                  AND touch IS NOT NULL AND touch > 0
+            """
+            params = []
+            if touch_filter and touch_filter != 'ALL':
+                q += " AND ROUND(touch,2) = ?"
+                params.append(round(float(touch_filter), 2))
+            q += " ORDER BY touch, tag_id"
+            with self._get_connection() as conn:
+                rows = conn.execute(q, params).fetchall()
+            snapshot = []
+            for r in rows:
+                snapshot.append({
+                    'tag_id': r['tag_id'],
+                    'it_name': r['it_name'] or r['it_code'] or 'Unknown',
+                    'touch': round(float(r['touch'] or 0), 2),
+                    'gr_wt': float(r['gr_wt'] or 0),
+                    'nt_wt': float(r['nt_wt'] or 0),
+                    'huid': r['huid'] or '',
+                })
+            return {'status': 'success', 'snapshot': snapshot}
+        except Exception as e:
+            _dberr(f"[TAG_AUDIT] start_snapshot: {e}")
+            return {'status': 'error', 'message': str(e), 'snapshot': []}
+
+    def tag_audit_scan(self, session_id, tag_id, book_tags=None):
+        """
+        Process a single scan.
+        book_tags param kept for API compat but ignored — DB lookup used instead.
+        """
+        tag_id = str(tag_id or '').strip().upper()
+        if not tag_id:
+            return {'status': 'error', 'message': 'Empty tag'}
+        try:
+            with self._get_connection() as conn:
+                # Check already scanned
+                existing = conn.execute(
+                    "SELECT id, status FROM tag_audit_scans WHERE session_id=? AND tag_id=?",
+                    (session_id, tag_id)
+                ).fetchone()
+                if existing:
+                    return {'status': 'duplicate', 'tag_id': tag_id,
+                            'message': f'{tag_id} already scanned'}
+
+                # Get session info to know touch filter
+                sess = conn.execute(
+                    "SELECT touch_filter FROM tag_audit_sessions WHERE id=?",
+                    (session_id,)
+                ).fetchone()
+                tf = sess['touch_filter'] if sess else 'ALL'
+
+                # Check if tag is in book (stock_inventory as a real tagged piece)
+                q = """SELECT tag_id, it_name, touch, gr_wt, nt_wt, huid
+                       FROM stock_inventory
+                       WHERE tag_id=?
+                         AND tag_id NOT LIKE 'OPENING-%'
+                         AND tag_id NOT LIKE 'KATTI-%'"""
+                params = [tag_id]
+                if tf and tf != 'ALL':
+                    q += " AND ROUND(touch,2)=?"
+                    params.append(round(float(tf), 2))
+
+                book_row = conn.execute(q, params).fetchone()
+
+                if book_row:
+                    scan_status = 'found'
+                    tag_info = {
+                        'it_name': book_row['it_name'] or '',
+                        'touch': float(book_row['touch'] or 0),
+                        'gr_wt': float(book_row['gr_wt'] or 0),
+                        'nt_wt': float(book_row['nt_wt'] or 0),
+                        'huid': book_row['huid'] or '',
+                    }
+                else:
+                    # Not in book — check if in inventory at all
+                    any_row = conn.execute(
+                        "SELECT it_name, touch, gr_wt FROM stock_inventory WHERE tag_id=?",
+                        (tag_id,)
+                    ).fetchone()
+                    scan_status = 'extra'
+                    tag_info = {
+                        'it_name': any_row['it_name'] if any_row else 'Unknown',
+                        'touch': float(any_row['touch'] or 0) if any_row else 0,
+                        'gr_wt': float(any_row['gr_wt'] or 0) if any_row else 0,
+                    } if any_row else {}
+
+                conn.execute("""
+                    INSERT INTO tag_audit_scans
+                    (session_id, tag_id, status, it_name, touch, gr_wt)
+                    VALUES (?,?,?,?,?,?)
+                """, (
+                    session_id, tag_id, scan_status,
+                    tag_info.get('it_name', ''),
+                    tag_info.get('touch', 0),
+                    tag_info.get('gr_wt', 0),
+                ))
+                conn.commit()
+
+                return {
+                    'status': scan_status,
+                    'tag_id': tag_id,
+                    'tag_info': tag_info,
+                    'message': f'{tag_id} — {scan_status.upper()}',
+                }
+        except Exception as e:
+            _dberr(f"[TAG_AUDIT] scan: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_get_status(self, session_id):
+        """Get current audit progress."""
+        try:
+            with self._get_connection() as conn:
+                sess = conn.execute(
+                    "SELECT * FROM tag_audit_sessions WHERE id=?", (session_id,)
+                ).fetchone()
+                if not sess:
+                    return {'status': 'error', 'message': 'Session not found'}
+
+                scans = conn.execute(
+                    "SELECT * FROM tag_audit_scans WHERE session_id=? ORDER BY scanned_at DESC",
+                    (session_id,)
+                ).fetchall()
+                absences = conn.execute(
+                    "SELECT tag_id FROM tag_audit_absences WHERE session_id=?",
+                    (session_id,)
+                ).fetchall()
+                absent_ids = {r['tag_id'] for r in absences}
+
+                found_ids = {s['tag_id'] for s in scans if s['status'] == 'found'}
+                extra_ids = {s['tag_id'] for s in scans if s['status'] == 'extra'}
+
+                return {
+                    'status': 'success',
+                    'session_id': session_id,
+                    'session_ref': sess['session_ref'],
+                    'touch_filter': sess['touch_filter'] if sess['touch_filter'] else 'ALL',
+                    'total_book': sess['total_book'],
+                    'total_scanned': len(scans),
+                    'total_found': len(found_ids),
+                    'total_extra': len(extra_ids),
+                    'absent_ids': list(absent_ids),
+                    'scans': [dict(s) for s in scans],
+                }
+        except Exception as e:
+            _dberr(f"[TAG_AUDIT] get_status: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_mark_absent(self, session_id, tag_id, reason, marked_by='Admin'):
+        """Mark a missing tag as absent (repair/loan etc)."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO tag_audit_absences
+                    (session_id, tag_id, reason, marked_by)
+                    VALUES (?,?,?,?)
+                """, (session_id, tag_id, reason, marked_by))
+                conn.commit()
+                return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_remove_absence(self, session_id, tag_id):
+        """Remove absent mark — bring back to missing list."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "DELETE FROM tag_audit_absences WHERE session_id=? AND tag_id=?",
+                    (session_id, tag_id)
+                )
+                conn.commit()
+                return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_remove_scan(self, session_id, tag_id):
+        """Remove a scan (undo accidental scan)."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "DELETE FROM tag_audit_scans WHERE session_id=? AND tag_id=?",
+                    (session_id, tag_id)
+                )
+                conn.commit()
+                return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_close(self, session_id, closed_by='Admin'):
+        """Close audit session and save final counts."""
+        import datetime as _datetime
+        try:
+            with self._get_connection() as conn:
+                scans = conn.execute(
+                    "SELECT status FROM tag_audit_scans WHERE session_id=?",
+                    (session_id,)
+                ).fetchall()
+                found = sum(1 for s in scans if s['status'] == 'found')
+                extra = sum(1 for s in scans if s['status'] == 'extra')
+                sess = conn.execute(
+                    "SELECT total_book FROM tag_audit_sessions WHERE id=?",
+                    (session_id,)
+                ).fetchone()
+                missing = (sess['total_book'] if sess else 0) - found
+                conn.execute("""
+                    UPDATE tag_audit_sessions SET
+                        status='closed', ended_at=?,
+                        total_scanned=?, total_found=?,
+                        total_missing=?, total_extra=?
+                    WHERE id=?
+                """, (
+                    _datetime.datetime.now().isoformat(),
+                    len(scans), found, max(0, missing), extra, session_id
+                ))
+                conn.commit()
+                return {'status': 'success', 'found': found, 'extra': extra, 'missing': max(0, missing)}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def tag_audit_get_sessions(self, limit=20):
+        """Get recent audit sessions for history view."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT * FROM tag_audit_sessions
+                    ORDER BY started_at DESC LIMIT ?
+                """, (limit,)).fetchall()
+                return {'status': 'success', 'sessions': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e), 'sessions': []}
+
+    def tag_audit_get_available_touches(self):
+        """Get all touches that have tagged pieces."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT ROUND(touch,2) as touch, COUNT(*) as pcs,
+                           COALESCE(SUM(gr_wt),0) as total_wt
+                    FROM stock_inventory
+                    WHERE tag_id IS NOT NULL AND tag_id != ''
+                      AND tag_id != 'N/A'
+                      AND tag_id NOT LIKE 'OPENING-%'
+                      AND tag_id NOT LIKE 'KATTI-%'
+                      AND touch > 0
+                    GROUP BY ROUND(touch,2)
+                    ORDER BY touch DESC
+                """).fetchall()
+                return {'status': 'success', 'touches': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e), 'touches': []}
+
+    # ══════════════════════════════════════════════════════════════
+    # YEAR-END BALANCE TRANSFER SYSTEM
+    # ══════════════════════════════════════════════════════════════
+
+    def get_year_list(self):
+        """Return list of financial years — current + all archived."""
+        import os as _os
+        try:
+            with self._get_connection() as conn:
+                # Get current year from app_config
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key='financial_year'"
+                ).fetchone()
+                if row and row['value']:
+                    current_year = row['value']
+                else:
+                    current_year = self._guess_financial_year()
+                    try:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) VALUES('financial_year',?)",
+                            (current_year,)
+                        )
+                    except Exception:
+                        pass
+
+            # Get archived years
+            base = _os.path.dirname(self.db_path)
+            arch = _os.path.join(base, 'archives')
+            years = []
+            if _os.path.isdir(arch):
+                for d in sorted(_os.listdir(arch), reverse=True):
+                    db_file = _os.path.join(arch, d, 'aurum_local.db')
+                    if _os.path.isdir(_os.path.join(arch, d)) and _os.path.exists(db_file):
+                        years.append({
+                            'year': d,
+                            'path': db_file,
+                            'size_mb': round(_os.path.getsize(db_file) / 1048576, 2),
+                            'archived': True,
+                        })
+            return {
+                'status': 'success',
+                'current_year': current_year,
+                'archived': years,
+            }
+        except Exception as e:
+            _dberr(f"[YEAR] get_year_list: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def _guess_financial_year(self):
+        """Guess current financial year (April-March Indian FY)."""
+        from datetime import datetime as _dt
+        now = _dt.now()
+        if now.month >= 4:
+            return f"{now.year}-{str(now.year + 1)[2:]}"
+        return f"{now.year - 1}-{str(now.year)[2:]}"
+
+    def get_year_close_preview(self):
+        """
+        Preview what will be transferred/cleared in year-end close.
+        Shows counts before user confirms.
+        """
+        try:
+            with self._get_connection() as conn:
+                # Current year
+                from datetime import datetime as _dt
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key='financial_year'"
+                ).fetchone()
+                if row and row['value']:
+                    current_year = row['value']
+                else:
+                    current_year = self._guess_financial_year()
+                    # Seed it so it persists
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES('financial_year',?)",
+                        (current_year,)
+                    )
+
+                # CARRY-FORWARD: full closing balance (all stock per touch)
+                # Matches EXACTLY what do_year_close will transfer
+                # Tagged pieces + bulk opening + unsold katti = total closing weight
+                carry_rows = conn.execute("""
+                    SELECT COUNT(DISTINCT ROUND(touch,2)) as n,
+                           COALESCE(SUM(gr_wt),0) as wt
+                    FROM stock_inventory
+                    WHERE touch IS NOT NULL AND touch > 0
+                      AND gr_wt > 0
+                """).fetchone()
+
+                # Tagged pieces separately (for display)
+                tagged_rows = conn.execute("""
+                    SELECT COUNT(*) as n, COALESCE(SUM(gr_wt),0) as wt
+                    FROM stock_inventory
+                    WHERE is_tagged = 1
+                      AND gr_wt > 0
+                """).fetchone()
+
+                # What will be cleared
+                sales_count = conn.execute(
+                    "SELECT COUNT(*) as n FROM sales_history"
+                ).fetchone()
+                katti_count = conn.execute(
+                    "SELECT COUNT(*) as n FROM katti_vouchers"
+                ).fetchone()
+                client_count = conn.execute(
+                    "SELECT COUNT(*) as n FROM clients_master"
+                ).fetchone()
+
+                stock_count = carry_rows
+
+                # Suggest next year
+                parts = current_year.split('-')
+                try:
+                    y1 = int(parts[0])
+                    y2 = int('20' + parts[1]) if len(parts[1]) == 2 else int(parts[1])
+                    next_year = f"{y1 + 1}-{str(y2 + 1)[2:]}"
+                except Exception:
+                    next_year = ''
+
+                return {
+                    'status': 'success',
+                    'current_year': current_year,
+                    'next_year': next_year,
+                    'stock_rows': int(stock_count['n']),
+                    'stock_wt': round(float(stock_count['wt']), 3),
+                    'tagged_rows': int(tagged_rows['n']),
+                    'tagged_wt': round(float(tagged_rows['wt']), 3),
+                    'sales_count': int(sales_count['n']),
+                    'katti_count': int(katti_count['n']),
+                    'client_count': int(client_count['n']),
+                }
+        except Exception as e:
+            _dberr(f"[YEAR] preview: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def do_year_close(self, new_year, closing_note=''):
+        """
+        Year-end balance transfer:
+        1. Archive current DB to archives/<current_year>/
+        2. Carry forward live stock as new OPENING rows
+        3. Wipe all transactional data
+        4. Update financial year in app_config
+        """
+        import os as _os, shutil as _sh
+        from datetime import datetime as _dt
+        try:
+            with self._get_connection() as conn:
+                # Step 0: Get current year
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key='financial_year'"
+                ).fetchone()
+                current_year = row['value'] if row else self._guess_financial_year()
+
+                _dblog(f"[YEAR] Starting year close: {current_year} -> {new_year}")
+
+                # ── Step 1: Archive current DB ────────────────────────
+                base = _os.path.dirname(self.db_path)
+                arch_dir = _os.path.join(base, 'archives', current_year)
+                _os.makedirs(arch_dir, exist_ok=True)
+
+                # WAL checkpoint before copy
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception:
+                    pass
+
+                arch_db = _os.path.join(arch_dir, 'aurum_local.db')
+                _sh.copy2(self.db_path, arch_db)
+                _dblog(f"[YEAR] Archived to {arch_db}")
+
+                # Also save a metadata file
+                import json as _json
+                meta = {
+                    'year': current_year,
+                    'archived_at': _dt.now().isoformat(),
+                    'closing_note': closing_note,
+                    'new_year': new_year,
+                }
+                with open(_os.path.join(arch_dir, 'meta.json'), 'w') as mf:
+                    _json.dump(meta, mf, indent=2)
+
+                # ── Step 2: Read TAGGED live stock only for carry-forward ─
+                # Exclude OPENING- rows (previous year opening)
+                # Exclude KATTI- rows (bulk katti stock tracked separately)
+                # Only carry forward real tagged pieces in stock
+                # Carry forward ONLY real tagged pieces:
+                # Exclude OPENING- (untagged bulk opening stock)
+                # Exclude KATTI-  (katti/refining stock)
+                # Exclude WT-     (weight-based system rows)
+                # Only genuine barcode-tagged jewellery pieces transfer
+                # ── Carry-forward: FULL closing balance per touch ─────────
+                # Enterprise logic:
+                #   New year opening = EVERYTHING in stock at year end
+                #   = Tagged pieces + Remaining bulk + Unsold katti
+                #   = SUM(gr_wt) per touch — no exclusions
+                #
+                # Example 91.6%:
+                #   OPENING-WT (remaining bulk) = 100g
+                #   KATTI-2025-001 (unsold)     =  45g
+                #   TAG-001 Ring                =  5.32g
+                #   TAG-002 Chain               =  8.10g
+                #   ─────────────────────────────────────
+                #   New year OPENING-WT         = 158.42g  ← full closing balance
+                live_stock = conn.execute("""
+                    SELECT ROUND(touch,2) as touch,
+                           COALESCE(SUM(gr_wt),0) as total_wt,
+                           COALESCE(SUM(nt_wt),0) as total_nt,
+                           COUNT(*) as pcs
+                    FROM stock_inventory
+                    WHERE touch IS NOT NULL
+                      AND touch > 0
+                      AND gr_wt > 0
+                    GROUP BY ROUND(touch,2)
+                    HAVING COALESCE(SUM(gr_wt),0) > 0
+                """).fetchall()
+                _dblog(f"[YEAR] Carry-forward full closing balance: {len(live_stock)} touch groups")
+                for _r in live_stock:
+                    _dblog(f"[YEAR]   touch={_r['touch']}%  closing_wt={float(_r['total_wt']):.3f}g  rows={_r['pcs']}")
+
+                # ── Step 3: Clear ALL transactional tables ────────────
+                CLEAR = [
+                    'sales_history',
+                    'katti_vouchers', 'katti_voucher_items',
+                    'credit_ledger',
+                    'uchak_inward_vouchers', 'uchak_inward_items',
+                    'clients_master',
+                    'product_master',
+                    'categories',
+                    'touch_groups',
+                    'stock_inventory',
+                    'stock_med_sessions',
+                    'tag_audit_sessions', 'tag_audit_scans', 'tag_audit_absences',
+                ]
+                for tbl in CLEAR:
+                    try:
+                        conn.execute(f"DELETE FROM {tbl}")
+                        conn.execute(
+                            f"DELETE FROM sqlite_sequence WHERE name='{tbl}'"
+                        )
+                    except Exception as _te:
+                        _dblog(f"[YEAR] Clear {tbl}: {_te}")
+
+                # ── Step 4: Insert carry-forward OPENING rows ─────────
+                today = _dt.now().strftime('%Y-%m-%d')
+                inserted = 0
+                # Query already has GROUP BY touch — use directly
+                for row in live_stock:
+                    tv = round(float(row['touch']), 2)
+                    wt = round(float(row['total_wt']), 3)
+                    nt = round(float(row['total_nt']), 3)
+                    tid = f"OPENING-WT-{_dt.now().strftime('%Y%m%d')}-{str(int(tv * 10)).zfill(4)}"
+                    conn.execute("""
+                        INSERT OR REPLACE INTO stock_inventory
+                            (it_code, it_name, tag_id, pcs,
+                             gr_wt, ls_wt, nt_wt,
+                             touch, wastage, is_tagged, entry_date)
+                        VALUES (?, ?, ?, 0, ?, 0, ?, ?, 0, 0, ?)
+                    """, (
+                        f'OPENING-{int(tv)}',
+                        f'Opening Stock {tv}% - {new_year}',
+                        tid, wt, nt, tv, today,
+                    ))
+                    inserted += 1
+
+                # ── Step 5: Update financial year ─────────────────────
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('financial_year',?)",
+                    (new_year,)
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('year_close_date',?)",
+                    (_dt.now().isoformat(),)
+                )
+
+                # Audit log
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS audit_log (
+                        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts       TEXT, username TEXT,
+                        action   TEXT, detail TEXT,
+                        category TEXT, ip TEXT DEFAULT '')
+                """)
+                conn.execute(
+                    "INSERT INTO audit_log(ts,username,action,detail,category) VALUES(?,?,?,?,?)",
+                    (_dt.now().isoformat(), 'system',
+                     f'Year Close {current_year}',
+                     f'Archived to {arch_db}. New year: {new_year}. '
+                     f'Carried {inserted} touch groups.',
+                     'year_close')
+                )
+
+                # WAL checkpoint
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception:
+                    pass
+
+                conn.commit()
+                _dblog(f"[YEAR] Year close complete. {inserted} OPENING rows created.")
+
+                return {
+                    'status': 'success',
+                    'current_year': current_year,
+                    'new_year': new_year,
+                    'archive_path': arch_db,
+                    'opening_rows': inserted,
+                    'message': f'Year {current_year} closed. {inserted} touch groups carried to {new_year}.',
+                }
+        except Exception as e:
+            _dberr(f"[YEAR] do_year_close: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_archive_data(self, year, table, limit=500):
+        """Read data from an archived year DB (read-only)."""
+        import os as _os
+        SAFE_TABLES = {
+            'sales_history', 'katti_vouchers', 'katti_voucher_items',
+            'stock_inventory', 'clients_master', 'credit_ledger',
+            'audit_log', 'stock_med_sessions',
+        }
+        if table not in SAFE_TABLES:
+            return {'status': 'error', 'message': f'Table {table} not allowed'}
+        try:
+            base = _os.path.dirname(self.db_path)
+            arch_db = _os.path.join(base, 'archives', year, 'aurum_local.db')
+            if not _os.path.exists(arch_db):
+                return {'status': 'error', 'message': f'Archive for {year} not found'}
+            import sqlite3 as _sq
+            conn = _sq.connect(arch_db, check_same_thread=False)
+            conn.row_factory = _sq.Row
+            rows = conn.execute(
+                f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+            conn.close()
+            return {
+                'status': 'success',
+                'year': year,
+                'table': table,
+                'rows': [dict(r) for r in rows],
+                'count': len(rows),
+            }
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def get_archive_summary(self, year):
+        """Get summary stats from an archived year."""
+        import os as _os
+        try:
+            base = _os.path.dirname(self.db_path)
+            arch_db = _os.path.join(base, 'archives', year, 'aurum_local.db')
+            if not _os.path.exists(arch_db):
+                return {'status': 'error', 'message': 'Archive not found'}
+
+            # Load meta
+            meta_path = _os.path.join(base, 'archives', year, 'meta.json')
+            meta = {}
+            if _os.path.exists(meta_path):
+                import json as _json
+                with open(meta_path) as mf:
+                    meta = _json.load(mf)
+
+            import sqlite3 as _sq
+            conn = _sq.connect(arch_db, check_same_thread=False)
+            conn.row_factory = _sq.Row
+
+            def safe_query(sql, default=0):
+                try:
+                    return conn.execute(sql).fetchone()[0] or default
+                except:
+                    return default
+
+            summary = {
+                'status': 'success',
+                'year': year,
+                'meta': meta,
+                'total_sales': safe_query("SELECT COUNT(*) FROM sales_history"),
+                'total_katti': safe_query("SELECT COUNT(*) FROM katti_vouchers"),
+                'total_clients': safe_query("SELECT COUNT(*) FROM clients_master"),
+                'closing_stock_wt': round(safe_query(
+                    "SELECT COALESCE(SUM(gr_wt),0) FROM stock_inventory", 0.0
+                ), 3),
+                'closing_stock_rows': safe_query("SELECT COUNT(*) FROM stock_inventory"),
+                'archive_path': arch_db,
+                'size_mb': round(_os.path.getsize(arch_db) / 1048576, 2),
+            }
+            conn.close()
+            return summary
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
     def _mirror_data(self):
         """Backup DB to C:/ProgramData/AurumOS/aurum_backup.db. Called after stock med."""
+        import os as _os, shutil as _sh
         try:
             secret_dir = r"C:\ProgramData\AurumOS"
             backup_path = _os.path.join(secret_dir, 'aurum_backup.db')
             _os.makedirs(secret_dir, exist_ok=True)
-            # Checkpoint WAL before copy
             try:
                 with self._get_connection() as conn:
                     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")

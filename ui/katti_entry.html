@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Katti Terminal</title>
 <link rel="stylesheet" href="fonts.css">
+<script src="scale_widget.js"></script>
 <style>
 :root{
     --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
@@ -42,8 +43,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .meta-input.wide{min-width:240px;text-align:left;}
 .meta-date{font-family:var(--mono);font-size:0.8rem;color:var(--muted);padding:6px 0;}
 .hdr-div{width:1px;height:28px;background:var(--rule);}
-
-/* SCALE WEIGHT in header — centered via absolute */
 .hdr-scale-wrap{position:absolute;left:58%;transform:translateX(-50%);top:0;bottom:0;display:flex;align-items:center;}
 .hdr-scale{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 24px;border-radius:8px;background:var(--cream2);border:1px solid var(--rule);cursor:pointer;transition:all 0.13s;}
 .hdr-scale:hover{border-color:var(--gold-ln);background:var(--gold-bg);}
@@ -51,11 +50,11 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .hdr-sc-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
 .hdr-sc-lbl{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);}
 .hdr-sc-num{display:flex;align-items:baseline;gap:5px;}
-.hdr-sc-wt{font-family:var(--mono);font-size:3.8rem;font-weight:600;color:var(--muted2);letter-spacing:-2px;line-height:1;}
+.hdr-sc-wt{font-family:var(--mono);font-size:3.8rem;color:var(--muted2);letter-spacing:-2px;line-height:1;}
 .hdr-sc-g{font-family:var(--mono);font-size:1.4rem;color:var(--muted2);}
 
 /* HISTORY BANNER */
-.history-banner{display:none;background:rgba(180,83,9,0.07);color:#92400e;padding:8px 24px;font-size:0.7rem;border-bottom:1px solid rgba(180,83,9,0.15);text-align:center;}
+.history-banner{display:none;background:rgba(180,83,9,0.07);color:#92400e;padding:8px 24px;font-size:0.7rem;border-bottom:1px solid rgba(180,83,9,0.15);text-align:center;flex-shrink:0;}
 .history-banner.visible{display:block;}
 
 /* ENTRY STRIP */
@@ -76,7 +75,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .btn-add{height:36px;padding:0 18px;background:var(--ink);color:var(--white);border:none;border-radius:7px;font-family:var(--sans);font-size:0.75rem;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
 .btn-add:hover{background:var(--gold3);}
 
-/* TABLE */
+/* MAIN TABLE AREA */
 .table-area{flex:1;overflow:auto;padding:18px 24px;}
 .data-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
 table{width:100%;border-collapse:collapse;}
@@ -92,14 +91,10 @@ tr:hover td{background:var(--gold-bg);}
 .td-sr{color:var(--muted2);font-size:0.72rem;text-align:center;}
 .td-edit{font-family:var(--mono);font-size:0.78rem;height:28px;padding:0 8px;border:1px solid var(--gold-ln);border-radius:5px;background:var(--gold-bg);color:var(--gold3);outline:none;width:100%;}
 .action-btn{border:none;background:none;cursor:pointer;padding:3px 6px;border-radius:4px;transition:all 0.12s;font-size:0.78rem;}
-.del-btn{color:var(--muted2);}
-.del-btn:hover{color:var(--red);background:var(--red-bg);}
-.edit-btn{color:var(--muted2);}
-.edit-btn:hover{color:var(--gold3);background:var(--gold-bg);}
-.save-btn{color:var(--green);background:var(--green-bg);border:1px solid rgba(21,128,61,0.2);}
-.save-btn:hover{background:var(--green);color:#fff;}
-.cancel-btn{color:var(--muted);}
-.cancel-btn:hover{color:var(--red);background:var(--red-bg);}
+.del-btn{color:var(--muted2);}.del-btn:hover{color:var(--red);background:var(--red-bg);}
+.edit-btn{color:var(--muted2);}.edit-btn:hover{color:var(--gold3);background:var(--gold-bg);}
+.save-btn{color:var(--green);background:var(--green-bg);border:1px solid rgba(21,128,61,0.2);}.save-btn:hover{background:var(--green);color:#fff;}
+.cancel-btn{color:var(--muted);}.cancel-btn:hover{color:var(--red);background:var(--red-bg);}
 
 /* FOOTER */
 footer{height:68px;background:var(--white);border-top:1px solid var(--rule);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
@@ -109,9 +104,13 @@ footer{height:68px;background:var(--white);border-top:1px solid var(--rule);padd
 .stat-val{font-family:var(--mono);font-size:1.2rem;color:var(--ink);}
 .stat-val.green{color:var(--green);}
 .footer-btns{display:flex;gap:10px;align-items:center;}
+.btn-toggle-hist{height:32px;padding:0 14px;border:1px solid var(--rule);background:var(--cream2);color:var(--ink3);border-radius:6px;font-family:var(--sans);font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.btn-toggle-hist:hover{border-color:var(--gold-ln);color:var(--gold3);}
 .btn-new-vch{display:none;height:34px;padding:0 16px;background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);border-radius:7px;font-family:var(--sans);font-size:0.74rem;cursor:pointer;}
 .btn-new-vch.visible{display:flex;align-items:center;}
 .btn-new-vch:hover{background:var(--gold3);color:var(--white);}
+.btn-del-vch{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 14px;background:var(--red-bg);color:var(--red);border:1px solid rgba(185,28,28,0.2);border-radius:7px;font-family:var(--sans);font-size:0.72rem;cursor:pointer;}
+.btn-del-vch:hover{background:var(--red);color:#fff;}
 .btn-commit{height:36px;padding:0 26px;background:var(--ink);color:var(--white);border:none;border-radius:7px;font-family:var(--sans);font-size:0.78rem;cursor:pointer;transition:all 0.15s;}
 .btn-commit:hover:not(:disabled){background:var(--green);}
 .btn-commit:disabled{background:var(--muted2);cursor:not-allowed;}
@@ -126,172 +125,106 @@ footer{height:68px;background:var(--white);border-top:1px solid var(--rule);padd
 .modal-msg{font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:20px;white-space:pre-line;}
 .modal-btns{display:flex;gap:10px;}
 .mbtn{flex:1;height:40px;border:none;border-radius:8px;font-family:var(--sans);font-size:0.78rem;cursor:pointer;transition:all 0.13s;}
-.mbtn-primary{background:var(--ink);color:#fff;}
-.mbtn-primary:hover{background:var(--gold3);}
-.mbtn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
-.mbtn-ghost:hover{background:var(--cream3);}
+.mbtn-primary{background:var(--ink);color:#fff;}.mbtn-primary:hover{background:var(--gold3);}
+.mbtn-danger{background:var(--red);color:#fff;}.mbtn-danger:hover{background:#991b1b;}
+.mbtn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}.mbtn-ghost:hover{background:var(--cream3);}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(--cream3);border-radius:99px;}
 </style>
 </head>
 <body>
 
-<!-- ══ SCALE BRIDGE — ES5, no async/await ══ -->
+<!-- SCALE BRIDGE -->
 <script>
+ScaleWidget.init();
+ScaleWidget.renderMini('sw-mini-katti', 'in-weight');
+
 'use strict';
-var _scW = null, _scStable = false, _scConnected = false;
+var _scW=null, _scStable=false, _scConnected=false;
 
-function JSLOG(m) {
-    try { console.log('[KT] ' + m); } catch(e) {}
-    try { if (window.pywebview && window.pywebview.api && window.pywebview.api.js_log) window.pywebview.api.js_log(m); } catch(e) {}
-}
+function JSLOG(m){try{console.log('[KT] '+m);}catch(e){} try{if(window.pywebview&&window.pywebview.api&&window.pywebview.api.js_log)window.pywebview.api.js_log(m);}catch(e){}}
 
-window.__onScale = function(d) {
-    if (!d) return;
-    if (d.error) {
-        _scConnected = false;
-        _scSetStatus('ERROR', '#b91c1c');
-        return;
-    }
-    _scW = d.weight; _scStable = !!d.stable;
-    var w   = (_scW !== null) ? parseFloat(_scW).toFixed(3) : '--.-';
-    var col = d.stable ? '#15803d' : '#d97706';
-
-    var wEl = document.getElementById('hdr-sc-wt');
-    var dEl = document.getElementById('hdr-sc-dot');
-    var lEl = document.getElementById('hdr-sc-lbl');
-    var gEl = document.getElementById('hdr-sc-g');
-    var pEl = document.getElementById('sc-popup-wt');
-
-    if (wEl) { wEl.innerText = w;       wEl.style.color = col; }
-    if (dEl) dEl.style.background = d.stable ? '#16a34a' : '#d97706';
-    if (lEl) { lEl.innerText = d.stable ? 'STABLE' : 'READING'; lEl.style.color = col; }
-    if (gEl) gEl.style.color = col;
-    if (pEl) pEl.innerText = w;
+window.__onScale=function(d){
+    if(!d) return;
+    if(d.error){_scConnected=false;_scSetStatus('ERROR','#b91c1c');return;}
+    _scW=d.weight; _scStable=!!d.stable;
+    var w=(_scW!==null)?parseFloat(_scW).toFixed(3):'--.-';
+    var col=d.stable?'#15803d':'#d97706';
+    var wEl=document.getElementById('hdr-sc-wt'),dEl=document.getElementById('hdr-sc-dot'),lEl=document.getElementById('hdr-sc-lbl'),gEl=document.getElementById('hdr-sc-g'),pEl=document.getElementById('sc-popup-wt');
+    if(wEl){wEl.innerText=w;wEl.style.color=col;}
+    if(dEl)dEl.style.background=d.stable?'#16a34a':'#d97706';
+    if(lEl){lEl.innerText=d.stable?'STABLE':'READING';lEl.style.color=col;}
+    if(gEl)gEl.style.color=col;
+    if(pEl)pEl.innerText=w;
 };
+window.__onScaleConnected=function(){_scConnected=true;_scSetStatus('AUTO','#15803d');};
+function _scSetStatus(lbl,color){var dEl=document.getElementById('hdr-sc-dot'),lEl=document.getElementById('hdr-sc-lbl');if(dEl)dEl.style.background=color;if(lEl){lEl.innerText=lbl;lEl.style.color=color;}}
 
-window.__onScaleConnected = function() {
-    _scConnected = true;
-    _scSetStatus('AUTO', '#15803d');
-};
-
-function _scSetStatus(lbl, color) {
-    var dEl = document.getElementById('hdr-sc-dot');
-    var lEl = document.getElementById('hdr-sc-lbl');
-    if (dEl) dEl.style.background = color;
-    if (lEl) { lEl.innerText = lbl; lEl.style.color = color; }
-}
-
-function scOpenPopup() {
-    var ov = document.getElementById('sc-popup-overlay');
-    if (!ov) return;
-    ov.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
+function openScalePopup(){
+    ScaleWidget.openPopup();
     scLoadPorts();
 }
-
-function scClosePopup() {
-    var ov = document.getElementById('sc-popup-overlay');
-    if (ov) ov.style.display = 'none';
+function closeScalePopup(){
+    ScaleWidget.closePopup();
 }
-
-function scLoadPorts() {
-    var sel = document.getElementById('sc-port');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">Scanning...</option>';
-    if (!window.pywebview || !window.pywebview.api) { sel.innerHTML = '<option value="">Bridge not ready</option>'; return; }
-    var cfgFn = window.pywebview.api.scale_get_saved_config;
-    var prom  = cfgFn ? cfgFn() : Promise.resolve({ port:'', baud:1200 });
-    prom.then(function(cfg) {
-        var sp = (cfg && cfg.port) || '';
-        var sb = (cfg && cfg.baud) || 1200;
-        try { if (!sp) sp = localStorage.getItem('aurum_scale_port') || ''; } catch(e) {}
-        var baudEl = document.getElementById('sc-baud');
-        if (baudEl) baudEl.value = sb;
-        return window.pywebview.api.scale_get_ports().then(function(ports) {
-            sel.innerHTML = '';
-            ports = ports || [];
-            if (!ports.length) { sel.innerHTML = '<option value="">No ports found</option>'; return; }
-            ports.forEach(function(p) {
-                var o   = document.createElement('option');
-                o.value = p.port;
-                o.text  = p.port + (p.desc ? ' - ' + p.desc.substring(0, 22) : '');
-                if (p.port === sp) o.selected = true;
-                sel.appendChild(o);
-            });
-            if (!sel.value && ports.length) sel.value = ports[0].port;
+function scLoadPorts(){
+    var sel=document.getElementById('sc-port');if(!sel)return;sel.innerHTML='<option value="">Scanning...</option>';
+    if(!window.pywebview||!window.pywebview.api){sel.innerHTML='<option value="">Bridge not ready</option>';return;}
+    var cfgFn=window.pywebview.api.scale_get_saved_config;
+    var prom=cfgFn?cfgFn():Promise.resolve({port:'',baud:1200});
+    prom.then(function(cfg){
+        var sp=(cfg&&cfg.port)||'',sb=(cfg&&cfg.baud)||1200;
+        try{if(!sp)sp=localStorage.getItem('aurum_scale_port')||'';}catch(e){}
+        var baudEl=document.getElementById('sc-baud');if(baudEl)baudEl.value=sb;
+        return window.pywebview.api.scale_get_ports().then(function(ports){
+            sel.innerHTML='';ports=ports||[];
+            if(!ports.length){sel.innerHTML='<option value="">No ports found</option>';return;}
+            ports.forEach(function(p){var o=document.createElement('option');o.value=p.port;o.text=p.port+(p.desc?' - '+p.desc.substring(0,22):'');if(p.port===sp)o.selected=true;sel.appendChild(o);});
+            if(!sel.value&&ports.length)sel.value=ports[0].port;
         });
-    }).catch(function(e) { JSLOG('scLoadPorts error: ' + e); });
+    }).catch(function(e){JSLOG('scLoadPorts error: '+e);});
 }
-
-function scConnect() {
-    var port    = (document.getElementById('sc-port')  || {}).value || '';
-    var baud    = parseInt((document.getElementById('sc-baud') || {}).value) || 1200;
-    var msgEl   = document.getElementById('sc-popup-msg');
-    var connBtn = document.getElementById('sc-popup-connect-btn');
-
-    function setMsg(m, c) { if (msgEl) { msgEl.innerText = m; msgEl.style.color = c || 'rgba(255,255,255,0.4)'; } }
-
-    if (!port) { setMsg('Select a port first', '#f87171'); return; }
-    if (connBtn) { connBtn.innerText = 'Connecting...'; connBtn.disabled = true; }
-    setMsg('Connecting to ' + port + '...');
-
-    if (!window.pywebview || !window.pywebview.api) {
-        setMsg('Bridge not ready', '#f87171');
-        if (connBtn) { connBtn.disabled = false; connBtn.innerText = 'Connect Scale'; }
-        return;
-    }
-    window.pywebview.api.scale_connect(port, baud).then(function(r) {
-        if (connBtn) { connBtn.disabled = false; connBtn.innerText = 'Connect Scale'; }
-        if (r && r.status === 'success') {
-            _scConnected = true;
-            try { localStorage.setItem('aurum_scale_port', port); localStorage.setItem('aurum_scale_baud', String(baud)); } catch(e) {}
-            if (connBtn) connBtn.style.display = 'none';
-            var disc = document.getElementById('sc-popup-disconnect-btn');
-            if (disc) disc.style.display = 'block';
-            setMsg('\u2713 Connected to ' + port, '#4ade80');
-            _scSetStatus('ONLINE', '#15803d');
-        } else {
-            setMsg('\u2715 ' + ((r && r.message) || 'Failed'), '#f87171');
-        }
-    }).catch(function(e) {
-        if (connBtn) { connBtn.disabled = false; connBtn.innerText = 'Connect Scale'; }
-        setMsg('\u2715 ' + e, '#f87171');
-    });
+function scConnect(){
+    var port=(document.getElementById('sc-port')||{}).value||'';
+    var baud=parseInt((document.getElementById('sc-baud')||{}).value)||1200;
+    var msgEl=document.getElementById('sc-popup-msg'),connBtn=document.getElementById('sc-popup-connect-btn');
+    function setMsg(m,c){if(msgEl){msgEl.innerText=m;msgEl.style.color=c||'rgba(255,255,255,0.4)';}}
+    if(!port){setMsg('Select a port first','#f87171');return;}
+    if(connBtn){connBtn.innerText='Connecting...';connBtn.disabled=true;}
+    setMsg('Connecting to '+port+'...');
+    if(!window.pywebview||!window.pywebview.api){setMsg('Bridge not ready','#f87171');if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}return;}
+    window.pywebview.api.scale_connect(port,baud).then(function(r){
+        if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}
+        if(r&&r.status==='success'){
+            _scConnected=true;
+            try{localStorage.setItem('aurum_scale_port',port);localStorage.setItem('aurum_scale_baud',String(baud));}catch(e){}
+            if(connBtn)connBtn.style.display='none';
+            var disc=document.getElementById('sc-popup-disconnect-btn');if(disc)disc.style.display='block';
+            setMsg('\u2713 Connected to '+port,'#4ade80');_scSetStatus('ONLINE','#15803d');
+        }else{setMsg('\u2715 '+((r&&r.message)||'Failed'),'#f87171');}
+    }).catch(function(e){if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}setMsg('\u2715 '+e,'#f87171');});
 }
-
-function scDisconnect() {
-    _scConnected = false; _scW = null;
-    if (window.pywebview && window.pywebview.api) window.pywebview.api.scale_disconnect().catch(function(){});
-    _scSetStatus('OFFLINE', '#9e9890');
-    var wEl = document.getElementById('hdr-sc-wt');
-    if (wEl) { wEl.innerText = '--.-'; wEl.style.color = 'var(--muted2)'; }
-    var gEl = document.getElementById('hdr-sc-g');
-    if (gEl) gEl.style.color = 'var(--muted2)';
-    var connBtn = document.getElementById('sc-popup-connect-btn');
-    var discBtn = document.getElementById('sc-popup-disconnect-btn');
-    if (connBtn) { connBtn.style.display = 'block'; connBtn.innerText = 'Connect Scale'; }
-    if (discBtn) discBtn.style.display = 'none';
-    var msgEl = document.getElementById('sc-popup-msg');
-    if (msgEl) { msgEl.innerText = 'Disconnected'; msgEl.style.color = 'rgba(255,255,255,0.35)'; }
+function scDisconnect(){
+    _scConnected=false;_scW=null;
+    if(window.pywebview&&window.pywebview.api)window.pywebview.api.scale_disconnect().catch(function(){});
+    _scSetStatus('OFFLINE','#9e9890');
+    var wEl=document.getElementById('hdr-sc-wt');if(wEl){wEl.innerText='--.-';wEl.style.color='var(--muted2)';}
+    var gEl=document.getElementById('hdr-sc-g');if(gEl)gEl.style.color='var(--muted2)';
+    var connBtn=document.getElementById('sc-popup-connect-btn'),discBtn=document.getElementById('sc-popup-disconnect-btn');
+    if(connBtn){connBtn.style.display='block';connBtn.innerText='Connect Scale';}
+    if(discBtn)discBtn.style.display='none';
+    var msgEl=document.getElementById('sc-popup-msg');if(msgEl){msgEl.innerText='Disconnected';msgEl.style.color='rgba(255,255,255,0.35)';}
 }
-
-// Auto-connect on startup
-(function tryAutoConnect(n) {
-    if (window.pywebview && window.pywebview.api) {
-        var cfgFn = window.pywebview.api.scale_get_saved_config;
-        if (!cfgFn) return;
-        cfgFn().then(function(cfg) {
-            var port = (cfg && cfg.port) || '';
-            var baud = (cfg && cfg.baud) || 1200;
-            if (!port) { try { port = localStorage.getItem('aurum_scale_port') || ''; } catch(e) {} }
-            if (!port) return;
-            window.pywebview.api.scale_connect(port, baud).then(function(r) {
-                if (r && r.status === 'success') { _scConnected = true; _scSetStatus('AUTO', '#15803d'); JSLOG('Auto-connected: ' + port); }
-            }).catch(function(){});
+(function tryAutoConnect(n){
+    if(window.pywebview&&window.pywebview.api){
+        var cfgFn=window.pywebview.api.scale_get_saved_config;if(!cfgFn)return;
+        cfgFn().then(function(cfg){
+            var port=(cfg&&cfg.port)||'',baud=(cfg&&cfg.baud)||1200;
+            if(!port){try{port=localStorage.getItem('aurum_scale_port')||'';}catch(e){}}
+            if(!port)return;
+            window.pywebview.api.scale_connect(port,baud).then(function(r){if(r&&r.status==='success'){_scConnected=true;_scSetStatus('AUTO','#15803d');JSLOG('Auto-connected: '+port);}}).catch(function(){});
         }).catch(function(){});
-    } else if (n > 0) {
-        setTimeout(function() { tryAutoConnect(n - 1); }, 300);
-    }
+    }else if(n>0){setTimeout(function(){tryAutoConnect(n-1);},300);}
 })(30);
 </script>
 
@@ -306,35 +239,7 @@ function scDisconnect() {
 </div>
 
 <!-- SCALE POPUP -->
-<div id="sc-popup-overlay" onclick="if(event.target===this)scClosePopup()"
-     style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;">
-  <div style="background:#0e0c09;border-radius:16px;width:320px;border:1px solid rgba(201,162,39,0.22);box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;">
-    <div style="height:2px;background:linear-gradient(90deg,#a87d1e,#c9a227,#8a6c0a);"></div>
-    <div style="padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-family:var(--serif);font-size:0.95rem;color:#fff;">Scale Connection</span>
-      <button onclick="scClosePopup()" style="border:none;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);width:24px;height:24px;border-radius:5px;cursor:pointer;">&#10005;</button>
-    </div>
-    <div style="text-align:center;padding:8px 18px 4px;">
-      <span id="sc-popup-wt" style="font-family:var(--mono);font-size:1.8rem;color:#fff;letter-spacing:-1px;">--.-</span>
-      <span style="font-size:0.8rem;color:rgba(255,255,255,0.35);margin-left:3px;">g</span>
-    </div>
-    <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:0.5rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">COM Port</label>
-        <select id="sc-port" style="height:38px;padding:0 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:#fff;font-family:var(--mono);font-size:0.8rem;outline:none;cursor:pointer;">
-          <option value="">Select port...</option>
-        </select>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <label style="font-size:0.5rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">Baud Rate</label>
-        <input id="sc-baud" value="1200" type="number" style="height:38px;padding:0 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:#fff;font-family:var(--mono);font-size:0.8rem;outline:none;">
-      </div>
-      <button id="sc-popup-connect-btn" onclick="scConnect()" style="width:100%;height:40px;background:linear-gradient(135deg,rgba(201,162,39,0.2),rgba(168,125,30,0.15));border:1px solid rgba(201,162,39,0.35);border-radius:8px;color:#c9a227;font-size:0.8rem;cursor:pointer;font-family:var(--sans);">&#9889; Connect Scale</button>
-      <button id="sc-popup-disconnect-btn" onclick="scDisconnect()" style="display:none;width:100%;height:36px;background:rgba(185,28,28,0.1);border:1px solid rgba(185,28,28,0.25);border-radius:7px;color:#f87171;font-size:0.76rem;cursor:pointer;font-family:var(--sans);">Disconnect</button>
-      <div id="sc-popup-msg" style="font-size:0.65rem;color:rgba(255,255,255,0.35);text-align:center;min-height:16px;">Select port and click Connect</div>
-    </div>
-  </div>
-</div>
+
 
 <header>
     <div class="h-left">
@@ -345,7 +250,7 @@ function scDisconnect() {
         <div class="hdr-div"></div>
         <div class="meta-group">
             <label>Voucher</label>
-            <input type="text" id="vch-id" class="meta-input" value="LOADING"
+            <input type="text" id="vch-id" class="meta-input"
                    onkeydown="if(event.key==='Enter'){lookUpVoucher(this.value);event.preventDefault();}">
         </div>
         <div class="meta-group">
@@ -357,10 +262,8 @@ function scDisconnect() {
             <input type="text" id="vch-note" class="meta-input wide" placeholder="Batch details, lot info...">
         </div>
     </div>
-
-    <!-- Scale weight — absolutely centered -->
     <div class="hdr-scale-wrap">
-        <div class="hdr-scale" onclick="scOpenPopup()" title="Click to configure scale">
+        <div class="hdr-scale" onclick="ScaleWidget.openPopup()">
             <div class="hdr-sc-status">
                 <span class="hdr-sc-dot" id="hdr-sc-dot"></span>
                 <span class="hdr-sc-lbl" id="hdr-sc-lbl">offline</span>
@@ -371,14 +274,13 @@ function scDisconnect() {
             </div>
         </div>
     </div>
-
     <div class="h-right">
         <div class="page-title">Katti <em>Terminal</em></div>
     </div>
 </header>
 
 <div class="history-banner" id="history-banner">
-    Viewing historical record - read only. Enter latest voucher ID to return.
+    Viewing historical record — you can edit and save changes or delete this voucher.
 </div>
 
 <div class="entry-strip" id="entry-strip">
@@ -386,7 +288,7 @@ function scDisconnect() {
         <div class="fld">
             <label>Touch % *</label>
             <input type="number" id="in-touch" class="touch-inp nav-input" placeholder="68" step="0.1"
-                   onkeydown="handleTouchEnter(event)">
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('in-note').focus();}">
         </div>
     </div>
     <div class="entry-group">
@@ -396,8 +298,10 @@ function scDisconnect() {
         </div>
         <div class="fld">
             <label>Weight (g) *</label>
-            <input type="number" id="in-weight" class="weight-inp nav-input" step="0.001" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();if(typeof _scW!=='undefined'&&_scW!==null&&parseFloat(_scW)>0){this.value=parseFloat(_scW).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
-        </div>
+            <input type="number" id="in-weight" class="weight-inp nav-input" step="0.001" placeholder="0.000"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();var _w=window._scW||_scW;if(_w!==null&&_w!==undefined&&parseFloat(_w)>0){this.value=parseFloat(_w).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
+
+<div id="sw-mini-katti" style="margin-top:6px;"></div></div>
         <div class="fld">
             <label>Packets</label>
             <input type="number" id="in-packets" class="pkt-inp nav-input" placeholder="1">
@@ -415,26 +319,27 @@ function scDisconnect() {
     </div>
 </div>
 
-<div class="table-area">
-    <div class="data-card">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:44px;">#</th>
-                    <th style="width:76px;">Touch</th>
-                    <th>Description</th>
-                    <th style="width:96px;">Weight</th>
-                    <th style="width:66px;">Pkts</th>
-                    <th style="width:76px;">Box</th>
-                    <th style="width:76px;text-align:center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="terminal-body">
-                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">No entries yet - type a touch % and weight above.</td></tr>
-            </tbody>
-        </table>
+<!-- MAIN TABLE -->
+    <div class="table-area">
+        <div class="data-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:44px;">#</th>
+                        <th style="width:76px;">Touch</th>
+                        <th>Description</th>
+                        <th style="width:96px;">Weight</th>
+                        <th style="width:66px;">Pkts</th>
+                        <th style="width:76px;">Box</th>
+                        <th style="width:88px;text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="terminal-body">
+                    <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">No entries yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
 <footer>
     <div class="stats">
@@ -442,245 +347,249 @@ function scDisconnect() {
         <div class="stat"><span class="stat-lbl">Total Weight</span><span class="stat-val green" id="stat-weight">0.000 g</span></div>
     </div>
     <div class="footer-btns">
+
         <button class="btn-new-vch" id="btn-new" onclick="initializeVoucher()">+ New Voucher</button>
-        <button class="btn-commit"  id="btn-final" onclick="saveVoucherToDB()">Commit Voucher</button>
+        <button class="btn-del-vch" id="btn-del" onclick="deleteVoucher()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            Delete Voucher
+        </button>
+        <button class="btn-commit" id="btn-final" onclick="saveVoucherToDB()">Commit Voucher</button>
     </div>
 </footer>
 
 <script>
 'use strict';
+ScaleWidget.init();
 var kattiLedger            = [];
 var currentBoxIdx          = 1;
 var isViewingHistoryMode   = false;
 var latestNextVoucherIdRaw = '0001';
-var weightStockItems       = [];
 var editingIdx             = -1;
 
-function h(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function h(s){ return String(s||'').replace(/&/g,'&'+'amp;').replace(/</g,'&'+'lt;').replace(/>/g,'&'+'gt;'); }
 
-function loadWeightStock() {
-    if (!window.pywebview || !window.pywebview.api) return Promise.resolve();
-    return window.pywebview.api.get_weight_stock_it_codes().then(function(items) {
-        weightStockItems = (items || []).filter(function(r) {
-            return (r.it_code || '').toUpperCase().indexOf('KATTI-') === 0;
-        });
-    }).catch(function(){});
-}
+// ── HISTORY SIDEBAR ────────────────────────────────────────────
 
-function handleTouchEnter(e) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    document.getElementById('in-note').focus();
-}
 
-function triggerPopup(type, title, text, onConfirm) {
-    var icons = { success:'\u2713', warn:'!', danger:'!' };
-    document.getElementById('modal-icon').innerText  = icons[type] || '!';
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-msg').innerText   = text;
-    var btns = document.getElementById('modal-btns');
-    btns.innerHTML = '';
-    if (onConfirm) {
-        var y = document.createElement('button'); y.className = 'mbtn mbtn-primary'; y.innerText = 'Yes';
-        y.onclick = function(){ closePopup(); onConfirm(); };
-        var n = document.createElement('button'); n.className = 'mbtn mbtn-ghost'; n.innerText = 'Cancel';
-        n.onclick = closePopup;
-        btns.appendChild(y); btns.appendChild(n);
-    } else {
-        var ok = document.createElement('button'); ok.className = 'mbtn mbtn-primary'; ok.innerText = 'OK';
-        ok.onclick = closePopup;
-        btns.appendChild(ok);
-    }
-    document.getElementById('modal-wrap').classList.add('open');
-}
-function closePopup() { document.getElementById('modal-wrap').classList.remove('open'); }
 
-function setHistoryMode(on) {
-    isViewingHistoryMode = on;
-    document.getElementById('entry-strip').classList.toggle('locked', on);
-    document.getElementById('history-banner').classList.toggle('visible', on);
-    var btnFin  = document.getElementById('btn-final');
-    var btnNew  = document.getElementById('btn-new');
-    var noteInp = document.getElementById('vch-note');
-    btnFin.disabled  = false;
-    btnFin.innerText = on ? 'Save Changes' : 'Commit Voucher';
-    btnNew.classList.toggle('visible', on);
-    noteInp.readOnly      = on;
-    noteInp.style.opacity = on ? '0.5' : '1';
-}
 
-function initializeVoucher() {
-    if (!window.pywebview || !window.pywebview.api) { setTimeout(initializeVoucher, 150); return; }
-    window.pywebview.api.get_katti_vch_id().then(function(nextId) {
-        latestNextVoucherIdRaw = String(nextId).padStart(4, '0');
+
+// ── VOUCHER LOOKUP & INIT ──────────────────────────────────────
+function initializeVoucher(){
+    if(!window.pywebview||!window.pywebview.api){ setTimeout(initializeVoucher,150); return; }
+    window.pywebview.api.get_katti_vch_id().then(function(nextId){
+        latestNextVoucherIdRaw = String(nextId).padStart(4,'0');
         document.getElementById('vch-id').value = latestNextVoucherIdRaw;
         resetTerminalState();
         setHistoryMode(false);
         document.getElementById('in-touch').focus();
-    }).catch(function() { document.getElementById('vch-id').value = '0001'; });
+    }).catch(function(){ document.getElementById('vch-id').value = '0001'; });
 }
 
-function resetTerminalState() {
-    kattiLedger = []; currentBoxIdx = 1; editingIdx = -1;
-    document.getElementById('vch-note').value = '';
-    document.getElementById('in-box').value   = 'B-001';
+function resetTerminalState(){
+    kattiLedger=[]; currentBoxIdx=1; editingIdx=-1;
+    document.getElementById('vch-note').value='';
+    document.getElementById('in-box').value='B-001';
     renderTerminal();
 }
 
-function lookUpVoucher(val) {
-    if (!val || val === 'LOADING') return;
-    var typed = String(val).trim().padStart(4, '0');
-    if (typed === latestNextVoucherIdRaw) {
+function lookUpVoucher(val){
+    if(!val) return;
+    var typed = String(val).trim().padStart(4,'0');
+    if(typed === latestNextVoucherIdRaw){
         document.getElementById('vch-id').value = latestNextVoucherIdRaw;
         resetTerminalState(); setHistoryMode(false); return;
     }
-    if (!window.pywebview || !window.pywebview.api) return;
-    window.pywebview.api.get_voucher_history(typed).then(function(response) {
-        if (response && response.status === 'success' && response.voucher) {
-            kattiLedger = (response.items || []).map(function(i) {
-                return { name:i.it_name||i.name||'', touch:parseFloat(i.touch||0), weight:parseFloat(i.nt_wt||i.weight||0).toFixed(3), packets:parseInt(i.pcs||i.packets||1), box:i.huid||i.box||'B-001' };
+    if(!window.pywebview||!window.pywebview.api) return;
+    window.pywebview.api.get_voucher_history(typed).then(function(response){
+        if(response&&response.status==='success'&&response.voucher){
+            kattiLedger=(response.items||[]).map(function(i){
+                return{name:i.it_name||i.name||'',touch:parseFloat(i.touch||0),weight:parseFloat(i.nt_wt||i.weight||0).toFixed(3),packets:parseInt(i.pcs||i.packets||1),box:i.huid||i.box||'B-001'};
             });
-            document.getElementById('vch-note').value = (response.voucher || {}).note || '';
-            document.getElementById('vch-id').value   = typed;
+            document.getElementById('vch-note').value=(response.voucher||{}).note||'';
+            document.getElementById('vch-id').value=typed;
             renderTerminal(); setHistoryMode(true);
-        } else {
-            triggerPopup('warn', 'Not Found', 'Voucher "' + typed + '" does not exist.');
-            document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+            }else{
+            triggerPopup('warn','Not Found','Voucher "'+typed+'" does not exist.');
+            document.getElementById('vch-id').value=latestNextVoucherIdRaw;
             resetTerminalState(); setHistoryMode(false);
         }
     }).catch(function(){});
 }
 
-function saveVoucherToDB() {
-    if (kattiLedger.length === 0) { triggerPopup('warn', 'Empty Batch', 'Add at least one entry.'); return; }
-    var vchId  = document.getElementById('vch-id').value.trim();
-    var note   = document.getElementById('vch-note').value;
-    var totalW = 0, totalP = 0;
-    for (var i = 0; i < kattiLedger.length; i++) { totalW += parseFloat(kattiLedger[i].weight); totalP += parseInt(kattiLedger[i].packets); }
-    var btn = document.getElementById('btn-final');
-    if (!window.pywebview || !window.pywebview.api) return;
-    btn.innerText = 'Saving...'; btn.disabled = true;
-    var items = kattiLedger.map(function(item) {
-        return { it_code:'KATTI-'+parseFloat(item.touch), name:item.name, weight:parseFloat(item.weight)||0, packets:parseInt(item.packets)||1, touch:parseFloat(item.touch)||0, box:item.box||'B-001' };
+function setHistoryMode(on){
+    isViewingHistoryMode=on;
+    // In history mode — entry strip ALLOWED (can add to existing voucher)
+    document.getElementById('entry-strip').classList.remove('locked');
+    document.getElementById('history-banner').classList.toggle('visible',on);
+    var btnFin=document.getElementById('btn-final');
+    var btnNew=document.getElementById('btn-new');
+    var btnDel=document.getElementById('btn-del');
+    btnFin.disabled=false;
+    btnFin.innerText=on?'Save Changes':'Commit Voucher';
+    btnNew.classList.toggle('visible',on);
+}
+
+// ── SAVE / DELETE VOUCHER ──────────────────────────────────────
+function saveVoucherToDB(){
+    if(kattiLedger.length===0){triggerPopup('warn','Empty Batch','Add at least one entry.');return;}
+    var vchId=document.getElementById('vch-id').value.trim();
+    var note=document.getElementById('vch-note').value;
+    var totalW=0,totalP=0;
+    for(var i=0;i<kattiLedger.length;i++){totalW+=parseFloat(kattiLedger[i].weight);totalP+=parseInt(kattiLedger[i].packets);}
+    var btn=document.getElementById('btn-final');
+    if(!window.pywebview||!window.pywebview.api) return;
+    btn.innerText='Saving...'; btn.disabled=true;
+    var items=kattiLedger.map(function(item){
+        return{it_code:'KATTI-'+parseFloat(item.touch),name:item.name,weight:parseFloat(item.weight)||0,packets:parseInt(item.packets)||1,touch:parseFloat(item.touch)||0,box:item.box||'B-001'};
     });
-    window.pywebview.api.save_katti_voucher(vchId, totalW, totalP, note, items).then(function(res) {
-        if (res.status !== 'success') {
-            triggerPopup('danger', 'Save Failed', res.message || 'Unknown error.');
-            btn.innerText = 'Commit Voucher'; btn.disabled = false; return;
+    window.pywebview.api.save_katti_voucher(vchId,totalW,totalP,note,items).then(function(res){
+        if(res.status!=='success'){
+            triggerPopup('danger','Save Failed',res.message||'Unknown error.');
+            btn.innerText=isViewingHistoryMode?'Save Changes':'Commit Voucher'; btn.disabled=false; return;
         }
-        return loadWeightStock().then(function() {
-            triggerPopup('success', 'Committed', vchId + ' saved - ' + items.length + ' lot(s) added to stock.');
-            initializeVoucher();
-        });
-    }).catch(function(e) {
-        triggerPopup('danger', 'Error', String(e));
-        btn.innerText = 'Commit Voucher'; btn.disabled = false;
+        triggerPopup('success','Saved','VCH-'+vchId+' saved — '+items.length+' lot(s).');
+        initializeVoucher();
+    }).catch(function(e){
+        triggerPopup('danger','Error',String(e));
+        btn.innerText=isViewingHistoryMode?'Save Changes':'Commit Voucher'; btn.disabled=false;
     });
 }
 
-function commitEntry() {
-    if (isViewingHistoryMode) return;
-    var touch  = parseFloat(document.getElementById('in-touch').value);
-    var weight = parseFloat(document.getElementById('in-weight').value);
-    var name   = document.getElementById('in-note').value.trim();
-    if (isNaN(touch)  || touch  <= 0) { triggerPopup('warn', 'Touch Required',  'Enter touch % first.');    document.getElementById('in-touch').focus();  return; }
-    if (isNaN(weight) || weight <= 0) { triggerPopup('warn', 'Weight Required', 'Enter a valid weight.'); document.getElementById('in-weight').focus(); return; }
-    kattiLedger.push({ name:name||('Katti '+touch+'%'), touch:touch, weight:weight.toFixed(3), packets:parseInt(document.getElementById('in-packets').value)||1, box:document.getElementById('in-box').value.trim()||'B-001' });
+function deleteVoucher(){
+    var vchId=document.getElementById('vch-id').value.trim();
+    triggerPopup('danger','Delete Voucher?','This will permanently delete VCH-'+vchId+' and remove all its stock entries.\n\nThis cannot be undone.',function(){
+        if(!window.pywebview||!window.pywebview.api) return;
+        window.pywebview.api.delete_katti_voucher(vchId).then(function(res){
+            loadHistoryList();
+            triggerPopup('success','Deleted','VCH-'+vchId+' removed.');
+            initializeVoucher();
+        }).catch(function(e){ triggerPopup('danger','Error',String(e)); });
+    });
+}
+
+// ── ENTRY MANAGEMENT ──────────────────────────────────────────
+function commitEntry(){
+    var touch=parseFloat(document.getElementById('in-touch').value);
+    var weight=parseFloat(document.getElementById('in-weight').value);
+    var name=document.getElementById('in-note').value.trim();
+    if(isNaN(touch)||touch<=0){triggerPopup('warn','Touch Required','Enter touch % first.');document.getElementById('in-touch').focus();return;}
+    if(isNaN(weight)||weight<=0){triggerPopup('warn','Weight Required','Enter a valid weight.');document.getElementById('in-weight').focus();return;}
+    kattiLedger.push({name:name||('Katti '+touch+'%'),touch:touch,weight:weight.toFixed(3),packets:parseInt(document.getElementById('in-packets').value)||1,box:document.getElementById('in-box').value.trim()||'B-001'});
     renderTerminal();
-    if (kattiLedger.length % 4 === 0) { currentBoxIdx++; document.getElementById('in-box').value = 'B-' + String(currentBoxIdx).padStart(3,'0'); }
-    document.getElementById('in-touch').value = ''; document.getElementById('in-note').value = '';
-    document.getElementById('in-weight').value = ''; document.getElementById('in-packets').value = '';
+    if(kattiLedger.length%4===0){currentBoxIdx++;document.getElementById('in-box').value='B-'+String(currentBoxIdx).padStart(3,'0');}
+    document.getElementById('in-touch').value='';document.getElementById('in-note').value='';
+    document.getElementById('in-weight').value='';document.getElementById('in-packets').value='';
     document.getElementById('in-touch').focus();
 }
 
-function startEdit(idx) {
-    if (isViewingHistoryMode) return;
-    editingIdx = idx; renderTerminal();
-    setTimeout(function() { var el = document.getElementById('edit-touch-' + idx); if (el) { el.focus(); el.select(); } }, 50);
+function startEdit(idx){editingIdx=idx;renderTerminal();setTimeout(function(){var el=document.getElementById('edit-touch-'+idx);if(el){el.focus();el.select();}},50);}
+
+function saveEdit(idx){
+    var tEl=document.getElementById('edit-touch-'+idx),wEl=document.getElementById('edit-weight-'+idx);
+    var nEl=document.getElementById('edit-name-'+idx),pEl=document.getElementById('edit-pkt-'+idx),bEl=document.getElementById('edit-box-'+idx);
+    if(!tEl||!wEl) return;
+    var touch=parseFloat(tEl.value),weight=parseFloat(wEl.value);
+    if(isNaN(touch)||touch<=0||isNaN(weight)||weight<=0){tEl.style.borderColor='var(--red)';setTimeout(function(){tEl.style.borderColor='';},800);return;}
+    kattiLedger[idx]={touch:touch,weight:weight.toFixed(3),name:nEl?nEl.value.trim()||('Katti '+touch+'%'):kattiLedger[idx].name,packets:pEl?parseInt(pEl.value)||1:kattiLedger[idx].packets,box:bEl?bEl.value.trim()||'B-001':kattiLedger[idx].box};
+    editingIdx=-1; renderTerminal();
 }
 
-function saveEdit(idx) {
-    var tEl = document.getElementById('edit-touch-'  + idx);
-    var wEl = document.getElementById('edit-weight-' + idx);
-    var nEl = document.getElementById('edit-name-'   + idx);
-    var pEl = document.getElementById('edit-pkt-'    + idx);
-    var bEl = document.getElementById('edit-box-'    + idx);
-    if (!tEl || !wEl) return;
-    var touch = parseFloat(tEl.value), weight = parseFloat(wEl.value);
-    if (isNaN(touch) || touch <= 0 || isNaN(weight) || weight <= 0) { tEl.style.borderColor = 'var(--red)'; setTimeout(function(){ tEl.style.borderColor = ''; }, 800); return; }
-    kattiLedger[idx] = { touch:touch, weight:weight.toFixed(3), name:nEl?nEl.value.trim()||('Katti '+touch+'%'):kattiLedger[idx].name, packets:pEl?parseInt(pEl.value)||1:kattiLedger[idx].packets, box:bEl?bEl.value.trim()||'B-001':kattiLedger[idx].box };
-    editingIdx = -1; renderTerminal();
-}
+function cancelEdit(){editingIdx=-1;renderTerminal();}
 
-function cancelEdit() { editingIdx = -1; renderTerminal(); }
-
-function removeRow(idx) {
-    kattiLedger.splice(idx, 1);
-    if (editingIdx === idx) editingIdx = -1;
-    else if (editingIdx > idx) editingIdx--;
+function removeRow(idx){
+    kattiLedger.splice(idx,1);
+    if(editingIdx===idx) editingIdx=-1;
+    else if(editingIdx>idx) editingIdx--;
     renderTerminal();
 }
 
-function renderTerminal() {
-    var tbody = document.getElementById('terminal-body');
-    if (!tbody) return;
-    if (kattiLedger.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">' + (isViewingHistoryMode ? 'No items in this record.' : 'No entries yet - type a touch % and weight above.') + '</td></tr>';
+function renderTerminal(){
+    var tbody=document.getElementById('terminal-body');if(!tbody) return;
+    if(!kattiLedger.length){
+        tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">No entries yet.</td></tr>';
         updateStats(); return;
     }
-    var rows = [];
-    for (var ri = kattiLedger.length - 1; ri >= 0; ri--) {
-        var item = kattiLedger[ri], sr = ri + 1;
-        if (ri === editingIdx) {
+    var rows=[];
+    for(var ri=kattiLedger.length-1;ri>=0;ri--){
+        var item=kattiLedger[ri],sr=ri+1;
+        if(ri===editingIdx){
             rows.push('<tr style="background:var(--gold-bg);">'
-                + '<td class="td-sr">' + sr + '</td>'
-                + '<td><input id="edit-touch-'  + ri + '" class="td-edit" type="number" value="' + item.touch   + '" step="0.1" style="width:64px;"></td>'
-                + '<td><input id="edit-name-'   + ri + '" class="td-edit" type="text"   value="' + h(item.name) + '" style="width:100%;"></td>'
-                + '<td><input id="edit-weight-' + ri + '" class="td-edit" type="number" value="' + item.weight  + '" step="0.001" style="width:84px;"></td>'
-                + '<td><input id="edit-pkt-'    + ri + '" class="td-edit" type="number" value="' + item.packets + '" style="width:52px;text-align:center;"></td>'
-                + '<td><input id="edit-box-'    + ri + '" class="td-edit" type="text"   value="' + h(item.box)  + '" style="width:66px;text-align:center;"></td>'
-                + '<td style="text-align:center;"><button class="action-btn save-btn" onclick="saveEdit(' + ri + ')">&#10003;</button><button class="action-btn cancel-btn" onclick="cancelEdit()">&#10005;</button></td></tr>');
-        } else {
+                +'<td class="td-sr">'+sr+'</td>'
+                +'<td><input id="edit-touch-'+ri+'" class="td-edit" type="number" value="'+item.touch+'" step="0.1" style="width:64px;"></td>'
+                +'<td><input id="edit-name-'+ri+'" class="td-edit" type="text" value="'+h(item.name)+'" style="width:100%;"></td>'
+                +'<td><input id="edit-weight-'+ri+'" class="td-edit" type="number" value="'+item.weight+'" step="0.001" style="width:84px;"></td>'
+                +'<td><input id="edit-pkt-'+ri+'" class="td-edit" type="number" value="'+item.packets+'" style="width:52px;text-align:center;"></td>'
+                +'<td><input id="edit-box-'+ri+'" class="td-edit" type="text" value="'+h(item.box)+'" style="width:66px;text-align:center;"></td>'
+                +'<td style="text-align:center;"><button class="action-btn save-btn" onclick="saveEdit('+ri+')">&#10003;</button> <button class="action-btn cancel-btn" onclick="cancelEdit()">&#10005;</button></td></tr>');
+        }else{
             rows.push('<tr>'
-                + '<td class="td-sr">' + sr + '</td>'
-                + '<td class="td-touch">' + item.touch + '%</td>'
-                + '<td style="color:var(--ink3);">' + h(item.name) + '</td>'
-                + '<td class="td-wt">' + item.weight + ' g</td>'
-                + '<td class="td-num">' + item.packets + '</td>'
-                + '<td class="td-box">' + h(item.box) + '</td>'
-                + '<td style="text-align:center;"><button class="action-btn edit-btn" onclick="startEdit(' + ri + ')">&#9998;</button><button class="action-btn del-btn" onclick="removeRow(' + ri + ')">&#10005;</button></td></tr>');
+                +'<td class="td-sr">'+sr+'</td>'
+                +'<td class="td-touch">'+item.touch+'%</td>'
+                +'<td style="color:var(--ink3);">'+h(item.name)+'</td>'
+                +'<td class="td-wt">'+item.weight+' g</td>'
+                +'<td class="td-num">'+item.packets+'</td>'
+                +'<td class="td-box">'+h(item.box)+'</td>'
+                +'<td style="text-align:center;"><button class="action-btn edit-btn" onclick="startEdit('+ri+')">&#9998;</button> <button class="action-btn del-btn" onclick="removeRow('+ri+')">&#10005;</button></td></tr>');
         }
     }
-    tbody.innerHTML = rows.join('');
+    tbody.innerHTML=rows.join('');
     updateStats();
 }
 
-function updateStats() {
-    var totalW = 0, totalP = 0;
-    for (var i = 0; i < kattiLedger.length; i++) { totalW += parseFloat(kattiLedger[i].weight || 0); totalP += parseInt(kattiLedger[i].packets || 0); }
-    document.getElementById('stat-weight').innerText  = totalW.toFixed(3) + ' g';
-    document.getElementById('stat-packets').innerText = totalP;
+function updateStats(){
+    var totalW=0,totalP=0;
+    for(var i=0;i<kattiLedger.length;i++){totalW+=parseFloat(kattiLedger[i].weight||0);totalP+=parseInt(kattiLedger[i].packets||0);}
+    document.getElementById('stat-weight').innerText=totalW.toFixed(3)+' g';
+    document.getElementById('stat-packets').innerText=totalP;
 }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { if (editingIdx >= 0) cancelEdit(); return; }
-    var el = document.activeElement;
-    if (!el) return;
-    if (e.key === 'Enter' && el.classList.contains('td-edit') && editingIdx >= 0) { e.preventDefault(); saveEdit(editingIdx); return; }
-    if (e.key !== 'Enter' || !el.classList.contains('nav-input')) return;
-    if (isViewingHistoryMode || el.id === 'in-touch') { e.preventDefault(); if (el.id === 'in-touch') document.getElementById('in-note').focus(); return; }
-    var inputs = Array.from(document.querySelectorAll('.nav-input'));
-    var idx    = inputs.indexOf(el);
-    if (el.id === 'in-box') { e.preventDefault(); commitEntry(); }
-    else if (idx < inputs.length - 1) { e.preventDefault(); inputs[idx + 1].focus(); }
+// ── MODAL ──────────────────────────────────────────────────────
+function triggerPopup(type,title,text,onConfirm){
+    var icons={success:'\u2713',warn:'!',danger:'&#128683;'};
+    document.getElementById('modal-icon').innerHTML=icons[type]||'!';
+    document.getElementById('modal-title').innerText=title;
+    document.getElementById('modal-msg').innerText=text;
+    var btns=document.getElementById('modal-btns');
+    btns.innerHTML='';
+    if(onConfirm){
+        var y=document.createElement('button');y.className='mbtn mbtn-danger';y.innerText='Yes, Delete';
+        y.onclick=function(){closePopup();onConfirm();};
+        var n=document.createElement('button');n.className='mbtn mbtn-ghost';n.innerText='Cancel';
+        n.onclick=closePopup;
+        btns.appendChild(y);btns.appendChild(n);
+    }else{
+        var ok=document.createElement('button');ok.className='mbtn mbtn-primary';ok.innerText='OK';
+        ok.onclick=closePopup;
+        btns.appendChild(ok);
+    }
+    document.getElementById('modal-wrap').classList.add('open');
+}
+function closePopup(){document.getElementById('modal-wrap').classList.remove('open');}
+
+// ── KEYBOARD ───────────────────────────────────────────────────
+document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){if(editingIdx>=0)cancelEdit();else if(document.getElementById('modal-wrap').classList.contains('open'))closePopup();return;}
+    var el=document.activeElement;if(!el) return;
+    if(e.key==='Enter'&&el.classList.contains('td-edit')&&editingIdx>=0){e.preventDefault();saveEdit(editingIdx);return;}
+    if(e.key!=='Enter'||!el.classList.contains('nav-input')) return;
+    var inputs=Array.from(document.querySelectorAll('.nav-input'));
+    var idx=inputs.indexOf(el);
+    if(el.id==='in-box'){e.preventDefault();commitEntry();}
+    else if(idx<inputs.length-1){e.preventDefault();inputs[idx+1].focus();}
 });
 
-window.onload = function() {
-    document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-    function waitAndInit(n) {
-        if (window.pywebview && window.pywebview.api) { loadWeightStock().then(function() { initializeVoucher(); }); }
-        else if (n > 0) { setTimeout(function() { waitAndInit(n - 1); }, 200); }
-        else { initializeVoucher(); }
+// ── INIT ───────────────────────────────────────────────────────
+window.onload=function(){
+    document.getElementById('current-date').innerText=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    function waitAndInit(n){
+        if(window.pywebview&&window.pywebview.api){
+            initializeVoucher();
+        }else if(n>0){
+            setTimeout(function(){waitAndInit(n-1);},200);
+        }else{
+            initializeVoucher();
+        }
     }
     waitAndInit(30);
 };
