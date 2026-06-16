@@ -137,6 +137,31 @@ class DBManager:
                         note          TEXT, touch REAL DEFAULT 0.00, box_id TEXT DEFAULT NULL,
                         date          DATE     DEFAULT (date('now')),
                         timestamp     DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE IF NOT EXISTS bastion_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        ts TEXT DEFAULT (datetime('now')), 
+                        event_type TEXT NOT NULL, 
+                        severity TEXT DEFAULT 'LOW', 
+                        score INTEGER DEFAULT 0, 
+                        detail TEXT DEFAULT '', 
+                        actor TEXT DEFAULT 'system', 
+                        action_taken TEXT DEFAULT 'LOGGED', 
+                        auto_healed INTEGER DEFAULT 0, 
+                        sent INTEGER DEFAULT 0
+                    );
+                    CREATE TABLE IF NOT EXISTS bastion_learning (
+                    key TEXT PRIMARY KEY, 
+                    value TEXT, 
+                    updated_at TEXT DEFAULT (datetime('now'))
+                    );
+                    CREATE TABLE IF NOT EXISTS bastion_alerts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                        ts TEXT DEFAULT (datetime('now')), 
+                        subject TEXT, 
+                        body TEXT, 
+                        sent INTEGER DEFAULT 0, 
+                        sent_at TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS katti_voucher_items (
                         id      INTEGER PRIMARY KEY AUTOINCREMENT,
                         vch_id  TEXT,
@@ -164,6 +189,9 @@ class DBManager:
                         it_code TEXT, it_name TEXT, pcs INTEGER DEFAULT 1, price REAL DEFAULT 0.00);
                 """)
 
+                # Create configuration table explicitly
+                cursor.execute("CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT);")
+
                 bp_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(business_profile)").fetchall()]
                 if 'owner_name' not in bp_cols:
                     cursor.execute("ALTER TABLE business_profile ADD COLUMN owner_name TEXT DEFAULT NULL")
@@ -187,7 +215,7 @@ class DBManager:
                 sh_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(sales_history)").fetchall()]
                 if 'status' not in sh_cols:
                     cursor.execute("ALTER TABLE sales_history ADD COLUMN status TEXT DEFAULT 'CREDIT'")
-                # Discount columns -- added in v2
+
                 for col, defn in [
                     ('discount_type', "TEXT DEFAULT 'none'"),
                     ('discount_touch', 'REAL DEFAULT 0.0'),
@@ -197,7 +225,6 @@ class DBManager:
                     if col not in sh_cols:
                         cursor.execute(f"ALTER TABLE sales_history ADD COLUMN {col} {defn}")
 
-                # App config -- setup status, business profile
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS login_log (
                         id         INTEGER PRIMARY KEY AUTOINCREMENT,
