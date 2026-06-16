@@ -3189,34 +3189,67 @@ class DBManager:
             return {'status': 'error', 'message': str(e)}
 
     def tag_audit_close(self, session_id, closed_by='Admin'):
-        """Close audit session and save final counts."""
+        """Close audit session, save final counts, and ensure session is locked."""
         import datetime as _datetime
         try:
             with self._get_connection() as conn:
+                # 1. Fetch scan results for the session
                 scans = conn.execute(
                     "SELECT status FROM tag_audit_scans WHERE session_id=?",
                     (session_id,)
                 ).fetchall()
+
                 found = sum(1 for s in scans if s['status'] == 'found')
                 extra = sum(1 for s in scans if s['status'] == 'extra')
+
+                # 2. Fetch session booking info
                 sess = conn.execute(
                     "SELECT total_book FROM tag_audit_sessions WHERE id=?",
                     (session_id,)
                 ).fetchone()
-                missing = (sess['total_book'] if sess else 0) - found
+
+                total_book = sess['total_book'] if sess else 0
+                missing = max(0, total_book - found)
+
+                # 3. CRITICAL: Update status to 'closed' to persist data
+                # and protect it from Stock Med resets.
                 conn.execute("""
                     UPDATE tag_audit_sessions SET
-                        status='closed', ended_at=?,
-                        total_scanned=?, total_found=?,
-                        total_missing=?, total_extra=?
+                        status='closed', 
+                        ended_at=?,
+                        total_scanned=?, 
+                        total_found=?,
+                        total_missing=?, 
+                        total_extra=?
                     WHERE id=?
                 """, (
                     _datetime.datetime.now().isoformat(),
-                    len(scans), found, max(0, missing), extra, session_id
+                    len(scans),
+                    found,
+                    missing,
+                    extra,
+                    session_id
                 ))
+
+                # 4. Explicitly commit to disk
                 conn.commit()
-                return {'status': 'success', 'found': found, 'extra': extra, 'missing': max(0, missing)}
+                verify = conn.execute("SELECT status FROM tag_audit_sessions WHERE id=?", (session_id,)).fetchone()
+                if verify and verify['status'] == 'closed':
+                    _dblog(f"[TAG_AUDIT] Session {session_id} confirmed closed.")
+                    return {'status': 'success', 'found': found, 'extra': extra, 'missing': missing}
+                else:
+                    raise Exception("Audit closure failed to commit to database.")
+
+                _dblog(f"[TAG_AUDIT] Session {session_id} closed successfully. Status set to 'closed'.")
+
+                return {
+                    'status': 'success',
+                    'found': found,
+                    'extra': extra,
+                    'missing': missing
+                }
         except Exception as e:
+            _dberr(f"[TAG_AUDIT] close error: {e}")
             return {'status': 'error', 'message': str(e)}
 
     def tag_audit_get_sessions(self, limit=20):
