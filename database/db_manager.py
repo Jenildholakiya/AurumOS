@@ -137,31 +137,6 @@ class DBManager:
                         note          TEXT, touch REAL DEFAULT 0.00, box_id TEXT DEFAULT NULL,
                         date          DATE     DEFAULT (date('now')),
                         timestamp     DATETIME DEFAULT CURRENT_TIMESTAMP);
-                    CREATE TABLE IF NOT EXISTS bastion_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                        ts TEXT DEFAULT (datetime('now')), 
-                        event_type TEXT NOT NULL, 
-                        severity TEXT DEFAULT 'LOW', 
-                        score INTEGER DEFAULT 0, 
-                        detail TEXT DEFAULT '', 
-                        actor TEXT DEFAULT 'system', 
-                        action_taken TEXT DEFAULT 'LOGGED', 
-                        auto_healed INTEGER DEFAULT 0, 
-                        sent INTEGER DEFAULT 0
-                    );
-                    CREATE TABLE IF NOT EXISTS bastion_learning (
-                    key TEXT PRIMARY KEY, 
-                    value TEXT, 
-                    updated_at TEXT DEFAULT (datetime('now'))
-                    );
-                    CREATE TABLE IF NOT EXISTS bastion_alerts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                        ts TEXT DEFAULT (datetime('now')), 
-                        subject TEXT, 
-                        body TEXT, 
-                        sent INTEGER DEFAULT 0, 
-                        sent_at TEXT
-                    );
                     CREATE TABLE IF NOT EXISTS katti_voucher_items (
                         id      INTEGER PRIMARY KEY AUTOINCREMENT,
                         vch_id  TEXT,
@@ -189,9 +164,6 @@ class DBManager:
                         it_code TEXT, it_name TEXT, pcs INTEGER DEFAULT 1, price REAL DEFAULT 0.00);
                 """)
 
-                # Create configuration table explicitly
-                cursor.execute("CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT);")
-
                 bp_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(business_profile)").fetchall()]
                 if 'owner_name' not in bp_cols:
                     cursor.execute("ALTER TABLE business_profile ADD COLUMN owner_name TEXT DEFAULT NULL")
@@ -215,7 +187,7 @@ class DBManager:
                 sh_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(sales_history)").fetchall()]
                 if 'status' not in sh_cols:
                     cursor.execute("ALTER TABLE sales_history ADD COLUMN status TEXT DEFAULT 'CREDIT'")
-
+                # Discount columns -- added in v2
                 for col, defn in [
                     ('discount_type', "TEXT DEFAULT 'none'"),
                     ('discount_touch', 'REAL DEFAULT 0.0'),
@@ -225,6 +197,7 @@ class DBManager:
                     if col not in sh_cols:
                         cursor.execute(f"ALTER TABLE sales_history ADD COLUMN {col} {defn}")
 
+                # App config -- setup status, business profile
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS login_log (
                         id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,9 +217,346 @@ class DBManager:
                         category   TEXT    DEFAULT 'general'
                     )
                 """)
+
+                # ── LAN SYNC SCHEMA ──────────────────────────────────────────
+                # Permanent per-PC identity for sync (separate from the
+                # hardware security fingerprint -- this one is purely for
+                # telling rows apart across two independent local databases).
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS device_registry (
+                        id          INTEGER PRIMARY KEY CHECK (id=1),
+                        device_id   TEXT    NOT NULL,
+                        device_name TEXT    DEFAULT '',
+                        created_at  TEXT    DEFAULT (datetime('now'))
+                    )
+                """)
+                # Tracks the last sync_version seen FROM the other device,
+                # per table, so each sync only pulls what's new.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS sync_state (
+                        peer_device_id TEXT NOT NULL,
+                        table_name     TEXT NOT NULL,
+                        last_version   INTEGER DEFAULT 0,
+                        last_synced_at TEXT DEFAULT (datetime('now')),
+                        PRIMARY KEY (peer_device_id, table_name)
+                    )
+                """)
+                # Anomalies found after a merge (e.g. same stock sold twice
+                # independently on both PCs while offline). Never blocks
+                # anything -- purely a log for manual review.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS sync_conflicts (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        detected_at  TEXT    DEFAULT (datetime('now')),
+                        conflict_type TEXT,
+                        description  TEXT,
+                        ref_a        TEXT,
+                        ref_b        TEXT,
+                        resolved     INTEGER DEFAULT 0
+                    )
+                """)
+
+                # Add device_id + sync_version to every syncable table.
+                # sync_version is a local logical counter (NOT wall-clock) --
+                # bumped on every insert/update to that row on this device.
+                SYNC_TABLES = [
+                    'sales_history', 'stock_inventory', 'katti_vouchers',
+                    'katti_voucher_items', 'clients_master', 'credit_ledger',
+                    'uchak_inward_vouchers', 'uchak_inward_items',
+                ]
+                for tbl in SYNC_TABLES:
+                    try:
+                        cols = [r['name'] for r in cursor.execute(f"PRAGMA table_info({tbl})").fetchall()]
+                        if 'device_id' not in cols:
+                            cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN device_id TEXT DEFAULT ''")
+                        if 'sync_version' not in cols:
+                            cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN sync_version INTEGER DEFAULT 0")
+                        if 'local_id' not in cols:
+                            # local_id = this row's original autoincrement id on the
+                            # device that created it. Needed because once merged
+                            # onto the other PC, the autoincrement id will differ.
+                            cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN local_id INTEGER DEFAULT NULL")
+                    except Exception as _se:
+                        _dblog(f"[SYNC SCHEMA] {tbl}: {_se}")
+
             return True
         except Exception as e:
             print(f"? [DB INIT ERROR] {e}")
+            return False
+
+    # ══════════════════════════════════════════════════════════════
+    # LAN SYNC -- DEVICE IDENTITY
+    # ══════════════════════════════════════════════════════════════
+
+    def get_or_create_device_id(self, device_name=''):
+        """
+        Permanent, random ID for THIS PC's database -- generated once,
+        stored forever. Used only to tell rows apart during sync; has
+        nothing to do with the hardware fingerprint / license system.
+        """
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute("SELECT device_id, device_name FROM device_registry WHERE id=1").fetchone()
+                if row and row['device_id']:
+                    return row['device_id']
+                import uuid as _uuid
+                new_id = 'DEV-' + _uuid.uuid4().hex[:12].upper()
+                conn.execute(
+                    "INSERT OR REPLACE INTO device_registry (id, device_id, device_name) VALUES (1, ?, ?)",
+                    (new_id, device_name or '')
+                )
+                conn.commit()
+                _dblog(f"[SYNC] New device_id generated: {new_id}")
+                return new_id
+        except Exception as e:
+            _dberr(f"[SYNC] get_or_create_device_id: {e}")
+            return 'DEV-UNKNOWN'
+
+    # ══════════════════════════════════════════════════════════════
+    # LAN SYNC -- ENGINE
+    # ══════════════════════════════════════════════════════════════
+
+    SYNC_TABLES = [
+        'sales_history', 'stock_inventory', 'katti_vouchers',
+        'katti_voucher_items', 'clients_master', 'credit_ledger',
+        'uchak_inward_vouchers', 'uchak_inward_items',
+    ]
+
+    def stamp_row_for_sync(self, table_name, row_id, pk_col='id'):
+        """
+        Call right after inserting a new row in a syncable table.
+        Stamps it with this device's id, a fresh local sync_version,
+        and local_id = its own rowid (so it keeps its identity even
+        after being merged onto another PC with a different autoincrement id).
+
+        pk_col: the column to match on. Most tables use 'id', but a few
+        (katti_vouchers, uchak_inward_vouchers) use a TEXT PRIMARY KEY
+        like vch_id instead -- pass that column name for those.
+        local_id is always stored as SQLite's internal rowid converted
+        to an integer string hash isn't needed here -- we just reuse
+        sqlite's own rowid via "SELECT rowid" since every table (even
+        ones with a TEXT PK) still has an implicit unique rowid.
+        """
+        try:
+            if table_name not in self.SYNC_TABLES:
+                return False
+            dev_id = self.get_or_create_device_id()
+            with self._get_connection() as conn:
+                nxt = conn.execute(
+                    f"SELECT COALESCE(MAX(sync_version),0)+1 as n FROM {table_name} WHERE device_id=?",
+                    (dev_id,)
+                ).fetchone()
+                next_version = int(nxt['n'] or 1)
+                # Use rowid (always present in SQLite, even for TEXT PK tables)
+                # as local_id, and match the WHERE clause on whatever pk_col was given.
+                rowid_row = conn.execute(
+                    f"SELECT rowid FROM {table_name} WHERE {pk_col}=?", (row_id,)
+                ).fetchone()
+                local_id_val = rowid_row[0] if rowid_row else row_id
+                conn.execute(
+                    f"UPDATE {table_name} SET device_id=?, sync_version=?, local_id=? WHERE {pk_col}=?",
+                    (dev_id, next_version, local_id_val, row_id)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[SYNC] stamp_row_for_sync {table_name}: {e}")
+            return False
+
+    def get_changes_since(self, peer_device_id, since_versions):
+        """
+        Called when responding to a sync request FROM another device.
+        since_versions: {table_name: last_version_that_peer_already_has_from_ME}
+        Returns: {table_name: [rows...]} -- only rows ORIGINATING on this
+        device (device_id = my own id) that the peer doesn't have yet.
+        Rows the peer itself created are never sent back to it.
+        """
+        try:
+            my_id = self.get_or_create_device_id()
+            out = {}
+            with self._get_connection() as conn:
+                for tbl in self.SYNC_TABLES:
+                    last_v = int(since_versions.get(tbl, 0) or 0)
+                    rows = conn.execute(
+                        f"SELECT * FROM {tbl} WHERE device_id=? AND sync_version>? ORDER BY sync_version ASC LIMIT 500",
+                        (my_id, last_v)
+                    ).fetchall()
+                    if rows:
+                        out[tbl] = [dict(r) for r in rows]
+            return {'status': 'success', 'device_id': my_id, 'changes': out}
+        except Exception as e:
+            _dberr(f"[SYNC] get_changes_since: {e}")
+            return {'status': 'error', 'message': str(e), 'changes': {}}
+
+    def apply_incoming_rows(self, peer_device_id, changes):
+        """
+        Merge rows that originated on the OTHER device into this DB.
+        Identity for dedup = (device_id, local_id) -- never the local
+        autoincrement id, since that differs per machine. Existing tables
+        already have a few real UNIQUE constraints (tag_id, vch_id) which
+        we respect via INSERT OR IGNORE / matching update.
+        """
+        applied = {}
+        try:
+            with self._get_connection() as conn:
+                for tbl, rows in (changes or {}).items():
+                    if tbl not in self.SYNC_TABLES or not rows:
+                        continue
+                    count = 0
+                    for row in rows:
+                        try:
+                            # Skip if we already have this exact peer row
+                            existing = conn.execute(
+                                f"SELECT id FROM {tbl} WHERE device_id=? AND local_id=?",
+                                (peer_device_id, row.get('local_id'))
+                            ).fetchone()
+                            if existing:
+                                continue
+
+                            cols = [c for c in row.keys() if c != 'id']
+                            placeholders = ','.join(['?'] * len(cols))
+                            colnames = ','.join(cols)
+                            values = [row[c] for c in cols]
+                            # Force device_id to the PEER's id (not overwritten by us)
+                            if 'device_id' in cols:
+                                values[cols.index('device_id')] = peer_device_id
+
+                            conn.execute(
+                                f"INSERT OR IGNORE INTO {tbl} ({colnames}) VALUES ({placeholders})",
+                                values
+                            )
+                            count += 1
+                        except Exception as _re:
+                            _dblog(f"[SYNC] apply row skip {tbl}: {_re}")
+                    if count:
+                        applied[tbl] = count
+
+                # Remember how far we've pulled from this peer
+                for tbl, rows in (changes or {}).items():
+                    if not rows:
+                        continue
+                    max_v = max(int(r.get('sync_version') or 0) for r in rows)
+                    conn.execute(
+                        "INSERT OR REPLACE INTO sync_state (peer_device_id, table_name, last_version, last_synced_at) "
+                        "VALUES (?,?,?,datetime('now'))",
+                        (peer_device_id, tbl, max_v)
+                    )
+                conn.commit()
+            _dblog(f"[SYNC] Applied from {peer_device_id}: {applied}")
+            return {'status': 'success', 'applied': applied}
+        except Exception as e:
+            _dberr(f"[SYNC] apply_incoming_rows: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_my_sync_versions(self, peer_device_id):
+        """What versions have I already pulled from this peer, per table?
+        Sent to the peer so it knows what's new to send me."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT table_name, last_version FROM sync_state WHERE peer_device_id=?",
+                    (peer_device_id,)
+                ).fetchall()
+                return {r['table_name']: r['last_version'] for r in rows}
+        except Exception as e:
+            _dberr(f"[SYNC] get_my_sync_versions: {e}")
+            return {}
+
+    def detect_stock_conflicts(self):
+        """
+        Run after every merge. Checks whether total weight sold per touch
+        group (across BOTH devices' sales now in this DB) ever exceeded
+        what was actually in stock at the time. Does not block or fix
+        anything -- just logs a row to sync_conflicts for manual review.
+        Lightweight heuristic: total sold for a touch vs total ever
+        received (opening + katti inward) for that touch. If sold > received,
+        something was double-counted (most likely a double-sale of the
+        same physical stock from two offline devices).
+        """
+        try:
+            import json as _json
+            with self._get_connection() as conn:
+                received = conn.execute("""
+                    SELECT ROUND(touch,2) as touch, COALESCE(SUM(gr_wt),0) as wt
+                    FROM stock_inventory
+                    WHERE touch IS NOT NULL AND touch > 0
+                    GROUP BY ROUND(touch,2)
+                """).fetchall()
+                received_map = {round(float(r['touch']), 2): float(r['wt']) for r in received}
+
+                sales = conn.execute(
+                    "SELECT vch_id, device_id, items FROM sales_history WHERE items IS NOT NULL"
+                ).fetchall()
+                sold_map = {}
+                sold_refs = {}
+                for s in sales:
+                    try:
+                        items = _json.loads(s['items'] or '[]')
+                    except Exception:
+                        continue
+                    for it in items:
+                        wt = float(it.get('weight') or it.get('gr_wt') or 0)
+                        tv = float(it.get('touch') or 0)
+                        if not tv:
+                            try:
+                                p = float(it.get('it_code') or it.get('code') or 0)
+                                if 1 <= p <= 100:
+                                    tv = p
+                            except Exception:
+                                pass
+                        if tv > 0 and wt > 0:
+                            key = round(tv, 2)
+                            sold_map[key] = sold_map.get(key, 0) + wt
+                            sold_refs.setdefault(key, []).append(s['vch_id'])
+
+                new_conflicts = 0
+                for touch, sold_wt in sold_map.items():
+                    avail = received_map.get(touch, 0)
+                    if sold_wt > avail + 0.05:  # small float tolerance
+                        refs = sold_refs.get(touch, [])
+                        desc = (f"Touch {touch}%: sold {round(sold_wt, 3)}g across bills "
+                                f"but only {round(avail, 3)}g was ever recorded as stock. "
+                                f"Possible double-sale from offline sync merge.")
+                        already = conn.execute(
+                            "SELECT id FROM sync_conflicts WHERE conflict_type='stock_oversold' "
+                            "AND description=? AND resolved=0",
+                            (desc,)
+                        ).fetchone()
+                        if not already:
+                            conn.execute(
+                                "INSERT INTO sync_conflicts (conflict_type, description, ref_a, ref_b) "
+                                "VALUES ('stock_oversold', ?, ?, ?)",
+                                (desc, refs[0] if refs else '', ','.join(refs[1:]) if len(refs) > 1 else '')
+                            )
+                            new_conflicts += 1
+                conn.commit()
+            if new_conflicts:
+                _dblog(f"[SYNC] {new_conflicts} new stock conflict(s) flagged")
+            return {'status': 'success', 'new_conflicts': new_conflicts}
+        except Exception as e:
+            _dberr(f"[SYNC] detect_stock_conflicts: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_sync_conflicts(self, include_resolved=False):
+        try:
+            with self._get_connection() as conn:
+                q = "SELECT * FROM sync_conflicts"
+                if not include_resolved:
+                    q += " WHERE resolved=0"
+                q += " ORDER BY id DESC"
+                rows = conn.execute(q).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[SYNC] get_sync_conflicts: {e}")
+            return []
+
+    def resolve_sync_conflict(self, conflict_id):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE sync_conflicts SET resolved=1 WHERE id=?", (int(conflict_id),))
+                conn.commit()
+            return True
+        except Exception:
             return False
 
     def generate_unique_tag_id(self):
@@ -532,6 +842,11 @@ class DBManager:
                               str(kwargs.get('huid') or '-'))
                              )
                 conn.commit()
+                new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            try:
+                self.stamp_row_for_sync('stock_inventory', new_id)
+            except Exception as _sse:
+                _dblog(f"[SYNC] stamp skip (stock_inventory): {_sse}")
             print(f"[DB] Stock entry saved: {kwargs.get('it_code')} tag={tag_id}")
             return True
         except Exception as e:
@@ -564,10 +879,16 @@ class DBManager:
         return self.execute_query("UPDATE stock_inventory SET is_tagged=1 WHERE id=?", (item_id,))
 
     def add_client(self, name, phone, metal_limit, cash_limit):
-        return self.execute_query(
+        ok = self.execute_query(
             "INSERT INTO clients_master (name,phone,metal_limit,cash_limit) VALUES (?,?,?,?)",
             (name, phone, float(metal_limit or 0), float(cash_limit or 0))
         )
+        if ok:
+            try:
+                self.stamp_row_for_sync('clients_master', name, pk_col='name')
+            except Exception as _cse:
+                _dblog(f"[SYNC] stamp skip (clients_master): {_cse}")
+        return ok
 
     def get_all_clients(self):
         with self._get_connection() as conn:
@@ -695,8 +1016,19 @@ class DBManager:
                              item_touch, safe_vch_id, item_box)
                         )
                         print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
+                        try:
+                            ks_id = cursor.execute("SELECT id FROM stock_inventory WHERE tag_id=?",
+                                                   (unique_tag,)).fetchone()
+                            if ks_id:
+                                self.stamp_row_for_sync('stock_inventory', ks_id[0])
+                        except Exception as _kse:
+                            _dblog(f"[SYNC] stamp skip (katti stock): {_kse}")
 
                 conn.commit()
+                try:
+                    self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
+                except Exception as _kve:
+                    _dblog(f"[SYNC] stamp skip (katti_vouchers): {_kve}")
                 return True
         except Exception as e:
             print(f"? [KATTI SAVE ERROR] {e}");
@@ -862,6 +1194,10 @@ class DBManager:
                             (code, name, pcs, str(price))
                         )
                 conn.commit()
+                try:
+                    self.stamp_row_for_sync('uchak_inward_vouchers', safe_vch_id, pk_col='vch_id')
+                except Exception as _use:
+                    _dblog(f"[SYNC] stamp skip (uchak_inward_vouchers): {_use}")
                 return True
         except Exception as e:
             print(f"? [DB UCHAK INWARD SAVE ERROR] {e}");
@@ -1232,6 +1568,11 @@ class DBManager:
                         )
                         _dblog(f"[SALE] Removed katti stock: {tid}")
                 conn.commit()
+                sale_row_id = conn.execute("SELECT id FROM sales_history WHERE vch_id=?", (safe_vch_id,)).fetchone()[0]
+            try:
+                self.stamp_row_for_sync('sales_history', sale_row_id)
+            except Exception as _sse:
+                _dblog(f"[SYNC] stamp skip (sales_history): {_sse}")
             return True
         except Exception as e:
             print(f"? [DB RECORD SALE ERROR] {e}");
@@ -1426,6 +1767,43 @@ class DBManager:
                 return None
         except:
             return None
+
+    def get_uchak_price_by_code(self, it_code):
+        """
+        Look up Uchak opening stock by IT Code for billing auto-fill.
+        Uchak opening rows are tag_id LIKE 'OPENING-UCH-%' with price
+        stored in the 'design' column (text) -- see opening_stock.html.
+        Returns {found, it_code, it_name, price, pcs} or {found:false}.
+        """
+        try:
+            code = str(it_code).strip().upper()
+            if not code:
+                return {'found': False}
+            with self._get_connection() as conn:
+                res = conn.execute("""
+                    SELECT it_code, it_name, design, pcs
+                    FROM stock_inventory
+                    WHERE tag_id LIKE 'OPENING-UCH-%'
+                      AND UPPER(TRIM(it_code)) = ?
+                    ORDER BY id DESC LIMIT 1
+                """, (code,)).fetchone()
+                if not res:
+                    return {'found': False, 'it_code': code}
+                r = dict(res)
+                try:
+                    price = float(r.get('design') or 0)
+                except (TypeError, ValueError):
+                    price = 0.0
+                return {
+                    'found': True,
+                    'it_code': r.get('it_code') or code,
+                    'it_name': r.get('it_name') or code,
+                    'price': price,
+                    'pcs': int(r.get('pcs') or 0),
+                }
+        except Exception as e:
+            _dberr(f"[UCHAK PRICE LOOKUP] {e}")
+            return {'found': False, 'it_code': it_code}
 
     # --- ANALYTICS -----------------------------------------------------------
     def get_inventory_analytics(self):
@@ -1827,6 +2205,9 @@ class DBManager:
                     'audit_log',
                     'login_log',
                     'mac_lock',
+                    'device_registry',
+                    'sync_state',
+                    'sync_conflicts',
                 ]
                 for t in tables:
                     try:
@@ -2305,12 +2686,21 @@ class DBManager:
                 rows = conn.execute("""
                     SELECT id, it_code, it_name, tag_id,
                            gr_wt, ls_wt, nt_wt, touch, wastage,
-                           pcs, entry_date
+                           pcs, entry_date, design
                     FROM stock_inventory
                     WHERE tag_id LIKE 'OPENING-%'
                     ORDER BY id DESC
                 """).fetchall()
-                return [dict(r) for r in rows]
+                result = []
+                for r in rows:
+                    d = dict(r)
+                    # Uchak rows store price in the 'design' column as text -- expose as 'price' too
+                    try:
+                        d['price'] = float(d.get('design') or 0)
+                    except (TypeError, ValueError):
+                        d['price'] = 0.0
+                    result.append(d)
+                return result
         except Exception as e:
             _dberr(f"[OPENING STOCK] get: {e}");
             return []
@@ -2952,14 +3342,28 @@ class DBManager:
             return False
 
     def tag_audit_start(self, started_by='Admin', touch_filter='ALL'):
-        """Start new tag audit session."""
+        """
+        Start new tag audit session.
+
+        PERMANENT LOGIC:
+        - A fresh audit always starts with ALL booked pieces as MISSING.
+          (An audit means physical re-verification — is_tagged alone
+           does not prove the piece is still there right now.)
+        - EXCEPTION: any tag_id that was marked FOUND in the most
+          recently CLOSED audit session is carried forward as
+          pre-verified FOUND, since it was physically confirmed last time.
+        - Any tag_id added to stock AFTER that last closed audit has
+          never been scanned in any audit -> starts as MISSING.
+        - Any tag_id that was MISSING in the last closed audit stays
+          MISSING (still unverified).
+        """
         import datetime as _datetime
         try:
             self.tag_audit_init_tables()
             with self._get_connection() as conn:
-                # Build snapshot from stock_inventory — real tagged pieces only
                 q = """
-                    SELECT id, tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid, pcs
+                    SELECT id, tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid, pcs,
+                           COALESCE(is_tagged,0) as is_tagged
                     FROM stock_inventory
                     WHERE tag_id IS NOT NULL
                       AND tag_id != ''
@@ -2989,24 +3393,61 @@ class DBManager:
                     "SELECT id FROM tag_audit_sessions WHERE session_ref=?", (ref,)
                 ).fetchone()['id']
 
-                # Build snapshot dict
+                # Find the most recently CLOSED session (any touch filter)
+                last_closed = conn.execute("""
+                    SELECT id FROM tag_audit_sessions
+                    WHERE status='closed' AND id != ?
+                    ORDER BY ended_at DESC LIMIT 1
+                """, (session_id,)).fetchone()
+
+                carried_found = set()
+                if last_closed:
+                    prev_found = conn.execute("""
+                        SELECT DISTINCT tag_id FROM tag_audit_scans
+                        WHERE session_id=? AND status='found'
+                    """, (last_closed['id'],)).fetchall()
+                    carried_found = {str(r['tag_id']).strip().upper() for r in prev_found}
+                    _dblog(f"[TAG_AUDIT] Carrying forward {len(carried_found)} "
+                           f"found tags from session {last_closed['id']}")
+
+                # Build snapshot + carry forward only previously-FOUND tags
                 snapshot = []
                 touches = {}
+                auto_found = 0
                 for r in rows:
                     tv = round(float(r['touch'] or 0), 2)
+                    tid = str(r['tag_id']).strip().upper()
+
                     snapshot.append({
-                        'tag_id': r['tag_id'],
+                        'tag_id': tid,
                         'it_name': r['it_name'] or r['it_code'] or 'Unknown',
                         'touch': tv,
                         'gr_wt': float(r['gr_wt'] or 0),
                         'nt_wt': float(r['nt_wt'] or 0),
                         'huid': r['huid'] or '',
+                        'is_tagged': int(r['is_tagged'] or 0),
                     })
                     if tv not in touches:
                         touches[tv] = 0
                     touches[tv] += 1
 
-                _dblog(f"[TAG_AUDIT] Session {ref} started — {total_book} tags, filter={touch_filter}")
+                    # Carry forward ONLY if this exact tag was Found last audit
+                    if tid in carried_found:
+                        conn.execute("""
+                            INSERT INTO tag_audit_scans
+                            (session_id, tag_id, status, it_name, touch, gr_wt)
+                            VALUES (?,?,?,?,?,?)
+                        """, (
+                            session_id, tid, 'found',
+                            r['it_name'] or r['it_code'] or 'Unknown',
+                            tv, float(r['gr_wt'] or 0)
+                        ))
+                        auto_found += 1
+
+                conn.commit()
+
+                _dblog(f"[TAG_AUDIT] Session {ref} started — {total_book} tags, "
+                       f"{auto_found} carried forward as found, filter={touch_filter}")
                 return {
                     'status': 'success',
                     'session_id': session_id,
@@ -3014,16 +3455,22 @@ class DBManager:
                     'total_book': total_book,
                     'snapshot': snapshot,
                     'touches': {str(k): v for k, v in sorted(touches.items())},
+                    'auto_found': auto_found,
                 }
         except Exception as e:
             _dberr(f"[TAG_AUDIT] start: {e}")
             return {'status': 'error', 'message': str(e)}
 
     def tag_audit_start_snapshot(self, session_id, touch_filter='ALL'):
-        """Get snapshot for an existing session — used when resuming."""
+        """
+        Get snapshot for an existing session — used when resuming.
+        Read-only — does NOT create a new session.
+        Includes is_tagged so the UI can reflect already-tagged pieces.
+        """
         try:
             q = """
-                SELECT tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid
+                SELECT tag_id, it_code, it_name, touch, gr_wt, nt_wt, huid,
+                       COALESCE(is_tagged,0) as is_tagged
                 FROM stock_inventory
                 WHERE tag_id IS NOT NULL AND tag_id != ''
                   AND tag_id != 'N/A'
@@ -3041,12 +3488,13 @@ class DBManager:
             snapshot = []
             for r in rows:
                 snapshot.append({
-                    'tag_id': r['tag_id'],
+                    'tag_id': str(r['tag_id']).strip().upper(),
                     'it_name': r['it_name'] or r['it_code'] or 'Unknown',
                     'touch': round(float(r['touch'] or 0), 2),
                     'gr_wt': float(r['gr_wt'] or 0),
                     'nt_wt': float(r['nt_wt'] or 0),
                     'huid': r['huid'] or '',
+                    'is_tagged': int(r['is_tagged'] or 0),
                 })
             return {'status': 'success', 'snapshot': snapshot}
         except Exception as e:
@@ -3216,67 +3664,34 @@ class DBManager:
             return {'status': 'error', 'message': str(e)}
 
     def tag_audit_close(self, session_id, closed_by='Admin'):
-        """Close audit session, save final counts, and ensure session is locked."""
+        """Close audit session and save final counts."""
         import datetime as _datetime
         try:
             with self._get_connection() as conn:
-                # 1. Fetch scan results for the session
                 scans = conn.execute(
                     "SELECT status FROM tag_audit_scans WHERE session_id=?",
                     (session_id,)
                 ).fetchall()
-
                 found = sum(1 for s in scans if s['status'] == 'found')
                 extra = sum(1 for s in scans if s['status'] == 'extra')
-
-                # 2. Fetch session booking info
                 sess = conn.execute(
                     "SELECT total_book FROM tag_audit_sessions WHERE id=?",
                     (session_id,)
                 ).fetchone()
-
-                total_book = sess['total_book'] if sess else 0
-                missing = max(0, total_book - found)
-
-                # 3. CRITICAL: Update status to 'closed' to persist data
-                # and protect it from Stock Med resets.
+                missing = (sess['total_book'] if sess else 0) - found
                 conn.execute("""
                     UPDATE tag_audit_sessions SET
-                        status='closed', 
-                        ended_at=?,
-                        total_scanned=?, 
-                        total_found=?,
-                        total_missing=?, 
-                        total_extra=?
+                        status='closed', ended_at=?,
+                        total_scanned=?, total_found=?,
+                        total_missing=?, total_extra=?
                     WHERE id=?
                 """, (
                     _datetime.datetime.now().isoformat(),
-                    len(scans),
-                    found,
-                    missing,
-                    extra,
-                    session_id
+                    len(scans), found, max(0, missing), extra, session_id
                 ))
-
-                # 4. Explicitly commit to disk
                 conn.commit()
-                verify = conn.execute("SELECT status FROM tag_audit_sessions WHERE id=?", (session_id,)).fetchone()
-                if verify and verify['status'] == 'closed':
-                    _dblog(f"[TAG_AUDIT] Session {session_id} confirmed closed.")
-                    return {'status': 'success', 'found': found, 'extra': extra, 'missing': missing}
-                else:
-                    raise Exception("Audit closure failed to commit to database.")
-
-                _dblog(f"[TAG_AUDIT] Session {session_id} closed successfully. Status set to 'closed'.")
-
-                return {
-                    'status': 'success',
-                    'found': found,
-                    'extra': extra,
-                    'missing': missing
-                }
+                return {'status': 'success', 'found': found, 'extra': extra, 'missing': max(0, missing)}
         except Exception as e:
-            _dberr(f"[TAG_AUDIT] close error: {e}")
             return {'status': 'error', 'message': str(e)}
 
     def tag_audit_get_sessions(self, limit=20):
@@ -4281,3 +4696,4 @@ class DBManager:
         except Exception as e:
             _dberr(f"[BASTION] exe_verify error: {e}")
             return True  # fail open on unexpected error
+

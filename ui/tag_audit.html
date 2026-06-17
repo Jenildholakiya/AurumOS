@@ -333,7 +333,7 @@ body{display:flex;flex-direction:column;overflow:hidden;}
           <span class="sz-save"><span class="sz-dot"></span>Auto-saving</span>
         </div>
         <div class="sz-row">
-          <input class="sf-inp" id="scan-inp" type="text" placeholder="Scan or type here" onkeydown="onScanKey(event)" autocomplete="off" spellcheck="false">
+          <input class="sf-inp" id="scan-inp" type="text" placeholder="Scan or type here" onkeydown="onScanKey(event)" oninput="onScanInput(this)" autocomplete="off" spellcheck="false">
           <button class="btn-enter" onclick="processScan()" title="Enter">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
           </button>
@@ -495,6 +495,7 @@ function showSaved() {
 window.addEventListener('DOMContentLoaded', function() {
     loadTouches();
     loadHistory();
+    checkActiveSession();
 });
 
 // ── TOUCHES ───────────────────────────────────────────────────────
@@ -653,10 +654,13 @@ function doResume() {
                 SNAPSHOT = sr.snapshot;
                 BOOK_MAP = {};
                 for (var k = 0; k < SNAPSHOT.length; k++) {
-                    // FIX 4: Uppercase BOOK_MAP keys to match SCANNED keys
+                    // Uppercase BOOK_MAP keys to match SCANNED keys.
+                    // Resume only restores scans ALREADY saved for THIS session
+                    // (handled above via tag_audit_get_status) — no extra
+                    // auto-found logic needed here.
                     var key = (SNAPSHOT[k].tag_id || '').toUpperCase();
                     BOOK_MAP[key] = SNAPSHOT[k];
-                    SNAPSHOT[k].tag_id = key; // normalise snapshot too
+                    SNAPSHOT[k].tag_id = key;
                 }
             }
             showAuditScreen();
@@ -708,15 +712,38 @@ function startAudit() {
         SESSION_REF = r.session_ref;
         SNAPSHOT    = r.snapshot || [];
         BOOK_MAP    = {}; SCANNED = {}; ABSENT = {};
-        // FIX: Normalise BOOK_MAP keys to uppercase
+        // Normalise BOOK_MAP keys to uppercase.
+        // PERMANENT RULE: every piece starts MISSING by default.
+        // The backend has ALREADY pre-inserted 'found' scan rows for any
+        // tag_id that was Found in the last CLOSED audit (carry-forward).
+        // We load those via tag_audit_get_status right after this.
         for (var i = 0; i < SNAPSHOT.length; i++) {
             var key = (SNAPSHOT[i].tag_id || '').toUpperCase();
             BOOK_MAP[key] = SNAPSHOT[i];
             SNAPSHOT[i].tag_id = key;
         }
-        showAuditScreen();
-        updateKPIs(); renderList(); focusScan();
-        toast('Audit started \u2014 ' + r.total_book + ' tags to verify', 'info', 2500);
+
+        // Pull the scans the backend just carried forward (if any)
+        // so previously-verified pieces show as Found immediately,
+        // while brand-new/never-scanned pieces remain Missing.
+        window.pywebview.api.tag_audit_get_status(SESSION_ID).then(function(st) {
+            if (st && st.scans) {
+                for (var j = 0; j < st.scans.length; j++) {
+                    var sc  = st.scans[j];
+                    var tid = (sc.tag_id || '').toUpperCase();
+                    SCANNED[tid] = {
+                        status: sc.status,
+                        info: { it_name: sc.it_name || '', touch: sc.touch || 0, gr_wt: sc.gr_wt || 0 }
+                    };
+                }
+            }
+            showAuditScreen();
+            updateKPIs(); renderList(); focusScan();
+            var autoMsg = (r.auto_found > 0) ? (' \u2014 ' + r.auto_found + ' carried forward as Found from last audit') : '';
+            toast('Audit started \u2014 ' + r.total_book + ' tags to verify' + autoMsg, 'info', 3000);
+        }).catch(function() {
+            showAuditScreen(); updateKPIs(); renderList(); focusScan();
+        });
     }).catch(function(e) {
         if (btn) { btn.disabled = false; btn.innerText = 'Start Tag Audit'; }
         showInfo('Error', String(e), 'danger');
@@ -736,6 +763,34 @@ function showAuditScreen() {
 
 // ── SCAN — FIX: proper state sync after every scan ────────────────
 function onScanKey(e) { if (e.key === 'Enter') { e.preventDefault(); processScan(); } }
+
+// Auto-submit as soon as a full tag code is typed/scanned —
+// no Enter key needed. Tag IDs are exactly 10 digits (see
+// generate_unique_tag_id in db_manager.py). Most barcode
+// scanners type fast with no Enter at all, so this catches
+// that case while onkeydown above still handles real Enter presses.
+var SCAN_AUTO_TIMER = null;
+function onScanInput(el) {
+    if (PAUSED) return;
+    var val = (el.value || '').trim();
+    if (SCAN_AUTO_TIMER) { clearTimeout(SCAN_AUTO_TIMER); SCAN_AUTO_TIMER = null; }
+
+    // Standard tag IDs are 10 digits -- auto-submit immediately on reaching that length
+    if (/^[0-9]{10}$/.test(val)) {
+        processScan();
+        return;
+    }
+
+    // Fallback for any other code format/length: if no further
+    // keystrokes arrive within 150ms (scanner finished, no Enter sent),
+    // submit automatically.
+    if (val.length >= 4) {
+        SCAN_AUTO_TIMER = setTimeout(function() {
+            var cur = (document.getElementById('scan-inp') || {}).value || '';
+            if (cur.trim() === val) { processScan(); }
+        }, 150);
+    }
+}
 
 function processScan() {
     if (PAUSED) return;

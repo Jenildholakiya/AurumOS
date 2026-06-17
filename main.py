@@ -38,6 +38,7 @@ import random
 from datetime import datetime
 from pathlib import Path
 from database.db_manager import DBManager
+from sync_engine import SyncEngine
 try:
     from database.bastion_ai import BastionAI
     _BASTION_AVAILABLE = True
@@ -230,7 +231,7 @@ class ScaleReader:
     - Pushes weight to ALL open windows via __onScale
     """
     WEIGHT_PATTERNS = [
-        _re.compile(r'[+-]?\s*(\d+\.\d+)\s+G\s+S'),
+        _re.compile(r'[+-]?\s*(\d+\.\d+)\s+G\s+[SU]'),
         _re.compile(r'ST[,\s]+GS[,\s]+[+-]?\s*(\d+\.\d+)'),
         _re.compile(r'GS[,\s]+[+-]?\s*(\d+\.\d+)'),
         _re.compile(r'[+-]?\s*(\d+\.\d+)\s*g', _re.I),
@@ -327,7 +328,7 @@ class ScaleReader:
                 if raw:
                     txt = raw.decode('ascii', errors='replace')
                     has_digit = any(ch.isdigit() for ch in txt)
-                    has_garbage = txt.count('�') > len(txt) * 0.3
+                    has_garbage = txt.count(' ') > len(txt) * 0.3
                     LOG(f"[SCALE] Baud {try_baud}: {raw[:16]} ascii={has_digit} garbage={has_garbage}")
                     if has_digit and not has_garbage:
                         detected_baud = try_baud
@@ -612,6 +613,31 @@ class AurumAPI:
         except Exception as _be:
             LOG(f"[BASTION] EXE check skipped: {_be}")
 
+        # ── LAN SYNC: auto-detect peer PC and start background sync ───────
+        # Two-PC shop network: 192.168.1.1 and 192.168.1.2. Whichever one
+        # THIS PC is NOT, that's the peer to sync with. Fully automatic,
+        # no manual sync button -- silently retries if the peer is off.
+        try:
+            self.sync_engine = None
+            _shop_lan_ips = ['192.168.1.1', '192.168.1.2']
+            _my_ip = self._detect_my_lan_ip()
+            _peer_ip = None
+            if _my_ip in _shop_lan_ips:
+                _peer_ip = [ip for ip in _shop_lan_ips if ip != _my_ip][0]
+            elif _my_ip:
+                # Fallback: if this PC's IP isn't exactly .1 or .2 (e.g. DHCP
+                # gave something else), still try the other configured IP
+                # so sync keeps working even if one side's IP drifted.
+                _peer_ip = _shop_lan_ips[0] if _my_ip != _shop_lan_ips[0] else _shop_lan_ips[1]
+            if _peer_ip:
+                self.sync_engine = SyncEngine(self.db, _peer_ip)
+                self.sync_engine.start()
+                LOG(f"[SYNC] Started. This PC={_my_ip or '?'} Peer={_peer_ip}")
+            else:
+                LOG("[SYNC] Could not detect LAN IP -- sync engine not started")
+        except Exception as _syne:
+            LOG(f"[SYNC] Failed to start sync engine: {_syne}")
+
         # Layer 10: Generate session token
         try:
             self.db._generate_session_token()
@@ -658,6 +684,26 @@ class AurumAPI:
                 ERR(f"[BACKUP] Failed to hide folder: {result.stderr}")
         except Exception as e:
             ERR(f"[BACKUP] Dir setup failed: {e}")
+
+    def _detect_my_lan_ip(self):
+        """
+        Returns this PC's local LAN IP (e.g. '192.168.1.1') by opening a
+        throwaway UDP socket toward the shop router -- doesn't actually
+        send any data, just asks the OS which local interface/IP it
+        WOULD use. Works without internet access. Returns '' on failure.
+        """
+        import socket as _sock
+        try:
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+            try:
+                s.connect(('192.168.1.1', 1))
+                ip = s.getsockname()[0]
+            finally:
+                s.close()
+            return ip
+        except Exception as e:
+            LOG(f"[SYNC] Could not detect LAN IP: {e}")
+            return ''
 
     def set_window(self, window):
         self._window = window
@@ -1571,6 +1617,25 @@ class AurumAPI:
     def get_stock_ledger_by_date(self, d):           return self.db.fetch_stock_ledger_by_date(d)
     def get_ledger_dates(self):                      return self.db.get_available_ledger_dates()
     def get_product_by_tag(self, tag_id):            return self.db.get_product_by_tag(tag_id)
+    def get_uchak_price_by_code(self, it_code):       return self.db.get_uchak_price_by_code(it_code)
+
+    def get_sync_status(self):
+        """Returns whether this PC last reached its peer successfully, for an optional status indicator."""
+        try:
+            eng = getattr(self, 'sync_engine', None)
+            if not eng:
+                return {'enabled': False}
+            st = eng.status()
+            st['enabled'] = True
+            return st
+        except Exception as e:
+            return {'enabled': False, 'error': str(e)}
+
+    def get_sync_conflicts(self, include_resolved=False):
+        return self.db.get_sync_conflicts(include_resolved)
+
+    def resolve_sync_conflict(self, conflict_id):
+        return self.db.resolve_sync_conflict(conflict_id)
     def get_inventory_stats(self):                   return self.db.get_inventory_stats()
     def get_analytics_payload(self):                 return self.db.get_analytics_payload()
     def get_velocity_products(self):                 return self.db.get_velocity_products()
@@ -3132,6 +3197,12 @@ def run_aur_os():
             api.bastion.notify_session_active(False)
             api.bastion.stop()
             LOG("[BASTION_AI] Stopped")
+        except Exception:
+            pass
+        try:
+            if getattr(api, 'sync_engine', None):
+                api.sync_engine.stop()
+                LOG("[SYNC] Sync engine stopped on close")
         except Exception:
             pass
         try:

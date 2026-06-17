@@ -192,6 +192,7 @@ tr:hover td{background:var(--gb);}
     <div class="stats">
       <div class="stat"><div class="stat-n" id="h-grwt">0.000</div><div class="stat-l">Gross Wt</div></div>
       <div class="stat"><div class="stat-n" id="h-ntwt">0.000</div><div class="stat-l">Net Wt</div></div>
+      <div class="stat"><div class="stat-n" id="h-uchakval">&#8377;0</div><div class="stat-l">Uchak Value</div></div>
       <div class="stat"><div class="stat-n" id="h-count">0</div><div class="stat-l">Entries</div></div>
     </div>
     <a href="inventory.html" class="back-btn">&#8592; Inventory</a>
@@ -207,7 +208,7 @@ tr:hover td{background:var(--gb);}
     </div>
     <div class="mode-toggle">
       <button class="mode-btn wt active" id="btn-wt" onclick="setMode('weight')">Weight / Katti</button>
-      <button class="mode-btn uc" id="btn-uc" onclick="setMode('uchak')">Uchak Weight</button>
+      <button class="mode-btn uc" id="btn-uc" onclick="setMode('uchak')">Uchak</button>
     </div>
   </div>
 
@@ -234,15 +235,15 @@ tr:hover td{background:var(--gb);}
   <div class="fc" id="fc-uc" style="display:none;">
     <div class="fc-head">
       <div class="fc-bar uc"></div>
-      <span class="fc-title">Uchak Opening Weight</span>
-      <span class="fc-hint">Weight-based uchak opening stock</span>
+      <span class="fc-title">Uchak Opening Stock</span>
+      <span class="fc-hint">Price-based uchak opening stock &mdash; no weight or touch</span>
     </div>
     <div class="fc-body">
       <div class="row-uc">
-        <div class="fg"><label>IT Code <span>*</span></label><input type="text" id="u-itcode" class="uc-inp" placeholder="UCH-76" maxlength="20" autocomplete="off"></div>
-        <div class="fg"><label>Gr. Wt (g) <span>*</span></label><input type="number" id="u-grwt" class="uc-inp" step="0.001" placeholder="0.000" oninput="calcUchakNt()"></div>
-        <div class="fg"><label>Ls. Wt (g)</label><input type="number" id="u-lswt" class="uc-inp" step="0.001" placeholder="0.000" oninput="calcUchakNt()"></div>
-        <div class="fg"><label>Touch % <span>*</span></label><input type="number" id="u-touch" class="uc-inp" step="0.5" placeholder="76"></div>
+        <div class="fg"><label>IT Code <span>*</span></label><input type="text" id="u-itcode" class="uc-inp" placeholder="UCH-22" maxlength="20" autocomplete="off"></div>
+        <div class="fg"><label>Item Name <span>*</span></label><input type="text" id="u-itname" class="uc-inp" placeholder="Uchak Ring" autocomplete="off"></div>
+        <div class="fg"><label>Pcs <span>*</span></label><input type="number" id="u-pcs" class="uc-inp" step="1" min="1" placeholder="1"></div>
+        <div class="fg"><label>Price (&#8377;) <span>*</span></label><input type="number" id="u-price" class="uc-inp" step="0.01" placeholder="0.00"></div>
         <button class="btn-save uc-btn" id="btn-add-uc" onclick="addUchak()">&#43; Save Uchak</button>
       </div>
     </div>
@@ -255,15 +256,16 @@ tr:hover td{background:var(--gb);}
       <div class="tbl-count">Showing <strong id="fc-count">0</strong> of <strong id="tc-count">0</strong></div>
     </div>
     <table>
-      <thead>
+      <thead id="tbl-thead">
         <tr>
           <th>IT Code</th>
           <th>Item Name</th>
-          <th>Type</th>
-          <th>Gr. Wt</th>
-          <th>Ls. Wt</th>
-          <th>Nt. Wt</th>
-          <th>Touch %</th>
+          <th id="th-c4">Gr. Wt</th>
+          <th id="th-c5">Ls. Wt</th>
+          <th id="th-c6">Nt. Wt</th>
+          <th id="th-c7">Touch %</th>
+          <th id="th-c8">Price</th>
+          <th id="th-c9">Total</th>
           <th>Date</th>
           <th>Actions</th>
         </tr>
@@ -286,11 +288,19 @@ tr:hover td{background:var(--gb);}
     <div class="mb">
       <div class="m-row">
         <div class="mfg"><label>IT Code</label><input type="text" id="e-itcode"></div>
+        <div class="mfg"><label>Item Name</label><input type="text" id="e-itname"></div>
+      </div>
+      <!-- Weight fields -->
+      <div class="m-row" id="edit-wt-fields">
         <div class="mfg"><label>Gr. Wt (g)</label><input type="number" id="e-grwt" step="0.001" oninput="calcEditNt()"></div>
         <div class="mfg"><label>Ls. Wt (g)</label><input type="number" id="e-lswt" step="0.001" oninput="calcEditNt()"></div>
         <div class="mfg"><label>Nt. Wt (g)</label><input type="number" id="e-ntwt" readonly></div>
         <div class="mfg"><label>Touch %</label><input type="number" id="e-touch" step="0.5"></div>
-        <div class="mfg"><label>Item Name</label><input type="text" id="e-itname"></div>
+      </div>
+      <!-- Uchak fields -->
+      <div class="m-row" id="edit-uc-fields" style="display:none;">
+        <div class="mfg"><label>Pcs</label><input type="number" id="e-pcs" step="1" min="1"></div>
+        <div class="mfg"><label>Price (&#8377;)</label><input type="number" id="e-price" step="0.01"></div>
       </div>
       <div class="m-btns">
         <button class="btn-mc" onclick="closeEdit()">Cancel</button>
@@ -339,6 +349,11 @@ function setMode(m) {
     document.getElementById('btn-uc').className = 'mode-btn uc' + (!isWt ? ' active' : '');
     document.getElementById('fc-wt').style.display = isWt ? '' : 'none';
     document.getElementById('fc-uc').style.display = isWt ? 'none' : '';
+
+    // Refresh table so it only shows rows matching the active tab
+    var srchEl = document.getElementById('srch-inp');
+    filterTable(srchEl ? srchEl.value : '');
+
     setTimeout(function() {
         var f = document.getElementById(isWt ? 'f-itcode' : 'u-itcode');
         if (f) f.focus();
@@ -348,7 +363,7 @@ function setMode(m) {
 // ── ENTER KEY NAVIGATION (ES5, no arrow functions) ────────────────
 function setupEnterNav() {
     var wtSeq = ['f-itcode', 'f-grwt', 'f-lswt', 'f-touch'];
-    var ucSeq = ['u-itcode', 'u-grwt', 'u-lswt', 'u-touch'];
+    var ucSeq = ['u-itcode', 'u-itname', 'u-pcs', 'u-price'];
     var allIds = wtSeq.concat(ucSeq);
 
     for (var i = 0; i < allIds.length; i++) {
@@ -363,7 +378,7 @@ function setupEnterNav() {
                     var nextEl = document.getElementById(seq[idx + 1]);
                     if (nextEl) nextEl.focus();
                 } else if (idx === seq.length - 1) {
-                    // Last field — trigger save
+                    // Last field \u2014 trigger save
                     if (MODE === 'weight') addWeight();
                     else addUchak();
                 }
@@ -371,8 +386,8 @@ function setupEnterNav() {
         })(allIds[i], allIds[i].charAt(0) === 'f' ? wtSeq : ucSeq);
     }
 
-    // Edit modal enter to save
-    var editIds = ['e-itcode','e-grwt','e-lswt','e-touch','e-itname'];
+    // Edit modal enter to save (covers both weight and uchak edit fields)
+    var editIds = ['e-itcode','e-itname','e-grwt','e-lswt','e-touch','e-pcs','e-price'];
     for (var j = 0; j < editIds.length; j++) {
         (function(id) {
             var el = document.getElementById(id);
@@ -384,18 +399,13 @@ function setupEnterNav() {
     }
 }
 
+
 // ── CALC ─────────────────────────────────────────────────────────
 function calcNt() {
     var gr = parseFloat(document.getElementById('f-grwt').value) || 0;
     var ls = parseFloat(document.getElementById('f-lswt').value) || 0;
     var nt = Math.max(0, parseFloat((gr - ls).toFixed(3)));
     document.getElementById('f-ntwt').value = nt > 0 ? nt : '';
-}
-
-function calcUchakNt() {
-    var gr = parseFloat(document.getElementById('u-grwt').value) || 0;
-    var ls = parseFloat(document.getElementById('u-lswt').value) || 0;
-    return Math.max(0, parseFloat((gr - ls).toFixed(3)));
 }
 
 function calcEditNt() {
@@ -445,29 +455,31 @@ function addWeight() {
 // ── ADD UCHAK ─────────────────────────────────────────────────────
 function addUchak() {
     var code  = (document.getElementById('u-itcode').value || '').trim().toUpperCase();
-    var gr    = parseFloat(document.getElementById('u-grwt').value) || 0;
-    var ls    = parseFloat(document.getElementById('u-lswt').value) || 0;
-    var nt    = calcUchakNt();
-    var touch = parseFloat(document.getElementById('u-touch').value) || 0;
+    var name  = (document.getElementById('u-itname').value || '').trim();
+    var pcs   = parseInt(document.getElementById('u-pcs').value) || 0;
+    var price = parseFloat(document.getElementById('u-price').value) || 0;
 
     if (!code)    { errInp('u-itcode'); toast('IT Code is required', 'err'); return; }
-    if (gr <= 0)  { errInp('u-grwt');  toast('Gross weight must be > 0', 'err'); return; }
-    if (touch<=0) { errInp('u-touch'); toast('Touch % is required', 'err'); return; }
+    if (!name)    { errInp('u-itname'); toast('Item Name is required', 'err'); return; }
+    if (pcs <= 0) { errInp('u-pcs');    toast('Pcs must be > 0', 'err'); return; }
+    if (price<=0) { errInp('u-price');  toast('Price is required', 'err'); return; }
 
     setBtnLoading('btn-add-uc', true);
+    // Uchak opening: price-based, no weight, no touch -- design field stores price
     var tag = 'OPENING-UCH-' + code + '-' + Date.now();
     var payload = {
-        it_code: code, it_name: 'Uchak Opening ' + code,
+        it_code: code, it_name: name,
         tag_id:  tag,
-        gr_wt: gr, ls_wt: ls, nt_wt: nt,
-        touch: touch, wastage: 0, pcs: 0
+        gr_wt: 0, ls_wt: 0, nt_wt: 0,
+        touch: 0, wastage: 0, pcs: pcs,
+        design: String(price)
     };
     window.pywebview.api.add_stock_entry(payload).then(function(r) {
         setBtnLoading('btn-add-uc', false);
         var ok = r === true || r === 'true' || (r && r.status === 'success');
         if (ok) {
-            toast('Uchak ' + code + ' \u2014 ' + gr.toFixed(3) + 'g saved', 'ok');
-            clearFields(['u-itcode','u-grwt','u-lswt','u-touch']);
+            toast('Uchak ' + code + ' \u2014 ' + pcs + ' pcs @ \u20b9' + price.toFixed(2) + ' saved', 'ok');
+            clearFields(['u-itcode','u-itname','u-pcs','u-price']);
             document.getElementById('u-itcode').focus();
             loadData();
         } else {
@@ -491,98 +503,171 @@ function loadData() {
 }
 
 function updateStats() {
-    var tgr = 0; var tnt = 0;
+    var tgr = 0; var tnt = 0; var tuchak = 0;
     for (var i = 0; i < stocks.length; i++) {
-        tgr += parseFloat(stocks[i].gr_wt || 0);
-        tnt += parseFloat(stocks[i].nt_wt || 0);
+        var r = stocks[i];
+        var isUchak = (r.tag_id || '').indexOf('OPENING-UCH-') >= 0;
+        if (isUchak) {
+            tuchak += (parseInt(r.pcs || 0) * parseFloat(r.design || 0));
+        } else {
+            tgr += parseFloat(r.gr_wt || 0);
+            tnt += parseFloat(r.nt_wt || 0);
+        }
     }
-    document.getElementById('h-grwt').innerText  = tgr.toFixed(3);
-    document.getElementById('h-ntwt').innerText  = tnt.toFixed(3);
-    document.getElementById('h-count').innerText = stocks.length;
+    document.getElementById('h-grwt').innerText    = tgr.toFixed(3);
+    document.getElementById('h-ntwt').innerText    = tnt.toFixed(3);
+    document.getElementById('h-uchakval').innerText = '\u20b9' + tuchak.toFixed(2);
+    document.getElementById('h-count').innerText   = stocks.length;
 }
 
 function filterTable(q) {
     q = (q || '').toLowerCase().trim();
     filtered = [];
+    var modeTotal = 0;
     for (var i = 0; i < stocks.length; i++) {
         var r = stocks[i];
+        var isUchak = (r.tag_id || '').indexOf('OPENING-UCH-') >= 0;
+
+        // PERMANENT: Weight tab shows only weight rows, Uchak tab shows only Uchak rows
+        if (MODE === 'uchak' && !isUchak) continue;
+        if (MODE === 'weight' && isUchak) continue;
+
+        modeTotal++;
+
         if (!q || (r.it_code||'').toLowerCase().indexOf(q) >= 0 || (r.it_name||'').toLowerCase().indexOf(q) >= 0) {
             filtered.push(r);
         }
     }
     document.getElementById('fc-count').innerText = filtered.length;
-    document.getElementById('tc-count').innerText = stocks.length;
+    document.getElementById('tc-count').innerText = modeTotal;
     renderTable();
 }
 
 // ── RENDER ───────────────────────────────────────────────────────
 function renderTable() {
     var tb = document.getElementById('tbl-body');
+    var isUchakMode = (MODE === 'uchak');
+
     if (!filtered.length) {
-        tb.innerHTML = '<tr><td colspan="9" class="tbl-empty">No opening stock entries found</td></tr>';
+        tb.innerHTML = '<tr><td colspan="10" class="tbl-empty">No ' + (isUchakMode ? 'Uchak' : 'weight') + ' opening stock entries found</td></tr>';
         return;
     }
     var html = '';
+    var grandTotal = 0;
+
     for (var i = 0; i < filtered.length; i++) {
-        var r   = filtered[i];
-        var gr  = parseFloat(r.gr_wt || 0);
-        var ls  = parseFloat(r.ls_wt || 0);
-        var nt  = parseFloat(r.nt_wt || 0);
-        var tc  = parseFloat(r.touch || 0);
-        var tag = r.tag_id || '';
+        var r = filtered[i];
 
-        var isUchak = tag.indexOf('OPENING-UCH-') >= 0;
-        var badge   = isUchak
-            ? '<span class="type-badge tb-uc">Uchak</span>'
-            : '<span class="type-badge tb-wt">Weight</span>';
+        if (isUchakMode) {
+            var pcs   = parseInt(r.pcs || 0);
+            var price = parseFloat(r.price !== undefined ? r.price : (r.design || 0));
+            var total = pcs * price;
+            grandTotal += total;
 
-        html += '<tr>'
-            + '<td><span class="tag-pill">' + esc(r.it_code || '') + '</span></td>'
-            + '<td style="font-size:.74rem;">' + esc(r.it_name || '') + '</td>'
-            + '<td>' + badge + '</td>'
-            + '<td><span class="mn mn-gr">' + gr.toFixed(3) + '</span></td>'
-            + '<td><span class="mn" style="color:var(--rd);">' + (ls > 0 ? ls.toFixed(3) : '\u2014') + '</span></td>'
-            + '<td><span class="mn mn-nt">' + nt.toFixed(3) + '</span></td>'
-            + '<td><span class="mn mn-tc">' + tc.toFixed(0) + '%</span></td>'
-            + '<td style="font-size:.68rem;color:var(--mu);">' + (r.entry_date || '\u2014') + '</td>'
-            + '<td><div class="act-wrap">'
-            + '<div class="act-btn" title="Edit" onclick="openEdit(' + r.id + ')">&#9998;</div>'
-            + '<div class="act-btn del" title="Delete" onclick="openDel(' + r.id + ',\'' + esc(r.it_code||'') + '\')">&#128465;</div>'
-            + '</div></td>'
+            html += '<tr>'
+                + '<td><span class="tag-pill">' + esc(r.it_code || '') + '</span></td>'
+                + '<td style="font-size:.74rem;">' + esc(r.it_name || '') + '</td>'
+                + '<td><span class="mn mn-gr">' + pcs + ' pcs</span></td>'
+                + '<td><span class="mn" style="color:var(--mu);">\u2014</span></td>'
+                + '<td><span class="mn" style="color:var(--mu);">\u2014</span></td>'
+                + '<td><span class="mn" style="color:var(--mu);">\u2014</span></td>'
+                + '<td><span class="mn mn-nt">\u20b9' + price.toFixed(2) + '</span></td>'
+                + '<td><span class="mn mn-nt" style="font-weight:700;">\u20b9' + total.toFixed(2) + '</span></td>'
+                + '<td style="font-size:.68rem;color:var(--mu);">' + (r.entry_date || '\u2014') + '</td>'
+                + '<td><div class="act-wrap">'
+                + '<div class="act-btn" title="Edit" onclick="openEdit(' + r.id + ')">&#9998;</div>'
+                + '<div class="act-btn del" title="Delete" onclick="openDel(' + r.id + ',\'' + esc(r.it_code||'') + '\')">&#128465;</div>'
+                + '</div></td>'
+                + '</tr>';
+        } else {
+            var gr = parseFloat(r.gr_wt || 0);
+            var ls = parseFloat(r.ls_wt || 0);
+            var nt = parseFloat(r.nt_wt || 0);
+            var tc = parseFloat(r.touch || 0);
+
+            html += '<tr>'
+                + '<td><span class="tag-pill">' + esc(r.it_code || '') + '</span></td>'
+                + '<td style="font-size:.74rem;">' + esc(r.it_name || '') + '</td>'
+                + '<td><span class="mn mn-gr">' + gr.toFixed(3) + '</span></td>'
+                + '<td><span class="mn" style="color:var(--rd);">' + (ls > 0 ? ls.toFixed(3) : '\u2014') + '</span></td>'
+                + '<td><span class="mn mn-nt">' + nt.toFixed(3) + '</span></td>'
+                + '<td><span class="mn mn-tc">' + tc.toFixed(0) + '%</span></td>'
+                + '<td><span class="mn" style="color:var(--mu);">\u2014</span></td>'
+                + '<td><span class="mn" style="color:var(--mu);">\u2014</span></td>'
+                + '<td style="font-size:.68rem;color:var(--mu);">' + (r.entry_date || '\u2014') + '</td>'
+                + '<td><div class="act-wrap">'
+                + '<div class="act-btn" title="Edit" onclick="openEdit(' + r.id + ')">&#9998;</div>'
+                + '<div class="act-btn del" title="Delete" onclick="openDel(' + r.id + ',\'' + esc(r.it_code||'') + '\')">&#128465;</div>'
+                + '</div></td>'
+                + '</tr>';
+        }
+    }
+
+    // Grand total row -- only meaningful in Uchak mode
+    if (isUchakMode && grandTotal > 0) {
+        html += '<tr style="background:var(--c2);font-weight:700;">'
+            + '<td colspan="7" style="text-align:right;font-size:.74rem;color:var(--ink2);">Uchak Grand Total</td>'
+            + '<td><span class="mn mn-nt" style="font-weight:800;">\u20b9' + grandTotal.toFixed(2) + '</span></td>'
+            + '<td></td><td></td>'
             + '</tr>';
     }
+
     tb.innerHTML = html;
 }
 
+
 // ── EDIT ─────────────────────────────────────────────────────────
+var EDIT_IS_UCHAK = false;
 function openEdit(id) {
     var r = null;
     for (var i = 0; i < stocks.length; i++) { if (stocks[i].id === id) { r = stocks[i]; break; } }
     if (!r) return;
     editId = id;
+    EDIT_IS_UCHAK = (r.tag_id || '').indexOf('OPENING-UCH-') >= 0;
+
     document.getElementById('edit-title').innerText = 'Edit Entry — ' + (r.it_code || '');
     document.getElementById('e-itcode').value  = r.it_code || '';
     document.getElementById('e-itname').value  = r.it_name || '';
-    document.getElementById('e-grwt').value    = parseFloat(r.gr_wt || 0).toFixed(3);
-    document.getElementById('e-lswt').value    = parseFloat(r.ls_wt || 0).toFixed(3);
-    document.getElementById('e-ntwt').value    = parseFloat(r.nt_wt || 0).toFixed(3);
-    document.getElementById('e-touch').value   = parseFloat(r.touch || 0).toFixed(1);
+
+    document.getElementById('edit-wt-fields').style.display = EDIT_IS_UCHAK ? 'none' : '';
+    document.getElementById('edit-uc-fields').style.display = EDIT_IS_UCHAK ? '' : 'none';
+
+    if (EDIT_IS_UCHAK) {
+        document.getElementById('e-pcs').value   = parseInt(r.pcs || 0);
+        document.getElementById('e-price').value = parseFloat(r.price !== undefined ? r.price : (r.design || 0)).toFixed(2);
+    } else {
+        document.getElementById('e-grwt').value  = parseFloat(r.gr_wt || 0).toFixed(3);
+        document.getElementById('e-lswt').value  = parseFloat(r.ls_wt || 0).toFixed(3);
+        document.getElementById('e-ntwt').value  = parseFloat(r.nt_wt || 0).toFixed(3);
+        document.getElementById('e-touch').value = parseFloat(r.touch || 0).toFixed(1);
+    }
     document.getElementById('edit-modal').className = 'overlay open';
 }
+
 function closeEdit() {
     document.getElementById('edit-modal').className = 'overlay';
     editId = null;
 }
 function saveEdit() {
     if (!editId) return;
-    var data = {
-        it_code: (document.getElementById('e-itcode').value || '').trim().toUpperCase(),
-        it_name: (document.getElementById('e-itname').value || '').trim(),
-        gr_wt:   parseFloat(document.getElementById('e-grwt').value) || 0,
-        ls_wt:   parseFloat(document.getElementById('e-lswt').value) || 0,
-        nt_wt:   parseFloat(document.getElementById('e-ntwt').value) || 0,
-        touch:   parseFloat(document.getElementById('e-touch').value) || 0,
-    };
+    var data;
+    if (EDIT_IS_UCHAK) {
+        data = {
+            it_code: (document.getElementById('e-itcode').value || '').trim().toUpperCase(),
+            it_name: (document.getElementById('e-itname').value || '').trim(),
+            pcs:     parseInt(document.getElementById('e-pcs').value) || 0,
+            design:  String(parseFloat(document.getElementById('e-price').value) || 0),
+        };
+    } else {
+        data = {
+            it_code: (document.getElementById('e-itcode').value || '').trim().toUpperCase(),
+            it_name: (document.getElementById('e-itname').value || '').trim(),
+            gr_wt:   parseFloat(document.getElementById('e-grwt').value) || 0,
+            ls_wt:   parseFloat(document.getElementById('e-lswt').value) || 0,
+            nt_wt:   parseFloat(document.getElementById('e-ntwt').value) || 0,
+            touch:   parseFloat(document.getElementById('e-touch').value) || 0,
+        };
+    }
     window.pywebview.api.update_stock_entry(editId, data).then(function(r) {
         var ok = r === true || r === 'true' || (r && r.status === 'success');
         if (ok) { toast('Entry updated', 'ok'); closeEdit(); loadData(); }
