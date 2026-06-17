@@ -429,7 +429,6 @@ input:checked+.slider:before{transform:translateX(20px);}
           <!-- Discount — Two tabs: Touch | Fine -->
           <div style="background:var(--cream2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;">
 
-            <!-- Tab headers -->
             <div style="display:flex;border-bottom:1px solid var(--border);">
               <button id="disc-tab-touch" onclick="setDiscountType('touch')"
                 style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:all 0.13s;letter-spacing:0.5px;">
@@ -439,9 +438,12 @@ input:checked+.slider:before{transform:translateX(20px);}
                 style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
                 Fine (g)
               </button>
+              <button id="disc-tab-amount" onclick="setDiscountType('amount')"
+                style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
+                Amount
+              </button>
             </div>
 
-            <!-- Tab 1: Touch discount -->
             <div id="disc-touch-block" style="padding:10px 12px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin:0;">
@@ -458,7 +460,6 @@ input:checked+.slider:before{transform:translateX(20px);}
               </div>
             </div>
 
-            <!-- Tab 2: Fine discount -->
             <div id="disc-fine-block" style="display:none;padding:10px 12px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin:0;">
@@ -472,6 +473,15 @@ input:checked+.slider:before{transform:translateX(20px);}
                   <input type="number" id="disc-net-fine" readonly placeholder="0.000"
                     style="background:rgba(21,128,61,0.05);border-color:rgba(21,128,61,0.2);color:var(--success);font-family:var(--mono);font-weight:700;">
                 </div>
+              </div>
+            </div>
+
+            <div id="disc-amount-block" style="display:none;padding:10px 12px;">
+              <div class="form-group" style="margin:0;">
+                <label>Discount Amount (Rs)</label>
+                <input type="number" id="disc-amount-val" min="0"
+                  placeholder="e.g. 500" oninput="calcFinalSettlement()"
+                  style="font-family:var(--mono);">
               </div>
             </div>
 
