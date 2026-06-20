@@ -2621,9 +2621,9 @@ class DBManager:
                 return False
 
             if stored_fp != fp:
-                _dblog("[SETUP] app_config fingerprint mismatch -> DB copied to new PC -> WIPING")
-                self._wipe_business_data()
-                return False
+                _dblog("[SETUP] Hardware fingerprint changed — updating to new fingerprint")
+                self.mark_setup_done()  # <--- Simply update the fingerprint instead of wiping
+                return True
 
             # Second layer: check mac_lock table inside DB
             try:
