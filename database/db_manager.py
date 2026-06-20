@@ -168,6 +168,27 @@ class DBManager:
                 if 'owner_name' not in bp_cols:
                     cursor.execute("ALTER TABLE business_profile ADD COLUMN owner_name TEXT DEFAULT NULL")
 
+                # ── is_owner: replaces the fragile "row with id==1 is the
+                # owner" convention. Once LAN sync merges staff rows from
+                # another PC, local autoincrement ids are no longer a
+                # reliable way to identify the owner -- a synced row could
+                # land at id=1 on a fresh DB. is_owner is an explicit,
+                # permanent flag that travels WITH the row during sync
+                # (it's a real column, just like username/password), so
+                # the original owner stays the owner on every PC forever,
+                # regardless of what local id their row ends up with.
+                ac_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(admin_creds)").fetchall()]
+                if 'is_owner' not in ac_cols:
+                    cursor.execute("ALTER TABLE admin_creds ADD COLUMN is_owner INTEGER DEFAULT 0")
+                    # One-time migration for existing installs: whoever is
+                    # currently id=1 (the old implicit-owner convention)
+                    # gets explicitly flagged now, so nothing changes for
+                    # anyone already using the app.
+                    cursor.execute(
+                        "UPDATE admin_creds SET is_owner=1 WHERE id = (SELECT MIN(id) FROM admin_creds)"
+                    )
+                    _dblog("[MIGRATION] admin_creds.is_owner added, existing id=1 row flagged as owner")
+
                 kv_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(katti_vouchers)").fetchall()]
                 for col, defn in [('total_packets', 'INTEGER DEFAULT 0'), ('total_pcs', 'INTEGER DEFAULT 0'),
                                   ('touch', 'REAL DEFAULT 0.00'), ('box_id', 'TEXT DEFAULT NULL')]:
@@ -218,6 +239,69 @@ class DBManager:
                     )
                 """)
 
+                # ── APP CONFIG ─────────────────────────────────────────────
+                # PERMANENT FIX: this key/value table was referenced
+                # throughout the file (setup status, Bastion AI state,
+                # lock/unlock keys, EXE hash, financial year, etc.) but was
+                # NEVER actually created anywhere -- every read/write just
+                # silently assumed it already existed. Worked on existing
+                # installs only because the table happened to get created
+                # at some earlier point in this app's history; a genuinely
+                # fresh install would hit "no such table: app_config" on
+                # the very first config read/write. Creating it explicitly
+                # here, once and for all.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS app_config (
+                        key   TEXT PRIMARY KEY,
+                        value TEXT DEFAULT ''
+                    )
+                """)
+
+                # ── BASTION AI TABLES ───────────────────────────────────────
+                # Referenced throughout bastion_ai.py but never created --
+                # every record_event/queue_alert/learn call was silently
+                # failing on "no such table". Fixing permanently here.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_events (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts           TEXT,
+                        event_type   TEXT,
+                        severity     TEXT,
+                        score        INTEGER DEFAULT 0,
+                        detail       TEXT DEFAULT '',
+                        actor        TEXT DEFAULT 'system',
+                        action_taken TEXT DEFAULT '',
+                        auto_healed  INTEGER DEFAULT 0
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_alerts (
+                        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                        subject   TEXT,
+                        body      TEXT,
+                        html_body TEXT DEFAULT '',
+                        sent      INTEGER DEFAULT 0,
+                        sent_at   TEXT DEFAULT '',
+                        created_at TEXT DEFAULT (datetime('now'))
+                    )
+                """)
+                # Migration: older DBs may already have bastion_alerts
+                # without html_body (CREATE TABLE IF NOT EXISTS skips
+                # existing tables, so the column never got added).
+                try:
+                    ba_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(bastion_alerts)").fetchall()]
+                    if 'html_body' not in ba_cols:
+                        cursor.execute("ALTER TABLE bastion_alerts ADD COLUMN html_body TEXT DEFAULT ''")
+                except Exception as _bae:
+                    _dblog(f"[MIGRATION] bastion_alerts.html_body: {_bae}")
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_learning (
+                        key        TEXT PRIMARY KEY,
+                        value      TEXT,
+                        updated_at TEXT
+                    )
+                """)
+
                 # ── LAN SYNC SCHEMA ──────────────────────────────────────────
                 # Permanent per-PC identity for sync (separate from the
                 # hardware security fingerprint -- this one is purely for
@@ -262,7 +346,7 @@ class DBManager:
                 SYNC_TABLES = [
                     'sales_history', 'stock_inventory', 'katti_vouchers',
                     'katti_voucher_items', 'clients_master', 'credit_ledger',
-                    'uchak_inward_vouchers', 'uchak_inward_items',
+                    'uchak_inward_vouchers', 'uchak_inward_items', 'admin_creds',
                 ]
                 for tbl in SYNC_TABLES:
                     try:
@@ -288,6 +372,31 @@ class DBManager:
     # LAN SYNC -- DEVICE IDENTITY
     # ══════════════════════════════════════════════════════════════
 
+    def is_feature_enabled(self, feature):
+        """Plan-based feature gate. Checks app_config 'plan_features'
+        (comma list, e.g. 'lan_sync,reports'). Empty/missing = disabled
+        by default -- safer than accidentally enabling paid features."""
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute("SELECT value FROM app_config WHERE key='plan_features'").fetchone()
+            enabled = (row['value'] or '').split(',') if row else []
+            return feature.strip() in [f.strip() for f in enabled]
+        except Exception:
+            return False
+
+    def set_plan_features(self, features_csv):
+        """Called by license/setup flow, e.g. set_plan_features('lan_sync,reports')."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('plan_features',?)",
+                    (str(features_csv or ''),)
+                )
+                conn.commit()
+            return True
+        except Exception:
+            return False
+
     def get_or_create_device_id(self, device_name=''):
         """
         Permanent, random ID for THIS PC's database -- generated once,
@@ -312,6 +421,87 @@ class DBManager:
             _dberr(f"[SYNC] get_or_create_device_id: {e}")
             return 'DEV-UNKNOWN'
 
+    def is_feature_enabled(self, feature_name):
+        """
+        Simple plan-based feature gate. Stored in app_config as
+        'feature_<name>' = '1'/'0'. Defaults to DISABLED if not set --
+        so new features (like lan_sync) never silently turn on for
+        existing installs unless explicitly enabled for that plan.
+        """
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT value FROM app_config WHERE key=?",
+                    (f'feature_{feature_name}',)
+                ).fetchone()
+                return bool(row and row['value'] == '1')
+        except Exception as e:
+            _dberr(f"[FEATURE] check {feature_name}: {e}")
+            return False
+
+    def set_feature_enabled(self, feature_name, enabled):
+        """Admin/license tool calls this to turn a plan feature on/off."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                    (f'feature_{feature_name}', '1' if enabled else '0')
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[FEATURE] set {feature_name}: {e}")
+            return False
+
+    def get_or_create_shop_id(self):
+        """
+        Every PC belonging to the SAME shop must share this exact value --
+        it's how sync tells "another PC in my shop" apart from "a totally
+        different shop's PC that happens to be on the same WiFi router".
+        Generated once on the FIRST PC of a shop; every additional PC in
+        that shop must call set_shop_id() with the same value during setup
+        instead of getting a fresh random one (see set_shop_id below).
+        """
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute("SELECT value FROM app_config WHERE key='shop_id'").fetchone()
+                if row and row['value']:
+                    return row['value']
+                import uuid as _uuid
+                new_id = 'SHOP-' + _uuid.uuid4().hex[:8].upper()
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('shop_id',?)", (new_id,)
+                )
+                conn.commit()
+                _dblog(f"[SYNC] New shop_id generated: {new_id}")
+                return new_id
+        except Exception as e:
+            _dberr(f"[SYNC] get_or_create_shop_id: {e}")
+            return 'SHOP-UNKNOWN'
+
+    def set_shop_id(self, shop_id):
+        """
+        Called once, manually, when setting up the 2nd/3rd/Nth PC for a
+        shop that already has a shop_id from its first PC. The owner
+        reads the shop_id off PC #1 (shown in settings) and types it into
+        every additional PC during setup. After this, all PCs broadcast
+        the SAME shop_id and discover each other automatically.
+        """
+        try:
+            sid = str(shop_id or '').strip().upper()
+            if not sid.startswith('SHOP-') or len(sid) < 8:
+                return {'status': 'error', 'message': 'Invalid shop ID format (expected SHOP-XXXXXXXX)'}
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('shop_id',?)", (sid,)
+                )
+                conn.commit()
+            _dblog(f"[SYNC] shop_id manually set: {sid}")
+            return {'status': 'success', 'shop_id': sid}
+        except Exception as e:
+            _dberr(f"[SYNC] set_shop_id: {e}")
+            return {'status': 'error', 'message': str(e)}
+
     # ══════════════════════════════════════════════════════════════
     # LAN SYNC -- ENGINE
     # ══════════════════════════════════════════════════════════════
@@ -319,7 +509,7 @@ class DBManager:
     SYNC_TABLES = [
         'sales_history', 'stock_inventory', 'katti_vouchers',
         'katti_voucher_items', 'clients_master', 'credit_ledger',
-        'uchak_inward_vouchers', 'uchak_inward_items',
+        'uchak_inward_vouchers', 'uchak_inward_items', 'admin_creds',
     ]
 
     def stamp_row_for_sync(self, table_name, row_id, pk_col='id'):
@@ -388,6 +578,39 @@ class DBManager:
             _dberr(f"[SYNC] get_changes_since: {e}")
             return {'status': 'error', 'message': str(e), 'changes': {}}
 
+    def _describe_synced_row(self, table_name, row):
+        """
+        Turns a raw row dict into a short, human-readable description for
+        the sync log -- e.g. "Staff account 'cashier1' added" or
+        "Bill BILL-0042 for Ramesh Kumar, Rs 12,500". Keeps logs readable
+        instead of dumping raw column data.
+        """
+        try:
+            if table_name == 'admin_creds':
+                role = 'OWNER' if int(row.get('is_owner') or 0) == 1 else 'staff'
+                return f"{role} login '{row.get('username', '?')}'"
+            if table_name == 'sales_history':
+                amt = row.get('total_amount') or 0
+                return f"Bill {row.get('vch_id', '?')} for {row.get('customer', '?')}, Rs {amt}"
+            if table_name == 'stock_inventory':
+                return (f"Stock item '{row.get('it_code', '?')}' ({row.get('it_name', '?')}) "
+                        f"tag={row.get('tag_id', '-')} pcs={row.get('pcs', 0)}")
+            if table_name in ('katti_vouchers',):
+                return f"Katti voucher {row.get('vch_id', '?')}, {row.get('total_weight', 0)}g"
+            if table_name == 'katti_voucher_items':
+                return f"Katti item '{row.get('it_name', '?')}' for voucher {row.get('vch_id', '?')}"
+            if table_name == 'clients_master':
+                return f"Client '{row.get('name', '?')}' (phone {row.get('phone', '-')})"
+            if table_name == 'credit_ledger':
+                return f"Ledger entry for '{row.get('client_name', '?')}' ref {row.get('vch_reference', '-')}"
+            if table_name in ('uchak_inward_vouchers',):
+                return f"Uchak inward voucher {row.get('vch_id', '?')}"
+            if table_name == 'uchak_inward_items':
+                return f"Uchak item '{row.get('it_name', '?')}' x{row.get('pcs', 0)}"
+            return str(row)
+        except Exception:
+            return str(row)
+
     def apply_incoming_rows(self, peer_device_id, changes):
         """
         Merge rows that originated on the OTHER device into this DB.
@@ -413,6 +636,81 @@ class DBManager:
                             if existing:
                                 continue
 
+                            # admin_creds has no SQL UNIQUE on username -- check
+                            # for a same-username row created independently on
+                            # a different device (two offline PCs both adding
+                            # the same staff username before ever syncing).
+                            skip_row = False
+                            force_is_owner_zero = False
+                            if tbl == 'admin_creds':
+                                uname = str(row.get('username') or '').strip()
+                                incoming_is_owner = int(row.get('is_owner') or 0) == 1
+                                dupe = conn.execute(
+                                    "SELECT id, password, device_id, is_owner FROM admin_creds "
+                                    "WHERE LOWER(TRIM(username))=LOWER(TRIM(?))", (uname,)
+                                ).fetchone()
+
+                                if incoming_is_owner:
+                                    local_owner = conn.execute(
+                                        "SELECT id, username FROM admin_creds WHERE is_owner=1 LIMIT 1"
+                                    ).fetchone()
+                                    if local_owner is None:
+                                        # No owner here yet -- accept this one as
+                                        # THIS PC's owner too (same person, same
+                                        # shop, logging in from either PC).
+                                        pass
+                                    elif local_owner['username'].strip().lower() == uname.lower():
+                                        # Same owner we already know about
+                                        # (e.g. password was changed on the peer) --
+                                        # let it through as a normal update via
+                                        # INSERT OR IGNORE below; if truly new
+                                        # row, dupe check below still applies.
+                                        pass
+                                    else:
+                                        # A DIFFERENT owner exists locally already.
+                                        # Two independently-created owners is a
+                                        # real conflict -- never silently let one
+                                        # win. Flag it, keep the local owner,
+                                        # import the incoming person as staff
+                                        # instead so at least their login still
+                                        # works going forward.
+                                        desc = (f"Two different owner accounts were created independently: "
+                                                f"'{local_owner['username']}' (this PC) and '{uname}' (other PC). "
+                                                f"Kept '{local_owner['username']}' as owner here; "
+                                                f"'{uname}' was added as a staff login instead. Review and decide "
+                                                f"which one should be the real owner.")
+                                        already = conn.execute(
+                                            "SELECT id FROM sync_conflicts WHERE conflict_type='owner_clash' "
+                                            "AND description=? AND resolved=0", (desc,)
+                                        ).fetchone()
+                                        if not already:
+                                            conn.execute(
+                                                "INSERT INTO sync_conflicts (conflict_type, description, ref_a, ref_b) "
+                                                "VALUES ('owner_clash', ?, ?, ?)",
+                                                (desc, local_owner['username'], uname)
+                                            )
+                                        force_is_owner_zero = True
+
+                                if dupe and not incoming_is_owner:
+                                    if dupe['password'] != row.get('password'):
+                                        desc = (f"Staff username '{uname}' was created independently on "
+                                                f"two PCs with different passwords. Local copy kept; "
+                                                f"incoming copy from the other PC was skipped.")
+                                        already = conn.execute(
+                                            "SELECT id FROM sync_conflicts WHERE conflict_type='staff_username_clash' "
+                                            "AND description=? AND resolved=0", (desc,)
+                                        ).fetchone()
+                                        if not already:
+                                            conn.execute(
+                                                "INSERT INTO sync_conflicts (conflict_type, description, ref_a, ref_b) "
+                                                "VALUES ('staff_username_clash', ?, ?, ?)",
+                                                (desc, uname, peer_device_id)
+                                            )
+                                    skip_row = True  # never duplicate or overwrite an existing staff username
+
+                            if skip_row:
+                                continue
+
                             cols = [c for c in row.keys() if c != 'id']
                             placeholders = ','.join(['?'] * len(cols))
                             colnames = ','.join(cols)
@@ -420,12 +718,20 @@ class DBManager:
                             # Force device_id to the PEER's id (not overwritten by us)
                             if 'device_id' in cols:
                                 values[cols.index('device_id')] = peer_device_id
+                            if tbl == 'admin_creds' and force_is_owner_zero and 'is_owner' in cols:
+                                values[cols.index('is_owner')] = 0
 
                             conn.execute(
                                 f"INSERT OR IGNORE INTO {tbl} ({colnames}) VALUES ({placeholders})",
                                 values
                             )
                             count += 1
+
+                            # ── DETAILED TRANSFER LOG ──────────────────────
+                            # Plain-English description of exactly what just
+                            # moved from the peer into this DB, per row.
+                            desc_str = self._describe_synced_row(tbl, row)
+                            _dblog(f"[SYNC] RECEIVED from {peer_device_id} -> {tbl}: {desc_str}")
                         except Exception as _re:
                             _dblog(f"[SYNC] apply row skip {tbl}: {_re}")
                     if count:
@@ -442,7 +748,12 @@ class DBManager:
                         (peer_device_id, tbl, max_v)
                     )
                 conn.commit()
-            _dblog(f"[SYNC] Applied from {peer_device_id}: {applied}")
+            if applied:
+                total = sum(applied.values())
+                breakdown = ', '.join(f"{v} {k}" for k, v in applied.items())
+                _dblog(f"[SYNC] MERGE COMPLETE from {peer_device_id}: {total} row(s) total ({breakdown})")
+            else:
+                _dblog(f"[SYNC] Sync with {peer_device_id} complete -- nothing new to merge")
             return {'status': 'success', 'applied': applied}
         except Exception as e:
             _dberr(f"[SYNC] apply_incoming_rows: {e}")
@@ -613,13 +924,13 @@ class DBManager:
             pw_hash = self._hash_pw(password)
             with self._get_connection() as conn:
                 row = conn.execute(
-                    "SELECT id, username FROM admin_creds "
+                    "SELECT id, username, COALESCE(is_owner,0) as is_owner FROM admin_creds "
                     "WHERE LOWER(TRIM(username))=LOWER(TRIM(?)) "
                     "  AND (TRIM(password)=? OR TRIM(password)=?)",
                     (str(username).strip(), pw_hash, str(password).strip())
                 ).fetchone()
                 if row:
-                    return {"authenticated": True, "role": "admin" if row["id"] == 1 else "staff",
+                    return {"authenticated": True, "role": "admin" if row["is_owner"] == 1 else "staff",
                             "username": row["username"]}
                 return {"authenticated": False, "role": "visitor"}
         except Exception as e:
@@ -632,13 +943,13 @@ class DBManager:
             pw_hash = self._hash_pw(password)
             with self._get_connection() as conn:
                 row = conn.execute(
-                    "SELECT id, username FROM admin_creds "
+                    "SELECT id, username, COALESCE(is_owner,0) as is_owner FROM admin_creds "
                     "WHERE TRIM(password)=? OR TRIM(password)=? LIMIT 1",
                     (pw_hash, str(password).strip())
                 ).fetchone()
                 if row:
                     _dblog(f"[DB AUTH] Matched username={row['username']!r}")
-                    return {"authenticated": True, "role": "admin" if row["id"] == 1 else "staff",
+                    return {"authenticated": True, "role": "admin" if row["is_owner"] == 1 else "staff",
                             "username": row["username"]}
                 return {"authenticated": False, "role": "visitor"}
         except Exception as e:
@@ -656,11 +967,27 @@ class DBManager:
                     "SELECT COUNT(*) FROM admin_creds WHERE LOWER(username)=LOWER(?)", (username,)
                 ).fetchone()[0]
                 if exists == 0:
-                    conn.execute("INSERT INTO admin_creds (username,password) VALUES (?,?)", (username, password))
+                    cur = conn.execute("INSERT INTO admin_creds (username,password,is_owner) VALUES (?,?,1)",
+                                       (username, password))
+                    owner_row_id = cur.lastrowid
                 else:
-                    conn.execute("UPDATE admin_creds SET password=? WHERE LOWER(username)=LOWER(?)",
+                    conn.execute("UPDATE admin_creds SET password=?, is_owner=1 WHERE LOWER(username)=LOWER(?)",
                                  (password, username))
+                    owner_row_id = conn.execute(
+                        "SELECT id FROM admin_creds WHERE LOWER(username)=LOWER(?)", (username,)
+                    ).fetchone()[0]
                 conn.commit()
+            # Owner account DOES sync (per explicit decision: owner can log
+            # in on either PC). Stamped like any other syncable row -- the
+            # is_owner=1 flag travels WITH it, but apply_incoming_rows has
+            # a separate, stricter rule for this: an incoming owner row is
+            # only ever accepted as a SECOND login method for the SAME
+            # person if no conflicting owner already exists locally with a
+            # different username -- see apply_incoming_rows for the guard.
+            try:
+                self.stamp_row_for_sync('admin_creds', owner_row_id)
+            except Exception as _ose:
+                _dblog(f"[SYNC] stamp skip (owner admin_creds): {_ose}")
             return True
         except Exception as e:
             print(f"? [SETUP ERROR] {e}");
@@ -670,12 +997,12 @@ class DBManager:
         try:
             with self._get_connection() as conn:
                 rows = conn.execute(
-                    "SELECT id, username FROM admin_creds ORDER BY id ASC"
+                    "SELECT id, username, COALESCE(is_owner,0) as is_owner FROM admin_creds ORDER BY id ASC"
                 ).fetchall()
                 return [{
                     "id": r["id"],
                     "username": r["username"],
-                    "role": "admin" if r["id"] == 1 else "staff"
+                    "role": "admin" if r["is_owner"] == 1 else "staff"
                 } for r in rows]
         except Exception as e:
             _dblog(f"[STAFF] get_all_staff error: {e}")
@@ -697,11 +1024,16 @@ class DBManager:
                 ).fetchone()[0]
                 if exists > 0:
                     return False, f"Username '{u}' is already taken."
-                conn.execute(
+                cur = conn.execute(
                     "INSERT INTO admin_creds (username, password) VALUES (?,?)",
                     (u, hashed)
                 )
                 conn.commit()
+                new_id = cur.lastrowid
+            try:
+                self.stamp_row_for_sync('admin_creds', new_id)
+            except Exception as _ase:
+                _dblog(f"[SYNC] stamp skip (admin_creds): {_ase}")
             _dblog(f"[STAFF] Added staff: {u}")
             return True, f"Staff '{u}' registered successfully."
         except Exception as e:
@@ -797,6 +1129,9 @@ class DBManager:
             return False
 
     def add_stock_entry(self, **kwargs):
+        if self._bastion_block():
+            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            return False
         try:
             import time as _t
             tag_id = str(kwargs.get('tag_id') or '').strip()
@@ -879,6 +1214,9 @@ class DBManager:
         return self.execute_query("UPDATE stock_inventory SET is_tagged=1 WHERE id=?", (item_id,))
 
     def add_client(self, name, phone, metal_limit, cash_limit):
+        if self._bastion_block():
+            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            return False
         ok = self.execute_query(
             "INSERT INTO clients_master (name,phone,metal_limit,cash_limit) VALUES (?,?,?,?)",
             (name, phone, float(metal_limit or 0), float(cash_limit or 0))
@@ -907,6 +1245,9 @@ class DBManager:
             return False
 
     def post_ledger_entry(self, **kwargs):
+        if self._bastion_block():
+            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            return False
         return self.execute_query(
             """INSERT INTO credit_ledger
                    (client_name,vch_reference,description,metal_dr,metal_cr,cash_dr,cash_cr,gold_rate)
@@ -942,97 +1283,93 @@ class DBManager:
             return "0001"
 
     def save_katti_batch(self, vch_id, total_wt, total_packets, note="", items=None, box_id=None):
-        # Layer 10: verify session token before katti write
+        if self._bastion_block():
+            _dberr("[BASTION] Write blocked -- account suspended")
+            return False
         if not self._verify_session_token():
             _dberr("[KATTI] Session token invalid — save BLOCKED")
             return False
+
         items = items or []
+        conn = None
         try:
             safe_vch_id = str(vch_id).strip().zfill(4)
-            with self._get_connection() as conn:
-                conn.execute("PRAGMA busy_timeout = 30000")
-                cursor = conn.cursor()
+            conn = self._get_connection()
+            # Ensure we wait up to 5 seconds if the DB is busy
+            conn.execute("PRAGMA busy_timeout = 5000")
+            cursor = conn.cursor()
 
-                touch_values = [float(i.get('touch', 0)) if isinstance(i, dict) else 0.0 for i in items]
-                valid_touches = [t for t in touch_values if t > 0]
-                avg_touch_val = sum(valid_touches) / len(valid_touches) if valid_touches else 0.0
+            # Start explicit transaction
+            cursor.execute("BEGIN IMMEDIATE")
 
-                resolved_box_id = box_id
-                if not resolved_box_id:
-                    for item in items:
-                        if isinstance(item, dict):
-                            c = str(item.get('box') or '').strip()
-                            if c and c not in ('', '-', 'None', 'N/A'):
-                                resolved_box_id = c;
-                                break
+            touch_values = [float(i.get('touch', 0)) if isinstance(i, dict) else 0.0 for i in items]
+            valid_touches = [t for t in touch_values if t > 0]
+            avg_touch_val = sum(valid_touches) / len(valid_touches) if valid_touches else 0.0
 
-                cursor.execute(
-                    """INSERT OR REPLACE INTO katti_vouchers
-                           (vch_id,total_weight,total_packets,total_pcs,note,touch,box_id,date)
-                       VALUES (?,?,?,?,?,?,?,date('now'))""",
-                    (safe_vch_id, float(total_wt or 0), int(total_packets or 0),
-                     int(total_packets or 0), str(note).strip(), avg_touch_val, resolved_box_id)
-                )
-
-                cursor.execute("DELETE FROM katti_voucher_items WHERE vch_id=?", (safe_vch_id,))
-
-                # Delete old stock rows for this voucher before re-inserting
-                cursor.execute(
-                    "DELETE FROM stock_inventory WHERE vch_reference=? AND is_tagged=0",
-                    (safe_vch_id,)
-                )
-
+            resolved_box_id = box_id
+            if not resolved_box_id:
                 for item in items:
                     if isinstance(item, dict):
-                        item_code = str(item.get('it_code') or '').strip()
-                        item_name = str(item.get('name', '') or item.get('it_name', '')).strip()
-                        item_touch = float(item.get('touch') or 0.0)
-                        item_wt = float(item.get('weight') or item.get('nt_wt') or 0.0)
-                        item_pcs = int(item.get('packets') or item.get('pcs') or 1)
-                        raw_box = str(item.get('box') or resolved_box_id or '').strip()
-                        item_box = raw_box if raw_box not in ('', '-', 'None', 'N/A') else "B-001"
-                    else:
-                        item_code = '';
-                        item_name = str(item).strip()
-                        item_touch = 0.0;
-                        item_wt = 0.0;
-                        item_pcs = 1
-                        item_box = resolved_box_id or "B-001"
+                        c = str(item.get('box') or '').strip()
+                        if c and c not in ('', '-', 'None', 'N/A'):
+                            resolved_box_id = c
+                            break
 
+            cursor.execute(
+                """INSERT OR REPLACE INTO katti_vouchers
+                       (vch_id,total_weight,total_packets,total_pcs,note,touch,box_id,date)
+                   VALUES (?,?,?,?,?,?,?,date('now'))""",
+                (safe_vch_id, float(total_wt or 0), int(total_packets or 0),
+                 int(total_packets or 0), str(note).strip(), avg_touch_val, resolved_box_id)
+            )
+
+            cursor.execute("DELETE FROM katti_voucher_items WHERE vch_id=?", (safe_vch_id,))
+            cursor.execute("DELETE FROM stock_inventory WHERE vch_reference=? AND is_tagged=0", (safe_vch_id,))
+
+            for item in items:
+                item_code, item_name, item_touch, item_wt, item_pcs, item_box = self._extract_item_data(item,
+                                                                                                        resolved_box_id)
+
+                cursor.execute(
+                    "INSERT INTO katti_voucher_items (vch_id,it_code,it_name,nt_wt,touch,huid,pcs) VALUES (?,?,?,?,?,?,?)",
+                    (safe_vch_id, item_code, item_name, item_wt, item_touch, item_box, item_pcs)
+                )
+
+                if item_code and item_wt > 0:
+                    unique_tag = f"KATTI-{safe_vch_id}-{item_code}"
                     cursor.execute(
-                        "INSERT INTO katti_voucher_items (vch_id,it_code,it_name,nt_wt,touch,huid,pcs) VALUES (?,?,?,?,?,?,?)",
-                        (safe_vch_id, item_code, item_name, item_wt, item_touch, item_box, item_pcs)
+                        """INSERT OR REPLACE INTO stock_inventory
+                               (it_code,it_name,tag_id,pcs,gr_wt,ls_wt,nt_wt,
+                                touch,wastage,is_tagged,vch_reference,huid,entry_date)
+                           VALUES (?,?,?,0,?,0,?,?,0,0,?,?,date('now'))""",
+                        (item_code, item_name, unique_tag, item_wt, item_wt,
+                         item_touch, safe_vch_id, item_box)
                     )
 
-                    if item_code and item_wt > 0:
-                        # Each voucher gets its own stock row — no merging with other batches
-                        unique_tag = f"KATTI-{safe_vch_id}-{item_code}"
-                        cursor.execute(
-                            """INSERT OR REPLACE INTO stock_inventory
-                                   (it_code,it_name,tag_id,pcs,gr_wt,ls_wt,nt_wt,
-                                    touch,wastage,is_tagged,vch_reference,huid,entry_date)
-                               VALUES (?,?,?,0,?,0,?,?,0,0,?,?,date('now'))""",
-                            (item_code, item_name, unique_tag, item_wt, item_wt,
-                             item_touch, safe_vch_id, item_box)
-                        )
-                        print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
-                        try:
-                            ks_id = cursor.execute("SELECT id FROM stock_inventory WHERE tag_id=?",
-                                                   (unique_tag,)).fetchone()
-                            if ks_id:
-                                self.stamp_row_for_sync('stock_inventory', ks_id[0])
-                        except Exception as _kse:
-                            _dblog(f"[SYNC] stamp skip (katti stock): {_kse}")
+            conn.commit()
+            # Sync handling
+            self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
+            return True
 
-                conn.commit()
-                try:
-                    self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
-                except Exception as _kve:
-                    _dblog(f"[SYNC] stamp skip (katti_vouchers): {_kve}")
-                return True
         except Exception as e:
-            print(f"? [KATTI SAVE ERROR] {e}");
+            if conn: conn.rollback()
+            _dberr(f"[KATTI SAVE ERROR] {e}\n{traceback.format_exc()}")
             return False
+        finally:
+            if conn: conn.close()
+
+    def _extract_item_data(self, item, resolved_box_id):
+        """Helper to keep save_katti_batch clean."""
+        if isinstance(item, dict):
+            return (
+                str(item.get('it_code') or '').strip(),
+                str(item.get('name', '') or item.get('it_name', '')).strip(),
+                float(item.get('touch') or 0.0),
+                float(item.get('weight') or item.get('nt_wt') or 0.0),
+                int(item.get('packets') or item.get('pcs') or 1),
+                str(item.get('box') or resolved_box_id or 'B-001').strip()
+            )
+        return ('', str(item).strip(), 0.0, 0.0, 1, resolved_box_id or 'B-001')
 
     def get_all_katti_vouchers(self):
         """Return all katti vouchers ordered newest first."""
@@ -1133,6 +1470,9 @@ class DBManager:
             return "UCHK-IN-001"
 
     def save_uchak_inward_transaction(self, vch_id, total_lines, total_pcs, total_value, items_list):
+        if self._bastion_block():
+            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            return False
         try:
             safe_vch_id = str(vch_id).strip()
             with self._get_connection() as conn:
@@ -1512,6 +1852,9 @@ class DBManager:
 
     def record_sale(self, vch_id, customer, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0):
+        if self._bastion_block():
+            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            return False
         # Session token check before sale write
         if not self._verify_session_token():
             _dberr("[SALE] Session token invalid — sale BLOCKED")
@@ -2366,10 +2709,15 @@ class DBManager:
 
             # Write admin_creds
             conn.execute(
-                "INSERT OR REPLACE INTO admin_creds(id,username,password) VALUES(1,'owner',?)",
+                "INSERT OR REPLACE INTO admin_creds(id,username,password,is_owner) VALUES(1,'owner',?,1)",
                 (pin_hash,)
             )
             _dblog("[SETUP] admin_creds written")
+
+            # One-time repair: if this PC already ran the old save_setup
+            # (before is_owner was added here), id=1 exists but is_owner=0,
+            # silently demoting the real owner to "staff" on every login.
+            conn.execute("UPDATE admin_creds SET is_owner=1 WHERE id=1")
 
             conn.commit()
             _dblog("[SETUP] DB committed OK")
@@ -4387,6 +4735,14 @@ class DBManager:
         _dblog(f"[SESSION] Token generated: {token[:8]}...")
         return token
 
+    def _bastion_block(self):
+        """Real-time guard -- call at the START of every sensitive write.
+        Returns True if suspended (caller must abort the write)."""
+        try:
+            return bool(self.bastion_get_status().get('suspended'))
+        except Exception:
+            return False
+
     def _verify_session_token(self):
         """
         Called before every sensitive DB write.
@@ -4475,16 +4831,15 @@ class DBManager:
 
     def bastion_clear(self, admin_key, lock_code=None):
         """
-        Clear BASTION suspension.
-        Uses a DIFFERENT salt than regular unlock key —
-        so regular unlock key cannot clear a BASTION suspension.
-        Only the BASTION-specific key works here.
-
-        Key formula:
-          SHA256(lock_code + BASTION_SALT + date)[:16].upper()
-          16 chars (vs 12 for regular unlock) — harder to guess
+        Key formula: SHA256(lock_code + BASTION_SALT + IST_date)[:16]
+        Date-based (yesterday/today/tomorrow in IST), matching the
+        website unlock tool exactly -- no timestamp involved, so there
+        is nothing to copy wrong. IST is used explicitly (not server
+        local time) so the dev PC, shop PC, and website always agree
+        regardless of what timezone each machine is actually set to.
         """
         import hashlib as _hl
+        import json as _json
         from datetime import datetime as _dt, timedelta as _td
 
         BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin'  # KEEP SECRET
@@ -4497,53 +4852,61 @@ class DBManager:
 
             entered = str(admin_key).strip().upper()
 
-            # Try today, yesterday, tomorrow
-            dates_to_try = [
-                _dt.now().strftime('%Y-%m-%d'),
-                (_dt.now() - _td(days=1)).strftime('%Y-%m-%d'),
-                (_dt.now() + _td(days=1)).strftime('%Y-%m-%d'),
+            # Current time in IST, regardless of this machine's local timezone
+            now_ist = _dt.utcnow() + _td(hours=5, minutes=30)
+            date_candidates = [
+                (now_ist - _td(days=1)).strftime('%Y-%m-%d'),
+                now_ist.strftime('%Y-%m-%d'),
+                (now_ist + _td(days=1)).strftime('%Y-%m-%d'),
             ]
 
-            for date_str in dates_to_try:
-                expected = _hl.sha256(
+            matched_date = None
+            expected = ''
+            for date_str in date_candidates:
+                candidate = _hl.sha256(
                     (lock_code + BASTION_SALT + date_str).encode('utf-8')
                 ).hexdigest()[:16].upper()
+                if entered == candidate:
+                    matched_date = date_str
+                    expected = candidate
+                    break
+                expected = candidate  # keep last for logging if no match
 
-                _dblog(
-                    f"[BASTION] Trying date={date_str} "
-                    f"lc={lock_code} expected={expected[:4]}**** "
-                    f"entered={entered[:4]}****"
-                )
+            _dblog(
+                f"[BASTION] lc={lock_code} dates_tried={date_candidates} entered={entered[:4]}**** matched={matched_date}")
 
-                if entered == expected:
-                    # Match — clear suspension completely
-                    with self._get_connection() as conn:
-                        conn.execute(
-                            "INSERT OR REPLACE INTO app_config(key,value) "
-                            "VALUES('bastion_suspended','0')"
-                        )
-                        conn.execute(
-                            "INSERT OR REPLACE INTO app_config(key,value) "
-                            "VALUES('bastion_record','')"
-                        )
-                        conn.execute(
-                            "INSERT OR REPLACE INTO app_config(key,value) "
-                            "VALUES('account_locked','0')"
-                        )
-                        conn.execute(
-                            "INSERT OR REPLACE INTO app_config(key,value) "
-                            "VALUES('login_attempts','0')"
-                        )
-                        conn.commit()
-                    _dblog(f"[BASTION] Suspension CLEARED — matched date={date_str}")
-                    self.add_audit_log(
-                        "BASTION Cleared by Admin",
-                        f"Admin key matched for date={date_str}",
-                        "ADMIN", "security"
+            if matched_date:
+                # Match — clear suspension completely
+                with self._get_connection() as conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) "
+                        "VALUES('bastion_suspended','0')"
                     )
-                    return {'status': 'success', 'message': 'Account restored successfully'}
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) "
+                        "VALUES('bastion_record','')"
+                    )
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) "
+                        "VALUES('account_locked','0')"
+                    )
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) "
+                        "VALUES('login_attempts','0')"
+                    )
+                    conn.execute(
+                        "DELETE FROM app_config WHERE key='exe_hash'"
+                    )
+                    conn.commit()
+                _dblog(f"[BASTION] Suspension CLEARED — date={matched_date}")
+                self.add_audit_log(
+                    "BASTION Cleared by Admin",
+                    f"Admin key matched for date {matched_date}",
+                    "ADMIN", "security"
+                )
+                return {'status': 'success', 'message': 'Account restored successfully'}
 
-            _dblog("[BASTION] Admin key did not match any date")
+            _dblog("[BASTION] Admin key did not match")
             return {'status': 'error', 'message': 'Invalid admin key'}
 
         except Exception as e:
@@ -4640,9 +5003,22 @@ class DBManager:
 
     def bastion_verify_exe(self, exe_path=''):
         """
-        Check if EXE has been tampered by comparing its hash
-        to the stored hash written at first launch.
-        Called once at startup.
+        Check if EXE has been tampered, by comparing its hash against the
+        TRUSTED hash that build.py writes at build time into
+        'exe_trusted_hash.txt' (sitting next to AurumOS.exe in dist\\).
+
+        PERMANENT FIX: this used to self-capture "whatever ran first on
+        this PC" as the trusted baseline -- but every fresh PyInstaller
+        build produces a different hash even with zero source changes
+        (embedded timestamps etc.), so every legitimate rebuild looked
+        identical to tampering and falsely suspended the account.
+
+        Now the BUILD decides what's trusted, not the first run. A fresh,
+        untouched build always matches its own trusted_hash.txt and
+        passes. Genuine tampering -- someone editing the EXE bytes AFTER
+        it was built and shipped -- still changes the EXE's hash while
+        trusted_hash.txt (a separate, untouched file) stays the same,
+        so real tampering is still caught correctly.
         """
         import hashlib as _hl, os as _os, sys as _sys
         try:
@@ -4655,12 +5031,25 @@ class DBManager:
             if not _os.path.exists(exe_path):
                 return True
 
-            # Read stored hash
-            with self._get_connection() as conn:
-                row = conn.execute(
-                    "SELECT value FROM app_config WHERE key='exe_hash'"
-                ).fetchone()
-                stored_hash = row['value'] if row else None
+            # Trusted hash lives next to the EXE, written by build.py
+            exe_dir = _os.path.dirname(exe_path)
+            trust_path = _os.path.join(exe_dir, 'exe_trusted_hash.txt')
+
+            if not _os.path.exists(trust_path):
+                # No trusted-hash file shipped with this build (e.g. an
+                # older build made before this fix, or it was deleted).
+                # Fail OPEN rather than suspend on missing metadata --
+                # we only ever suspend on a confirmed MISMATCH, never on
+                # "we don't have anything to compare against."
+                _dblog("[BASTION] No exe_trusted_hash.txt found next to EXE -- skipping tamper check")
+                return True
+
+            with open(trust_path, 'r') as f:
+                trusted_hash = f.read().strip()
+
+            if not trusted_hash:
+                _dblog("[BASTION] exe_trusted_hash.txt is empty -- skipping tamper check")
+                return True
 
             # Compute current hash
             h = _hl.sha256()
@@ -4671,22 +5060,11 @@ class DBManager:
                     h.update(chunk)
             current_hash = h.hexdigest()
 
-            if not stored_hash:
-                # First run — store hash
-                with self._get_connection() as conn:
-                    conn.execute(
-                        "INSERT OR REPLACE INTO app_config(key,value) VALUES('exe_hash',?)",
-                        (current_hash,)
-                    )
-                    conn.commit()
-                _dblog(f"[BASTION] EXE hash stored: {current_hash[:12]}...")
-                return True
-
-            if stored_hash != current_hash:
-                _dberr(f"[BASTION] EXE TAMPERED! stored={stored_hash[:12]} current={current_hash[:12]}")
+            if trusted_hash != current_hash:
+                _dberr(f"[BASTION] EXE TAMPERED! trusted={trusted_hash[:12]} current={current_hash[:12]}")
                 self.bastion_suspend(
                     'exe_tamper',
-                    f"Stored={stored_hash[:12]}... Current={current_hash[:12]}..."
+                    f"Trusted={trusted_hash[:12]}... Current={current_hash[:12]}..."
                 )
                 return False
 

@@ -375,15 +375,19 @@ function h(s){ return String(s||'').replace(/&/g,'&'+'amp;').replace(/</g,'&'+'l
 
 
 // ── VOUCHER LOOKUP & INIT ──────────────────────────────────────
-function initializeVoucher(){
-    if(!window.pywebview||!window.pywebview.api){ setTimeout(initializeVoucher,150); return; }
-    window.pywebview.api.get_katti_vch_id().then(function(nextId){
-        latestNextVoucherIdRaw = String(nextId).padStart(4,'0');
+function initializeVoucher() {
+    isSaving = false; // Reset lock
+    if (!window.pywebview || !window.pywebview.api) {
+        setTimeout(initializeVoucher, 150);
+        return;
+    }
+    window.pywebview.api.get_katti_vch_id().then(function(nextId) {
+        latestNextVoucherIdRaw = String(nextId).padStart(4, '0');
         document.getElementById('vch-id').value = latestNextVoucherIdRaw;
         resetTerminalState();
         setHistoryMode(false);
         document.getElementById('in-touch').focus();
-    }).catch(function(){ document.getElementById('vch-id').value = '0001'; });
+    });
 }
 
 function resetTerminalState(){
@@ -430,30 +434,76 @@ function setHistoryMode(on){
     btnNew.classList.toggle('visible',on);
 }
 
-// ── SAVE / DELETE VOUCHER ──────────────────────────────────────
-function saveVoucherToDB(){
-    if(kattiLedger.length===0){triggerPopup('warn','Empty Batch','Add at least one entry.');return;}
-    var vchId=document.getElementById('vch-id').value.trim();
-    var note=document.getElementById('vch-note').value;
-    var totalW=0,totalP=0;
-    for(var i=0;i<kattiLedger.length;i++){totalW+=parseFloat(kattiLedger[i].weight);totalP+=parseInt(kattiLedger[i].packets);}
-    var btn=document.getElementById('btn-final');
-    if(!window.pywebview||!window.pywebview.api) return;
-    btn.innerText='Saving...'; btn.disabled=true;
-    var items=kattiLedger.map(function(item){
-        return{it_code:'KATTI-'+parseFloat(item.touch),name:item.name,weight:parseFloat(item.weight)||0,packets:parseInt(item.packets)||1,touch:parseFloat(item.touch)||0,box:item.box||'B-001'};
+// Add this at the very top of your <script> tag
+var isSaving = false;
+
+function saveVoucherToDB() {
+    // 1. Permanent Guard: If already saving, stop everything.
+    if (window.isSaving) {
+        console.warn("Save already in progress, blocking duplicate.");
+        return;
+    }
+
+    if (kattiLedger.length === 0) {
+        triggerPopup('warn', 'Empty Batch', 'Add at least one entry.');
+        return;
+    }
+
+    var vchId = document.getElementById('vch-id').value.trim();
+    var note = document.getElementById('vch-note').value; // You were missing this variable
+    var btn = document.getElementById('btn-final');
+
+    // Calculate totals from ledger
+    var totalW = 0, totalP = 0;
+    for (var i = 0; i < kattiLedger.length; i++) {
+        totalW += parseFloat(kattiLedger[i].weight);
+        totalP += parseInt(kattiLedger[i].packets);
+    }
+
+    // 2. Lock state
+    window.isSaving = true;
+    btn.disabled = true;
+    btn.innerText = 'Synchronizing...';
+
+    var items = kattiLedger.map(function(item) {
+        return {
+            it_code: 'KATTI-' + parseFloat(item.touch),
+            name: item.name,
+            weight: parseFloat(item.weight) || 0,
+            packets: parseInt(item.packets) || 1,
+            touch: parseFloat(item.touch) || 0,
+            box: item.box || 'B-001'
+        };
     });
-    window.pywebview.api.save_katti_voucher(vchId,totalW,totalP,note,items).then(function(res){
-        if(res.status!=='success'){
-            triggerPopup('danger','Save Failed',res.message||'Unknown error.');
-            btn.innerText=isViewingHistoryMode?'Save Changes':'Commit Voucher'; btn.disabled=false; return;
-        }
-        triggerPopup('success','Saved','VCH-'+vchId+' saved — '+items.length+' lot(s).');
-        initializeVoucher();
-    }).catch(function(e){
-        triggerPopup('danger','Error',String(e));
-        btn.innerText=isViewingHistoryMode?'Save Changes':'Commit Voucher'; btn.disabled=false;
-    });
+
+    // 3. API Call
+    window.pywebview.api.save_katti_voucher(vchId, totalW, totalP, note, items)
+        .then(function(res) {
+            if (res.status === 'success') {
+                // SUCCESS: Show success message
+                triggerPopup('success', 'Saved ✓', 'Voucher ' + vchId + ' committed.');
+
+                // Override modal button to reset terminal immediately
+                var okBtn = document.getElementById('modal-btns').querySelector('.mbtn-primary');
+                if (okBtn) {
+                    okBtn.onclick = function() {
+                        closePopup();
+                        initializeVoucher(); // Reset the screen
+                    };
+                }
+            } else {
+                triggerPopup('danger', 'Save Failed', res.message || 'Unknown error.');
+            }
+        })
+        .catch(function(e) {
+            triggerPopup('danger', 'Error', String(e));
+        })
+        .finally(function() {
+            // 4. Unlock state
+            window.isSaving = false;
+            btn.disabled = false;
+            btn.innerText = isViewingHistoryMode ? 'Save Changes' : 'Commit Voucher';
+        });
 }
 
 function deleteVoucher(){

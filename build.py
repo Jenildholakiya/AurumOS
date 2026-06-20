@@ -199,7 +199,7 @@ a = Analysis(
 {wv_datas_str}
     ],
     hiddenimports=[
-        "updater","database","database.db_manager","core","core.tag_engine",
+        "updater","database","database.db_manager","core","core.tag_engine","sync_engine",
         "serial","serial.tools","serial.tools.list_ports","serial.serialutil",
         "serial.serialwin32","serial.win32","serial.win32con","serial.win32file",
         "serial.win32pipe","serial.urlhandler","serial.urlhandler.protocol_hwgrep",
@@ -316,6 +316,39 @@ def run_pyinstaller():
         return False
     return True
 
+# ── STEP 5b: Write trusted EXE hash ───────────────────────────────────────────
+def write_trusted_hash():
+    """
+    PERMANENT FIX for the false-tamper-alarm bug: every fresh build produces
+    a different EXE hash (PyInstaller embeds timestamps/build internals even
+    with zero source changes), so capturing "whatever ran first on this PC"
+    as the trusted baseline meant every legitimate rebuild looked like
+    tampering. Instead, the BUILD itself now decides what's trusted: we hash
+    the just-built EXE right here and write that hash into a small companion
+    file next to it. bastion_verify_exe() in db_manager.py reads THIS file
+    as the source of truth -- so a fresh, untouched build always passes,
+    and genuine post-build tampering (someone editing the EXE bytes after
+    you shipped it) still gets caught correctly.
+    """
+    print("\n[5b/7] Writing trusted EXE hash...")
+    import hashlib
+    exe_path = os.path.join(ROOT, 'dist', 'AurumOS.exe')
+    if not os.path.exists(exe_path):
+        print(f"  SKIP -- EXE not found at {exe_path}")
+        return
+    h = hashlib.sha256()
+    with open(exe_path, 'rb') as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            h.update(chunk)
+    digest = h.hexdigest()
+    trust_path = os.path.join(ROOT, 'dist', 'exe_trusted_hash.txt')
+    with open(trust_path, 'w') as f:
+        f.write(digest)
+    print(f"  OK -- {digest[:16]}... written to dist\\exe_trusted_hash.txt")
+
 # ── STEP 6: Report ────────────────────────────────────────────────────────────
 def report():
     print("\n[7/7] Build report...")
@@ -325,8 +358,11 @@ def report():
         print(f"\n  ✓ SUCCESS")
         print(f"  EXE : {exe}")
         print(f"  Size: {size_mb:.1f} MB")
-        print(f"\n  Copy to client:")
+        print(f"\n  Copy BOTH of these to every client PC, into the SAME folder:")
         print(f"  dist\\AurumOS.exe")
+        print(f"  dist\\exe_trusted_hash.txt")
+        print(f"  (the hash file tells Bastion AI this exact build is legitimate --")
+        print(f"   without it next to the EXE, tamper-detection can't run)")
     else:
         print(f"\n  ✗ EXE not found at {exe}")
         print(f"  Check build output above for errors")
@@ -351,6 +387,7 @@ if __name__ == '__main__':
         print("\n✗ Build FAILED — originals restored")
         sys.exit(1)
 
+    write_trusted_hash()
     report()
     print(f"\n  Total time: {time.time()-t0:.0f}s")
     print("=" * 50)

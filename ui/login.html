@@ -468,6 +468,15 @@ function login() {
 function handleResult(res) {
     if (!res) { showErr('No response — try again.'); return; }
 
+    if (res.status === 'bastion_suspended') {
+        var btn0 = document.getElementById('btn');
+        btn0.disabled = false; btn0.innerHTML = '<span>→</span> Sign In';
+        if (typeof bastionShow === 'function' && res.bastion) {
+            bastionShow(res.bastion);
+        }
+        return;
+    }
+
     if (res.status === 'success') {
         var btn = document.getElementById('btn');
         btn.innerHTML='<span>✓</span> Welcome!'; btn.style.background='#15803d';
@@ -723,6 +732,8 @@ window.onload = function() {
         </div>
     </div>
 </div>
+
+<script src="bastion_guard.js"></script>
 
 </body>
 </html>

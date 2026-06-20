@@ -613,30 +613,49 @@ class AurumAPI:
         except Exception as _be:
             LOG(f"[BASTION] EXE check skipped: {_be}")
 
-        # ── LAN SYNC: auto-detect peer PC and start background sync ───────
-        # Two-PC shop network: 192.168.1.1 and 192.168.1.2. Whichever one
-        # THIS PC is NOT, that's the peer to sync with. Fully automatic,
-        # no manual sync button -- silently retries if the peer is off.
+        # ── LAN SYNC: shop-scoped auto-discovery, any number of PCs ────────
+        # Every PC broadcasts + listens on the LAN. PCs sharing the same
+        # shop_id automatically find and sync with each other -- no fixed
+        # IP list, works for 2 PCs or 20. Different shops never mix even
+        # on the same WiFi router, because shop_id must match exactly.
+        # ── LAN SYNC: only if this license/plan allows it ───────────────
         try:
             self.sync_engine = None
-            _shop_lan_ips = ['192.168.1.1', '192.168.1.2']
-            _my_ip = self._detect_my_lan_ip()
-            _peer_ip = None
-            if _my_ip in _shop_lan_ips:
-                _peer_ip = [ip for ip in _shop_lan_ips if ip != _my_ip][0]
-            elif _my_ip:
-                # Fallback: if this PC's IP isn't exactly .1 or .2 (e.g. DHCP
-                # gave something else), still try the other configured IP
-                # so sync keeps working even if one side's IP drifted.
-                _peer_ip = _shop_lan_ips[0] if _my_ip != _shop_lan_ips[0] else _shop_lan_ips[1]
-            if _peer_ip:
-                self.sync_engine = SyncEngine(self.db, _peer_ip)
+            if self.db.is_feature_enabled('lan_sync'):
+                self.sync_engine = SyncEngine(self.db)
                 self.sync_engine.start()
-                LOG(f"[SYNC] Started. This PC={_my_ip or '?'} Peer={_peer_ip}")
+                LOG(f"[SYNC] Started. shop_id={self.db.get_or_create_shop_id()}")
             else:
-                LOG("[SYNC] Could not detect LAN IP -- sync engine not started")
+                LOG("[SYNC] Disabled for this plan")
         except Exception as _syne:
             LOG(f"[SYNC] Failed to start sync engine: {_syne}")
+            self.sync_engine = None
+
+        # ── BASTION REAL-TIME ENFORCEMENT ───────────────────────────────
+        # Polls suspension status every 3s. The instant it flips True,
+        # forces the lock screen into the CURRENTLY OPEN window -- no
+        # waiting for the next login or next save attempt.
+        self._app_closing = False
+
+        def _bastion_watch():
+            while True:
+                if self._app_closing:
+                    break
+                try:
+                    st = self.db.bastion_get_status()
+                    if st.get('suspended') and self._window and not self._app_closing:
+                        payload = __import__('json').dumps(st)
+                        try:
+                            self._window.evaluate_js(
+                                "if(typeof bastionShow==='function'){bastionShow(" + payload + ");}"
+                            )
+                        except Exception:
+                            pass  # window may have just closed mid-call -- safe to ignore
+                except Exception as _bwe:
+                    LOG(f"[BASTION] watch error: {_bwe}")
+                time.sleep(1)
+        threading.Thread(target=_bastion_watch, daemon=True).start()
+
 
         # Layer 10: Generate session token
         try:
@@ -1198,6 +1217,23 @@ class AurumAPI:
             return err
 
     def _do_login_check(self, password, now, _dt, _td):
+        # ── BASTION CHECK — comes BEFORE regular lockout logic ──────────
+        # Bastion suspension is a separate, more serious state than a
+        # normal failed-attempt lockout. Previously this was never
+        # actually checked during login at all -- the suspension sat
+        # correctly in the DB but no login attempt ever surfaced it,
+        # so the BASTION popup never had anything to react to.
+        try:
+            bastion_status = self.db.bastion_get_status()
+        except Exception:
+            bastion_status = {'suspended': False}
+        if bastion_status.get('suspended'):
+            return {
+                "status": "bastion_suspended",
+                "bastion": bastion_status,
+                "message": bastion_status.get('reason', 'Account suspended by BASTION AI.'),
+            }
+
         if self._lockout_until and now < self._lockout_until:
             remaining = int((self._lockout_until-now).total_seconds())
             try:
@@ -1631,6 +1667,20 @@ class AurumAPI:
         except Exception as e:
             return {'enabled': False, 'error': str(e)}
 
+    def join_shop(self, shop_id):
+        """
+        Called when setting up a NEW PC for a shop that already has
+        other PCs running AurumOS. The owner reads the shop_id off any
+        existing PC (see get_sync_status -> shop_id) and types it in
+        here on the new PC. After this, the new PC broadcasts the same
+        shop_id and gets discovered by its shopmates automatically --
+        no restart needed, discovery picks it up within seconds.
+        """
+        result = self.db.set_shop_id(shop_id)
+        if result.get('status') == 'success':
+            LOG(f"[SYNC] Joined shop: {result.get('shop_id')}")
+        return result
+
     def get_sync_conflicts(self, include_resolved=False):
         return self.db.get_sync_conflicts(include_resolved)
 
@@ -1791,6 +1841,17 @@ class AurumAPI:
             try: self.bastion.notify_write()
             except Exception: pass
             vch_id=str(bill_data.get('vch_id','VCH-000')).strip()
+            # SECURITY: staff cannot choose their own voucher ID, even by
+            # bypassing the UI lock (e.g. devtools). Force the real
+            # server-generated next ID regardless of what was submitted.
+            if getattr(self, '_session_role', 'admin') == 'staff':
+                try:
+                    is_uchak_check = str(bill_data.get('is_uchak') or '').lower() in ('1','true','yes')
+                    real_id = (self.get_next_uchak_vch_id() if is_uchak_check else self.get_sales_vch_id())
+                    if real_id:
+                        vch_id = str(real_id).strip()
+                except Exception as _ve:
+                    LOG(f"[BILLING] staff vch_id override failed, using submitted value: {_ve}")
             customer=str(bill_data.get('customer','Walking Customer')).strip()
             status=str(bill_data.get('status','CREDIT')).upper().strip()
             l_fine=float(bill_data.get('totalLedgerFine') or 0.0)
@@ -3193,6 +3254,10 @@ def run_aur_os():
         threading.Thread(target=_bg_check, daemon=True).start()
 
     def _on_closing():
+        try:
+            api._app_closing = True
+        except Exception:
+            pass
         try:
             api.bastion.notify_session_active(False)
             api.bastion.stop()
