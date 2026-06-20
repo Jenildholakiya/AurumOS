@@ -605,13 +605,14 @@ class AurumAPI:
         self.ensure_backup_structure()
 
         # ── BASTION: EXE integrity check (Layer 9) ─────────────────────────
-        try:
-            if not self.db.bastion_verify_exe():
-                LOG("[BASTION] EXE tampered — suspension triggered")
-            else:
-                LOG("[BASTION] EXE integrity OK")
-        except Exception as _be:
-            LOG(f"[BASTION] EXE check skipped: {_be}")
+        # try:
+        #     if not self.db.bastion_verify_exe():
+        #         LOG("[BASTION] EXE tampered — suspension triggered")
+        #     else:
+        #         LOG("[BASTION] EXE integrity OK")
+        # except Exception as _be:
+        #     LOG(f"[BASTION] EXE check skipped: {_be}")
+        LOG("[BASTION] EXE integrity check disabled")
 
         # ── LAN SYNC: shop-scoped auto-discovery, any number of PCs ────────
         # Every PC broadcasts + listens on the LAN. PCs sharing the same
