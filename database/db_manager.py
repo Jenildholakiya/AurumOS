@@ -2593,10 +2593,8 @@ class DBManager:
 
     def is_setup_done(self) -> bool:
         """
-        Returns True only if:
-          1. setup_done = '1' in app_config  (setup was completed)
-          2. machine_fingerprint in DB matches THIS machine's MAC hash
-             (so DB copied to new PC → fingerprint mismatch → show setup)
+        Returns True if setup is done.
+        Permanently modified to avoid wiping data on hardware changes.
         """
         try:
             fp = self._machine_fingerprint()
@@ -2610,38 +2608,15 @@ class DBManager:
             done = rows.get('setup_done') == '1'
             stored_fp = rows.get('machine_fingerprint', '')
 
-            _dblog(f"[SETUP] done={done} stored_fp={stored_fp[:8]}... my_fp={fp[:8]}...")
-
             if not done:
-                _dblog("[SETUP] setup_done != 1 -> show setup")
                 return False
 
-            if not stored_fp:
-                _dblog("[SETUP] no fingerprint stored -> new install -> show setup")
-                return False
-
+            # PERMANENT FIX: If fingerprint mismatches, update it instead of wiping!
             if stored_fp != fp:
-                _dblog("[SETUP] Hardware fingerprint changed — updating to new fingerprint")
-                self.mark_setup_done()  # <--- Simply update the fingerprint instead of wiping
-                return True
+                _dblog(f"[SETUP] Hardware mismatch detected. Updating fingerprint to {fp[:8]}...")
+                self.mark_setup_done() # This updates the DB with the new machine's ID
 
-            # Second layer: check mac_lock table inside DB
-            try:
-                lock_row = conn.execute(
-                    "SELECT fingerprint FROM mac_lock WHERE id=1"
-                ).fetchone()
-                if lock_row:
-                    lock_fp = lock_row['fingerprint'] if hasattr(lock_row, 'keys') else lock_row[0]
-                    if lock_fp and lock_fp != fp:
-                        _dblog("[SETUP] mac_lock mismatch -> DB copied to new PC -> WIPING")
-                        self._wipe_business_data()
-                        return False
-            except Exception:
-                pass  # mac_lock table may not exist on old DBs — skip
-
-            _dblog("[SETUP] all checks passed -> show login")
             return True
-
         except Exception as e:
             _dberr(f"[SETUP] is_setup_done error: {e}")
             return False
