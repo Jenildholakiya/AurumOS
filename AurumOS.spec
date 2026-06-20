@@ -102,7 +102,7 @@ a = Analysis(
         ('E:\\AurumOS_Client\\.venv\\Lib\\site-packages\\webview\\lib\\runtimes\\win-x86\\native\\WebView2Loader.dll', 'webview\\lib\\runtimes\\win-x86\\native'),
     ],
     hiddenimports=[
-        "updater","database","database.db_manager","core","core.tag_engine",
+        "updater","database","database.db_manager","core","core.tag_engine","sync_engine",
         "serial","serial.tools","serial.tools.list_ports","serial.serialutil",
         "serial.serialwin32","serial.win32","serial.win32con","serial.win32file",
         "serial.win32pipe","serial.urlhandler","serial.urlhandler.protocol_hwgrep",

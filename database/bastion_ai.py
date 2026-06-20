@@ -27,9 +27,9 @@ from email.mime.multipart import MIMEMultipart
 # ── ALERT CONFIG — fill these in ──────────────────────────────────
 # Your Gmail address and App Password (not regular password)
 # Go to: Google Account → Security → App Passwords → Generate
-ALERT_EMAIL_FROM     = 'aurumos.software@gmail.com'       # your Gmail
-ALERT_EMAIL_PASSWORD = 'ttyx niad ocea oebo'        # Gmail App Password
-ALERT_EMAIL_TO       = 'jenildholkiya8305@gmail.com'       # where to receive
+ALERT_EMAIL_FROM     = 'aurumos.software@gmail.com'
+ALERT_EMAIL_PASSWORD = 'ttyx niad ocea oebo'
+ALERT_EMAIL_TO       = 'jenildholakiya8305@gmail.com'
 
 # Threat score thresholds
 SCORE_WARN    = 40    # log + queue alert
@@ -126,37 +126,35 @@ class BastionAI:
         """Call from main.py after login / before logout."""
         self._session_active = active
 
-    def get_weekly_report(self):
-        """Returns weekly summary dict for aurum_health.py."""
+    def push_to_health_dashboard(self):
+        """Push real event data to the Vercel health dashboard. Silent no-op if not configured."""
+        url = os.environ.get('AURUM_HEALTH_URL', '')
+        secret = os.environ.get('AURUM_ADMIN_SECRET', '')
+        client_id = os.environ.get('AURUM_CLIENT_ID', '')
+        if not url or not secret or not client_id:
+            return False
         try:
-            week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-            with self.db._get_connection() as conn:
-                total = conn.execute(
-                    "SELECT COUNT(*) FROM bastion_events WHERE ts >= ?", (week_ago,)
-                ).fetchone()[0]
-                healed = conn.execute(
-                    "SELECT COUNT(*) FROM bastion_events WHERE ts >= ? AND auto_healed=1",
-                    (week_ago,)
-                ).fetchone()[0]
-                highs = conn.execute(
-                    "SELECT COUNT(*) FROM bastion_events WHERE ts >= ? AND severity IN ('HIGH','CRITICAL')",
-                    (week_ago,)
-                ).fetchone()[0]
-                recent = conn.execute(
-                    "SELECT ts, event_type, severity, score, detail, action_taken "
-                    "FROM bastion_events ORDER BY id DESC LIMIT 20"
-                ).fetchall()
-            return {
-                'period':       f"Last 7 days",
-                'total_events': total,
-                'auto_healed':  healed,
-                'high_threats': highs,
-                'recent':       [dict(r) for r in recent],
-                'thresholds':   self._thresholds,
-            }
+            import urllib.request, json as _json
+            report = self.get_weekly_report()
+            status = self.db.bastion_get_status()
+            payload = _json.dumps({
+                'client_id':  client_id,
+                'events':     report.get('recent', []),
+                'thresholds': report.get('thresholds', {}),
+                'suspended':  bool(status.get('suspended')),
+                'summary':    f"{report.get('total_events',0)} events, {report.get('auto_healed',0)} auto-healed, {report.get('high_threats',0)} high threats this week.",
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                url, data=payload, method='POST',
+                headers={'Content-Type': 'application/json', 'x-admin-secret': secret}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+            _log("Pushed events to health dashboard")
+            return True
         except Exception as e:
-            _err(f"get_weekly_report: {e}")
-            return {}
+            _err(f"push_to_health_dashboard: {e}")
+            return False
 
     # ══════════════════════════════════════════════════════════════
     # THREAD RUNNER
@@ -549,11 +547,15 @@ class BastionAI:
         Every 5 minutes: check for queued alerts.
         If internet available → send email.
         Works offline — queues until connection available.
+        Also pushes events to the health dashboard (if configured).
         """
+        if self._has_internet():
+            self.push_to_health_dashboard()
+
         try:
             with self.db._get_connection() as conn:
                 pending = conn.execute(
-                    "SELECT id, subject, body FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
+                    "SELECT id, subject, body, html_body FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
                 ).fetchall()
 
             if not pending:
@@ -566,7 +568,7 @@ class BastionAI:
 
             sent_ids = []
             for alert in pending:
-                success = self._send_email(alert['subject'], alert['body'])
+                success = self._send_email(alert['subject'], alert['body'], alert['html_body'] or None)
                 if success:
                     sent_ids.append(alert['id'])
                     _log(f"Alert sent: {alert['subject'][:40]}")
@@ -618,53 +620,191 @@ class BastionAI:
                 detail       = f"Auto-suspended: {attack_type} — {detail}",
                 action_taken = 'SUSPENDED'
             )
+
+            # CRITICAL: must be the EXACT raw timestamp string stored by
+            # bastion_suspend() -- this is what the unlock key formula
+            # hashes against. Generating a second, separately-formatted
+            # "now" here (as before) silently produces a timestamp that
+            # looks similar but never matches, making every key wrong.
+            try:
+                status = self.db.bastion_get_status()
+                ts_raw = status.get('timestamp', '')
+            except Exception:
+                ts_raw = ''
+            ts = ts_raw  # exact string for the keygen prompt -- copy this one
+            try:
+                lock_code = self.db._machine_fingerprint()[:8].upper()
+            except Exception:
+                lock_code = 'UNKNOWN'
+            try:
+                shop_id = self.db.get_or_create_shop_id()
+            except Exception:
+                shop_id = 'UNKNOWN'
+            try:
+                with self.db._get_connection() as conn:
+                    row = conn.execute("SELECT biz_name FROM business_profile WHERE id=1").fetchone()
+                    biz_name = (row['biz_name'] if row and row['biz_name'] else '').strip()
+                    if not biz_name:
+                        row2 = conn.execute("SELECT value FROM app_config WHERE key='business_name'").fetchone()
+                        biz_name = (row2['value'] if row2 and row2['value'] else '').strip()
+                biz_name = biz_name or 'Unknown Jeweller (name not set in app)'
+            except Exception:
+                biz_name = 'Unknown Jeweller (lookup failed)'
+            try:
+                device_id = self.db.get_or_create_device_id()
+            except Exception:
+                device_id = 'UNKNOWN'
+            try:
+                hostname = os.environ.get('COMPUTERNAME') or __import__('socket').gethostname()
+            except Exception:
+                hostname = 'UNKNOWN'
+            try:
+                week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+                with self.db._get_connection() as conn:
+                    events_week = conn.execute(
+                        "SELECT COUNT(*) FROM bastion_events WHERE ts >= ?", (week_ago,)
+                    ).fetchone()[0]
+            except Exception:
+                events_week = '?'
+
+            titles = {
+                'session_tamper':       'Session Tampering Detected',
+                'db_edit':              'Database Tampering Detected',
+                'fingerprint_mismatch': 'Unauthorized PC Access Detected',
+                'exe_tamper':           'EXE File Modified',
+                'replay_attack':        'Replay Attack Detected',
+            }
+            attack_title = titles.get(attack_type, attack_type.replace('_', ' ').title())
+
+            plain_body = (
+                f"CRITICAL: BASTION AI automatically suspended an account.\n\n"
+                f"Jeweller     : {biz_name}\n"
+                f"Attack Type : {attack_title} ({attack_type})\n"
+                f"Detail      : {detail}\n"
+                f"Lock Code   : {lock_code}\n"
+                f"Shop ID     : {shop_id}\n"
+                f"Device ID   : {device_id}\n"
+                f"PC Name     : {hostname}\n"
+                f"Time        : {ts}\n"
+                f"Events (7d) : {events_week}\n\n"
+                f"The client will see the BASTION red lock screen on every page.\n"
+                f"Run unlock_keygen.py (mode 2) with the Lock Code above to generate\n"
+                f"the 16-character BASTION key, then send it to the client.\n"
+                f"Or run aurum_health.py for full diagnosis."
+            )
+
+            html_body = f"""
+<div style="background:#f2efe7;padding:32px 16px;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(14,12,9,0.08);">
+
+    <!-- Header -->
+    <div style="background:#0e0c09;padding:28px 32px;position:relative;">
+      <div style="height:3px;width:100%;position:absolute;top:0;left:0;background:linear-gradient(90deg,#a87d1e,#c9a227,transparent);"></div>
+      <table style="width:100%;"><tr>
+        <td>
+          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c9a227;font-weight:700;">&#9632; AurumOS BASTION Security</span>
+        </td>
+        <td style="text-align:right;">
+          <span style="display:inline-block;background:rgba(239,68,68,0.15);color:#ef4444;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;border:1px solid rgba(239,68,68,0.4);">CRITICAL</span>
+        </td>
+      </tr></table>
+      <div style="margin-top:14px;display:inline-block;background:rgba(201,162,39,0.15);border:1px solid rgba(201,162,39,0.4);border-radius:6px;padding:4px 10px;">
+        <span style="color:#c9a227;font-size:12px;font-weight:700;">&#128274; {biz_name}</span>
+      </div>
+      <h1 style="color:#ffffff;font-size:24px;font-weight:800;margin:10px 0 4px;letter-spacing:0.5px;">Account Auto-Suspended</h1>
+      <p style="color:#a89878;font-size:13px;margin:0;">{attack_title}</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:28px 32px;">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13.5px;color:#7f1d1d;line-height:1.6;">{detail}</p>
+      </div>
+
+      <div style="margin-bottom:8px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a87d1e;font-weight:700;">Incident Details</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;width:140px;">Jeweller</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;font-weight:700;">{biz_name}</td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;width:140px;">Attack Type</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;font-weight:700;">{attack_type}</td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;">Lock Code</td><td style="padding:9px 0;"><span style="font-family:'Courier New',monospace;font-weight:700;color:#a87d1e;background:#faf6ea;padding:3px 8px;border-radius:5px;letter-spacing:1px;">{lock_code}</span></td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;">Shop ID</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;font-family:'Courier New',monospace;">{shop_id}</td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;">Device ID</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;font-family:'Courier New',monospace;">{device_id}</td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;">PC Name</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;">{hostname}</td></tr>
+        <tr style="border-bottom:1px solid #f0ece2;"><td style="padding:9px 0;color:#7a7268;font-size:13px;">Events (7 days)</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;">{events_week}</td></tr>
+        <tr><td style="padding:9px 0;color:#7a7268;font-size:13px;">Time</td><td style="padding:9px 0;color:#2c2a24;font-size:13px;">{ts}</td></tr>
+      </table>
+
+      <div style="background:#faf6ea;border:1px solid #f0e6cc;border-radius:10px;padding:18px 20px;">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a87d1e;font-weight:700;margin-bottom:8px;">Next Steps</div>
+        <p style="margin:0 0 8px;font-size:13px;color:#5c5347;line-height:1.7;">The client is now seeing the BASTION lock screen on every page of the app &mdash; all saves are blocked until unlocked.</p>
+        <p style="margin:0;font-size:13px;color:#5c5347;line-height:1.7;">Run <code style="background:#f0e6cc;padding:2px 6px;border-radius:4px;font-family:'Courier New',monospace;">unlock_keygen.py</code> (mode 2) using the Lock Code above to generate the 16-character BASTION key, then send it to the client.</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#faf8f3;padding:16px 32px;border-top:1px solid #f0ece2;text-align:center;">
+      <span style="font-size:11px;color:#a89878;">AurumOS BASTION AI &middot; Automated Security Alert</span>
+    </div>
+  </div>
+</div>
+"""
+
             self._queue_alert(
-                subject = f"AurumOS BASTION ALERT: Account Auto-Suspended",
-                body    = (
-                    f"CRITICAL: BASTION AI automatically suspended an account.\n\n"
-                    f"Attack Type : {attack_type}\n"
-                    f"Detail      : {detail}\n"
-                    f"Time        : {datetime.now().strftime('%d %b %Y %I:%M:%S %p')}\n\n"
-                    f"The client will see the BASTION red screen.\n"
-                    f"Run unlock_keygen.py (mode 2) to generate the 16-char BASTION key.\n"
-                    f"Or run aurum_health.py for full diagnosis."
-                )
+                subject   = "AurumOS BASTION ALERT: Account Auto-Suspended",
+                body      = plain_body,
+                html_body = html_body
             )
         except Exception as e:
             _err(f"auto_suspend: {e}")
 
-    def _queue_alert(self, subject, body):
+    def _queue_alert(self, subject, body, html_body=''):
         """Save alert to DB — sent when internet available."""
         try:
             with self.db._get_connection() as conn:
                 conn.execute(
-                    "INSERT INTO bastion_alerts (subject, body) VALUES (?,?)",
-                    (subject, body)
+                    "INSERT INTO bastion_alerts (subject, body, html_body) VALUES (?,?,?)",
+                    (subject, body, html_body)
                 )
                 conn.commit()
             _log(f"Alert queued: {subject[:40]}")
         except Exception as e:
             _err(f"queue_alert: {e}")
 
-    def _send_email(self, subject, body):
+    def _send_email(self, subject, body, html_body=None):
         """Send email via Gmail SMTP. Returns True on success."""
-        if not ALERT_EMAIL_FROM or 'your.gmail' in ALERT_EMAIL_FROM:
-            _log("Email not configured — skipping send")
+        if not ALERT_EMAIL_FROM or 'your.gmail' in ALERT_EMAIL_FROM or '@' not in ALERT_EMAIL_FROM:
+            _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_FROM is still a placeholder in bastion_ai.py !!!")
+            return False
+        if not ALERT_EMAIL_PASSWORD or 'xxxx' in ALERT_EMAIL_PASSWORD:
+            _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_PASSWORD is still a placeholder in bastion_ai.py !!!")
             return False
         try:
-            msg = MIMEMultipart()
+            pw = str(ALERT_EMAIL_PASSWORD).replace(' ', '')  # App Passwords often pasted with spaces
+
+            msg = MIMEMultipart('alternative')
             msg['From']    = ALERT_EMAIL_FROM
             msg['To']      = ALERT_EMAIL_TO
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
+            if html_body:
+                msg.attach(MIMEText(html_body, 'html'))
 
             ctx = ssl.create_default_context()
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx) as server:
-                server.login(ALERT_EMAIL_FROM, ALERT_EMAIL_PASSWORD)
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
+                server.login(ALERT_EMAIL_FROM, pw)
                 server.sendmail(ALERT_EMAIL_FROM, ALERT_EMAIL_TO, msg.as_string())
+            _log(f"Email sent OK to {ALERT_EMAIL_TO}")
             return True
+        except smtplib.SMTPAuthenticationError as e:
+            _err(f"send_email AUTH FAILED -- check App Password / 2FA enabled: {e}")
+            return False
+        except smtplib.SMTPException as e:
+            _err(f"send_email SMTP error: {e}")
+            return False
+        except OSError as e:
+            _err(f"send_email NETWORK error (no internet / blocked port 465?): {e}")
+            return False
         except Exception as e:
-            _err(f"send_email: {e}")
+            _err(f"send_email: {type(e).__name__}: {e}")
             return False
 
     def _has_internet(self):

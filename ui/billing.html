@@ -343,7 +343,7 @@ input:checked+.slider:before{transform:translateX(20px);}
           <div class="entry-row">
             <div class="form-group it-code-wrapper" style="margin:0;">
               <label id="entry-fld-1-label">IT Code / Touch <span id="stock-count-badge" style="color:var(--success);font-size:0.58rem;"></span></label>
-              <input type="text" id="it-code" placeholder="Type IT code or touch (e.g. 68)" autocomplete="off" oninput="onITCodeInput(this.value)" onkeydown="onITCodeKeydown(event)" onblur="scheduleCloseITDropdown()">
+              <input type="text" id="it-code" placeholder="Type IT code or touch (e.g. 68)" autocomplete="off" oninput="onITCodeInput(this.value)" onkeydown="onITCodeKeydown(event)" onblur="scheduleCloseITDropdown();">
               <div class="it-dropdown" id="it-dropdown"></div>
             </div>
             <div class="form-group" style="margin:0;">
@@ -354,7 +354,7 @@ input:checked+.slider:before{transform:translateX(20px);}
 
                 </span>
               </label>
-              <input type="number" id="it-weight" oninput="calcFine()" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();var _w=window._scW||_scW;if(_w!==null&&_w!==undefined&&parseFloat(_w)>0){this.value=parseFloat(_w).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
+              <input type="number" id="it-weight" oninput="calcFine()" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();var _w=window._scW||_scW;if(_w!==null&&_w!==undefined&&parseFloat(_w)>0){this.value=parseFloat(_w).toFixed(3);this.dispatchEvent(new Event('input'));}var nx=document.getElementById('it-wastage');if(nx){nx.focus();nx.select();}}">
             </div>
             <div class="form-group" style="margin:0;"><label id="entry-fld-3-label">Wastage</label><input type="number" id="it-wastage" oninput="calcFine()" placeholder="0.000"></div>
             <div class="form-group" style="margin:0;"><label id="entry-fld-4-label">Fine</label><input type="number" id="it-fine" readonly placeholder="0.000"></div>
@@ -426,10 +426,11 @@ input:checked+.slider:before{transform:translateX(20px);}
             <input type="number" id="gold-rate-input" onchange="saveGoldRatePersistent(this.value)" oninput="calcFinalSettlement()" placeholder="Rs. 00,000" data-next="disc-touch-val">
           </div>
 
-          <!-- Discount — Two tabs: Touch | Fine -->
+          <!-- Discount — Two tabs: Touch | Fine (weight mode) | Price (uchak mode) -->
           <div style="background:var(--cream2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;">
 
-            <div style="display:flex;border-bottom:1px solid var(--border);">
+            <!-- Tab headers -->
+            <div id="disc-tabs-row" style="display:flex;border-bottom:1px solid var(--border);">
               <button id="disc-tab-touch" onclick="setDiscountType('touch')"
                 style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--primary);color:#fff;transition:all 0.13s;letter-spacing:0.5px;">
                 Touch %
@@ -438,12 +439,12 @@ input:checked+.slider:before{transform:translateX(20px);}
                 style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
                 Fine (g)
               </button>
-              <button id="disc-tab-amount" onclick="setDiscountType('amount')"
-                style="flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
-                Amount
+              <button id="disc-tab-price" onclick="setDiscountType('price')" style="display:none;flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;background:var(--cream3);color:var(--text-muted);transition:all 0.13s;letter-spacing:0.5px;">
+                Price (&#8377;)
               </button>
             </div>
 
+            <!-- Tab 1: Touch discount -->
             <div id="disc-touch-block" style="padding:10px 12px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin:0;">
@@ -460,6 +461,7 @@ input:checked+.slider:before{transform:translateX(20px);}
               </div>
             </div>
 
+            <!-- Tab 2: Fine discount -->
             <div id="disc-fine-block" style="display:none;padding:10px 12px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin:0;">
@@ -476,12 +478,20 @@ input:checked+.slider:before{transform:translateX(20px);}
               </div>
             </div>
 
-            <div id="disc-amount-block" style="display:none;padding:10px 12px;">
-              <div class="form-group" style="margin:0;">
-                <label>Discount Amount (Rs)</label>
-                <input type="number" id="disc-amount-val" min="0"
-                  placeholder="e.g. 500" oninput="calcFinalSettlement()"
-                  style="font-family:var(--mono);">
+            <!-- Tab 3: Price discount (Uchak only) -->
+            <div id="disc-price-block" style="display:none;padding:10px 12px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin:0;">
+                  <label>Price Disc (&#8377;)</label>
+                  <input type="number" id="disc-price-val" step="1" min="0"
+                    placeholder="e.g. 100" oninput="calcFinalSettlement()"
+                    style="font-family:var(--mono);">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Net Amount (&#8377;)</label>
+                  <input type="number" id="disc-net-price" readonly placeholder="0.00"
+                    style="background:rgba(21,128,61,0.05);border-color:rgba(21,128,61,0.2);color:var(--success);font-family:var(--mono);font-weight:700;">
+                </div>
               </div>
             </div>
 
@@ -626,26 +636,20 @@ ScaleWidget.init();
 
 // ── JS Logger — sends messages to Python terminal log ────────────
 function _updateScaleUI(weight, stable) {
-    // ── PERMANENT ZERO-DRIFT FIX ──────────────────────────────────
-    var DEAD_ZONE = 0.025;
-    var wVal = parseFloat(weight) || 0;
-    if (wVal < DEAD_ZONE) {
-        wVal = 0.000;
-    }
-
-    var w = wVal.toFixed(3);
-    var isStable = (stable === true || stable === 'true') && wVal > 0;
-    // ──────────────────────────────────────────────────────────────
+    var w = (weight !== null && weight !== undefined) ? parseFloat(weight).toFixed(3) : '--.-';
+    var isStable = !!stable;
 
     // ── Popup weight (scp-wt) ──────────────────────────────────────
     var scpWt = document.getElementById('scp-wt');
     if (scpWt) scpWt.innerText = w;
 
+    // ── No auto-fill — user presses Enter to capture weight ─────
+
     // ── Weight field label status ────────────────────────────────
     var wtSts = document.getElementById('wt-scale-status');
     if (wtSts) {
         if (isStable)        { wtSts.innerText = 'STABLE'; wtSts.style.color = '#15803d'; }
-        else if (_scConnected){ wtSts.innerText = 'ONLINE'; wtSts.style.color = '#0ea5e9'; }
+        else if (_scConnected){ wtSts.innerText = 'READING'; wtSts.style.color = '#d97706'; }
         else                  { wtSts.innerText = ''; }
     }
 
@@ -657,17 +661,13 @@ function _updateScaleUI(weight, stable) {
         if (scpDot)  scpDot.style.color  = '#16a34a';
         if (scpSts)  scpSts.innerText    = 'STABLE';
         if (scpPill) scpPill.style.color = '#16a34a';
-    } else if (_scConnected) {
-        if (scpDot)  scpDot.style.color  = '#0ea5e9';
-        if (scpSts)  scpSts.innerText    = 'ONLINE';
-        if (scpPill) scpPill.style.color = '#0ea5e9';
     } else {
         if (scpDot)  scpDot.style.color  = '#d97706';
         if (scpSts)  scpSts.innerText    = 'READING';
         if (scpPill) scpPill.style.color = '#d97706';
     }
 
-    // ── Main billing scale bar ──────────────────────────────────
+    // ── Main billing scale bar — dynamic design ──────────────────
     var spWt  = document.getElementById('sp-weight-big');
     var spUt  = document.getElementById('sp-unit-big');
     var spDot = document.getElementById('sp-dot');
@@ -680,32 +680,40 @@ function _updateScaleUI(weight, stable) {
     if (spWt) spWt.innerText = w;
     if (shWt) shWt.innerText = w;
 
-    // Determine visual state
     if (isStable) {
-        // GREEN — Stable with weight
+        // GREEN — stable, weight ready
         if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
         if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
         if (spUt)  spUt.style.color = '#15803d';
         if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
-        if (spSts) { spSts.innerText = 'STABLE'; spSts.style.color = '#15803d'; }
+        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
         if (spHnt) spHnt.style.display = 'flex';
         if (spBtn) spBtn.style.display = 'none';
-    } else if (_scConnected) {
-        // BLUE — Online but Empty (or reading unstable)
-        if (spBar) spBar.style.background = 'rgba(14,165,233,0.04)';
-        if (spWt)  { spWt.style.color = '#0ea5e9'; spWt.style.fontSize = '2.8rem'; }
-        if (spUt)  spUt.style.color = '#0ea5e9';
-        if (spDot) { spDot.style.background = '#0ea5e9'; spDot.style.boxShadow = 'none'; }
-        if (spSts) { spSts.innerText = wVal > 0 ? 'READING' : 'ONLINE'; spSts.style.color = '#0ea5e9'; }
+    } else if (_scConnected && (weight === null || weight === undefined || parseFloat(weight) <= 0)) {
+        // AMBER — connected but no weight yet
+        if (spBar) spBar.style.background = 'rgba(217,119,6,0.03)';
+        if (spWt)  { spWt.style.color = '#d97706'; spWt.style.fontSize = '2.8rem'; }
+        if (spUt)  spUt.style.color = '#d97706';
+        if (spDot) { spDot.style.background = '#d97706'; spDot.style.boxShadow = 'none'; }
+        if (spSts) { spSts.innerText = 'Reading'; spSts.style.color = '#d97706'; }
         if (spHnt) spHnt.style.display = 'none';
         if (spBtn) spBtn.style.display = 'none';
+    } else if (_scConnected) {
+        // GREEN — connected and has weight value (treat as stable)
+        if (spBar) spBar.style.background = 'rgba(21,128,61,0.04)';
+        if (spWt)  { spWt.style.color = '#15803d'; spWt.style.fontSize = '3rem'; }
+        if (spUt)  spUt.style.color = '#15803d';
+        if (spDot) { spDot.style.background = '#16a34a'; spDot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.2)'; }
+        if (spSts) { spSts.innerText = 'Stable'; spSts.style.color = '#15803d'; }
+        if (spHnt) spHnt.style.display = 'flex';
+        if (spBtn) spBtn.style.display = 'none';
     } else {
-        // GREY — Offline
+        // GREY — offline
         if (spBar) spBar.style.background = '#fff';
         if (spWt)  { spWt.style.color = '#c9c5bc'; spWt.style.fontSize = '2.8rem'; }
         if (spUt)  spUt.style.color = '#c9c5bc';
         if (spDot) { spDot.style.background = '#d1cfc9'; spDot.style.boxShadow = 'none'; }
-        if (spSts) { spSts.innerText = 'OFFLINE'; spSts.style.color = '#9e9890'; }
+        if (spSts) { spSts.innerText = 'Offline'; spSts.style.color = '#9e9890'; }
         if (spHnt) spHnt.style.display = 'none';
         if (spBtn) spBtn.style.display = 'inline-flex';
     }
@@ -888,18 +896,16 @@ function scalePanelConnect(){
 // Keep scaleDoDisconnect working for backward compat
 function scaleDoDisconnect(){ scalePanelConnect(); }
 // Keep scaleDoConnect working
-function openPopup(){
-    JSLOG('scaleDoConnectDirect called');
-    // Open popup
-    var ov = null;
-    JSLOG('overlay: '+(ov?'FOUND':'NULL'));
-    if(ov){
-        ov.style.cssText='display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
-        JSLOG('popup opened');
+var ScaleWidget = {
+    openPopup: function() {
+        JSLOG('ScaleWidget.openPopup called');
+        var ov = document.getElementById('sc-conn-overlay');
+        if (ov) {
+            ov.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(14,12,9,0.55);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;';
+        }
+        scaleLoadPorts();
     }
-    // Scan ports
-    scaleLoadPorts();
-}
+};
 
 function scalePopupOpen(){
     var ov=null;
@@ -1192,16 +1198,16 @@ async function loadWeightStockCodes(){
     }catch(e){}
 }
 
-function onITCodeInput(val) {
+function onITCodeInput(val){
     var isUchak = document.getElementById('uchak-toggle').checked;
     var dd = document.getElementById('it-dropdown');
 
-    if (isUchak || !val.trim()) {
+    if(isUchak || !val.trim()){
         dd.classList.remove('open');
         return;
     }
 
-    if (_isTouchCode(val)) {
+    if(_isTouchCode(val)){
         dd.classList.remove('open');
         calcFine();
         return;
@@ -1209,22 +1215,23 @@ function onITCodeInput(val) {
 
     itDropdownHighlight = -1;
     var q = val.trim().toUpperCase();
-    var filtered = weightStockItems.filter(function(s) {
+    var filtered = weightStockItems.filter(function(s){
         return s.it_code.toUpperCase().includes(q) ||
                (s.it_name || '').toUpperCase().includes(q) ||
                String(s.touch || '').includes(q);
     });
 
-    _ddFiltered = filtered; // Assigned here so both branches can use it
+    _ddFiltered = filtered;
 
-    if (!filtered.length) {
-        dd.innerHTML = '<div class="it-no-results">No stock found for "' + val + '"</div>';
+    // THIS WAS THE ERROR: The 'else' needs to follow an 'if'
+    if (filtered.length === 0) {
+        dd.innerHTML = '<div class="it-no-results">No stock found for "'+val+'"</div>';
     } else {
-        dd.innerHTML = filtered.map(function(s, i) {
-            return '<div class="it-option" data-idx="' + i + '" onmousedown="selectStockItem(' + i + ',_ddFiltered)">' +
-                   '<div class="it-option-row"><span class="it-option-code">' + s.it_code + '</span><span class="it-option-touch">T: ' + (s.touch || '--') + '%</span></div>' +
-                   '<div class="it-option-name">' + (s.it_name || '') + '</div>' +
-                   '<div class="it-option-stock">' + parseFloat(s.gr_wt || 0).toFixed(3) + 'g available</div></div>';
+        dd.innerHTML = filtered.map(function(s,i){
+            return '<div class="it-option" data-idx="'+i+'" onmousedown="selectStockItem('+i+',_ddFiltered)">'+
+                   '<div class="it-option-row"><span class="it-option-code">'+s.it_code+'</span><span class="it-option-touch">T: '+(s.touch||'--')+'%</span></div>'+
+                   '<div class="it-option-name">'+(s.it_name||'')+'</div>'+
+                   '<div class="it-option-stock">'+parseFloat(s.gr_wt||0).toFixed(3)+'g available</div></div>';
         }).join('');
     }
 
@@ -1259,6 +1266,8 @@ async function fetchAndFillWastage(touchVal){
 function scheduleCloseITDropdown(){itCloseTimer=setTimeout(function(){document.getElementById('it-dropdown').classList.remove('open');itDropdownHighlight=-1;},220);}
 
 function onITCodeKeydown(e){
+    var isUchak=document.getElementById('uchak-toggle').checked;
+
     var dd=document.getElementById('it-dropdown');if(!dd.classList.contains('open'))return;
     var opts=dd.querySelectorAll('.it-option');
     if(e.key==='ArrowDown'){e.preventDefault();itDropdownHighlight=Math.min(itDropdownHighlight+1,opts.length-1);highlightITOption(opts);}
@@ -1272,7 +1281,7 @@ function highlightITOption(opts){opts.forEach(function(o,i){o.classList.toggle('
 function toggleUchakMode(){
     var isUchak=document.getElementById('uchak-toggle').checked;
     currentItems=[];document.getElementById('it-dropdown').classList.remove('open');
-    ['disc-touch-val','disc-touch-fine','disc-fine-val','disc-net-fine'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    ['disc-touch-val','disc-touch-fine','disc-fine-val','disc-net-fine','disc-price-val','disc-net-price'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
     if(isUchak){
         localStorage.setItem('aurum_active_billing_mode','uchak');
 
@@ -1290,6 +1299,10 @@ function toggleUchakMode(){
         document.getElementById('entry-fld-3-label').innerText='Pcs';
         document.getElementById('it-wastage').placeholder='0';
         document.getElementById('entry-fld-4-label').innerText='Amount';
+        document.getElementById('disc-tab-touch').style.display='none';
+        document.getElementById('disc-tab-fine').style.display='none';
+        document.getElementById('disc-tab-price').style.display='';
+        setDiscountType('price');
     }else{
         localStorage.setItem('aurum_active_billing_mode','weight');
 
@@ -1307,6 +1320,10 @@ function toggleUchakMode(){
         document.getElementById('entry-fld-3-label').innerText='Wastage';
         document.getElementById('it-wastage').placeholder='0.000';
         document.getElementById('entry-fld-4-label').innerText='Fine';
+        document.getElementById('disc-tab-touch').style.display='';
+        document.getElementById('disc-tab-fine').style.display='';
+        document.getElementById('disc-tab-price').style.display='none';
+        setDiscountType('touch');
     }
     syncLiveVoucher();renderTable();
 }
@@ -1377,41 +1394,51 @@ function setDiscountType(type){
     activeDiscountType=type;
     var tTab=document.getElementById('disc-tab-touch');
     var fTab=document.getElementById('disc-tab-fine');
+    var pTab=document.getElementById('disc-tab-price');
     var tBlk=document.getElementById('disc-touch-block');
     var fBlk=document.getElementById('disc-fine-block');
+    var pBlk=document.getElementById('disc-price-block');
     var ON ='background:var(--primary);color:#fff;';
     var OFF='background:var(--cream3);color:var(--text-muted);';
-    if(type==='touch'){
-        tTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+ON;
-        fTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+OFF;
-        tBlk.style.display='block'; fBlk.style.display='none';
-        var fv=document.getElementById('disc-fine-val');if(fv)fv.value='';
-        var nf=document.getElementById('disc-net-fine');if(nf)nf.value='';
-    }else{
-        fTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+ON;
-        tTab.style.cssText='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;'+OFF;
-        fBlk.style.display='block'; tBlk.style.display='none';
-        var tv=document.getElementById('disc-touch-val');if(tv)tv.value='';
-        var tf=document.getElementById('disc-touch-fine');if(tf)tf.value='';
-    }
+    var BASE='flex:1;height:32px;border:none;font-family:var(--sans);font-size:0.65rem;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.13s;';
+    var isUchak=document.getElementById('uchak-toggle').checked;
+
+    tTab.style.cssText=BASE+(type==='touch'?ON:OFF);
+    fTab.style.cssText=BASE+(type==='fine'?ON:OFF);
+    pTab.style.cssText=BASE+(type==='price'?ON:OFF)+(isUchak?'':'display:none;');
+
+    tBlk.style.display=(type==='touch')?'block':'none';
+    fBlk.style.display=(type==='fine')?'block':'none';
+    pBlk.style.display=(type==='price')?'block':'none';
+
+    if(type!=='touch'){var tv=document.getElementById('disc-touch-val');if(tv)tv.value='';var tf=document.getElementById('disc-touch-fine');if(tf)tf.value='';}
+    if(type!=='fine'){var fv=document.getElementById('disc-fine-val');if(fv)fv.value='';var nf=document.getElementById('disc-net-fine');if(nf)nf.value='';}
+    if(type!=='price'){var pv=document.getElementById('disc-price-val');if(pv)pv.value='';var np=document.getElementById('disc-net-price');if(np)np.value='';}
+
     calcFinalSettlement();
 }
 
 function getDiscountValues(totalFine,totalNetWt){
-    var fineSaved=0;
+    var fineSaved=0;var priceSaved=0;
     if(activeDiscountType==='touch'){
         var touchDisc=parseFloat(document.getElementById('disc-touch-val').value)||0;
         fineSaved=(totalNetWt>0&&touchDisc>0)?(totalNetWt*touchDisc)/100:0;
         var tf=document.getElementById('disc-touch-fine');
         if(tf) tf.value=fineSaved>0?fineSaved.toFixed(3):'';
-    }else{
+    }else if(activeDiscountType==='fine'){
         var fineDisc=parseFloat(document.getElementById('disc-fine-val').value)||0;
         fineSaved=fineDisc;
         var netFine=Math.max(0,totalFine-fineSaved);
         var nf=document.getElementById('disc-net-fine');
         if(nf) nf.value=fineSaved>0?netFine.toFixed(3):'';
+    }else if(activeDiscountType==='price'){
+        var priceDisc=parseFloat(document.getElementById('disc-price-val').value)||0;
+        priceSaved=priceDisc;
+        var netAmt=Math.max(0,totalFine-priceSaved);
+        var npEl=document.getElementById('disc-net-price');
+        if(npEl) npEl.value=priceSaved>0?netAmt.toFixed(2):'';
     }
-    return{touchDisc:activeDiscountType==='touch'?(parseFloat(document.getElementById('disc-touch-val').value)||0):0,fineSaved:fineSaved,amountDisc:0};
+    return{touchDisc:activeDiscountType==='touch'?(parseFloat(document.getElementById('disc-touch-val').value)||0):0,fineSaved:fineSaved,amountDisc:priceSaved};
 }
 
 function calcFinalSettlement(){
@@ -1425,7 +1452,7 @@ function calcFinalSettlement(){
     if(!isUchak)currentItems.forEach(function(it){totalNetWt+=(parseFloat(it.weight||0)-parseFloat(it.para||0)-parseFloat(it.less||0));});
     var disc=getDiscountValues(tf,totalNetWt);
     var fine=0,cash=0;
-    if(isUchak){cash=tf-cv-f9-fd;fine=0;}
+    if(isUchak){cash=tf-cv-f9-fd-disc.amountDisc;fine=0;}
     else{fine=tf-cv-f9-fd-disc.fineSaved;cash=(fine*r)/10;}
     document.getElementById('rem-fine-val').innerText=isUchak?'0.000':fine.toFixed(3);
     document.getElementById('total-amount').innerText=cash.toLocaleString('en-IN',{minimumFractionDigits:2});
@@ -1571,7 +1598,7 @@ async function commitBillingTransactionPipeline(){
     var totalNetWt=0;
     if(!isUchak)currentItems.forEach(function(it){totalNetWt+=(parseFloat(it.weight||0)-parseFloat(it.para||0)-parseFloat(it.less||0));});
     var discData=getDiscountValues(parseFloat(document.getElementById('sum-fine').innerText)||0,totalNetWt);
-    var data={vch_id:document.getElementById('v-id').value,customer:document.getElementById('cust-name').value||'Walking Customer',status:isCredit?'CREDIT':'PAID',is_credit:isCredit,is_uchak:isUchak,totalLedgerFine:isUchak?0:parseFloat(document.getElementById('sum-fine').innerText),remainingFine:isUchak?0:parseFloat(document.getElementById('rem-fine-val').innerText),collectedFine:isUchak?0:(parseFloat(document.getElementById('collect-fine').value)||0),fine995:parseFloat(document.getElementById('settle-995-fine').value)||0,fineDhal:parseFloat(document.getElementById('settle-dhal-fine').value)||0,goldRate:isUchak?0:rate,totalAmount:parseFloat(document.getElementById('total-amount').innerText.replace(/,/g,'')),discountType:activeDiscountType,discountTouch:discData.touchDisc,discountFine:discData.fineSaved,items:currentItems};
+    var data={vch_id:document.getElementById('v-id').value,customer:document.getElementById('cust-name').value||'Walking Customer',status:isCredit?'CREDIT':'PAID',is_credit:isCredit,is_uchak:isUchak,totalLedgerFine:isUchak?0:parseFloat(document.getElementById('sum-fine').innerText),remainingFine:isUchak?0:parseFloat(document.getElementById('rem-fine-val').innerText),collectedFine:isUchak?0:(parseFloat(document.getElementById('collect-fine').value)||0),fine995:parseFloat(document.getElementById('settle-995-fine').value)||0,fineDhal:parseFloat(document.getElementById('settle-dhal-fine').value)||0,goldRate:isUchak?0:rate,totalAmount:parseFloat(document.getElementById('total-amount').innerText.replace(/,/g,'')),discountType:activeDiscountType,discountTouch:discData.touchDisc,discountFine:discData.fineSaved,discountAmount:discData.amountDisc,items:currentItems};
     try{
         if(window.pywebview&&window.pywebview.api){
             var res=await window.pywebview.api.generate_bill(data);
@@ -1609,7 +1636,8 @@ window.onload=function(){
     document.getElementById('uchak-toggle').checked=(mode==='uchak');
     document.getElementById('header-title-display').innerHTML=role==='staff'?'Wholesale <em>Terminal</em>':'Create <em>Invoice</em>';
     var vInput=document.getElementById('v-id');
-    vInput.readOnly=false;vInput.removeAttribute('tabIndex');vInput.placeholder='VCH-001 (editable)';
+    if(role==='staff'){vInput.readOnly=true;vInput.tabIndex=-1;vInput.placeholder='VCH-001';vInput.style.background='#f5f3ee';vInput.style.cursor='not-allowed';}
+    else{vInput.readOnly=false;vInput.removeAttribute('tabIndex');vInput.placeholder='VCH-001 (editable)';}
     document.getElementById('session-avatar-badge').innerText=userName.substring(0,2).toUpperCase();
     initSidebar('billing');
     scalePanelLoadPorts();
@@ -1622,5 +1650,6 @@ window.onload=function(){
     setInterval(function(){document.getElementById('real-time-clock').innerText=new Date().toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');},1000);
 };
 </script>
+<script src="bastion_guard.js"></script>
 </body>
 </html>
