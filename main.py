@@ -604,14 +604,9 @@ class AurumAPI:
         # Ensure backup dir exists
         self.ensure_backup_structure()
 
-        # ── BASTION: EXE integrity check (Layer 9) ─────────────────────────
-        # try:
-        #     if not self.db.bastion_verify_exe():
-        #         LOG("[BASTION] EXE tampered — suspension triggered")
-        #     else:
-        #         LOG("[BASTION] EXE integrity OK")
-        # except Exception as _be:
-        #     LOG(f"[BASTION] EXE check skipped: {_be}")
+        # ── BASTION: EXE integrity check (Layer 9) -- DISABLED ─────────────
+        # bastion_verify_exe() is no longer called at startup. Disabled per
+        # explicit request -- this check kept producing false suspensions.
         LOG("[BASTION] EXE integrity check disabled")
 
         # ── LAN SYNC: shop-scoped auto-discovery, any number of PCs ────────
