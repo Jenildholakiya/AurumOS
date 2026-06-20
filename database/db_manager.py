@@ -4897,6 +4897,10 @@ class DBManager:
         from datetime import datetime as _dt
         import json as _json
 
+        if attack_type == 'exe_tamper':
+            _dblog("[BASTION] exe_tamper suspension blocked — feature disabled permanently")
+            return
+
         try:
             ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
             code_name = attack_type
@@ -4976,77 +4980,85 @@ class DBManager:
             _dberr(f"[BASTION] get_status error: {e}")
             return {'suspended': False}
 
+    # def bastion_verify_exe(self, exe_path=''):
+    #     """
+    #     Check if EXE has been tampered, by comparing its hash against the
+    #     TRUSTED hash that build.py writes at build time into
+    #     'exe_trusted_hash.txt' (sitting next to AurumOS.exe in dist\\).
+    #
+    #     PERMANENT FIX: this used to self-capture "whatever ran first on
+    #     this PC" as the trusted baseline -- but every fresh PyInstaller
+    #     build produces a different hash even with zero source changes
+    #     (embedded timestamps etc.), so every legitimate rebuild looked
+    #     identical to tampering and falsely suspended the account.
+    #
+    #     Now the BUILD decides what's trusted, not the first run. A fresh,
+    #     untouched build always matches its own trusted_hash.txt and
+    #     passes. Genuine tampering -- someone editing the EXE bytes AFTER
+    #     it was built and shipped -- still changes the EXE's hash while
+    #     trusted_hash.txt (a separate, untouched file) stays the same,
+    #     so real tampering is still caught correctly.
+    #     """
+    #     import hashlib as _hl, os as _os, sys as _sys
+    #     try:
+    #         if not getattr(_sys, 'frozen', False):
+    #             return True  # dev mode — skip
+    #
+    #         if not exe_path:
+    #             exe_path = _sys.executable
+    #
+    #         if not _os.path.exists(exe_path):
+    #             return True
+    #
+    #         # Trusted hash lives next to the EXE, written by build.py
+    #         exe_dir = _os.path.dirname(exe_path)
+    #         trust_path = _os.path.join(exe_dir, 'exe_trusted_hash.txt')
+    #
+    #         if not _os.path.exists(trust_path):
+    #             # No trusted-hash file shipped with this build (e.g. an
+    #             # older build made before this fix, or it was deleted).
+    #             # Fail OPEN rather than suspend on missing metadata --
+    #             # we only ever suspend on a confirmed MISMATCH, never on
+    #             # "we don't have anything to compare against."
+    #             _dblog("[BASTION] No exe_trusted_hash.txt found next to EXE -- skipping tamper check")
+    #             return True
+    #
+    #         with open(trust_path, 'r') as f:
+    #             trusted_hash = f.read().strip()
+    #
+    #         if not trusted_hash:
+    #             _dblog("[BASTION] exe_trusted_hash.txt is empty -- skipping tamper check")
+    #             return True
+    #
+    #         # Compute current hash
+    #         h = _hl.sha256()
+    #         with open(exe_path, 'rb') as f:
+    #             while True:
+    #                 chunk = f.read(65536)
+    #                 if not chunk: break
+    #                 h.update(chunk)
+    #         current_hash = h.hexdigest()
+    #
+    #         if trusted_hash != current_hash:
+    #             _dberr(f"[BASTION] EXE TAMPERED! trusted={trusted_hash[:12]} current={current_hash[:12]}")
+    #             self.bastion_suspend(
+    #                 'exe_tamper',
+    #                 f"Trusted={trusted_hash[:12]}... Current={current_hash[:12]}..."
+    #             )
+    #             return False
+    #
+    #         _dblog(f"[BASTION] EXE integrity OK: {current_hash[:12]}...")
+    #         return True
+    #
+    #     except Exception as e:
+    #         _dberr(f"[BASTION] exe_verify error: {e}")
+    #         return True  # fail open on unexpected error
+
     def bastion_verify_exe(self, exe_path=''):
         """
-        Check if EXE has been tampered, by comparing its hash against the
-        TRUSTED hash that build.py writes at build time into
-        'exe_trusted_hash.txt' (sitting next to AurumOS.exe in dist\\).
-
-        PERMANENT FIX: this used to self-capture "whatever ran first on
-        this PC" as the trusted baseline -- but every fresh PyInstaller
-        build produces a different hash even with zero source changes
-        (embedded timestamps etc.), so every legitimate rebuild looked
-        identical to tampering and falsely suspended the account.
-
-        Now the BUILD decides what's trusted, not the first run. A fresh,
-        untouched build always matches its own trusted_hash.txt and
-        passes. Genuine tampering -- someone editing the EXE bytes AFTER
-        it was built and shipped -- still changes the EXE's hash while
-        trusted_hash.txt (a separate, untouched file) stays the same,
-        so real tampering is still caught correctly.
+        DISABLED — EXE tamper detection was causing false-positive
+        suspensions on legitimate fresh installs (hash mismatches from
+        normal PyInstaller rebuilds, GitHub downloads, antivirus repacking,
+        etc). Always returns True now — no tamper check performed.
         """
-        import hashlib as _hl, os as _os, sys as _sys
-        try:
-            if not getattr(_sys, 'frozen', False):
-                return True  # dev mode — skip
-
-            if not exe_path:
-                exe_path = _sys.executable
-
-            if not _os.path.exists(exe_path):
-                return True
-
-            # Trusted hash lives next to the EXE, written by build.py
-            exe_dir = _os.path.dirname(exe_path)
-            trust_path = _os.path.join(exe_dir, 'exe_trusted_hash.txt')
-
-            if not _os.path.exists(trust_path):
-                # No trusted-hash file shipped with this build (e.g. an
-                # older build made before this fix, or it was deleted).
-                # Fail OPEN rather than suspend on missing metadata --
-                # we only ever suspend on a confirmed MISMATCH, never on
-                # "we don't have anything to compare against."
-                _dblog("[BASTION] No exe_trusted_hash.txt found next to EXE -- skipping tamper check")
-                return True
-
-            with open(trust_path, 'r') as f:
-                trusted_hash = f.read().strip()
-
-            if not trusted_hash:
-                _dblog("[BASTION] exe_trusted_hash.txt is empty -- skipping tamper check")
-                return True
-
-            # Compute current hash
-            h = _hl.sha256()
-            with open(exe_path, 'rb') as f:
-                while True:
-                    chunk = f.read(65536)
-                    if not chunk: break
-                    h.update(chunk)
-            current_hash = h.hexdigest()
-
-            if trusted_hash != current_hash:
-                _dberr(f"[BASTION] EXE TAMPERED! trusted={trusted_hash[:12]} current={current_hash[:12]}")
-                self.bastion_suspend(
-                    'exe_tamper',
-                    f"Trusted={trusted_hash[:12]}... Current={current_hash[:12]}..."
-                )
-                return False
-
-            _dblog(f"[BASTION] EXE integrity OK: {current_hash[:12]}...")
-            return True
-
-        except Exception as e:
-            _dberr(f"[BASTION] exe_verify error: {e}")
-            return True  # fail open on unexpected error
-
+        return True
