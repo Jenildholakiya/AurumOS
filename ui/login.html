@@ -80,7 +80,19 @@ body::before{
 .form{padding:16px 32px 24px;}
 .lbl{font-size:.55rem;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);display:block;margin-bottom:5px;}
 .pass-wrap{position:relative;margin-bottom:12px;}
-.inp{width:100%;height:42px;padding:0 42px 0 13px;background:var(--cream);border:1px solid var(--rule);border-radius:8px;font-family:var(--mono);font-size:.85rem;color:var(--ink);outline:none;transition:all .14s;}
+.inp {
+    width: 100%;
+    height: 42px;
+    padding: 0 13px; /* Changed from 42px right padding to 13px */
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: .85rem;
+    color: var(--ink);
+    outline: none;
+    transition: all .14s;
+}
 .inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,.12);background:#fff;}
 .inp:disabled{opacity:.45;cursor:not-allowed;}
 .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;padding:4px;color:var(--muted2);transition:color 0.13s;font-size:0.9rem;}
@@ -88,6 +100,17 @@ body::before{
 .strength-bar{height:2px;background:var(--rule);border-radius:99px;margin-top:5px;overflow:hidden;display:none;}
 .strength-bar.visible{display:block;}
 .strength-fill{height:100%;width:0%;border-radius:99px;transition:width 0.3s,background 0.3s;}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none !important;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+}
 
 /* Attempt dots */
 .ar{display:none;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:24px;}
@@ -320,17 +343,6 @@ function showLastLogin(data) {
     }
     meta.innerText = (data.role ? data.role.charAt(0).toUpperCase() + data.role.slice(1) : 'User') + '  ·  ' + timeStr;
     strip.classList.add('visible');
-}
-
-// ── Show/hide password ─────────────────────────────────────────────
-function toggleEye() {
-    var inp = document.getElementById('inp');
-    var icon = document.getElementById('eye-icon');
-    var show = inp.type === 'password';
-    inp.type = show ? 'text' : 'password';
-    icon.innerHTML = show
-        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 }
 
 // ── Password strength ──────────────────────────────────────────────

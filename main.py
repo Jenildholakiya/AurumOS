@@ -328,7 +328,7 @@ class ScaleReader:
                 if raw:
                     txt = raw.decode('ascii', errors='replace')
                     has_digit = any(ch.isdigit() for ch in txt)
-                    has_garbage = txt.count(' ') > len(txt) * 0.3
+                    has_garbage = txt.count('�') > len(txt) * 0.3
                     LOG(f"[SCALE] Baud {try_baud}: {raw[:16]} ascii={has_digit} garbage={has_garbage}")
                     if has_digit and not has_garbage:
                         detected_baud = try_baud
@@ -614,18 +614,25 @@ class AurumAPI:
         # shop_id automatically find and sync with each other -- no fixed
         # IP list, works for 2 PCs or 20. Different shops never mix even
         # on the same WiFi router, because shop_id must match exactly.
-        # ── LAN SYNC: only if this license/plan allows it ───────────────
+        # ── LAN SYNC: always on, no plan flag needed ─────────────────────
         try:
-            self.sync_engine = None
-            if self.db.is_feature_enabled('lan_sync'):
-                self.sync_engine = SyncEngine(self.db)
-                self.sync_engine.start()
-                LOG(f"[SYNC] Started. shop_id={self.db.get_or_create_shop_id()}")
-            else:
-                LOG("[SYNC] Disabled for this plan")
+            self.sync_engine = SyncEngine(self.db)
+            self.sync_engine.start()
+            LOG(f"[SYNC] Started. shop_id={self.db.get_or_create_shop_id()}")
         except Exception as _syne:
             LOG(f"[SYNC] Failed to start sync engine: {_syne}")
             self.sync_engine = None
+
+        # ── HEALTH DASHBOARD: auto-provision, zero manual setup ───────────
+        # Runs once per PC, in the background. If already provisioned,
+        # this is a no-op. Never blocks startup -- happens silently.
+        def _auto_provision():
+            try:
+                result = self.db.auto_provision_health_key('https://aurum-os-admin.vercel.app/')
+                LOG(f"[HEALTH] auto-provision: {result}")
+            except Exception as _ape:
+                LOG(f"[HEALTH] auto-provision error: {_ape}")
+        threading.Thread(target=_auto_provision, daemon=True).start()
 
         # ── BASTION REAL-TIME ENFORCEMENT ───────────────────────────────
         # Polls suspension status every 3s. The instant it flips True,

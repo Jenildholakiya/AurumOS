@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+from database.db_manager import _dberr
 
 # ── ALERT CONFIG — fill these in ──────────────────────────────────
 # Your Gmail address and App Password (not regular password)
@@ -126,6 +127,53 @@ class BastionAI:
         """Call from main.py after login / before logout."""
         self._session_active = active
 
+    def get_weekly_report(self):
+        """
+        Generates a summary of the past 7 days of Bastion events.
+        """
+        try:
+            # Assuming you have a database connection or a way to fetch logs
+            # This is a placeholder; replace with your actual DB query logic
+            logs = self.db.get_logs_last_7_days()
+
+            report = {
+                'total_threats': len([e for e in logs if e['severity'] == 'HIGH']),
+                'auto_healed': len([e for e in logs if e['action_taken'] == 'HEALED']),
+                'summary': 'Weekly system analysis complete.'
+            }
+            return report
+        except Exception as e:
+            _dberr(f"[BASTION_AI] Failed to generate weekly report: {str(e)}")
+            return {'error': str(e)}
+
+    def log_feature_status(self):
+        """Prints the current security configuration status to the terminal on startup."""
+        _log("══════════════════════════════════════════════════")
+        _log("BASTION AI — Active Security Configuration:")
+
+        # Mapping of internal keys to readable names
+        status_map = {
+            'db_watchdog_enabled': 'DB Watchdog',
+            'session_guard_enabled': 'Session Guard',
+            'auto_healer_enabled': 'Auto-Healer',
+            'pattern_learner_enabled': 'Pattern Learner',
+            'alert_sender_enabled': 'Alert Sender'
+        }
+
+        try:
+            # Fetch current status from your DB
+            settings = self.db.get_global_settings()
+
+            for key, name in status_map.items():
+                status = "ON" if settings.get(key, True) else "OFF"
+                color_prefix = "✔" if status == "ON" else "✘"
+                _log(f"  {color_prefix} {name:20} : {status}")
+
+        except Exception as e:
+            _err(f"Could not load feature status: {e}")
+
+        _log("══════════════════════════════════════════════════")
+
     def push_to_health_dashboard(self):
         """Push real event data to the Vercel health dashboard. Silent no-op if not configured."""
         url = os.environ.get('AURUM_HEALTH_URL', '')
@@ -160,21 +208,43 @@ class BastionAI:
     # THREAD RUNNER
     # ══════════════════════════════════════════════════════════════
 
-    def _runner(self, name, target, interval):
-        """Wraps each thread with error recovery and sleep."""
-        # Stagger startup so all threads don't hit DB at once
-        import random
-        time.sleep(random.uniform(2, 8))
+    # Inside BastionAI class
+    def _is_feature_enabled(self, feature_id):
+        """
+        Checks the Global Master Config in Supabase.
+        If the client is offline, it falls back to the last cached setting.
+        """
+        try:
+            # Example API call to your Supabase/Vercel proxy
+            # This function fetches the master config for ALL clients
+            settings = self.db.get_global_settings()
+            return settings.get(feature_id, True)
+        except:
+            return True  # Default to ON if network is down (Fail-safe)
 
+    def _runner(self, name, target, interval):
         while self._running:
-            try:
-                target()
-            except Exception as e:
-                _err(f"{name} error: {e}")
-            # Sleep in small chunks so stop() is responsive
+            # MAP THREAD NAMES TO DB SETTINGS
+            mapping = {
+                "DB-Watchdog": "db_watchdog_enabled",
+                "Session-Guard": "session_guard_enabled",
+                "Auto-Healer": "auto_healer_enabled",
+                "Pattern-Learner": "pattern_learner_enabled",
+                "Alert-Sender": "alert_sender_enabled"
+            }
+
+            feature_key = mapping.get(name.replace("BASTION-", ""))
+
+            if not feature_key or self._is_feature_enabled(feature_key):
+                try:
+                    target()
+                except Exception as e:
+                    _err(f"{name} error: {e}")
+            else:
+                _log(f"Feature {name} is globally DISABLED. Skipping.")
+
             for _ in range(interval):
-                if not self._running:
-                    return
+                if not self._running: return
                 time.sleep(1)
 
     # ══════════════════════════════════════════════════════════════
