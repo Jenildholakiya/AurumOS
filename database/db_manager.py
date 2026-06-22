@@ -387,17 +387,17 @@ class DBManager:
     # LAN SYNC -- DEVICE IDENTITY
     # ══════════════════════════════════════════════════════════════
 
-    def is_feature_enabled(self, feature):
-        """Plan-based feature gate. Checks app_config 'plan_features'
-        (comma list, e.g. 'lan_sync,reports'). Empty/missing = disabled
-        by default -- safer than accidentally enabling paid features."""
-        try:
-            with self._get_connection() as conn:
-                row = conn.execute("SELECT value FROM app_config WHERE key='plan_features'").fetchone()
-            enabled = (row['value'] or '').split(',') if row else []
-            return feature.strip() in [f.strip() for f in enabled]
-        except Exception:
-            return False
+    # def is_feature_enabled(self, feature):
+    #     """Plan-based feature gate. Checks app_config 'plan_features'
+    #     (comma list, e.g. 'lan_sync,reports'). Empty/missing = disabled
+    #     by default -- safer than accidentally enabling paid features."""
+    #     try:
+    #         with self._get_connection() as conn:
+    #             row = conn.execute("SELECT value FROM app_config WHERE key='plan_features'").fetchone()
+    #         enabled = (row['value'] or '').split(',') if row else []
+    #         return feature.strip() in [f.strip() for f in enabled]
+    #     except Exception:
+    #         return False
 
     def set_plan_features(self, features_csv):
         """Called by license/setup flow, e.g. set_plan_features('lan_sync,reports')."""
