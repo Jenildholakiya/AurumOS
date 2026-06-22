@@ -438,10 +438,8 @@ class DBManager:
 
     def is_feature_enabled(self, feature_name):
         """
-        Simple plan-based feature gate. Stored in app_config as
-        'feature_<name>' = '1'/'0'. Defaults to DISABLED if not set --
-        so new features (like lan_sync) never silently turn on for
-        existing installs unless explicitly enabled for that plan.
+        Updated plan-based feature gate.
+        Defaults to ENABLED (True) if not set.
         """
         try:
             with self._get_connection() as conn:
@@ -449,10 +447,18 @@ class DBManager:
                     "SELECT value FROM app_config WHERE key=?",
                     (f'feature_{feature_name}',)
                 ).fetchone()
-                return bool(row and row['value'] == '1')
+
+            # If the key is missing (None), return True (Fail-Open)
+            if row is None:
+                return True
+
+            # Only disable if explicitly set to '0'
+            return str(row['value']) == '1'
+
         except Exception as e:
-            _dberr(f"[FEATURE] check {feature_name}: {e}")
-            return False
+            _dberr(f"[FEATURE] check {feature_name} failed: {e}")
+            # Default to True so the app remains functional if DB has an error
+            return True
 
     def set_feature_enabled(self, feature_name, enabled):
         """Admin/license tool calls this to turn a plan feature on/off."""
