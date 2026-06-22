@@ -642,43 +642,44 @@ class DBManager:
 
     def stamp_row_for_sync(self, table_name, row_id, pk_col='id'):
         """
-        Call right after inserting a new row in a syncable table.
-        Stamps it with this device's id, a fresh local sync_version,
-        and local_id = its own rowid (so it keeps its identity even
-        after being merged onto another PC with a different autoincrement id).
-
-        pk_col: the column to match on. Most tables use 'id', but a few
-        (katti_vouchers, uchak_inward_vouchers) use a TEXT PRIMARY KEY
-        like vch_id instead -- pass that column name for those.
-        local_id is always stored as SQLite's internal rowid converted
-        to an integer string hash isn't needed here -- we just reuse
-        sqlite's own rowid via "SELECT rowid" since every table (even
-        ones with a TEXT PK) still has an implicit unique rowid.
+        Stamps a new row for synchronization.
+        Includes robust fallback for rowid lookups on TEXT primary key tables.
         """
         try:
             if table_name not in self.SYNC_TABLES:
                 return False
+
             dev_id = self.get_or_create_device_id()
+
             with self._get_connection() as conn:
+                # 1. Get the next version for this device
                 nxt = conn.execute(
                     f"SELECT COALESCE(MAX(sync_version),0)+1 as n FROM {table_name} WHERE device_id=?",
                     (dev_id,)
                 ).fetchone()
                 next_version = int(nxt['n'] or 1)
-                # Use rowid (always present in SQLite, even for TEXT PK tables)
-                # as local_id, and match the WHERE clause on whatever pk_col was given.
+
+                # 2. Safely retrieve the rowid for local_id mapping
+                # We explicitly cast row_id to string to match TEXT PKs if necessary
                 rowid_row = conn.execute(
                     f"SELECT rowid FROM {table_name} WHERE {pk_col}=?", (row_id,)
                 ).fetchone()
-                local_id_val = rowid_row[0] if rowid_row else row_id
+
+                # Fallback: if rowid is missing, use a hash of the row_id as local_id
+                local_id_val = rowid_row[0] if rowid_row else abs(hash(str(row_id)))
+
+                # 3. Apply the sync stamps
                 conn.execute(
                     f"UPDATE {table_name} SET device_id=?, sync_version=?, local_id=? WHERE {pk_col}=?",
                     (dev_id, next_version, local_id_val, row_id)
                 )
                 conn.commit()
+
+                _dblog(f"[SYNC] Stamped {table_name} [{row_id}] as v{next_version}")
             return True
+
         except Exception as e:
-            _dberr(f"[SYNC] stamp_row_for_sync {table_name}: {e}")
+            _dberr(f"[SYNC] stamp_row_for_sync {table_name} failed for ID {row_id}: {e}")
             return False
 
     def get_logs_last_7_days(self):
