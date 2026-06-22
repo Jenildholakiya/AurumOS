@@ -5,7 +5,13 @@ import random
 import json
 import sys
 import traceback
-from datetime import date
+from datetime import date, datetime
+
+# Safe to embed in every distributed EXE -- this key can ONLY mint a
+# per-shop secret for self-registration, nothing else. Set to match
+# AURUM_PROVISION_KEY on the Vercel dashboard. Rotating it just means
+# rebuilding the EXE and updating one Vercel env var.
+_AUTO_PROVISION_KEY = '2351370ae9fa41af69a603046b015b2cfc048fb30ee357c9647a18ea838c43cf'
 
 
 def _dblog(msg):
@@ -44,6 +50,7 @@ class DBManager:
         env_path = os.environ.get('AURUM_DB_PATH', '').strip()
         if env_path and os.path.exists(os.path.dirname(env_path) or '.'):
             self.db_path = env_path
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.db_dir = os.path.dirname(env_path)
         else:
             if getattr(_sys, 'frozen', False):
@@ -121,6 +128,14 @@ class DBManager:
                         is_tagged     INTEGER DEFAULT 0,
                         entry_date    DATE     DEFAULT (date('now')),
                         timestamp     DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE IF NOT EXISTS logs (
+                        ts TEXT,
+                        event_type TEXT,
+                        severity TEXT,
+                        score INTEGER,
+                        detail TEXT,
+                        action_taken TEXT
+                    )
                     CREATE TABLE IF NOT EXISTS sales_history (
                         id             INTEGER PRIMARY KEY AUTOINCREMENT,
                         vch_id         TEXT UNIQUE,
@@ -502,6 +517,104 @@ class DBManager:
             _dberr(f"[SYNC] set_shop_id: {e}")
             return {'status': 'error', 'message': str(e)}
 
+    def set_health_config(self, health_url, admin_secret, client_id):
+        """
+        One-time setup: store the health dashboard connection details
+        permanently in this PC's own DB, instead of requiring OS
+        environment variables to be set every single launch. This is
+        what makes onboarding a new shop scale -- run once per shop
+        (or per PC), never touch it again.
+        """
+        try:
+            with self._get_connection() as conn:
+                for k, v in [
+                    ('health_url', str(health_url or '').strip()),
+                    ('health_secret', str(admin_secret or '').strip()),
+                    ('health_client_id', str(client_id or '').strip()),
+                ]:
+                    conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)", (k, v))
+                conn.commit()
+            _dblog(f"[HEALTH] config saved: client_id={client_id}")
+            return {'status': 'success'}
+        except Exception as e:
+            _dberr(f"[HEALTH] set_health_config: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_health_config(self):
+        """Reads the persisted health-reporting config, falling back to
+        OS environment variables if nothing was saved (back-compat)."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT key, value FROM app_config WHERE key IN "
+                    "('health_url','health_secret','health_client_id')"
+                ).fetchall()
+            cfg = {r['key']: r['value'] for r in rows}
+            return {
+                'url': cfg.get('health_url') or os.environ.get('AURUM_HEALTH_URL', ''),
+                'secret': cfg.get('health_secret') or os.environ.get('AURUM_ADMIN_SECRET', ''),
+                'client_id': cfg.get('health_client_id') or os.environ.get('AURUM_CLIENT_ID', ''),
+            }
+        except Exception as e:
+            _dberr(f"[HEALTH] get_health_config: {e}")
+            return {'url': '', 'secret': '', 'client_id': ''}
+
+    def auto_provision_health_key(self, health_base_url):
+        """
+        Fully automatic key generation sending both ID and Business Name.
+        """
+        try:
+            existing = self.get_health_config()
+            # Fetch business name from your business_profile table
+            biz_name = self.get_config('business_name', 'Unnamed Shop')
+
+            if existing.get('url') and existing.get('secret') and existing.get('client_id'):
+                return {'status': 'already_configured', 'client_id': existing['client_id']}
+
+            client_id = self.get_or_create_shop_id()
+            events_url = health_base_url.rstrip('/') + '/api/bastion/events'
+
+            import urllib.request, urllib.error, json as _json
+
+            payload = self.get_provisioning_payload()
+
+            req = urllib.request.Request(
+                events_url,
+                data=_json.dumps(payload).encode('utf-8'),
+                method='POST',
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-admin-secret': _AUTO_PROVISION_KEY
+                },
+            )
+
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    resp_data = resp.read().decode('utf-8')
+                    result = _json.loads(resp_data)
+
+                    if result.get('ok'):
+                        shop_secret = result.get('shop_secret', 'DEFAULT_SECRET')
+                        self.set_health_config(events_url, shop_secret, client_id)
+                        _dblog(f"[HEALTH] Provisioned {biz_name} ({client_id})")
+                        return {'status': 'success', 'client_id': client_id}
+                    else:
+                        error_msg = result.get('error', 'Unknown')
+                        _dberr(f"[HEALTH] Rejected: {error_msg}")
+                        return {'status': 'error', 'message': error_msg}
+
+            except urllib.error.HTTPError as e:
+                error_body = e.read().decode('utf-8', errors='ignore')
+                _dberr(f"[HEALTH] HTTP {e.code}: {error_body}")
+                return {'status': 'error', 'message': f"HTTP {e.code}: {error_body}"}
+            except Exception as e:
+                _dberr(f"[HEALTH] Request failed: {str(e)}")
+                return {'status': 'error', 'message': str(e)}
+
+        except Exception as e:
+            _dberr(f"[HEALTH] Exception: {str(e)}")
+            return {'status': 'error', 'message': str(e)}
+
     # ══════════════════════════════════════════════════════════════
     # LAN SYNC -- ENGINE
     # ══════════════════════════════════════════════════════════════
@@ -511,6 +624,15 @@ class DBManager:
         'katti_voucher_items', 'clients_master', 'credit_ledger',
         'uchak_inward_vouchers', 'uchak_inward_items', 'admin_creds',
     ]
+
+    # Add this method to your DBManager class in db_manager.py
+    def get_provisioning_payload(self):
+        return {
+            'client_id': self.get_or_create_shop_id(),
+            'business_name': self.get_config('business_name', 'Unnamed Shop'),
+            'events': [],
+            'summary': 'Periodic Sync'
+        }
 
     def stamp_row_for_sync(self, table_name, row_id, pk_col='id'):
         """
@@ -552,6 +674,39 @@ class DBManager:
         except Exception as e:
             _dberr(f"[SYNC] stamp_row_for_sync {table_name}: {e}")
             return False
+
+    def get_logs_last_7_days(self):
+        """
+        Retrieves logs from the last 7 days from the local database.
+        """
+        import datetime
+        try:
+            seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
+
+            # Replace this query with your actual DB query logic
+            # Example for a simple list-based log:
+            all_logs = self.load_all_logs()
+            recent_logs = [log for log in all_logs if log.get('ts', '') >= seven_days_ago]
+
+            return recent_logs
+        except Exception as e:
+            _dberr(f"[DB] Error fetching logs: {str(e)}")
+            return []
+
+    def load_all_logs(self):
+        """
+        Fetches all event logs from the local database.
+        """
+        try:
+            cursor = self.conn.cursor()
+            # Ensure 'logs' is the correct table name in your local DB
+            cursor.execute("SELECT * FROM logs ORDER BY ts DESC")
+            # Convert rows to dictionary format
+            columns = [column[0] for column in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            _dberr(f"[DB] load_all_logs failed: {str(e)}")
+            return []
 
     def get_changes_since(self, peer_device_id, since_versions):
         """
@@ -1130,7 +1285,7 @@ class DBManager:
 
     def add_stock_entry(self, **kwargs):
         if self._bastion_block():
-            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            _dberr("[BASTION] Write blocked -- account suspended")
             return False
         try:
             import time as _t
@@ -1215,7 +1370,7 @@ class DBManager:
 
     def add_client(self, name, phone, metal_limit, cash_limit):
         if self._bastion_block():
-            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            _dberr("[BASTION] Write blocked -- account suspended")
             return False
         ok = self.execute_query(
             "INSERT INTO clients_master (name,phone,metal_limit,cash_limit) VALUES (?,?,?,?)",
@@ -1246,7 +1401,7 @@ class DBManager:
 
     def post_ledger_entry(self, **kwargs):
         if self._bastion_block():
-            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            _dberr("[BASTION] Write blocked -- account suspended")
             return False
         return self.execute_query(
             """INSERT INTO credit_ledger
@@ -1286,90 +1441,97 @@ class DBManager:
         if self._bastion_block():
             _dberr("[BASTION] Write blocked -- account suspended")
             return False
+        # Layer 10: verify session token before katti write
         if not self._verify_session_token():
             _dberr("[KATTI] Session token invalid — save BLOCKED")
             return False
-
         items = items or []
-        conn = None
         try:
             safe_vch_id = str(vch_id).strip().zfill(4)
-            conn = self._get_connection()
-            # Ensure we wait up to 5 seconds if the DB is busy
-            conn.execute("PRAGMA busy_timeout = 5000")
-            cursor = conn.cursor()
+            with self._get_connection() as conn:
+                conn.execute("PRAGMA busy_timeout = 30000")
+                cursor = conn.cursor()
 
-            # Start explicit transaction
-            cursor.execute("BEGIN IMMEDIATE")
+                touch_values = [float(i.get('touch', 0)) if isinstance(i, dict) else 0.0 for i in items]
+                valid_touches = [t for t in touch_values if t > 0]
+                avg_touch_val = sum(valid_touches) / len(valid_touches) if valid_touches else 0.0
 
-            touch_values = [float(i.get('touch', 0)) if isinstance(i, dict) else 0.0 for i in items]
-            valid_touches = [t for t in touch_values if t > 0]
-            avg_touch_val = sum(valid_touches) / len(valid_touches) if valid_touches else 0.0
-
-            resolved_box_id = box_id
-            if not resolved_box_id:
-                for item in items:
-                    if isinstance(item, dict):
-                        c = str(item.get('box') or '').strip()
-                        if c and c not in ('', '-', 'None', 'N/A'):
-                            resolved_box_id = c
-                            break
-
-            cursor.execute(
-                """INSERT OR REPLACE INTO katti_vouchers
-                       (vch_id,total_weight,total_packets,total_pcs,note,touch,box_id,date)
-                   VALUES (?,?,?,?,?,?,?,date('now'))""",
-                (safe_vch_id, float(total_wt or 0), int(total_packets or 0),
-                 int(total_packets or 0), str(note).strip(), avg_touch_val, resolved_box_id)
-            )
-
-            cursor.execute("DELETE FROM katti_voucher_items WHERE vch_id=?", (safe_vch_id,))
-            cursor.execute("DELETE FROM stock_inventory WHERE vch_reference=? AND is_tagged=0", (safe_vch_id,))
-
-            for item in items:
-                item_code, item_name, item_touch, item_wt, item_pcs, item_box = self._extract_item_data(item,
-                                                                                                        resolved_box_id)
+                resolved_box_id = box_id
+                if not resolved_box_id:
+                    for item in items:
+                        if isinstance(item, dict):
+                            c = str(item.get('box') or '').strip()
+                            if c and c not in ('', '-', 'None', 'N/A'):
+                                resolved_box_id = c;
+                                break
 
                 cursor.execute(
-                    "INSERT INTO katti_voucher_items (vch_id,it_code,it_name,nt_wt,touch,huid,pcs) VALUES (?,?,?,?,?,?,?)",
-                    (safe_vch_id, item_code, item_name, item_wt, item_touch, item_box, item_pcs)
+                    """INSERT OR REPLACE INTO katti_vouchers
+                           (vch_id,total_weight,total_packets,total_pcs,note,touch,box_id,date)
+                       VALUES (?,?,?,?,?,?,?,date('now'))""",
+                    (safe_vch_id, float(total_wt or 0), int(total_packets or 0),
+                     int(total_packets or 0), str(note).strip(), avg_touch_val, resolved_box_id)
                 )
 
-                if item_code and item_wt > 0:
-                    unique_tag = f"KATTI-{safe_vch_id}-{item_code}"
+                cursor.execute("DELETE FROM katti_voucher_items WHERE vch_id=?", (safe_vch_id,))
+
+                # Delete old stock rows for this voucher before re-inserting
+                cursor.execute(
+                    "DELETE FROM stock_inventory WHERE vch_reference=? AND is_tagged=0",
+                    (safe_vch_id,)
+                )
+
+                for item in items:
+                    if isinstance(item, dict):
+                        item_code = str(item.get('it_code') or '').strip()
+                        item_name = str(item.get('name', '') or item.get('it_name', '')).strip()
+                        item_touch = float(item.get('touch') or 0.0)
+                        item_wt = float(item.get('weight') or item.get('nt_wt') or 0.0)
+                        item_pcs = int(item.get('packets') or item.get('pcs') or 1)
+                        raw_box = str(item.get('box') or resolved_box_id or '').strip()
+                        item_box = raw_box if raw_box not in ('', '-', 'None', 'N/A') else "B-001"
+                    else:
+                        item_code = '';
+                        item_name = str(item).strip()
+                        item_touch = 0.0;
+                        item_wt = 0.0;
+                        item_pcs = 1
+                        item_box = resolved_box_id or "B-001"
+
                     cursor.execute(
-                        """INSERT OR REPLACE INTO stock_inventory
-                               (it_code,it_name,tag_id,pcs,gr_wt,ls_wt,nt_wt,
-                                touch,wastage,is_tagged,vch_reference,huid,entry_date)
-                           VALUES (?,?,?,0,?,0,?,?,0,0,?,?,date('now'))""",
-                        (item_code, item_name, unique_tag, item_wt, item_wt,
-                         item_touch, safe_vch_id, item_box)
+                        "INSERT INTO katti_voucher_items (vch_id,it_code,it_name,nt_wt,touch,huid,pcs) VALUES (?,?,?,?,?,?,?)",
+                        (safe_vch_id, item_code, item_name, item_wt, item_touch, item_box, item_pcs)
                     )
 
-            conn.commit()
-            # Sync handling
-            self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
-            return True
+                    if item_code and item_wt > 0:
+                        # Each voucher gets its own stock row — no merging with other batches
+                        unique_tag = f"KATTI-{safe_vch_id}-{item_code}"
+                        cursor.execute(
+                            """INSERT OR REPLACE INTO stock_inventory
+                                   (it_code,it_name,tag_id,pcs,gr_wt,ls_wt,nt_wt,
+                                    touch,wastage,is_tagged,vch_reference,huid,entry_date)
+                               VALUES (?,?,?,0,?,0,?,?,0,0,?,?,date('now'))""",
+                            (item_code, item_name, unique_tag, item_wt, item_wt,
+                             item_touch, safe_vch_id, item_box)
+                        )
+                        print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
+                        try:
+                            ks_id = cursor.execute("SELECT id FROM stock_inventory WHERE tag_id=?",
+                                                   (unique_tag,)).fetchone()
+                            if ks_id:
+                                self.stamp_row_for_sync('stock_inventory', ks_id[0])
+                        except Exception as _kse:
+                            _dblog(f"[SYNC] stamp skip (katti stock): {_kse}")
 
+                conn.commit()
+                try:
+                    self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
+                except Exception as _kve:
+                    _dblog(f"[SYNC] stamp skip (katti_vouchers): {_kve}")
+                return True
         except Exception as e:
-            if conn: conn.rollback()
-            _dberr(f"[KATTI SAVE ERROR] {e}\n{traceback.format_exc()}")
+            print(f"? [KATTI SAVE ERROR] {e}");
             return False
-        finally:
-            if conn: conn.close()
-
-    def _extract_item_data(self, item, resolved_box_id):
-        """Helper to keep save_katti_batch clean."""
-        if isinstance(item, dict):
-            return (
-                str(item.get('it_code') or '').strip(),
-                str(item.get('name', '') or item.get('it_name', '')).strip(),
-                float(item.get('touch') or 0.0),
-                float(item.get('weight') or item.get('nt_wt') or 0.0),
-                int(item.get('packets') or item.get('pcs') or 1),
-                str(item.get('box') or resolved_box_id or 'B-001').strip()
-            )
-        return ('', str(item).strip(), 0.0, 0.0, 1, resolved_box_id or 'B-001')
 
     def get_all_katti_vouchers(self):
         """Return all katti vouchers ordered newest first."""
@@ -1471,7 +1633,7 @@ class DBManager:
 
     def save_uchak_inward_transaction(self, vch_id, total_lines, total_pcs, total_value, items_list):
         if self._bastion_block():
-            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            _dberr("[BASTION] Write blocked -- account suspended")
             return False
         try:
             safe_vch_id = str(vch_id).strip()
@@ -1853,7 +2015,7 @@ class DBManager:
     def record_sale(self, vch_id, customer, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0):
         if self._bastion_block():
-            _dberr(f"[BASTION] Write blocked -- account suspended ({fn!r})")
+            _dberr("[BASTION] Write blocked -- account suspended")
             return False
         # Session token check before sale write
         if not self._verify_session_token():
@@ -2593,8 +2755,10 @@ class DBManager:
 
     def is_setup_done(self) -> bool:
         """
-        Returns True if setup is done.
-        Permanently modified to avoid wiping data on hardware changes.
+        Returns True only if:
+          1. setup_done = '1' in app_config  (setup was completed)
+          2. machine_fingerprint in DB matches THIS machine's MAC hash
+             (so DB copied to new PC → fingerprint mismatch → show setup)
         """
         try:
             fp = self._machine_fingerprint()
@@ -2608,15 +2772,38 @@ class DBManager:
             done = rows.get('setup_done') == '1'
             stored_fp = rows.get('machine_fingerprint', '')
 
+            _dblog(f"[SETUP] done={done} stored_fp={stored_fp[:8]}... my_fp={fp[:8]}...")
+
             if not done:
+                _dblog("[SETUP] setup_done != 1 -> show setup")
                 return False
 
-            # PERMANENT FIX: If fingerprint mismatches, update it instead of wiping!
-            if stored_fp != fp:
-                _dblog(f"[SETUP] Hardware mismatch detected. Updating fingerprint to {fp[:8]}...")
-                self.mark_setup_done() # This updates the DB with the new machine's ID
+            if not stored_fp:
+                _dblog("[SETUP] no fingerprint stored -> new install -> show setup")
+                return False
 
+            if stored_fp != fp:
+                _dblog("[SETUP] app_config fingerprint mismatch -> DB copied to new PC -> WIPING")
+                self._wipe_business_data()
+                return False
+
+            # Second layer: check mac_lock table inside DB
+            try:
+                lock_row = conn.execute(
+                    "SELECT fingerprint FROM mac_lock WHERE id=1"
+                ).fetchone()
+                if lock_row:
+                    lock_fp = lock_row['fingerprint'] if hasattr(lock_row, 'keys') else lock_row[0]
+                    if lock_fp and lock_fp != fp:
+                        _dblog("[SETUP] mac_lock mismatch -> DB copied to new PC -> WIPING")
+                        self._wipe_business_data()
+                        return False
+            except Exception:
+                pass  # mac_lock table may not exist on old DBs — skip
+
+            _dblog("[SETUP] all checks passed -> show login")
             return True
+
         except Exception as e:
             _dberr(f"[SETUP] is_setup_done error: {e}")
             return False
@@ -4897,10 +5084,6 @@ class DBManager:
         from datetime import datetime as _dt
         import json as _json
 
-        if attack_type == 'exe_tamper':
-            _dblog("[BASTION] exe_tamper suspension blocked — feature disabled permanently")
-            return
-
         try:
             ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
             code_name = attack_type
@@ -4980,85 +5163,76 @@ class DBManager:
             _dberr(f"[BASTION] get_status error: {e}")
             return {'suspended': False}
 
-    # def bastion_verify_exe(self, exe_path=''):
-    #     """
-    #     Check if EXE has been tampered, by comparing its hash against the
-    #     TRUSTED hash that build.py writes at build time into
-    #     'exe_trusted_hash.txt' (sitting next to AurumOS.exe in dist\\).
-    #
-    #     PERMANENT FIX: this used to self-capture "whatever ran first on
-    #     this PC" as the trusted baseline -- but every fresh PyInstaller
-    #     build produces a different hash even with zero source changes
-    #     (embedded timestamps etc.), so every legitimate rebuild looked
-    #     identical to tampering and falsely suspended the account.
-    #
-    #     Now the BUILD decides what's trusted, not the first run. A fresh,
-    #     untouched build always matches its own trusted_hash.txt and
-    #     passes. Genuine tampering -- someone editing the EXE bytes AFTER
-    #     it was built and shipped -- still changes the EXE's hash while
-    #     trusted_hash.txt (a separate, untouched file) stays the same,
-    #     so real tampering is still caught correctly.
-    #     """
-    #     import hashlib as _hl, os as _os, sys as _sys
-    #     try:
-    #         if not getattr(_sys, 'frozen', False):
-    #             return True  # dev mode — skip
-    #
-    #         if not exe_path:
-    #             exe_path = _sys.executable
-    #
-    #         if not _os.path.exists(exe_path):
-    #             return True
-    #
-    #         # Trusted hash lives next to the EXE, written by build.py
-    #         exe_dir = _os.path.dirname(exe_path)
-    #         trust_path = _os.path.join(exe_dir, 'exe_trusted_hash.txt')
-    #
-    #         if not _os.path.exists(trust_path):
-    #             # No trusted-hash file shipped with this build (e.g. an
-    #             # older build made before this fix, or it was deleted).
-    #             # Fail OPEN rather than suspend on missing metadata --
-    #             # we only ever suspend on a confirmed MISMATCH, never on
-    #             # "we don't have anything to compare against."
-    #             _dblog("[BASTION] No exe_trusted_hash.txt found next to EXE -- skipping tamper check")
-    #             return True
-    #
-    #         with open(trust_path, 'r') as f:
-    #             trusted_hash = f.read().strip()
-    #
-    #         if not trusted_hash:
-    #             _dblog("[BASTION] exe_trusted_hash.txt is empty -- skipping tamper check")
-    #             return True
-    #
-    #         # Compute current hash
-    #         h = _hl.sha256()
-    #         with open(exe_path, 'rb') as f:
-    #             while True:
-    #                 chunk = f.read(65536)
-    #                 if not chunk: break
-    #                 h.update(chunk)
-    #         current_hash = h.hexdigest()
-    #
-    #         if trusted_hash != current_hash:
-    #             _dberr(f"[BASTION] EXE TAMPERED! trusted={trusted_hash[:12]} current={current_hash[:12]}")
-    #             self.bastion_suspend(
-    #                 'exe_tamper',
-    #                 f"Trusted={trusted_hash[:12]}... Current={current_hash[:12]}..."
-    #             )
-    #             return False
-    #
-    #         _dblog(f"[BASTION] EXE integrity OK: {current_hash[:12]}...")
-    #         return True
-    #
-    #     except Exception as e:
-    #         _dberr(f"[BASTION] exe_verify error: {e}")
-    #         return True  # fail open on unexpected error
-
     def bastion_verify_exe(self, exe_path=''):
         """
-        DISABLED — EXE tamper detection was causing false-positive
-        suspensions on legitimate fresh installs (hash mismatches from
-        normal PyInstaller rebuilds, GitHub downloads, antivirus repacking,
-        etc). Always returns True now — no tamper check performed.
+        Check if EXE has been tampered, by comparing its hash against the
+        TRUSTED hash that build.py writes at build time into
+        'exe_trusted_hash.txt' (sitting next to AurumOS.exe in dist\\).
+
+        PERMANENT FIX: this used to self-capture "whatever ran first on
+        this PC" as the trusted baseline -- but every fresh PyInstaller
+        build produces a different hash even with zero source changes
+        (embedded timestamps etc.), so every legitimate rebuild looked
+        identical to tampering and falsely suspended the account.
+
+        Now the BUILD decides what's trusted, not the first run. A fresh,
+        untouched build always matches its own trusted_hash.txt and
+        passes. Genuine tampering -- someone editing the EXE bytes AFTER
+        it was built and shipped -- still changes the EXE's hash while
+        trusted_hash.txt (a separate, untouched file) stays the same,
+        so real tampering is still caught correctly.
         """
-        return True
+        import hashlib as _hl, os as _os, sys as _sys
+        try:
+            if not getattr(_sys, 'frozen', False):
+                return True  # dev mode — skip
+
+            if not exe_path:
+                exe_path = _sys.executable
+
+            if not _os.path.exists(exe_path):
+                return True
+
+            # Trusted hash lives next to the EXE, written by build.py
+            exe_dir = _os.path.dirname(exe_path)
+            trust_path = _os.path.join(exe_dir, 'exe_trusted_hash.txt')
+
+            if not _os.path.exists(trust_path):
+                # No trusted-hash file shipped with this build (e.g. an
+                # older build made before this fix, or it was deleted).
+                # Fail OPEN rather than suspend on missing metadata --
+                # we only ever suspend on a confirmed MISMATCH, never on
+                # "we don't have anything to compare against."
+                _dblog("[BASTION] No exe_trusted_hash.txt found next to EXE -- skipping tamper check")
+                return True
+
+            with open(trust_path, 'r') as f:
+                trusted_hash = f.read().strip()
+
+            if not trusted_hash:
+                _dblog("[BASTION] exe_trusted_hash.txt is empty -- skipping tamper check")
+                return True
+
+            # Compute current hash
+            h = _hl.sha256()
+            with open(exe_path, 'rb') as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk: break
+                    h.update(chunk)
+            current_hash = h.hexdigest()
+
+            if trusted_hash != current_hash:
+                _dberr(f"[BASTION] EXE TAMPERED! trusted={trusted_hash[:12]} current={current_hash[:12]}")
+                self.bastion_suspend(
+                    'exe_tamper',
+                    f"Trusted={trusted_hash[:12]}... Current={current_hash[:12]}..."
+                )
+                return False
+
+            _dblog(f"[BASTION] EXE integrity OK: {current_hash[:12]}...")
+            return True
+
+        except Exception as e:
+            _dberr(f"[BASTION] exe_verify error: {e}")
+            return True  # fail open on unexpected error

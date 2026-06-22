@@ -158,6 +158,17 @@ tr.staff-row:hover td{background:var(--gold-bg);}
 .modal-x:hover{color:var(--red);}
 .modal-body{padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;}
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none !important;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+}
+
 /* For label */
 .for-badge{
   display:flex;align-items:center;gap:10px;
