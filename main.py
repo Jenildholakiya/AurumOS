@@ -2726,29 +2726,27 @@ class AurumAPI:
         return "\r\n".join(lines).encode("ascii", errors="replace")
 
     def _send_to_tsc(self, tspl: bytes):
-        """Send raw TSPL bytes to TSC printer via USB."""
         import win32print
-        # Find TSC printer
-        printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
-        tsc = None
-        for p in printers:
-            nm = p[2].upper()
-            if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
-                tsc = p[2]; break
-        if not tsc and printers:
-            tsc = printers[0][2]
-        if not tsc:
-            raise RuntimeError('No printer found')
-        hp = win32print.OpenPrinter(tsc)
+        printer_name = self._find_tsc_printer()
+
+        # Open the printer
+        hp = win32print.OpenPrinter(printer_name)
         try:
-            win32print.StartDocPrinter(hp, 1, ('Tag', None, 'RAW'))
+            # Start the document
+            job_id = win32print.StartDocPrinter(hp, 1, ('AurumOS Tag', None, 'RAW'))
             win32print.StartPagePrinter(hp)
+
+            # Write the data once
             win32print.WritePrinter(hp, tspl)
+
+            # END the page and document BEFORE closing
             win32print.EndPagePrinter(hp)
             win32print.EndDocPrinter(hp)
+            LOG(f'[PRINT] Successfully sent to: {printer_name}')
+        except Exception as e:
+            ERR(f'[PRINT] Error sending to printer: {e}')
         finally:
             win32print.ClosePrinter(hp)
-        LOG(f'[PRINT] Printed to {tsc}')
 
     def bridge_discover(self):
         """PC2: Auto-discover PC1 bridge server on LAN."""
@@ -2858,17 +2856,28 @@ class AurumAPI:
             return {'ready': False, 'printer_name': 'Error', 'error': str(e)}
 
     def _find_tsc_printer(self):
+        """Auto-discovers any installed printer that matches our keywords."""
         try:
             import win32print
-            printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL, None, 1)
+            # Flag both local and network-connected printers
+            flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+            printers = win32print.EnumPrinters(flags, None, 1)
+
+            # Look for keywords in any installed printer name
+            keywords = ['TSC', 'TA210', 'JEWEL', 'TTP', 'LABEL']
             for p in printers:
-                nm = p[2].upper()
-                if any(k in nm for k in ['TSC','TTP','LABEL','JEWEL']):
-                    return p[2]
-            if printers: return printers[0][2]
-        except Exception:
-            pass
-        return ''
+                name = p[2]
+                if any(k in name.upper() for k in keywords):
+                    LOG(f"[PRINT] Auto-discovered printer: {name}")
+                    return name
+
+            # Fallback to system default if no keyword match
+            default = win32print.GetDefaultPrinter()
+            LOG(f"[PRINT] No match found, using system default: {default}")
+            return default
+        except Exception as e:
+            ERR(f"[PRINT] Auto-discovery error: {e}")
+            return ''
 
     def get_db_path(self):
         """Return current DB path."""
