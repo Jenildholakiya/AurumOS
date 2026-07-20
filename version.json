@@ -3,7 +3,7 @@
   "release_date": "2026-07-20",
   "min_version": "1.0.0",
   "download_url": "https://github.com/Jenildholakiya/AurumOS/releases/download/v1.1.4/AurumOS-1.1.4.zip",
-  "size_bytes": 114825103,
+  "size_bytes": 114829699,
   "changelog": [
     "Bug fixes and improvements"
   ],
@@ -58,14 +58,14 @@
     },
     {
       "path": "database/aurum_local.db-shm",
-      "sha256": "c93721356a17c777af9952bc603fa6bcd220c5dd5e8913ac28dd6d6b2de2ef70",
+      "sha256": "887126c806ef50fdfeff240178abd258450a409d9ca4b06aa3b18bec98b7f559",
       "size_bytes": 32768,
       "url": "https://github.com/Jenildholakiya/AurumOS/releases/download/vVERSION/database/aurum_local.db-shm"
     },
     {
       "path": "database/aurum_local.db-wal",
-      "sha256": "3ddbf8ff1adfc3a80103d16d39f16d4be82f8404bd4409d862fa883289b027d3",
-      "size_bytes": 321392,
+      "sha256": "ded421796052d098f3e3c3f7bd8306426a0cd3e57e2e34fab7069c1c805039cb",
+      "size_bytes": 412032,
       "url": "https://github.com/Jenildholakiya/AurumOS/releases/download/vVERSION/database/aurum_local.db-wal"
     },
     {
