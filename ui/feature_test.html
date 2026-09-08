@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Feature Test Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8f9fb;--white:#fff;--ink:#111827;--ink2:#1f2937;--ink3:#6b7280;--ink4:#9ca3af;--gold:#b45309;--gold2:#d97706;--gold-bg:rgba(180,83,9,0.06);--green:#059669;--green-bg:rgba(5,150,105,0.06);--green-border:rgba(5,150,105,0.15);--red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.15);--rule:rgba(0,0,0,0.06);--blue:#2563eb;--blue-bg:rgba(37,99,235,0.06);}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 32px;}
+
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--ink);display:flex;align-items:center;justify-content:center;}
+.logo span{font-size:0.75rem;font-weight:700;color:var(--gold2);font-style:italic;}
+.title{font-size:1.4rem;font-weight:700;letter-spacing:-0.3px;}
+.subtitle{font-size:0.78rem;color:var(--ink3);}
+.header-right{display:flex;gap:8px;}
+
+.status-card{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:20px 24px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.status-item{text-align:center;}
+.status-label{font-size:0.55rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;}
+.status-value{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.status-value.pro{color:var(--gold);}
+.status-value.active{color:var(--green);}
+
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px;}
+.feature-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;transition:all 0.2s;position:relative;}
+.feature-card:hover{border-color:var(--ink4);transform:translateY(-1px);}
+.feature-card.allowed{border-left:3px solid var(--green);}
+.feature-card.locked{border-left:3px solid var(--red);opacity:0.6;}
+.feature-id{font-family:Arial,sans-serif;font-size:0.68rem;font-weight:500;color:var(--ink);margin-bottom:4px;}
+.feature-tier{font-size:0.52rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px;}
+.feature-tier.lite{background:var(--gold-bg);color:var(--gold);}
+.feature-tier.pro{background:var(--blue-bg);color:var(--blue);}
+.feature-tier.enterprise{background:var(--red-bg);color:var(--red);}
+.feature-status{font-size:0.65rem;font-weight:600;display:flex;align-items:center;gap:5px;}
+.feature-status.ok{color:var(--green);}
+.feature-status.blocked{color:var(--red);}
+.feature-status .dot{width:6px;height:6px;border-radius:50%;}
+.feature-status.ok .dot{background:var(--green);}
+.feature-status.blocked .dot{background:var(--red);}
+
+.btn{height:36px;border-radius:8px;font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;}
+.btn-gold{background:var(--gold);color:#fff;}
+.btn-gold:hover{background:var(--gold2);}
+.btn-outline{background:var(--white);color:var(--ink3);border:1px solid var(--rule);}
+.btn-outline:hover{border-color:var(--ink4);color:var(--ink);}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:#b91c1c;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:#047857;}
+
+.plan-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;}
+.plan-badge.pro{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(180,83,9,0.2);}
+.plan-badge.lite{background:var(--ink2);color:#fff;}
+.plan-badge.enterprise{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 24px;border-radius:8px;font-size:0.78rem;font-weight:500;z-index:9999;opacity:0;transition:all 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo"><span>A</span></div>
+    <div>
+      <div class="title">Feature Test Dashboard</div>
+      <div class="subtitle">Verify subscription features are working correctly</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline" onclick="location.reload()">Refresh</button>
+    <button class="btn btn-green" onclick="forcePro()">Force Pro Plan</button>
+    <button class="btn btn-red" onclick="forceLite()">Force Lite Plan</button>
+  </div>
+</div>
+
+<div class="status-card" id="status-card">
+  <div class="status-item">
+    <div class="status-label">Current Plan</div>
+    <div class="status-value pro" id="s-plan">--</div>
+  </div>
+  <div class="status-item">
+    <div class="status-label">Total Features</div>
+    <div class="status-value" id="s-total">--</div>
+  </div>
+  <div class="status-item">
+    <div class="status-label">Allowed</div>
+    <div class="status-value active" id="s-allowed">--</div>
+  </div>
+  <div class="status-item">
+    <div class="status-label">Locked</div>
+    <div class="status-value" id="s-locked" style="color:var(--red);">--</div>
+  </div>
+</div>
+
+<div class="feature-grid" id="feature-grid"></div>
+
+<script>
+var ALL_FEATURES = {
+  'local_mode':          {tier:'lite',     name:'Local Mode'},
+  'billing_retail':      {tier:'lite',     name:'Billing Retail'},
+  'stock_entry':         {tier:'lite',     name:'Stock Entry'},
+  'product_master':      {tier:'lite',     name:'Product Master'},
+  'client_ledger':       {tier:'lite',     name:'Client Ledger'},
+  'staff_login_lockout': {tier:'lite',     name:'Staff Login Lockout'},
+  'tag_printing_local':  {tier:'lite',     name:'Tag Printing Local'},
+  'scale_weighing':      {tier:'lite',     name:'Scale Weighing'},
+  'sales_report_basic':  {tier:'lite',     name:'Sales Report Basic'},
+  'bastion_core':        {tier:'lite',     name:'Bastion Core'},
+  'lan_multi_pc':        {tier:'enterprise',name:'LAN Multi PC'},
+  'karigar_vouchers':    {tier:'pro',      name:'Karigar Vouchers'},
+  'touch_groups':        {tier:'pro',      name:'Touch Groups'},
+  'full_accounts':       {tier:'pro',      name:'Full Accounts'},
+  'tag_audit':           {tier:'pro',      name:'Tag Audit'},
+  'stock_med_reports':   {tier:'pro',      name:'Stock Med Reports'},
+  'tsc_network_printing':{tier:'pro',      name:'TSC Network Printing'},
+  'multi_staff':         {tier:'pro',      name:'Multi Staff'},
+  'analytics_dashboard': {tier:'pro',      name:'Analytics Dashboard'},
+  'year_close':          {tier:'pro',      name:'Year Close'},
+  'bastion_enhanced':    {tier:'pro',      name:'Bastion Enhanced'},
+  'cloud_sync':          {tier:'enterprise',name:'Cloud Sync'},
+  'fleet_bastion':       {tier:'enterprise',name:'Fleet Bastion'},
+  'customer_loyalty':    {tier:'enterprise',name:'Customer Loyalty'},
+  'bastion_ai':          {tier:'enterprise',name:'Bastion AI'},
+  'nexus_management':    {tier:'enterprise',name:'Nexus Management'},
+  'bridge_server':       {tier:'enterprise',name:'Bridge Server'},
+  'custom_db_location':  {tier:'enterprise',name:'Custom DB Location'},
+  'priority_support':    {tier:'enterprise',name:'Priority Support'},
+  'api_integration':     {tier:'enterprise',name:'API Integration'}
+};
+
+function getPlan(){return(window.AurumOS?window.AurumOS.getPlan():'pro');}
+function getFeatures(){return(window.AurumOS?window.AurumOS.getFeatures():[]);}
+
+function render(){
+  var plan=getPlan();
+  var features=getFeatures();
+  var allowed=0,locked=0;
+
+  document.getElementById('s-plan').innerText=plan.toUpperCase();
+  document.querySelector('.header-right .plan-badge')&&document.querySelector('.header-right .plan-badge').remove();
+  var badge=document.createElement('span');
+  badge.className='plan-badge '+plan;
+  badge.innerText=plan.toUpperCase();
+  document.getElementById('s-plan').parentElement.appendChild(badge);
+
+  var grid=document.getElementById('feature-grid');
+  grid.innerHTML='';
+
+  Object.keys(ALL_FEATURES).forEach(function(fid){
+    var meta=ALL_FEATURES[fid];
+    var isEnabled=features.indexOf(fid)!==-1;
+    if(isEnabled)allowed++;else locked++;
+
+    var card=document.createElement('div');
+    card.className='feature-card '+(isEnabled?'allowed':'locked');
+    card.innerHTML=
+      '<div class="feature-id">'+fid+'</div>'+
+      '<div class="feature-tier '+meta.tier+'">'+meta.tier.toUpperCase()+'</div>'+
+      '<div style="font-size:0.72rem;color:var(--ink2);margin-bottom:6px;">'+meta.name+'</div>'+
+      '<div class="feature-status '+(isEnabled?'ok':'blocked')+'">'+
+      '  <span class="dot"></span>'+
+      (isEnabled?'ENABLED':'LOCKED - Upgrade required')+
+      '</div>';
+    grid.appendChild(card);
+  });
+
+  document.getElementById('s-total').innerText=Object.keys(ALL_FEATURES).length;
+  document.getElementById('s-allowed').innerText=allowed;
+  document.getElementById('s-locked').innerText=locked;
+}
+
+function showToast(msg,type){
+  var t=document.querySelector('.toast');
+  if(t)t.remove();
+  t=document.createElement('div');
+  t.className='toast '+(type||'');
+  t.innerText=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.classList.add('show');},10);
+  setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},300);},2500);
+}
+
+function forcePro(){
+  var features=Object.keys(ALL_FEATURES).filter(function(f){
+    return ALL_FEATURES[f].tier==='lite'||ALL_FEATURES[f].tier==='pro';
+  });
+  if(window.__aurumSubState){
+    var s=window.__aurumSubState();
+    s.effective_plan='pro';s.plan='pro';s.features=features;s.status='active';
+    s.subscription={status:'active',expires_at:new Date(Date.now()+365*86400000).toISOString(),remaining_days:365,grace_remaining_days:0,renewal_amount:7000};
+    s.business=s.business||'Test Business';
+    window.__aurumSubState=function(){return JSON.parse(JSON.stringify(s));};
+  }
+  showToast('Forced to PRO plan — 21 features enabled','success');
+  render();
+}
+
+function forceLite(){
+  var features=Object.keys(ALL_FEATURES).filter(function(f){
+    return ALL_FEATURES[f].tier==='lite';
+  });
+  if(window.__aurumSubState){
+    var s=window.__aurumSubState();
+    s.effective_plan='lite';s.plan='lite';s.features=features;s.status='active';
+    s.subscription={status:'active',expires_at:new Date(Date.now()+365*86400000).toISOString(),remaining_days:365,grace_remaining_days:0,renewal_amount:3000};
+    window.__aurumSubState=function(){return JSON.parse(JSON.stringify(s));};
+  }
+  showToast('Forced to LITE plan — 10 features only','error');
+  render();
+}
+
+window.apiReady(function(){
+  setTimeout(function(){render();},800);
+});
+</script>
+</body>
+</html>

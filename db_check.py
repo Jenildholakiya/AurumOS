@@ -1,0 +1,25 @@
+import sqlite3
+conn = sqlite3.connect('E:/AurumOS_Client/database/aurum_local.db')
+cursor = conn.cursor()
+cursor.execute("PRAGMA table_info(sales_history)")
+cols = cursor.fetchall()
+print("=== sales_history columns ===")
+for c in cols:
+    print(c)
+print()
+cursor.execute("SELECT DISTINCT status FROM sales_history LIMIT 20")
+statuses = cursor.fetchall()
+print("=== Distinct status values ===")
+for s in statuses:
+    print(s)
+print()
+cursor.execute("SELECT COUNT(*) FROM sales_history WHERE UPPER(TRIM(status))='ESTIMATE'")
+print("Estimate count:", cursor.fetchone()[0])
+cursor.execute("SELECT COUNT(*) FROM sales_history")
+print("Total rows:", cursor.fetchone()[0])
+cursor.execute("SELECT customer, vch_id, status, date, total_amount FROM sales_history WHERE UPPER(TRIM(status))='ESTIMATE' LIMIT 5")
+rows = cursor.fetchall()
+print("=== Sample estimate rows ===")
+for r in rows:
+    print(r)
+conn.close()

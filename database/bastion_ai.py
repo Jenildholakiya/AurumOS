@@ -22,6 +22,7 @@ import smtplib, ssl
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from database.bastion_report import generate_bastion_report_async
 
 from database.db_manager import _dberr
 
@@ -35,6 +36,14 @@ ALERT_EMAIL_TO       = 'jenildholakiya8305@gmail.com'
 # Threat score thresholds
 SCORE_WARN    = 40    # log + queue alert
 SCORE_SUSPEND = 75    # auto-suspend account
+
+# ── SMARTER-DECISIONS TUNING ──────────────────────────────────────
+# Progressive escalation: a threat class climbs WARN -> RESTRICT ->
+# SUSPEND instead of locking on the first trigger.
+ESCALATION_WINDOW = 86400   # s — repeated threats within 24h escalate; older ones decay
+SUSPEND_LEVEL     = 3       # escalate to this level before auto-suspend is allowed
+CORRO_WINDOW      = 600     # s — corroboration looks back this far for a 2nd signal
+ALLOW_WINDOW      = 600     # s — an admin allowlist entry stays valid this long
 
 
 # ── SEVERITY LEVELS ───────────────────────────────────────────────
@@ -75,8 +84,25 @@ class BastionAI:
         self._last_db_hash     = None
         self._last_write_ts    = time.time()   # updated by db_manager hooks
         self._session_active   = False
+
+        # Tables whose row counts define the integrity hash, plus cached
+        # per-table counts so the watchdog can tell WHICH tables moved.
+        self._hash_tables      = [
+            'stock_inventory', 'sales_history', 'katti_vouchers',
+            'katti_voucher_items', 'credit_ledger', 'admin_creds'
+        ]
+        self._last_table_counts  = {}
+        self._prev_table_counts  = {}
         self._daily_score      = 0
         self._event_count_day  = 0
+        self._suspicious_count = 0
+        self._consecutive_clean = 0
+
+        # Smarter-decisions state
+        self._restricted      = False   # soft-lock: risky ops blocked, billing OK
+        self._recent_signals = []       # [(ts, event_type)] for corroboration
+        self._startup_time    = time.time()  # grace period to avoid false alerts
+        self._grace_period    = 120     # 2 minutes grace after startup
 
         # Load learned thresholds from DB
         self._thresholds = self._load_thresholds()
@@ -253,77 +279,166 @@ class BastionAI:
 
     def _thread_db_watchdog(self):
         """
-        Hashes row counts of all tables every 30s.
-        If DB changed without a valid write in last 60s → threat.
+        Hashes row counts every 30s and detects EXTERNAL db edits.
+
+        KEY PRINCIPLE (fixes false suspensions on normal business):
+        A row-count change is NOT proof of tampering. Normal shop activity
+        — making bills, stock entries, katti vouchers, payments — constantly
+        changes these tables WHILE THE USER IS LOGGED IN. So:
+
+          1. Active session  -> change is legitimate in-app activity. Never flag.
+          2. Recent in-app write (notify_write within 180s) -> legitimate.
+          3. Otherwise (app idle / logged out, no recent write) -> suspicious.
+             Even then, a change limited to business tables (e.g. a delayed
+             background save that missed the write hook) only raises an ALERT
+             — it can NEVER auto-suspend. Auto-suspend is reserved for
+             high-confidence tampering: credentials (admin_creds) touched, or
+             rows DELETED, while the app is idle.
         """
+        prev_counts = dict(self._prev_table_counts)
         current_hash = self._compute_db_hash()
         if current_hash is None:
             return
 
         if self._last_db_hash is None:
             self._last_db_hash = current_hash
+            self._prev_table_counts = dict(self._last_table_counts)
             return
 
         if current_hash == self._last_db_hash:
-            return   # no change — all good
-
-        # DB changed — was it a legitimate write?
-        seconds_since_write = time.time() - self._last_write_ts
-
-        if seconds_since_write < 90:
-            # App wrote to DB recently — legitimate
-            self._last_db_hash = current_hash
+            self._consecutive_clean += 1
+            self._prev_table_counts = dict(self._last_table_counts)
             return
 
-        # DB changed WITHOUT a recent app write → external edit detected
+        # (0) ADMIN ALLOWLIST — a known-good maintenance op (backup restore,
+        # data import, schema fix). If an admin marked the current change as
+        # expected, accept it outright and never flag it.
+        if self._is_allowlisted('db_external_change'):
+            self._last_db_hash = current_hash
+            self._last_write_ts = time.time()
+            self._suspicious_count = 0
+            self._prev_table_counts = dict(self._last_table_counts)
+            self._record_event(
+                event_type   = 'db_allowlisted',
+                severity     = SEV_LOW,
+                score        = 0,
+                detail       = 'DB change matched admin allowlist — ignored',
+                action_taken = 'ALLOWED'
+            )
+            _log("DB change matched allowlist — ignored")
+            return
+
+        new_counts = dict(self._last_table_counts)
+        seconds_since_write = time.time() - self._last_write_ts
+
+        # (1) ACTIVE SESSION — a logged-in user operating the app. Every DB
+        # change here is, by definition, a legitimate in-app write (billing,
+        # stock, etc.). This is the main guard against false suspensions.
+        if self._session_active:
+            self._last_db_hash = current_hash
+            self._last_write_ts = time.time()
+            self._suspicious_count = 0
+            self._prev_table_counts = new_counts
+            _log("DB changed during active session (legit app activity) — OK")
+            return
+
+        # (2) RECENT IN-APP WRITE — a save committed just now (or a notify_write
+        # hook fired). Generous 180s window covers commit + WAL flush latency.
+        if seconds_since_write < 180:
+            self._last_db_hash = current_hash
+            self._last_write_ts = time.time()
+            self._prev_table_counts = new_counts
+            _log(f"DB changed legitimately ({int(seconds_since_write)}s since write) — OK")
+            return
+
+        # (3) GENUINE EXTERNAL-EDIT SUSPICION: DB changed with NO active session
+        # and NO recent in-app write. Work out which tables moved so we can grade
+        # confidence — appends to business tables are weak evidence; credential
+        # changes or deletions are strong evidence.
+        SENSITIVE = {'admin_creds'}
+        changed, sensitive_changed, deletions = [], False, False
+        for t in self._hash_tables:
+            old = prev_counts.get(t)
+            new = new_counts.get(t)
+            if old is None or new is None or old == new:
+                continue
+            changed.append(t)
+            if t in SENSITIVE:
+                sensitive_changed = True
+            if new < old:
+                deletions = True
+
+        self._suspicious_count = getattr(self, '_suspicious_count', 0) + 1
         detail = (
-            f"DB hash changed without app write. "
-            f"Last app write: {int(seconds_since_write)}s ago. "
+            f"DB changed while app idle (no session, no recent write). "
+            f"Last write: {int(seconds_since_write)}s ago. "
+            f"Changed tables: {', '.join(changed) or 'unknown'}. "
+            f"Suspicious count: {self._suspicious_count}/2. "
             f"Old={self._last_db_hash[:8]} New={current_hash[:8]}"
         )
-        score = 65
-        # Check learned threshold
-        if self._thresholds.get('external_edit_threshold'):
-            score = int(self._thresholds['external_edit_threshold'])
+        _log(f"[WATCHDOG] Suspicious change #{self._suspicious_count}: {detail}")
+
+        self._last_db_hash = current_hash
+        self._prev_table_counts = new_counts
+
+        # Only act on a CONFIRMED pattern (2+ occurrences while idle).
+        if self._suspicious_count < 2:
+            self._record_event(
+                event_type='db_suspicious_change',
+                severity=SEV_MEDIUM,
+                score=25,
+                detail=detail,
+                action_taken='WATCHING'
+            )
+            return
+
+        # Confirmed external-edit pattern.
+        self._suspicious_count = 0
+        learned = int(self._thresholds.get('external_edit_threshold', 65))
+
+        if sensitive_changed or deletions:
+            # High-confidence tampering (creds touched / rows deleted while idle).
+            score = max(learned, 80)        # may cross the auto-suspend bar
+            confidence = 'HIGH'
+        else:
+            # Business-table change only (likely a delayed/missed in-app write).
+            # Capped safely BELOW the auto-suspend threshold so it can NEVER
+            # lock the user out — it only raises an alert for human review.
+            score = min(learned, 60)
+            confidence = 'LOW'
 
         self._record_event(
-            event_type   = 'db_external_edit',
-            severity     = SEV_HIGH,
-            score        = score,
-            detail       = detail,
-            action_taken = 'DETECTED'
+            event_type='db_external_edit',
+            severity=SEV_HIGH if confidence == 'HIGH' else SEV_MEDIUM,
+            score=score,
+            detail=f"[{confidence} confidence] {detail}",
+            action_taken='DETECTED'
         )
-        self._last_db_hash = current_hash
 
-        if score >= SCORE_SUSPEND:
-            self._auto_suspend('db_edit', detail)
-        else:
-            self._queue_alert(
-                subject = f"AurumOS BASTION: Database Tampering Detected",
-                body    = (
-                    f"Threat: External DB Edit\n"
-                    f"Score: {score}/100\n"
-                    f"Detail: {detail}\n"
-                    f"Time: {datetime.now().strftime('%d %b %Y %I:%M %p')}\n\n"
-                    f"Run aurum_health.py to investigate."
-                )
-            )
+        # Smarter decision: hand off to the escalation engine. It applies
+        # progressive escalation (WARN -> RESTRICT -> SUSPEND) and only
+        # suspends when CORROBORATED by a second independent signal — so a
+        # single weak/false trigger can never lock the user out.
+        self._evaluate_threat('db_edit', detail, critical=False)
 
     def _compute_db_hash(self):
-        """Hash row counts of all main tables."""
+        """Hash row counts of all main tables. Also caches per-table counts
+        so the watchdog can tell WHICH tables changed (and whether sensitive
+        tables like admin_creds were touched)."""
         try:
-            tables = [
-                'stock_inventory', 'sales_history', 'katti_vouchers',
-                'katti_voucher_items', 'credit_ledger', 'admin_creds'
-            ]
+            tables = self._hash_tables
             parts = []
+            counts = {}
             with self.db._get_connection() as conn:
                 for t in tables:
                     try:
                         n = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                        counts[t] = n
                         parts.append(f"{t}:{n}")
                     except Exception:
+                        counts[t] = None
                         parts.append(f"{t}:?")
+            self._last_table_counts = counts
             return hashlib.sha256('|'.join(parts).encode()).hexdigest()[:16]
         except Exception as e:
             _err(f"compute_db_hash: {e}")
@@ -345,42 +460,49 @@ class BastionAI:
             import winreg as _wr
             REG_PATH = r'SOFTWARE\Microsoft\InputMethod\AOS'
 
-            # Check registry
+            # Check registry — create if missing (setup may not have run yet)
             try:
                 key = _wr.OpenKey(_wr.HKEY_CURRENT_USER, REG_PATH)
                 _wr.QueryValueEx(key, 'SessionCache')
                 _wr.CloseKey(key)
             except FileNotFoundError:
-                self._record_event(
-                    event_type   = 'session_registry_missing',
-                    severity     = SEV_HIGH,
-                    score        = 55,
-                    detail       = 'Session registry key missing during active session',
-                    action_taken = 'DETECTED'
-                )
-                self._queue_alert(
-                    subject = 'AurumOS BASTION: Session Registry Tampered',
-                    body    = (
-                        f"Session registry key was deleted during an active session.\n"
-                        f"This may indicate a session hijack attempt.\n"
-                        f"Time: {datetime.now().strftime('%d %b %Y %I:%M %p')}"
+                # Registry key missing — try to create it silently
+                try:
+                    import uuid as _uuid
+                    token = str(_uuid.uuid4())
+                    key = _wr.CreateKey(_wr.HKEY_CURRENT_USER, REG_PATH)
+                    _wr.SetValueEx(key, 'SessionCache', 0, _wr.REG_SZ, token)
+                    _wr.CloseKey(key)
+                    self.db._session_token_file = os.path.join(
+                        os.path.dirname(self.db.db_path) if hasattr(self.db, 'db_path') else '.',
+                        '.session_token'
                     )
-                )
-                return
+                    # Also create the temp file
+                    try:
+                        with open(self.db._session_token_file, 'w') as f:
+                            f.write(token)
+                    except Exception:
+                        pass
+                    _log('Session registry recreated automatically')
+                except Exception as _reg_err:
+                    _err(f'Session registry recreate failed: {_reg_err}')
+                    # Just log — not a security threat, just missing setup
+                    _log('Session registry missing — not a security threat')
 
-            # Check temp file
+            # Check temp file — auto-create if missing (startup scenario)
             token_file = getattr(self.db, '_session_token_file', None)
-            if token_file and not os.path.exists(token_file):
-                score = 50
-                self._record_event(
-                    event_type   = 'session_file_missing',
-                    severity     = SEV_MEDIUM,
-                    score        = score,
-                    detail       = f'Session temp file deleted: {token_file}',
-                    action_taken = 'DETECTED'
-                )
-                if score >= SCORE_SUSPEND:
-                    self._auto_suspend('session_tamper', 'Session temp file deleted during active session')
+            if token_file:
+                if not os.path.exists(token_file):
+                    # Auto-create the temp file instead of triggering alert
+                    try:
+                        import uuid as _uuid
+                        token = str(_uuid.uuid4())
+                        with open(token_file, 'w') as f:
+                            f.write(token)
+                        _log('Session token file recreated automatically')
+                    except Exception as _tf_err:
+                        _err(f'Session token file recreate failed: {_tf_err}')
+                        # Only log — not a security threat during startup
 
         except ImportError:
             pass   # non-Windows — skip registry check
@@ -508,6 +630,12 @@ class BastionAI:
                 if hasattr(self.db, 'restore_from_backup'):
                     self.db.restore_from_backup()
                     healed.append("DB restored from backup")
+                    # A restore legitimately rewrites the whole DB — allowlist it
+                    # so the next watchdog cycle does not mistake it for tampering.
+                    try:
+                        self.allow_known_change('db_external_change', 'auto-heal DB restore')
+                    except Exception:
+                        pass
                     self._queue_alert(
                         subject = 'AurumOS BASTION: DB Corruption — Auto-Restored',
                         body    = (
@@ -521,7 +649,13 @@ class BastionAI:
         except Exception as e:
             _err(f"heal integrity: {e}")
 
+        # Any heal that touched the DB is a legitimate in-app write — tell the
+        # watchdog so it does not mistake the change for external tampering.
         if healed:
+            try:
+                self.notify_write()
+            except Exception:
+                pass
             _log(f"Auto-healed: {', '.join(healed)}")
 
     # ══════════════════════════════════════════════════════════════
@@ -569,21 +703,35 @@ class BastionAI:
                     self._set_learned('login_hour_max', max_hr)
                     _log(f"Learned login hours: {min_hr}:00 - {max_hr}:00")
 
-                # Learn: how often external edits happen
-                # If never seen → set strict threshold
+                # LEARNING FIX: a busy shop must NOT be pushed into the
+                # auto-suspend zone. Many DB changes during normal business
+                # (billing, stock, katti) are HEALTHY — we should grow MORE
+                # lenient, not more aggressive. The threshold now only nudges
+                # the *alert severity* of genuine idle edits; the watchdog caps
+                # business-table-only scores below SUSPEND on its own.
                 ext_edits = conn.execute(
                     "SELECT COUNT(*) FROM bastion_events "
                     "WHERE event_type='db_external_edit' AND ts >= ?",
                     (month_ago,)
                 ).fetchone()[0]
 
-                if ext_edits == 0:
-                    # Never seen — set strict
-                    self._set_learned('external_edit_threshold', 65)
+                suspicious_only = conn.execute(
+                    "SELECT COUNT(*) FROM bastion_events "
+                    "WHERE event_type='db_suspicious_change' AND ts >= ?",
+                    (month_ago,)
+                ).fetchone()[0]
+
+                if suspicious_only > 0 and ext_edits == 0:
+                    # Near-misses that never escalated = busy, healthy shop.
+                    # Stay lenient so alerts remain informational, never locking.
+                    self._set_learned('external_edit_threshold', 60)
+                    _log(f"Learned: busy shop ({suspicious_only} near-misses, 0 escalations) — threshold kept lenient at 60")
+                elif ext_edits > 0:
+                    # Real escalations observed — keep moderate (never into suspend zone).
+                    self._set_learned('external_edit_threshold', 70)
+                    _log(f"Note: {ext_edits} confirmed external edits — threshold set to 70")
                 else:
-                    # Seen before — slightly relax (may be legitimate tool)
-                    self._set_learned('external_edit_threshold', 75)
-                    _log(f"Note: {ext_edits} external DB edits recorded this month")
+                    self._set_learned('external_edit_threshold', 65)
 
                 # Learn: backup frequency
                 backup_heals = conn.execute(
@@ -624,9 +772,15 @@ class BastionAI:
 
         try:
             with self.db._get_connection() as conn:
-                pending = conn.execute(
-                    "SELECT id, subject, body, html_body FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
-                ).fetchall()
+                # Older DBs may not have the 'recipient' column yet — select defensively.
+                try:
+                    pending = conn.execute(
+                        "SELECT id, subject, body, html_body, recipient FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
+                    ).fetchall()
+                except Exception:
+                    pending = conn.execute(
+                        "SELECT id, subject, body, html_body FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
+                    ).fetchall()
 
             if not pending:
                 return
@@ -638,7 +792,12 @@ class BastionAI:
 
             sent_ids = []
             for alert in pending:
-                success = self._send_email(alert['subject'], alert['body'], alert['html_body'] or None)
+                try:
+                    recipient = alert['recipient']
+                except (IndexError, KeyError):
+                    recipient = None
+                success = self._send_email(alert['subject'], alert['body'],
+                                           alert['html_body'] or None, recipient)
                 if success:
                     sent_ids.append(alert['id'])
                     _log(f"Alert sent: {alert['subject'][:40]}")
@@ -678,11 +837,174 @@ class BastionAI:
         except Exception as e:
             _err(f"record_event: {e}")
 
+    # ══════════════════════════════════════════════════════════════
+    # SMARTER DECISIONS — escalation engine + corroboration + allowlist
+    # ══════════════════════════════════════════════════════════════
+
+    def _bump_escalation(self, attack_type):
+        """Increment + persist the escalation level for a threat class.
+        Decays back to 1 if the last event was older than ESCALATION_WINDOW,
+        so isolated incidents never accumulate into a permanent lock."""
+        try:
+            now    = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            now_ts = time.time()
+            with self.db._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT level, last_ts FROM bastion_escalation WHERE attack_type=?",
+                    (attack_type,)
+                ).fetchone()
+                level = 1
+                if row:
+                    try:
+                        last_ts = datetime.strptime(row['last_ts'], '%Y-%m-%d %H:%M:%S').timestamp()
+                    except Exception:
+                        last_ts = 0
+                    level = row['level'] + 1 if (now_ts - last_ts) < ESCALATION_WINDOW else 1
+                conn.execute(
+                    "INSERT OR REPLACE INTO bastion_escalation(attack_type,level,last_ts,updated_at) "
+                    "VALUES(?,?,?,?)",
+                    (attack_type, level, now, now)
+                )
+                conn.commit()
+                return level
+        except Exception as e:
+            _err(f"bump_escalation: {e}")
+            return 1
+
+    def _distinct_recent_signals(self):
+        """Count distinct threat signal types in the last CORRO_WINDOW secs.
+        Used for corroboration: a lone detector should never auto-suspend."""
+        now = time.time()
+        self._recent_signals = [(t, e) for (t, e) in self._recent_signals if now - t < CORRO_WINDOW]
+        return len({e for (t, e) in self._recent_signals})
+
+    def _decide_action(self, attack_type, critical):
+        """Smarter decision: progressive escalation + corroboration.
+          - CRITICAL signals (exe tamper, fingerprint mismatch, …) suspend now.
+          - Others escalate: 1=WARN, 2=RESTRICT, 3+=SUSPEND.
+          - A non-critical signal only ever suspends if CORROBORATED by a
+            second, independent detector (>=2 distinct recent signals). This
+            is what stops a single false positive from locking the user out."""
+        level   = self._bump_escalation(attack_type)
+        distinct = self._distinct_recent_signals()
+        if critical:
+            return 'SUSPEND', level
+        if level >= SUSPEND_LEVEL and distinct >= 2:
+            return 'SUSPEND', level
+        if level >= 2:
+            return 'RESTRICT', level
+        return 'WARN', level
+
+    def _evaluate_threat(self, attack_type, detail, critical=False):
+        """Central smarter-decision entry point. Replaces ad-hoc _auto_suspend
+        calls. Records the signal, decides the action, and executes it."""
+        # Grace period: skip all alerts for first 2 minutes after startup
+        elapsed = time.time() - self._startup_time
+        if elapsed < self._grace_period:
+            _log(f'Skipping threat {attack_type} — grace period ({int(elapsed)}s/{self._grace_period}s)')
+            return
+
+        self._recent_signals.append((time.time(), attack_type))
+        action, level = self._decide_action(attack_type, critical)
+
+        if action == 'SUSPEND':
+            self._record_event(
+                event_type = attack_type,
+                severity   = SEV_CRITICAL,
+                score      = 95,
+                detail     = f"[ESCALATED→SUSPEND L{level}] {detail}",
+                action_taken = 'SUSPENDED'
+            )
+            self._auto_suspend(attack_type, detail)
+            return
+
+        if action == 'RESTRICT':
+            self._restricted = True
+            self._record_event(
+                event_type = attack_type,
+                severity   = SEV_HIGH,
+                score      = 70,
+                detail     = f"[RESTRICTED L{level}] {detail}",
+                action_taken = 'RESTRICTED'
+            )
+            self._queue_alert(
+                subject = 'AurumOS BASTION: Restricted Mode Engaged',
+                body    = (
+                    f"Threat: {attack_type}\nEscalation level: {level}\n\n"
+                    f"BASTION entered RESTRICTED mode — sensitive actions are "
+                    f"blocked but billing can continue, pending review.\n"
+                    f"Detail: {detail}\n"
+                    f"Time: {datetime.now().strftime('%d %b %Y %I:%M %p')}"
+                )
+            )
+            return
+
+        # WARN
+        self._record_event(
+            event_type = attack_type,
+            severity   = SEV_MEDIUM,
+            score      = 40,
+            detail     = f"[WARN L{level}] {detail}",
+            action_taken = 'WATCHING'
+        )
+        self._queue_alert(
+            subject = 'AurumOS BASTION: Suspicious Activity (Watch)',
+            body    = (
+                f"Threat: {attack_type}\nEscalation level: {level}\n\n"
+                f"No auto-suspend (single signal / low confidence).\n"
+                f"Detail: {detail}\n"
+                f"Time: {datetime.now().strftime('%d %b %Y %I:%M %p')}"
+            )
+        )
+
+    def allow_known_change(self, event_type='db_external_change', note=''):
+        """Admin / maintenance whitelist: tell BASTION a DB change at this
+        moment is expected (backup restore, data import, schema fix). The next
+        watchdog cycle will treat a matching change as legitimate and ignore it."""
+        try:
+            ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            with self.db._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO bastion_allowlist(event_type,note,ts) VALUES(?,?,?)",
+                    (event_type, str(note)[:200], ts)
+                )
+                conn.commit()
+            _log(f"Allowlist added for {event_type}: {note}")
+        except Exception as e:
+            _err(f"allow_known_change: {e}")
+
+    def _is_allowlisted(self, event_type):
+        """True if an admin allowlist entry for this event type is still valid."""
+        try:
+            cutoff = (datetime.now() - timedelta(seconds=ALLOW_WINDOW)).strftime('%Y-%m-%d %H:%M:%S')
+            with self.db._get_connection() as conn:
+                n = conn.execute(
+                    "SELECT COUNT(*) FROM bastion_allowlist WHERE event_type=? AND ts >= ?",
+                    (event_type, cutoff)
+                ).fetchone()[0]
+                return n > 0
+        except Exception:
+            return False
+
     def _auto_suspend(self, attack_type, detail):
         """Trigger BASTION suspension and queue alert."""
         _err(f"AUTO-SUSPEND: {attack_type} — {detail}")
         try:
             self.db.bastion_suspend(attack_type, detail)
+
+            # Capture metadata for forensics BEFORE generating the report
+            try:
+                status = self.db.bastion_get_status()
+                ts = status.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                lock_code = self.db._machine_fingerprint()[:8].upper()
+            except:
+                ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                lock_code = 'UNKNOWN'
+
+            # TRIGGER FORENSIC PDF GENERATION (Background Thread)
+            # This will save the PDF to C:\AurumOS\Reports and save the path in app_config
+            generate_bastion_report_async(self.db, attack_type, detail, ts, lock_code, None)
+
             self._record_event(
                 event_type   = 'bastion_auto_suspend',
                 severity     = SEV_CRITICAL,
@@ -828,6 +1150,11 @@ class BastionAI:
 
     def _queue_alert(self, subject, body, html_body=''):
         """Save alert to DB — sent when internet available."""
+        # Grace period: skip all alerts for first 2 minutes after startup
+        elapsed = time.time() - self._startup_time
+        if elapsed < self._grace_period:
+            _log(f'Skipping alert — grace period ({int(elapsed)}s/{self._grace_period}s)')
+            return
         try:
             with self.db._get_connection() as conn:
                 conn.execute(
@@ -839,20 +1166,26 @@ class BastionAI:
         except Exception as e:
             _err(f"queue_alert: {e}")
 
-    def _send_email(self, subject, body, html_body=None):
-        """Send email via Gmail SMTP. Returns True on success."""
+    def _send_email(self, subject, body, html_body=None, recipient=None):
+        """Send email via Gmail SMTP. Returns True on success.
+        `recipient` overrides the default ALERT_EMAIL_TO (used for owner
+        staff-conduct alerts); falls back to the default when blank/invalid."""
         if not ALERT_EMAIL_FROM or 'your.gmail' in ALERT_EMAIL_FROM or '@' not in ALERT_EMAIL_FROM:
             _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_FROM is still a placeholder in bastion_ai.py !!!")
             return False
         if not ALERT_EMAIL_PASSWORD or 'xxxx' in ALERT_EMAIL_PASSWORD:
             _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_PASSWORD is still a placeholder in bastion_ai.py !!!")
             return False
+        # Choose recipient: per-alert owner email if valid, else the default.
+        to_addr = str(recipient).strip() if recipient else ''
+        if '@' not in to_addr:
+            to_addr = ALERT_EMAIL_TO
         try:
             pw = str(ALERT_EMAIL_PASSWORD).replace(' ', '')  # App Passwords often pasted with spaces
 
             msg = MIMEMultipart('alternative')
             msg['From']    = ALERT_EMAIL_FROM
-            msg['To']      = ALERT_EMAIL_TO
+            msg['To']      = to_addr
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
             if html_body:
@@ -861,8 +1194,8 @@ class BastionAI:
             ctx = ssl.create_default_context()
             with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
                 server.login(ALERT_EMAIL_FROM, pw)
-                server.sendmail(ALERT_EMAIL_FROM, ALERT_EMAIL_TO, msg.as_string())
-            _log(f"Email sent OK to {ALERT_EMAIL_TO}")
+                server.sendmail(ALERT_EMAIL_FROM, to_addr, msg.as_string())
+            _log(f"Email sent OK to {to_addr}")
             return True
         except smtplib.SMTPAuthenticationError as e:
             _err(f"send_email AUTH FAILED -- check App Password / 2FA enabled: {e}")

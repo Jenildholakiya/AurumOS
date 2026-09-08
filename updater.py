@@ -1,4 +1,171 @@
-import marshal,zlib,base64
-exec(marshal.loads(zlib.decompress(base64.b85decode(
-    'c-pmEYit`=cAg=J@24n=dfFbzdeM?dJ#5F8Z6%5%+sZnWE6H)JO_mvPh7x7Ic4lZ<gq&5kMk6C`EjMW;Bb!D=7gz;xvHH;;M$sP$HrVu6K`yxvGf>gpHbv`y^4e`(FHrQ{JHv-0+SvlFVBb4)=iYPAJ?GwYzH=`BnJD?wDfMF&Nf4_9OH2_g$*RKS6p3rqlnU4CDK)OCDGJw`DGjc*Q(9c>rgXU0PZ@A+#I-tXikPR&B*9Ws7FIK5Wwlc_RySp5^_=x1f;Dh9T-u>Deyp3SU`?DksAA1GsVRr@Y=P%Wcy_|G6`reD8-BLKvx}|ZoU8->o4D$rmaT-g8n%vgLQ54_3$1m~>bj|!s)ts&r6EYM)zEUlKo|(No~^;uYN6%eg38^Hm;gZ-2NQfEGB!b9inEN!@y0W||BOSI#>Yo|lm0hG#wSL{d~`^lrxTGl$I?tfj71nR6kx*P1$r9(B|>4=&vRjp5jamA8n|GL=V*=z%*r1<#>rWZ9(i+w4)PqA<OEur1%lU@aDt=%Y3V~+h(U|og9*<w3j%#L8k-mBkSNfx`6zvj<AqQx>M<G<m|r>=j?MQQX}ZTl2WGjzRX@z=m%p{UX}YV64ss$)pC33U#G){HEJB|PiRTm3opc};i8DM0G<rQW3zLLn4C`m2tUnYLL|9vUf)C52@?YsFH;;Jir04k%Ffq-DoiwbQNkjv)#)oK^`P`&LU1Y@Bq^8Hy<LQ;GuW?b3z-%ncTn#NSl1>r4L`9fTG}$yOigBUe>*bkw&rC?1O-v^Qjt|75A{P}sz@+yX=}lU^r3;a?JSQgjXrOeTYv8{c?epIdXrGH@{)4E>KcRj5nOc74dqmCt9&=h^-`{5nr8)inZ*!(H{grxxD4D@r7-20#rDA^@tIp3`nE!=yxvAurpi7z_$D$GNehS9IEXULHvm9(kMerW(I!A{?*Ej)o6B>XvT_nbG{j{(kps#_1$V`Vh`V2kN@0CXh{-JOP6yjw=g6J)wgeesNx&~-ong2Os<vEABYs#GY?tyt0f04AXOOssm>@(8iHb}Y|PGm%pm(;)<k8~#)i!4f7w1uOhq~kdu7QV(ws+b^AaoB&7j+qwF!>7b!B%x;wBmHkFj4KSiC7%}_j;v&YdHhT~?q@?hUk&|f_%Dn>u|zy^5PI8fVdeZ9m(?|I+bTaCTJ_!aWo(DHY)8_zBU`rKw5>N|JDSoT-8R`iRITdn>Q-%cZR_fcy*XoQ*)nydO<ft2H${2*Dxg_@<9`0TZQQp1^~N>)j+^xVfSOyKY%bk_Oh8O9VVX}wqoL>w-fKuH9^MGu&$=}{IvBhK6=;1tIvu<n6;4zjVeu}cbu&^BXx@*8^R>|AK^hvs8u~_OeU5%Q(zcF_tt+MP`UW(kUbWt}W=w~+Ol@gXTgK#0QSSW;QRfwM`nd`z2t)HiVUUTxg@=8|Qn6*S6F?%FX9VmhM0y@fpa%~al>GqDF|0uE^+sSH!A3_#>^x=}o(;fZ0@ozU{)QGq5l$xK<6t(03by~jP#FAAyIjHPp%YOs;URqDL(zgYaLdEpYB+gt{A_zTkTlR5itp7@CDKwL!J|XzSC+{igfGXDvTEexWG2kE+dsf+Xi1w|GN!f^)rN^k<h1}<B1&yu6Mus>VJOkXVo?X`=j))Heps?FQdj1yD*yEcDH@8__$IMPvJ|VSBZdpq^F1es!-Qze_icu)OcGa!1?@a>U44a^C*8W_k&6s3aCBRbr`vO~4cW=|o=&>ElRoJNE6pq3I0Vkk!yiK8M8<xXEGYQjhh)(U#dio2<grM+ZNq#PrBYbipOLF1N!+fWhy~)W)W8FYT(de972PUH<>{8l>jK)&G>tX)%y4>!i*ncF{6Ml1&KNM8*PrKfI0jfp81NLj3?XeI)&Cpubcy(d)4NW7II&i-`bOI6{VxG=`opSf()SQ)#;xYjJjKGT<?GS&0i<wk81Ez4PVsO^lr&-@4rbjjay`JsMVQ>J!s3uLz>+AGax7VQv&nZt<I9M#OL&{@P?V;2+g`ac_<?rSeAoPeb<5t8wzsSYGWH`|_U^R3d$TfQKenvdwmE_C^-CMQ8-wdtvQBTt=1u9nPq$6Z-w>px_G??sjvDG`f&;B=&@^ZzzOWhw>(pP=l29Tz5{ZeNq``s;sP<?L@8Iq|wxqa!%W3cGuxvk)eR;bv$pcgj1!;Mzf(Zcw0-y{|xH!v1X*|EjO=4Mq=(>=cv7IaxoIWJ@@gN>Cbsl}Lmd&WCcC9sIYW%Tp^H`?&WZHBxMV*unrW(MYq(f#UmJoNXu;9KXRXDyNZ>UPo>1Ty=m4q#QL%pbe(Rt-xD!QX`P6$RD%3-DZ)Lyi7gIc7@Atn~0n$HyeZ>Yoq8k@71!DW?YI4I7bS=7u`m6<`y>O@!m?IYr2RenB_c+LntYbfcX;;Ww1&&Zk<Rl6yQwFPeLo-fxMTGqU%^%qtv))Yn^EVD+fzaWiok<j5Xqcw}#Me@ES4_I#K7IkwiFY=RzOYm{tdfxu~g7vf}A7Wp07DqIf#xFq7B?5e<FUR<+LaEd0$NjqK;gEp*nLtlWTtG)96ohCEnG?GG;=-sL-oTk*W1J9eLq0Rgg7*t>U}D?~i9r?|<|PP4x(31OiFCUhH^KRv;{p(sv0RWzfWwA!5e`k$4C<60dm)CrtujE2UFDR}i$U<y557AXnvo+iIMB>BCKN{8%J7#+R_yEcOp_3UT_-*zB|R4fPY*~6@DL7`{Fr>wSmZRRS5U53(hdfY8BN*&*oGAecyRz_8BB<?F+P;UZAq=n<XLbHIvjdk7kT7n+?5y$OIq$aV0S>)c(4Y=f`Vi~pu&&(N@{TX{1Mz!mIngl-%oG?AoFqM!N{<ze-?&--D$ukMG(T0D*#kP&aa5mugor4<*0TxCWuic0v=&#WPH-^8}p4wCall}KT^1)gZW}{E-F!o8@HbCK~|&}y9~T2NgW8zNE85lMp6S)@Gf3Qy@j}-$3{{9lTD-1kHcm^Q02#=;dNvj|6BGacEVy?8re~4HI{8_?fa3`!Jf3WXIY&yS?~1U>c4$@yRv$<|8D<U;FHL`$mZp>Nao;~Oy$7xaL!q?dj9VDweM|=XPn*3BTtNksp5|3mS@XIr;YS_WyaXDG?b%s@A-b;w{m*@#Qm{U$LUn#nJhJsZ#|JZ;LTFqU+c^{z3GnimUZO^8?BpFo4Qo{iLCzQ6D?t~ZW)`?#^#K%6^PXyTpG$!uI<`}PY&EWurzdY>>HSK;MTyFsWEM8TtB=aJUEv!HD*l1OT#&n?as+tC*MDnqFhg(G!o`2<oGOK>&?jVS!Bm|bI>_lPkdQ#7;aO4*-ApW3!fPCeqc$p+tU?n5GksQ7;KTmc8o08vEnzCNbRzog+Aa{3W%-PXOXzCF0tqZ|1f7PW1CcSmNIsAzxPm!wi2IHQPz)W^RpK4WaSGiFeMf&`XaSh^g)`EmFpI%kH8x&YGB<|aou21VZ?LzFw78nTF>bLUgKMOn7_4$g|+5;u(luRu+4Ur*zBPj+7gLr3lga<L(9%q+;`-umDPv6pa)%vbSf8hyZ6Htf_2`|zN=ku%Jn>1@EKLiAgM%NXJ42IqnRk1&xPUWYj3QjWJ&Tkj12|EekJQsFx~jApPr7z!pf&SKBJXSfO2WNeK&Y>D}9xCX;0sLaM&j7>km+Gh6~4Ll>T9`&B`Yw3F*f<LYb8ErI6tR(^mRrY@GJRq8tspMmcdFJSq(aI>yW4U$XYQmo5$uPL7Pf4PFhvWuBLQI_WHa!XgH*)K7m(V&lsnL)KKMbWUozA?)c+))hyL?~(*itE6c;9pf)Z^^9aFELAd>E{#8mQv#)Hl1!0M)L)no#aZ2Mon$Cb<1b;B6k+pkATBSX;!RXs!5)JV0-+G{UGXpz;K1K%u`GmSQ<3w%=~h`>{j|?*!I3V6Dm+A4l3m$9{?{g;0MvpV3V#L_1K3rv9E#fIVCa>6M1(Q9;!Cl!=fJ7;=5ai@FlJt&LQ$B%OZK;z35nz+H84`frP=o~%!i;kiX2-9iR1A)!a`@vjY}ijlp$qqS?AU-r;J@$%7fqOY-3M~?oAo{veeNX%B68`+iJ6QM>fx8ZKs#j+qTL($y>>_!=D_vcVzu?rmibv^DI-}II33I)!DnVYYQ7~8CP${(YNI|nRcAaI8H5Vw;gqB$JdW#9PVZ9H+oCTeq`hLMtiDv<n!R?Z>FritbS}qOB^_yYiP<fH0B!UPtM;vzy96LrcA@J{M+|7$1@El%D=t6c`nm%`jJg<H|`L6gYoGTC-!M-VBT7>()fPxPUKc(?cB!bawKCtzGXd=ww`$~ld+zK1tETVH~ThQQdZ<yVS&Hh(ZR@PIDc_}h#Kl4e%50cKBN9w|H<JK>Mu`d;2CeDfVy1hHx0#m#Czm>s#Ri{SXM2QK{ZR>)Ps{LILSFxxnPG?6<ynlQcWbWK)E%E%XyPGyeDA~Ae0ulNL)z>%V+yC&fzn(XPOalRtUwA1>4pG@R~u_4=6iPnmPtjfpAR7XMTG<^iV7w;)KFnF_dtEdC-f}sm}ukUcM%Pj(gL`le2(53tv%!3~_|)GQdtzxhskDu>dFJbJnq_9~x!=#R={4fY?b#;0Z9e8z;oj%?!uN*1Wr`r@K2ph6PL4E+hho(sRZjURZ1pc{&KDgOk(JyAp&b5JIm0@gIVY|5Uv@F;#H*#4Y1>Qc#fqc3u?n-T){hm~WYQgNnFiVpXiV7~Cxox6HWRj8ab}L7%1=Z0-e8r66gMWOeuTCE%zy&QJtOi-pmw@gs^geXK50E6iWPI!fj*0G%SJnRAtK<dyfG`=Aws&1@A;251+x<p9EBDJ(2<>{`_BUMbM2#&mRS4O`3BvGr^Ndw@O29%5;>5%p%976C%Chd<V^&1?(X%C;%*YPNmGc0&(=X?+>4-E#-ZaHTIu$$bAvSzUDO1t<mSb+TP0BMud0Mwgl0!+OO6C|cCzsm-XxLa091RAyZF{hoZty^E{f5`OZ#tefpC;inLs&$X7Jdz3wPvj8#Y+%L33dlR9*2R5#_mcqW8vy}y*miq;eSstbqlRG8rvmwyDOX?=xtehpg@=a9&83EkCt6os*B4pgd`NR!F3Fn6Y7tW8D;oK^7zDVui+3>Dmq2x)fO91anJ`9S^CJ*^y#S2@MED1$-f!~K{{-k9n7L9TN5kQ;A<4IN*@lD=$U^w^iuMzT?L?f#9cL96(jO<Km<$MhP7V7&pD!zvX)bAglSX6*}75kbVUPOaj7Xf@RJi03i<?}Sapk&5Lk(humjNc8wEY5Sm(DkG(f29ZB2RW2d!0J;RlE7TUb2>_B01iTaFKKv%3(UsoSTLBZ5<_CRa7~*3VL-AOcR;=nF;(IX3!V@Ouw7(?t5-weFzr1{dq-d2<ubjK^nmZu1-f^jwI^ApBvEOvNcYj+Xl$D2n5(!$Qqw;V^CVwG#1N_nVxx4^=<9>$Mtp;>kI>xrOX)TNK}2>Dyf-*YFLd4Y6_Y$23ewS-D5KOcca00vJrG<JdFa{A1Kmo`#9(EJ5qGi{FJ8%*q4g`GgB2SBvG@Y*y+Su7)lGEMGqNf93e2^89z6W);OK>sVI(dESYxfU(s3psa8M&JPkX279(VFE9w3XpumM<FaoNE{IK0rfOM<<7Bxr;oyht|zM@b_KOf<E;8|-dMsw_qx-9eS^^j868pdT`b90VW_{doIbz%XR*_Dkvl5f*PRl{YZyR!J6|wt^!S3^OwV#3^VW_=BvFK*+r~g|dnA=!V5m1FaX$z{KOpMrEy-ZI1QOgYh^37uZLDZBUzMMm7UaU*2~|i6Kbmo_mFIK(ct_H9@#lKKT|##aG~H#gEw8bC35-e>%)Wrdehnd9>V5LyA{Iem+rpL8OfOR}@`XaoX&@<EJ&B)@(L@R=*@qkZdiAryT8kJms#!x4d#t^bRV<aR3zNqBuN~<0d2&emZ}BEa?%-MOaqSMXs{wMKa;vs`#;ql8o{TPBBt*u~1Yp3W;e2TS}UXIF;xa8Xp1v{JxRP{-H77#Mp%q$so?61S874Y9?X(@#q2+)Z?~D`ogU=&OQ1NA1W5&v4}7u>BI>BO@X8X1BLFdB|VrO++8xDCpcALI%o2MsH9V1s$?p`xPql5tfT3rr6oDGqmcNMP2aAfpCE-?1-(CAB6d{6q@i=W`tS$uE}zfUH2<RJ$cAdGx+h)Tld0}o9{P2q>+8z8d*{|iQXLnv4X@|yu18wJUVra98|22z*@jcw=8BZFV`FIJSjy3pHTUjNI!pC-HO?t!tNT`{ZF^O!rt5xSv-z{o19Ic-2dydBVAlTXBdbhCmFgVMHjF&c64muTI<ZyXk*@F99LUzcnsE&+pUb%pr0AZss|Oy<m0RXRY4f3VDr;`R^LA~_Y+Ok>UdozJK!{j#DAjl@U43l%{IBfwIeS~qemrOI&)GY3_UfGdt(@JLvv=ei^=s$WPOcAa=+~2*6)AgP&OV;AA4A<74Qp?%y|&Jz?Cm*w!_Falt#x^Hr-`ssDHCgdV)_fy#%P8<{&{uEd?;%kRhEB#qd(<1o;APpYg^r}HCd{+%nfOCL$0E3ZTQEB*JuB-D`oHAKG?o>@KpNXsa)N`f7ekK>k}hkaikmrS@X+Z+g$f_>r|?BG+Xl;qTsqSc57^HDBXB8V?MTJK9x3~`lb2I(<cl`I1l`Wpg`QN+O?(+W>%wjqwAM9udGBfu9vr5XVb2;pU-DpV=HQ`gTBq7&0{Io$*jFUuhOo82f_m`)q$AZw!412V*qNueZrE2y%qvw*ccGGGat0BcHQk-*KHbBx-yRbEyrNmG5C2~#_`(n5MF=(gT4nXDaR{W^PtSVW?k5-=}6af+@43_vZ3>tFbbRQ4?4~@6F;qm;tNCTSsn3(ceol}ey%f|YgGT-KBzm_p#G|wf~Kz;G|==_qZ&Oo8%7EBS6zeD`BUn@JEegaWOcQ0;$}Ee(y|N}iA8;GHUC4L1ewH#lfQ}V8YL%m{s<MfQSrxU@1tP+op;_*aw5)hCx-tM__T&PBRu?UiTIC$Bc!JDiBCmntXq^bO*z+wH=J3@vqc?EQ%8SE9mfXEO+GYYgX;6S4@o*d9N&Q7kFBfx!xo(K89@c&mQSMM2lxhCzAW)5cP0EF&T1)**bGWKWGUcP{&ft#H!+_ZojiZ(RsYy!-^jRRQr^Z#E{;hS<>l4!LEq4Mo<U>K1&(Y<vB5+!1il`YD3q?0(@jm-6UZnITUiRFIdP&0OJ%=%h{V`Lm>b~#93xba*}p)sqb5o65oI8$|8x=LsV$-({$+^%e<Tk715pFVwX$x>29>jU$(*ZfSTf}*YnLp)(zb6jY*=$z-Lh%v#>(JIWW~S!I=Xo1+ffr_#g5%XcCSo6CZO7B(2z$~*vAA^J9aJEzBcigfNIB~C2Lm#=(%>sp(6WNCUyv@)+=$f;e3p$N5+F>^~%r=0oD3pTx}#Cqw3MCWE<&R3+xb3Z5(}!s+~7TqV-6wvE`BG4U&9mU3fyE8jIn708^ulwg'
-))))
+# -*- coding: utf-8 -*-
+"""
+AurumOS Updater Module
+Checks GitHub releases for updates and downloads changed files.
+"""
+
+import os
+import sys
+import json
+import hashlib
+import urllib.request
+import urllib.error
+from pathlib import Path
+
+# Current version baked into the EXE at build time
+# Update this BEFORE building each release — must match the GitHub release tag
+CURRENT_VERSION = "1.1.5"
+
+# GitHub repo for releases
+REPO_OWNER = "Jenildholakiya"
+REPO_NAME = "AurumOS"
+VERSION_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
+
+# Files that should never be auto-updated (protected)
+PROTECTED_PATHS = {
+    'database', 'logs', 'config.json', 'exe_trusted_hash.txt',
+    'AurumOS.exe', 'version.lock',
+}
+
+def sha256(path: Path) -> str:
+    """Compute SHA256 hash of a file. Returns empty string if missing."""
+    try:
+        h = hashlib.sha256()
+        with open(path, 'rb') as f:
+            for chunk in iter(lambda: f.read(65536), b''):
+                h.update(chunk)
+        return h.hexdigest()
+    except Exception:
+        return ''
+
+
+def get_app_root() -> Path:
+    """Return the application root directory (where updatable files live)."""
+    if getattr(sys, 'frozen', False):
+        exe_dir = Path(sys.executable).parent
+        # If EXE is in dist/ or dist/AurumOS/, go up to project root
+        if exe_dir.name.lower() in ('dist', 'aurumos'):
+            return exe_dir.parent
+        return exe_dir
+    return Path.cwd()
+
+
+def _is_protected(rel_path: str) -> bool:
+    """Check if a relative path should be protected from auto-updates."""
+    rel = rel_path.replace('\\', '/').lstrip('./')
+    parts = rel.split('/')
+    # Protect top-level folders like database/, logs/, and specific files
+    if parts[0] in PROTECTED_PATHS:
+        return True
+    if rel in PROTECTED_PATHS:
+        return True
+    return False
+
+
+def _version_key(v: str):
+    """Convert version string to tuple for comparison."""
+    try:
+        return tuple(int(x) for x in v.split('.')[:3])
+    except Exception:
+        return (0, 0, 0)
+
+
+def check_for_update(timeout=8) -> dict | None:
+    """
+    Check GitHub for the latest release.
+    Returns dict with version info if update available, None otherwise.
+    """
+    try:
+        req = urllib.request.Request(
+            VERSION_URL,
+            headers={
+                'User-Agent': f'AurumOS/{CURRENT_VERSION}',
+                'Accept': 'application/vnd.github.v3+json',
+            }
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode())
+    except urllib.error.URLError:
+        return None  # No network
+    except Exception:
+        return None
+
+    # Parse version from tag_name (e.g., "v1.1.4")
+    tag = data.get('tag_name', '')
+    if not tag.startswith('v'):
+        return None
+    remote_version = tag[1:]
+
+    # Compare versions — use installed version (version.lock) if available,
+    # falls back to CURRENT_VERSION for fresh installs
+    local_version = get_installed_version()
+    if _version_key(remote_version) <= _version_key(local_version):
+        return None
+
+    # Find version.json asset
+    version_json_url = None
+    for asset in data.get('assets', []):
+        if asset.get('name') == 'version.json':
+            version_json_url = asset.get('browser_download_url')
+            break
+
+    if not version_json_url:
+        return None
+
+    # Fetch version.json with file manifest
+    try:
+        req = urllib.request.Request(
+            version_json_url,
+            headers={'User-Agent': f'AurumOS/{CURRENT_VERSION}'}
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            manifest = json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+    # Add metadata — callers expect these keys
+    manifest['_remote_version'] = remote_version
+    manifest['_changelog'] = data.get('body', '')
+    manifest['available'] = True
+    manifest['current'] = CURRENT_VERSION
+    manifest['file_count'] = len(manifest.get('files', []))
+    return manifest
+
+
+def set_installed_version(version: str):
+    """Write version.lock file to mark installed version."""
+    try:
+        root = get_app_root()
+        (root / 'version.lock').write_text(version.strip(), encoding='utf-8')
+    except Exception:
+        pass
+
+
+def get_installed_version() -> str:
+    """Read version.lock if exists, else return CURRENT_VERSION."""
+    try:
+        root = get_app_root()
+        lock = root / 'version.lock'
+        if lock.exists():
+            return lock.read_text(encoding='utf-8').strip()
+    except Exception:
+        pass
+    return CURRENT_VERSION
+
+
+# Backwards compatibility - main.py imports these
+def _sha256(path):
+    """Alias for sha256() used by main.py"""
+    return sha256(Path(path) if not isinstance(path, Path) else path)
+
+
+# Export for main.py
+__all__ = [
+    'CURRENT_VERSION',
+    'check_for_update',
+    'sha256',
+    'get_app_root',
+    '_is_protected',
+    'set_installed_version',
+    'get_installed_version',
+]

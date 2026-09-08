@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this file to sign_config.json and fill in your values. sign_config.json is gitignored so your password is never committed. You can instead set env vars: AURUMOS_PFX, AURUMOS_PFX_PASSWORD, AURUMOS_TIMESTAMP_URL.",
+  "pfx_path": "C:/Certificates/AurumOS.pfx",
+  "password": "YOUR_PFX_PASSWORD",
+  "timestamp_url": "http://timestamp.digicert.com"
+}

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Karigar Orders</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;--white:#fff;
+  --ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);--green-ln:rgba(22,163,74,0.18);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-ln:rgba(220,38,38,0.18);
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,0.07);--amber-ln:rgba(217,119,6,0.18);
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 4px 20px rgba(14, 12, 9, 0.04), 0 1px 3px rgba(14, 12, 9, 0.02);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+
+header{height:62px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.3rem;color:var(--ink);font-weight:400;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-tools{display:flex;align-items:center;gap:12px;}
+
+.content{flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;}
+
+/* Toolbar above table */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.toolbar .left{display:flex;align-items:center;gap:14px;}
+.t-title{font-family:var(--serif);font-size:1.15rem;color:var(--ink);}
+.t-count{font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:6px;border:1px solid var(--rule);font-weight:600;}
+.search-wrapper{position:relative;width:240px;}
+.search-wrapper input{width:100%;height:34px;padding:0 12px 0 32px;border:1px solid var(--rule);border-radius:7px;font-size:0.8rem;background:var(--white);outline:none;}
+.search-wrapper input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(37,99,235,0.06);}
+.search-wrapper svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;}
+
+/* Buttons */
+.btn{height:38px;padding:0 16px;background:var(--white);border:1px solid var(--rule);border-radius:8px;font-weight:700;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:var(--sh-lux);}
+.btn:hover{background:var(--gold-bg);border-color:var(--gold);color:var(--gold3);transform:translateY(-1px);}
+.btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold));border:1px solid var(--gold);color:#fff;}
+.btn-primary:hover{background:var(--gold3);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3);}
+.btn-ink{background:var(--ink);border:1px solid var(--ink);color:#fff;}
+.btn-ink:hover{background:#000;color:#fff;transform:translateY(-1px);}
+.btn-sm{height:30px;padding:0 12px;font-size:0.72rem;box-shadow:none;}
+.btn-danger{border-color:var(--red-ln);color:var(--red);}
+.btn-danger:hover{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+
+/* Card + Table */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--sh-lux);overflow:hidden;transition:box-shadow 0.2s ease;}
+.card:hover{box-shadow:0 8px 28px rgba(14,12,9,0.07),0 2px 6px rgba(14,12,9,0.03);}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--cream2);padding:11px 16px;text-align:left;font-size:0.55rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;border-bottom:1px solid var(--rule);}
+tbody td{padding:12px 16px;font-size:0.82rem;border-bottom:1px solid var(--rule2);vertical-align:middle;color:var(--ink2);}
+tbody tr.main-row{cursor:pointer;transition:background .12s;}
+tbody tr.main-row:hover td{background:rgba(37,99,235,0.04);}
+.num{text-align:right;font-family:Arial,Helvetica,sans-serif;font-weight:600;}
+.muted{color:var(--muted2);}
+.chev{display:inline-block;margin-right:8px;color:var(--muted2);transition:transform .15s;}
+tr.main-row.open .chev{transform:rotate(90deg);}
+.detail-row td{background:var(--gold-bg);padding:0;border-bottom:1px solid var(--rule2);}
+.detail-inner{padding:14px 18px 18px 46px;}
+.detail-inner h4{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted2);margin-bottom:8px;font-weight:700;}
+.mini{width:100%;border-collapse:collapse;}
+.mini th{background:transparent;padding:6px 10px;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted2);text-align:left;border-bottom:1px solid var(--gold-ln);}
+
+/* ── FIXED: REMOVED ALIGNMENT MISMATCH BY FORCING INNER NUMERIC HEADERS RIGHT ── */
+.mini th.num{text-align:right;}
+.mini td{padding:7px 10px;font-size:0.78rem;border-bottom:1px solid var(--rule2);}
+
+.pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:5px;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:1px solid transparent;}
+.pill.issued{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-ln);}
+.pill.completed{background:var(--green-bg);color:var(--green);border-color:var(--green-ln);}
+.empty{padding:46px 20px;text-align:center;color:var(--muted2);font-size:0.84rem;line-height:1.8;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.45);display:none;align-items:center;justify-content:center;z-index:5000;backdrop-filter:blur(2px);}
+.modal-overlay.show{display:flex;}
+.modal-box{width:600px;max-width:94vw;max-height:92vh;display:flex;flex-direction:column;background:var(--white);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:hidden;}
+.modal-head{padding:16px 22px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;background:var(--cream2);}
+.modal-title{font-family:var(--serif);font-size:1.1rem;color:var(--ink);}
+.modal-close{background:none;border:none;font-size:1.3rem;color:var(--muted2);cursor:pointer;line-height:1;}
+.modal-body{padding:20px 22px;overflow-y:auto;}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--rule);display:flex;justify-content:flex-end;gap:10px;background:var(--cream);}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;}
+.field label{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted2);font-weight:700;}
+.field input,.field select{height:37px;padding:0 11px;border:1px solid var(--rule);border-radius:7px;font-size:0.82rem;background:var(--white);outline:none;font-family:var(--sans);}
+.field input:focus,.field select:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+
+.items-input{width:100%;height:33px;padding:0 9px;border:1px solid var(--rule);border-radius:6px;font-size:0.78rem;outline:none;background:var(--white);}
+.items-input:focus{border-color:var(--gold2);}
+.exp{font-family:Arial,Helvetica,sans-serif;font-weight:600;color:var(--blue);}
+.summary{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;background:var(--gold-bg);border:1px solid var(--gold-ln);border-radius:9px;}
+.summary div{font-size:0.76rem;color:var(--ink3);}
+.summary b{display:block;font-family:Arial,Helvetica,sans-serif;font-size:1.05rem;color:var(--ink);margin-top:2px;}
+.match-ok{color:var(--green);font-weight:700;}
+.match-bad{color:var(--red);font-weight:700;}
+
+.recon{margin-top:14px;padding:14px 16px;background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:9px;display:grid;grid-template-columns:repeat(2,1fr);gap:9px 20px;font-size:0.8rem;}
+.recon b{font-family:Arial,Helvetica,sans-serif;color:var(--ink);}
+.flag{font-weight:800;grid-column:1 / -1;}
+.txt-red{color:var(--red);}
+.txt-green{color:var(--green);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:0.78rem;font-weight:600;padding:12px 22px;border-radius:7px;z-index:9999;opacity:0;pointer-events:none;transition:all .2s ease;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);box-shadow:0 8px 24px rgba(0,0,0,.22);}
+</style>
+</head>
+<body>
+
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Karigar Orders</div>
+    <div class="h-tools">
+      <button class="btn" onclick="sideNavigate('karigar.html')">← Dashboard</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="toolbar">
+      <div class="left">
+        <div class="t-title">Orders &amp; Lots</div>
+        <span class="t-count" id="order-count">0 orders</span>
+        <button class="btn btn-ink" onclick="openIssue()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Issue Order
+        </button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <form class="search-wrapper" autocomplete="off" onsubmit="return false;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <!-- ── FIXED: INSTALLED AUTOCOMPLETE PROTECTION ── -->
+          <input type="text" id="orderSearch" autocomplete="off" placeholder="Search orders / karigars…" oninput="renderOrders()">
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px;"></th>
+            <th>Order / Lot</th>
+            <th>Karigar</th>
+            <th class="num" style="width:120px;">Issue Date</th>
+            <th class="num" style="width:120px;">Due Date</th>
+            <th class="num" style="width:130px;">Given (fine g)</th>
+            <th class="num" style="width:90px;">Touch</th>
+            <th class="num" style="width:90px;">Items</th>
+            <th style="width:120px;">Status</th>
+            <th style="width:130px; text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="10" class="empty">Loading orders…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── ISSUE MODAL ── -->
+<div class="modal-overlay" id="issueModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Issue New Lot / Order</div>
+      <button class="modal-close" onclick="closeIssue()">&times;</button>
+    </div>
+    <form class="modal-body" autocomplete="off" onsubmit="return false;">
+      <div class="grid2">
+        <div class="field">
+          <label for="o_karigar">Karigar</label>
+          <!-- ── FIXED: AUTOCOMPLETE GAP REMOVED ── -->
+          <input type="text" id="o_karigar" autocomplete="off" placeholder="Type karigar name">
+        </div>
+        <div class="field">
+          <label for="o_no">Order / Lot No</label>
+          <!-- ── FIXED: AUTOCOMPLETE GAP REMOVED ── -->
+          <input type="text" id="o_no" autocomplete="off" placeholder="e.g. LT-1042">
+        </div>
+        <div class="field">
+          <label for="o_issue">Issue Date</label>
+          <input type="date" id="o_issue">
+        </div>
+        <div class="field">
+          <label for="o_due">Due Date</label>
+          <input type="date" id="o_due">
+        </div>
+        <div class="field">
+          <label for="o_given">Gold Given (fine g)</label>
+          <!-- ── FIXED: AUTOCOMPLETE GAP REMOVED ── -->
+          <input type="number" step="0.001" id="o_given" autocomplete="off" placeholder="e.g. 100.000" oninput="recalcSummary()">
+        </div>
+        <div class="field">
+          <label for="o_gtouch">Given Touch %</label>
+          <!-- ── FIXED: AUTOCOMPLETE GAP REMOVED ── -->
+          <input type="number" step="0.01" id="o_gtouch" autocomplete="off" value="100" placeholder="100">
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 10px;">
+        <div style="font-weight:700;font-size:0.85rem;">Items to Make</div>
+        <button class="btn btn-sm" onclick="addItemRow()">+ Add Item</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num" style="width:130px;">Fine Gold (g)</th>
+            <th class="num" style="width:110px;">Touch %</th>
+            <th class="num" style="width:150px;">Expected Return (g)</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="items-tbody"></tbody>
+      </table>
+
+      <div class="summary">
+        <div>Total Fine Given<b id="sum-given">0.000 g</b></div>
+        <div>Total Fine Allocated<b id="sum-alloc">0.000 g</b></div>
+        <div>Expected Return Wt<b id="sum-return">0.000 g</b></div>
+        <div id="sum-match" class="match-ok" style="align-self:center;">Enter gold given</div>
+      </div>
+    </form>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeIssue()">Cancel</button>
+      <button class="btn btn-primary" id="issueSubmitBtn" onclick="submitOrder()">Issue Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECEIVE MODAL ── -->
+<div class="modal-overlay" id="recvModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Receive Order <span id="recv-title"></span></div>
+      <button class="modal-close" onclick="closeRecv()">&times;</button>
+    </div>
+    <form class="modal-body" autocomplete="off" onsubmit="return false;">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num" style="width:120px;">Exp. Return (g)</th>
+            <th class="num" style="width:120px;">Actual Wt (g)</th>
+            <th class="num" style="width:100px;">Touch %</th>
+          </tr>
+        </thead>
+        <tbody id="recv-items"></tbody>
+      </table>
+      <div class="recon">
+        <div>Gold Given (fine): <b id="r-given">0.000 g</b></div>
+        <div>Gold Returned (fine): <b id="r-returned">0.000 g</b></div>
+        <div>Loss / Wastage: <b id="r-loss">0.000 g</b></div>
+        <div>Karigar Allowance: <b id="r-allow">0.000 g</b></div>
+        <div class="flag" id="r-flag"></div>
+      </div>
+    </form>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeRecv()">Cancel</button>
+      <button class="btn btn-primary" id="recvSubmitBtn" onclick="submitReceive()">Complete Receive</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var KARIGARS = [];
+var ORDERS = [];
+var recvOrder = null;
+var openRows = {};
+
+(function boot(n){
+    if (window.pywebview && window.pywebview.api) { load(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+    else document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="10" class="empty">Bridge not ready.</td></tr>';
+})(50);
+
+function load() {
+    if (!window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.get_all_karigars().then(function(klist){
+        KARIGARS = Array.isArray(klist) ? klist : [];
+        document.getElementById('o_issue').value = new Date().toISOString().slice(0,10);
+        refreshOrders();
+    }).catch(function(e){
+        document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="10" class="empty">Error: ' + e + '</td></tr>';
+    });
+}
+
+function refreshOrders() {
+    window.pywebview.api.get_karigar_orders().then(function(list){
+        ORDERS = Array.isArray(list) ? list : [];
+        renderOrders();
+    }).catch(function(e){
+        document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="10" class="empty">Error: ' + e + '</td></tr>';
+    });
+}
+
+// ── ISSUE MODAL ──────────────────────────────────────
+function openIssue() {
+    resetOrderForm();
+    addItemRow();
+    document.getElementById('issueModal').classList.add('show');
+}
+function closeIssue() { document.getElementById('issueModal').classList.remove('show'); }
+
+function addItemRow() {
+    var tb = document.getElementById('items-tbody');
+    var tr = document.createElement('tr');
+    // ── FIXED: AUTOCOMPLETE PROTECTION INJECTED ──
+    tr.innerHTML =
+        '<td><input class="items-input" autocomplete="off" placeholder="e.g. Ring" oninput="recalcSummary()"></td>' +
+        '<td class="num"><input class="items-input num" autocomplete="off" type="number" step="0.001" placeholder="0.000" oninput="onItemChange(this)"></td>' +
+        '<td class="num"><input class="items-input num" autocomplete="off" type="number" step="0.01" placeholder="76" oninput="onItemChange(this)"></td>' +
+        '<td class="num"><span class="exp">0.000 g</span></td>' +
+        '<td><button class="btn btn-sm btn-danger" onclick="this.closest(\'tr\').remove(); recalcSummary()">✕</button></td>';
+    tb.appendChild(tr);
+}
+function onItemChange(el) {
+    var tr = el.closest('tr');
+    var fine = parseFloat(tr.children[1].querySelector('input').value || '0');
+    var touch = parseFloat(tr.children[2].querySelector('input').value || '0');
+    var exp = (touch > 0) ? fine / (touch / 100) : 0;
+    tr.children[3].querySelector('.exp').textContent = f3(exp) + ' g';
+    recalcSummary();
+}
+function readItems() {
+    return Array.prototype.map.call(document.getElementById('items-tbody').children, function(tr){
+        return {
+            name: tr.children[0].querySelector('input').value.trim(),
+            fine_wt: parseFloat(tr.children[1].querySelector('input').value || '0'),
+            touch: parseFloat(tr.children[2].querySelector('input').value || '0')
+        };
+    }).filter(function(it){ return it.name || it.fine_wt > 0; });
+}
+function recalcSummary() {
+    var items = readItems();
+    var alloc = items.reduce(function(s, it){ return s + (it.fine_wt || 0); }, 0);
+    var given = parseFloat(document.getElementById('o_given').value || '0');
+    var expReturn = items.reduce(function(s, it){ return s + ((it.touch > 0) ? it.fine_wt / (it.touch / 100) : 0); }, 0);
+    document.getElementById('sum-given').textContent = f3(given) + ' g';
+    document.getElementById('sum-alloc').textContent = f3(alloc) + ' g';
+    document.getElementById('sum-return').textContent = f3(expReturn) + ' g';
+    var m = document.getElementById('sum-match');
+    if (given > 0 && Math.abs(alloc - given) > 0.001) {
+        m.className = 'match-bad'; m.textContent = 'Allocated ' + f3(alloc) + ' g ≠ Given ' + f3(given) + ' g';
+    } else {
+        m.className = 'match-ok'; m.textContent = (given > 0) ? 'All gold allocated ✓' : 'Enter gold given';
+    }
+}
+function resetOrderForm() {
+    document.getElementById('o_karigar').value = '';
+    document.getElementById('o_no').value = '';
+    document.getElementById('o_due').value = '';
+    document.getElementById('o_given').value = '';
+    document.getElementById('o_gtouch').value = '100';
+    document.getElementById('items-tbody').innerHTML = '';
+    recalcSummary();
+}
+function submitOrder() {
+    var kname = (document.getElementById('o_karigar').value || '').trim();
+    var k = KARIGARS.filter(function(x){ return x.name && x.name.toLowerCase() === kname.toLowerCase(); })[0];
+    var kid = k ? k.id : null;
+    var given = parseFloat(document.getElementById('o_given').value || '0');
+    var gtouch = parseFloat(document.getElementById('o_gtouch').value || '100');
+    var items = readItems();
+    if (!kid) { toast('Enter a valid karigar name.'); return; }
+    if (!(given > 0)) { toast('Enter gold given (fine g).'); return; }
+    if (!items.length) { toast('Add at least one item.'); return; }
+    var alloc = items.reduce(function(s, it){ return s + (it.fine_wt || 0); }, 0);
+    if (Math.abs(alloc - given) > 0.001) { toast('Fine allocated (' + f3(alloc) + ' g) must equal gold given (' + f3(given) + ' g).'); return; }
+    var payload = {
+        karigar_id: kid,
+        order_no: document.getElementById('o_no').value.trim(),
+        issue_date: document.getElementById('o_issue').value || null,
+        due_date: document.getElementById('o_due').value || '',
+        given_fine_wt: given, given_touch: gtouch,
+        items: items.map(function(it){ return {name: it.name, fine_wt: it.fine_wt, touch: it.touch}; })
+    };
+    var ib = document.getElementById('issueSubmitBtn');
+    ib.textContent = 'Issuing…'; ib.disabled = true;
+    window.pywebview.api.create_karigar_order(
+        payload.karigar_id, payload.order_no, payload.issue_date, payload.due_date,
+        payload.given_fine_wt, payload.given_touch, payload.items
+    ).then(function(r){
+        if (r && r.status === 'success') { toast('Order issued.'); closeIssue(); refreshOrders(); }
+        else toast('Error: ' + ((r && r.message) || 'unknown'));
+        ib.textContent = 'Issue Order'; ib.disabled = false;
+    }).catch(function(e){ toast('Error: ' + e); ib.textContent = 'Issue Order'; ib.disabled = false; });
+}
+
+// ── ORDERS TABLE ─────────────────────────────────────
+function renderOrders() {
+    var q = (document.getElementById('orderSearch').value || '').toLowerCase().trim();
+    var rows = ORDERS.filter(function(o){
+        if (!q) return true;
+        return (o.order_no || '').toLowerCase().indexOf(q) !== -1
+            || (o.karigar_name || '').toLowerCase().indexOf(q) !== -1;
+    });
+    document.getElementById('order-count').textContent = ORDERS.length + (ORDERS.length === 1 ? ' order' : ' orders');
+    var tb = document.getElementById('orders-tbody');
+    if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="10" class="empty">No orders match. Use “Issue Order” to create one.</td></tr>';
+        return;
+    }
+    tb.innerHTML = rows.map(function(o){
+        var isOpen = !!openRows[o.id];
+        var pill = o.status === 'completed'
+            ? '<span class="pill completed">Completed</span>'
+            : '<span class="pill issued">Issued</span>';
+        var act = o.status === 'completed'
+            ? '<button class="btn btn-sm" onclick="event.stopPropagation();openRecv(' + o.id + ')">View</button>'
+            : '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openRecv(' + o.id + ')">Receive ›</button>';
+        var main = '<tr class="main-row' + (isOpen ? ' open' : '') + '" onclick="toggleRow(' + o.id + ')">'
+            + '<td><span class="chev">▶</span></td>'
+            + '<td><b>' + hesc(o.order_no || ('#' + o.id)) + '</b></td>'
+            + '<td>' + hesc(o.karigar_name) + '</td>'
+            + '<td class="num">' + (o.issue_date || '—') + '</td>'
+            + '<td class="num">' + (o.due_date || '—') + '</td>'
+            + '<td class="num">' + f3(o.given_fine_wt) + ' g</td>'
+            + '<td class="num">' + f2(o.given_touch) + '%</td>'
+            + '<td class="num">' + (o.items ? o.items.length : 0) + '</td>'
+            + '<td>' + pill + '</td>'
+            + '<td style="text-align:center;">' + act + '</td>'
+            + '</tr>';
+        var detail = '<tr class="detail-row" style="' + (isOpen ? '' : 'display:none;') + '">'
+            + '<td colspan="10"><div class="detail-inner">'
+            + '<h4>Items in this lot</h4>'
+            + '<table class="mini"><thead><tr><th>Item</th><th class="num">Fine (g)</th><th class="num">Touch</th><th class="num">Exp. Return (g)</th>'
+            + (o.status === 'completed' ? '<th class="num">Actual (g)</th><th class="num">Returned Fine (g)</th>' : '')
+            + '</tr></thead><tbody>'
+            + o.items.map(function(it){
+                var exp = it.expected_return_wt;
+                var line = '<tr><td>' + hesc(it.item_name || 'Item') + '</td>'
+                    + '<td class="num">' + f3(it.fine_wt) + '</td>'
+                    + '<td class="num">' + f2(it.touch) + '%</td>'
+                    + '<td class="num">' + f3(exp) + ' g</td>';
+                if (o.status === 'completed') {
+                    var rg = it.received ? it.recv_gross_wt : exp;
+                    var rt = it.received ? it.recv_touch : it.touch;
+                    var rf = rg * rt / 100;
+                    line += '<td class="num">' + f3(rg) + ' g</td><td class="num">' + f3(rf) + ' g</td>';
+                }
+                return line + '</tr>';
+            }).join('')
+            + '</tbody></table>'
+            + (o.status === 'completed'
+                ? '<div style="margin-top:10px;font-size:0.78rem;color:var(--ink3);">Loss / Wastage: <b>' + f3(o.loss) + ' g</b> &nbsp;·&nbsp; Allowance: <b>' + f3(o.allowance) + ' g</b></div>'
+                : '')
+            + '</div></td></tr>';
+        return main + detail;
+    }).join('');
+}
+
+function toggleRow(id) {
+    openRows[id] = !openRows[id];
+    renderOrders();
+}
+
+// ── RECEIVE MODAL ─────────────────────────────────────
+function openRecv(orderId) {
+    var o = ORDERS.find(function(x){ return x.id === orderId; });
+    if (!o) return;
+    recvOrder = o;
+    document.getElementById('recv-title').textContent = ' · ' + (o.order_no || ('#' + o.id));
+    var tb = document.getElementById('recv-items');
+    // ── FIXED: AUTOCOMPLETE PROTECTION INJECTED FOR DYNAMIC INPUTS ──
+    tb.innerHTML = o.items.map(function(it){
+        var exp = it.expected_return_wt;
+        var rg = it.received ? it.recv_gross_wt : exp;
+        var rt = it.received ? it.recv_touch : it.touch;
+        var disabled = it.received ? 'disabled' : '';
+        return '<tr data-item="' + it.id + '">'
+            + '<td>' + hesc(it.item_name || 'Item') + '</td>'
+            + '<td class="num">' + f3(exp) + ' g</td>'
+            + '<td class="num"><input class="items-input num" autocomplete="off" type="number" step="0.001" value="' + f3(rg) + '" ' + disabled + ' oninput="recalcRecv()"></td>'
+            + '<td class="num"><input class="items-input num" autocomplete="off" type="number" step="0.01" value="' + f2(rt) + '" ' + disabled + ' oninput="recalcRecv()"></td>'
+            + '</tr>';
+    }).join('');
+    document.getElementById('recvSubmitBtn').style.display = (o.status === 'completed') ? 'none' : '';
+    recalcRecv();
+    document.getElementById('recvModal').classList.add('show');
+}
+function closeRecv() { document.getElementById('recvModal').classList.remove('show'); recvOrder = null; }
+function recalcRecv() {
+    if (!recvOrder) return;
+    var given = parseFloat(recvOrder.given_fine_wt || 0);
+    var allow = parseFloat(recvOrder.allowance || 0);
+    var returned = 0;
+    Array.prototype.forEach.call(document.getElementById('recv-items').children, function(tr){
+        var rg = parseFloat(tr.children[2].querySelector('input').value || '0');
+        var rt = parseFloat(tr.children[3].querySelector('input').value || '0');
+        returned += rg * rt / 100;
+    });
+    returned = round3(returned);
+    var loss = round3(given - returned);
+    if (loss < 0) loss = 0;
+    document.getElementById('r-given').textContent = f3(given) + ' g';
+    document.getElementById('r-returned').textContent = f3(returned) + ' g';
+    document.getElementById('r-loss').textContent = f3(loss) + ' g';
+    document.getElementById('r-allow').textContent = f3(allow) + ' g';
+    var flag = document.getElementById('r-flag');
+    if (allow > 0 && loss >= allow) {
+        var over = round3(loss - allow);
+        flag.className = 'flag txt-red';
+        flag.textContent = '⚠ Over Allowance by ' + f3(over) + ' g — flag this karigar.';
+    } else {
+        flag.className = 'flag txt-green';
+        flag.textContent = '✓ Within allowance (' + f3(loss) + ' g of ' + f3(allow) + ' g).';
+    }
+}
+function submitReceive() {
+    if (!recvOrder) return;
+    var received_items = [];
+    Array.prototype.forEach.call(document.getElementById('recv-items').children, function(tr){
+        received_items.push({
+            item_id: parseInt(tr.getAttribute('data-item'), 10),
+            recv_gross_wt: parseFloat(tr.children[2].querySelector('input').value || '0'),
+            recv_touch: parseFloat(tr.children[3].querySelector('input').value || '0')
+        });
+    });
+    var rb = document.getElementById('recvSubmitBtn');
+    rb.textContent = 'Saving…'; rb.disabled = true;
+    window.pywebview.api.receive_karigar_order(recvOrder.id, received_items).then(function(r){
+        if (r && r.status === 'success') { toast('Order received.'); closeRecv(); refreshOrders(); }
+        else toast('Error: ' + ((r && r.message) || 'unknown'));
+        rb.textContent = 'Complete Receive'; rb.disabled = false;
+    }).catch(function(e){ toast('Error: ' + e); rb.textContent = 'Complete Receive'; rb.disabled = false; });
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function hesc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function f2(v){ return parseFloat(v||0).toFixed(2); }
+function f3(v){ return parseFloat(v||0).toFixed(3); }
+function round3(v){ return Math.round(parseFloat(v||0)*1000)/1000; }
+function setBtn(label, text, disable){
+    var btns = document.querySelectorAll('button');
+    for (var i=0;i<btns.length;i++){
+        if (btns[i].textContent === label) { btns[i].textContent = text; btns[i].disabled = disable; break; }
+    }
+}
+var toastTimer;
+function toast(msg){
+    var t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+// ── FIXED: GLOBAL ENTER-KEY INTERCEPTOR ENGINE ──
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+
+    var active = document.activeElement;
+    if (!active || active.tagName !== 'INPUT') return;
+
+    // Prevent default browser form submissions or field drops
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Blur active input field instantly to remove the drop down panel safely
+    active.blur();
+
+    // Context Aware Focus Management
+    if (active.id === 'orderSearch') {
+        renderOrders();
+    } else if (active.id === 'o_karigar') {
+        document.getElementById('o_no').focus();
+    } else if (active.id === 'o_no') {
+        document.getElementById('o_given').focus();
+    } else if (active.id === 'o_given') {
+        recalcSummary();
+        document.getElementById('o_gtouch').focus();
+    } else if (active.id === 'o_gtouch') {
+        recalcSummary();
+    } else if (active.classList.contains('items-input')) {
+        onItemChange(active);
+    } else if (active.closest('#recv-items')) {
+        recalcRecv();
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('karigar_order'); });
+</script>
+</body>
+</html>

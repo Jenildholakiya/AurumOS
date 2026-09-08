@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Subscription Expired</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --bg:#f8fafb;--white:#fff;--ink:#0f172a;--ink2:#1e293b;--ink3:#64748b;--ink4:#94a3b8;
+  --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;--blue-bg:rgba(37,99,235,0.06);--blue-border:rgba(37,99,235,0.18);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.15);
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-border:rgba(22,163,74,0.15);
+  --rule:#e2e8f0;
+  --sh:0 1px 3px rgba(15,23,42,0.04),0 1px 2px rgba(15,23,42,0.03);
+  --sh2:0 20px 60px rgba(15,23,42,0.08);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--ink);display:flex;align-items:center;justify-content:center;height:100vh;}
+
+.card{width:100vw;height:100vh;display:flex;overflow:hidden;animation:cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both;}
+@keyframes cardIn{from{opacity:0;transform:scale(0.98);}to{opacity:1;transform:none;}}
+
+.left{flex:0 0 48%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.left::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,rgba(37,99,235,0.04) 0%,transparent 60%);pointer-events:none;}
+.qr-full{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:absolute;inset:0;overflow:hidden;background:#fff;}
+.qr-full img{width:100%;height:100%;object-fit:contain;}
+.qr-full-label{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);backdrop-filter:blur(8px);border:1px solid var(--rule);border-radius:20px;padding:6px 18px;font-size:0.62rem;font-weight:600;color:var(--ink3);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;z-index:2;box-shadow:var(--sh);}
+.qr-full-brand{position:absolute;top:24px;left:28px;display:flex;align-items:center;gap:8px;z-index:2;}
+.qr-full-brand .qm{width:32px;height:32px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(37,99,235,0.25);}
+.qr-full-brand .qm span{font-size:0.7rem;font-weight:700;color:#fff;}
+.qr-full-brand .qt{font-size:0.88rem;font-weight:600;color:var(--ink);}
+.qr-full-brand .qt em{color:var(--blue);font-style:normal;font-weight:700;}
+.qr-full-badge{position:absolute;top:24px;right:28px;display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:var(--red-bg);border:1px solid var(--red-border);z-index:2;}
+.qr-full-badge .bd{width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.8s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.qr-full-badge span{font-size:0.58rem;font-weight:600;color:var(--red);letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;}
+
+.right{flex:1;background:var(--bg);display:flex;flex-direction:column;padding:28px 32px;overflow-y:auto;}
+.r-header{margin-bottom:14px;}
+.r-biz{font-size:0.55rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+.r-status{font-size:0.52rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.r-status .dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.8s ease-in-out infinite;}
+.r-title{font-size:1.3rem;font-weight:700;color:var(--ink);letter-spacing:-0.3px;margin-bottom:2px;}
+.r-subtitle{font-size:0.72rem;color:var(--ink3);line-height:1.5;}
+
+.divider{height:1px;background:var(--rule);margin:12px 0;}
+
+.online-badge{display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 12px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:6px;margin-bottom:12px;font-size:0.58rem;font-weight:600;color:var(--blue);letter-spacing:0.5px;}
+
+.plan-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.plan-card{background:var(--white);border:2px solid var(--rule);border-radius:10px;padding:14px 12px;text-align:center;transition:all 0.2s;position:relative;cursor:default;}
+.plan-card:hover{border-color:var(--ink4);transform:translateY(-1px);}
+.plan-card.active{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-bg);}
+.plan-card.active::after{content:'CURRENT';position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:0.45rem;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;}
+.plan-emoji{font-size:1.4rem;margin-bottom:4px;}
+.plan-name{font-size:0.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-bottom:3px;}
+.plan-card.active .plan-name{color:var(--blue);}
+.plan-price{font-family:'DM Sans',Arial,sans-serif;font-size:1rem;font-weight:700;color:var(--ink);}
+.plan-card.active .plan-price{color:var(--blue);}
+.plan-onb{font-size:0.5rem;color:var(--ink4);margin-top:2px;}
+.plan-desc{font-size:0.5rem;color:var(--ink4);margin-top:2px;font-weight:500;}
+.plan-btn{margin-top:8px;width:100%;height:28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.62rem;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.btn-renew{background:var(--blue);color:#fff;}
+.btn-renew:hover{background:var(--blue3);}
+.btn-upgrade{background:var(--ink);color:#fff;}
+.btn-upgrade:hover{background:var(--ink2);}
+.btn-contact{background:var(--bg);color:var(--ink3);border:1px solid var(--rule);}
+.btn-contact:hover{border-color:var(--ink4);}
+
+.section-label{font-size:0.52rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink4);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--rule);}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.step{display:flex;gap:8px;align-items:flex-start;background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;}
+.step-num{width:22px;height:22px;border-radius:5px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.58rem;font-weight:700;flex-shrink:0;font-family:Arial,sans-serif;}
+.step-num.gold{background:var(--blue);}
+.step-num.green{background:var(--green);}
+.step-title{font-size:0.68rem;font-weight:600;color:var(--ink);margin-bottom:1px;}
+.step-desc{font-size:0.58rem;color:var(--ink3);line-height:1.3;}
+
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.bank-card{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;}
+.bank-header{font-size:0.48rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.bank-row{display:flex;justify-content:space-between;align-items:center;padding:1px 0;}
+.bank-label{font-size:0.58rem;color:var(--ink4);}
+.bank-val{font-family:'DM Sans',Arial,sans-serif;font-size:0.58rem;font-weight:500;color:var(--ink);}
+
+.pay-card{background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;padding:10px 12px;}
+.pay-header{font-size:0.48rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin-bottom:6px;}
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:1px 0;}
+.pay-label{font-size:0.58rem;color:var(--ink4);}
+.pay-val{font-family:'DM Sans',Arial,sans-serif;font-size:0.6rem;font-weight:500;color:var(--ink);}
+.pay-amount{font-size:0.82rem;font-weight:700;color:var(--green);}
+
+.contact-row{display:flex;gap:6px;margin-bottom:10px;}
+.contact-chip{display:flex;align-items:center;gap:4px;padding:4px 8px;background:var(--white);border:1px solid var(--rule);border-radius:6px;font-size:0.58rem;color:var(--ink3);}
+.contact-chip .cc-icon{font-size:0.72rem;}
+.contact-chip .cc-val{font-family:Arial,sans-serif;font-size:0.56rem;color:var(--ink2);}
+
+.btn-row{display:flex;gap:8px;margin-top:auto;}
+.btn{height:36px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn-quit{flex:0 0 auto;padding:0 16px;background:var(--white);color:var(--ink3);border:1px solid var(--rule);}
+.btn-quit:hover{border-color:var(--ink4);color:var(--ink);}
+.btn-retry{flex:1;background:var(--ink);color:#fff;}
+.btn-retry:hover{background:var(--ink2);box-shadow:0 4px 12px rgba(15,23,42,0.15);transform:translateY(-1px);}
+.btn-retry:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.retry-status{text-align:center;font-family:Arial,sans-serif;font-size:0.58rem;color:var(--ink4);margin-top:4px;min-height:14px;}
+
+.footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--rule);margin-top:8px;}
+.footer-left{font-size:0.55rem;color:var(--ink4);display:flex;align-items:center;gap:5px;}
+.footer-left .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+.footer-right{font-family:Arial,sans-serif;font-size:0.5rem;color:var(--ink4);letter-spacing:0.5px;}
+
+.copy-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:8px 20px;border-radius:8px;font-size:0.72rem;font-weight:500;z-index:9999;opacity:0;transition:all 0.3s ease;box-shadow:0 4px 20px rgba(15,23,42,0.2);pointer-events:none;}
+.copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.bank-row{transition:background 0.15s;border-radius:4px;padding:3px 4px;margin:0 -4px;}
+.bank-row:hover{background:var(--blue-bg);}
+.contact-chip{transition:all 0.15s;}
+.contact-chip:hover{border-color:var(--blue);background:var(--blue-bg);transform:translateY(-1px);}
+
+@media(min-width:2560px){
+  .card{max-width:2400px;margin:0 auto;}
+  .left{flex:0 0 50%;}
+  .right{padding:56px 64px;}
+  .r-biz{font-size:0.72rem;letter-spacing:2px;}
+  .r-status{font-size:0.68rem;letter-spacing:2.5px;}
+  .r-title{font-size:2.2rem;}
+  .r-subtitle{font-size:1rem;line-height:1.6;}
+  .online-badge{font-size:0.82rem;padding:9px 20px;border-radius:8px;}
+  .section-label{font-size:0.68rem;letter-spacing:2.5px;}
+  .plan-card{padding:24px 20px;border-radius:12px;}
+  .plan-emoji{font-size:2.2rem;}
+  .plan-name{font-size:0.78rem;letter-spacing:2px;}
+  .plan-price{font-size:1.5rem;}
+  .plan-onb{font-size:0.7rem;}
+  .plan-desc{font-size:0.65rem;}
+  .plan-btn{height:42px;font-size:0.82rem;border-radius:8px;}
+  .plan-card.active::after{font-size:0.55rem;padding:3px 10px;top:-10px;}
+  .step{padding:14px 16px;border-radius:10px;}
+  .step-num{width:32px;height:32px;font-size:0.82rem;border-radius:8px;}
+  .step-title{font-size:0.95rem;}
+  .step-desc{font-size:0.82rem;line-height:1.5;}
+  .bank-card,.pay-card{padding:18px 20px;border-radius:10px;}
+  .bank-header,.pay-header{font-size:0.62rem;letter-spacing:2px;}
+  .bank-label,.pay-label{font-size:0.72rem;}
+  .bank-val,.pay-val{font-size:0.82rem;}
+  .pay-amount{font-size:1.1rem;}
+  .contact-chip{padding:8px 16px;font-size:0.78rem;gap:6px;border-radius:8px;}
+  .contact-chip .cc-icon{font-size:1rem;}
+  .contact-chip .cc-val{font-size:0.72rem;}
+  .btn{height:48px;font-size:0.92rem;border-radius:10px;}
+  .btn-quit{padding:0 24px;}
+  .retry-status{font-size:0.68rem;}
+  .footer-left{font-size:0.68rem;}
+  .footer-right{font-size:0.6rem;}
+  .qr-full-brand{top:32px;left:36px;gap:10px;}
+  .qr-full-brand .qm{width:40px;height:40px;border-radius:10px;}
+  .qr-full-brand .qm span{font-size:0.88rem;}
+  .qr-full-brand .qt{font-size:1.1rem;}
+  .qr-full-badge{top:32px;right:36px;padding:7px 16px;border-radius:8px;}
+  .qr-full-badge .bd{width:8px;height:8px;}
+  .qr-full-badge span{font-size:0.72rem;letter-spacing:1.5px;}
+  .qr-full-label{font-size:0.75rem;bottom:32px;padding:8px 24px;border-radius:24px;}
+  .divider{margin:16px 0;}
+  .steps{gap:10px;margin-bottom:16px;}
+  .bottom-row{gap:10px;margin-bottom:16px;}
+  .contact-row{gap:8px;margin-bottom:14px;}
+}
+@media(max-width:1920px){
+  .right{padding:36px 40px;}
+  .r-biz{font-size:0.6rem;}
+  .r-status{font-size:0.56rem;}
+  .r-title{font-size:1.6rem;}
+  .r-subtitle{font-size:0.82rem;}
+  .online-badge{font-size:0.65rem;padding:6px 14px;}
+  .plan-card{padding:18px 14px;}
+  .plan-emoji{font-size:1.7rem;}
+  .plan-name{font-size:0.62rem;}
+  .plan-price{font-size:1.15rem;}
+  .plan-onb{font-size:0.58rem;}
+  .plan-desc{font-size:0.55rem;}
+  .plan-btn{height:34px;font-size:0.7rem;}
+  .step-num{width:26px;height:26px;font-size:0.68rem;}
+  .step-title{font-size:0.78rem;}
+  .step-desc{font-size:0.68rem;}
+  .bank-label,.pay-label{font-size:0.62rem;}
+  .bank-val,.pay-val{font-size:0.7rem;}
+  .pay-amount{font-size:0.9rem;}
+  .btn{height:40px;font-size:0.78rem;}
+  .contact-chip{font-size:0.65rem;}
+  .contact-chip .cc-val{font-size:0.6rem;}
+  .footer-left{font-size:0.6rem;}
+  .footer-right{font-size:0.55rem;}
+}
+@media(max-width:1440px){
+  .right{padding:28px 30px;}
+  .r-title{font-size:1.25rem;}
+  .r-subtitle{font-size:0.7rem;}
+  .plan-card{padding:14px 10px;}
+  .plan-emoji{font-size:1.3rem;}
+  .plan-price{font-size:0.95rem;}
+  .plan-onb{font-size:0.48rem;}
+  .step{padding:8px 10px;}
+  .step-title{font-size:0.68rem;}
+  .step-desc{font-size:0.56rem;}
+  .bank-card,.pay-card{padding:10px 12px;}
+  .btn{height:34px;font-size:0.7rem;}
+}
+@media(max-width:1280px){
+  .left{flex:0 0 44%;}
+  .right{padding:24px 24px;}
+  .r-title{font-size:1.15rem;}
+  .r-subtitle{font-size:0.65rem;}
+  .plan-grid{gap:6px;}
+  .plan-card{padding:12px 8px;}
+  .plan-emoji{font-size:1.2rem;}
+  .plan-name{font-size:0.52rem;letter-spacing:1px;}
+  .plan-price{font-size:0.88rem;}
+  .plan-onb{font-size:0.45rem;}
+  .plan-desc{font-size:0.45rem;}
+  .plan-btn{height:26px;font-size:0.58rem;}
+  .steps{gap:6px;}
+  .step{padding:7px 8px;}
+  .step-num{width:20px;height:20px;font-size:0.55rem;}
+  .step-title{font-size:0.62rem;}
+  .step-desc{font-size:0.52rem;}
+  .bottom-row{gap:6px;}
+  .bank-card,.pay-card{padding:8px 10px;}
+  .bank-label,.pay-label{font-size:0.52rem;}
+  .bank-val,.pay-val{font-size:0.56rem;}
+  .contact-chip{padding:4px 6px;font-size:0.54rem;}
+  .contact-chip .cc-val{font-size:0.5rem;}
+  .btn{height:32px;font-size:0.65rem;}
+  .online-badge{font-size:0.54rem;padding:4px 10px;}
+  .qr-full-brand{top:16px;left:20px;}
+  .qr-full-brand .qm{width:28px;height:28px;}
+  .qr-full-brand .qm span{font-size:0.6rem;}
+  .qr-full-brand .qt{font-size:0.78rem;}
+  .qr-full-badge{top:16px;right:20px;padding:4px 10px;}
+  .qr-full-badge span{font-size:0.52rem;}
+  .qr-full-label{font-size:0.55rem;bottom:16px;}
+}
+@media(max-width:1024px){
+  .card{flex-direction:column;}
+  .left{flex:none;width:100%;height:40vh;min-height:280px;}
+  .right{flex:none;height:60vh;padding:20px 24px;overflow-y:auto;}
+  .qr-full-brand{top:12px;left:16px;}
+  .qr-full-brand .qm{width:24px;height:24px;border-radius:6px;}
+  .qr-full-brand .qm span{font-size:0.55rem;}
+  .qr-full-brand .qt{font-size:0.72rem;}
+  .qr-full-badge{top:12px;right:16px;padding:3px 8px;}
+  .qr-full-badge .bd{width:5px;height:5px;}
+  .qr-full-badge span{font-size:0.48rem;letter-spacing:0.8px;}
+  .qr-full-label{font-size:0.5rem;bottom:12px;padding:4px 14px;}
+  .r-header{margin-bottom:10px;}
+  .r-biz{font-size:0.5rem;}
+  .r-title{font-size:1.05rem;}
+  .r-subtitle{font-size:0.62rem;}
+  .online-badge{font-size:0.5rem;padding:4px 8px;margin-bottom:8px;}
+  .plan-grid{grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px;}
+  .plan-card{padding:10px 6px;}
+  .plan-emoji{font-size:1rem;}
+  .plan-name{font-size:0.48rem;}
+  .plan-price{font-size:0.78rem;}
+  .plan-onb{font-size:0.42rem;}
+  .plan-desc{font-size:0.42rem;}
+  .plan-btn{height:24px;font-size:0.52rem;margin-top:6px;}
+  .plan-card.active::after{font-size:0.38rem;padding:1px 6px;top:-7px;}
+  .section-label{font-size:0.48rem;margin-bottom:6px;}
+  .steps{grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;}
+  .step{padding:6px 7px;gap:6px;}
+  .step-num{width:18px;height:18px;font-size:0.5rem;border-radius:4px;}
+  .step-title{font-size:0.56rem;}
+  .step-desc{font-size:0.48rem;}
+  .divider{margin:8px 0;}
+  .bottom-row{grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;}
+  .bank-card,.pay-card{padding:7px 8px;}
+  .bank-header,.pay-header{font-size:0.44rem;margin-bottom:4px;}
+  .bank-label,.pay-label{font-size:0.48rem;}
+  .bank-val,.pay-val{font-size:0.5rem;}
+  .pay-amount{font-size:0.7rem;}
+  .contact-row{gap:4px;margin-bottom:8px;}
+  .contact-chip{padding:3px 5px;font-size:0.48rem;gap:3px;}
+  .contact-chip .cc-icon{font-size:0.62rem;}
+  .contact-chip .cc-val{font-size:0.45rem;}
+  .btn-row{gap:6px;}
+  .btn{height:30px;font-size:0.6rem;}
+  .btn-quit{padding:0 12px;}
+  .retry-status{font-size:0.5rem;}
+  .footer{padding-top:6px;}
+  .footer-left{font-size:0.48rem;}
+  .footer-right{font-size:0.44rem;}
+}
+@media(max-width:768px){
+  .left{height:35vh;min-height:240px;}
+  .right{height:65vh;padding:16px 18px;}
+  .r-biz{font-size:0.46rem;}
+  .r-title{font-size:0.92rem;}
+  .r-subtitle{font-size:0.56rem;line-height:1.4;}
+  .plan-grid{grid-template-columns:1fr 1fr 1fr;gap:4px;}
+  .plan-card{padding:8px 5px;}
+  .plan-emoji{font-size:0.88rem;}
+  .plan-name{font-size:0.44rem;}
+  .plan-price{font-size:0.68rem;}
+  .plan-onb{font-size:0.38rem;}
+  .plan-desc{display:none;}
+  .plan-btn{height:22px;font-size:0.48rem;margin-top:4px;}
+  .plan-card.active::after{font-size:0.34rem;padding:1px 5px;top:-6px;}
+  .steps{grid-template-columns:1fr;gap:4px;}
+  .step{padding:5px 6px;}
+  .step-num{width:16px;height:16px;font-size:0.45rem;}
+  .step-title{font-size:0.52rem;}
+  .step-desc{font-size:0.44rem;}
+  .bottom-row{grid-template-columns:1fr;gap:4px;}
+  .bank-card,.pay-card{padding:6px 7px;}
+  .bank-row,.pay-row{padding:1px 0;}
+  .contact-row{flex-wrap:wrap;gap:3px;}
+  .contact-chip{padding:2px 4px;font-size:0.44rem;}
+  .contact-chip .cc-val{font-size:0.4rem;}
+  .btn{height:28px;font-size:0.55rem;}
+  .qr-full-brand{top:10px;left:12px;}
+  .qr-full-brand .qm{width:22px;height:22px;}
+  .qr-full-brand .qm span{font-size:0.5rem;}
+  .qr-full-brand .qt{font-size:0.65rem;}
+  .qr-full-badge{top:10px;right:12px;padding:3px 7px;}
+  .qr-full-badge span{font-size:0.44rem;}
+  .qr-full-label{font-size:0.45rem;bottom:10px;padding:3px 12px;}
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="left">
+    <div class="qr-full-brand">
+      <div class="qm"><span>A</span></div>
+      <div class="qt">Aurum<em>OS</em></div>
+    </div>
+    <div class="qr-full-badge">
+      <div class="bd"></div>
+      <span>Expired</span>
+    </div>
+    <div class="qr-full">
+      <img src="../assets/qrcode image.jpeg" alt="Scan to Pay" onerror="this.parentElement.innerHTML='<div style=text-align:center;padding:20px;font-size:0.7rem;color:var(--ink4);line-height:1.5>QR Code<br>Not Available</div>'">
+    </div>
+    <div class="qr-full-label">Scan with phone camera to pay</div>
+  </div>
+
+  <div class="right">
+    <div class="r-header">
+      <div class="r-biz" id="r-biz">&#9670; AurumOS</div>
+      <div class="r-status"><span class="dot"></span>Subscription Expired</div>
+      <div class="r-title">Renew Your Plan</div>
+      <div class="r-subtitle">Your subscription has ended. Scan the QR code to pay and renew. After payment, click "Check License Again" to activate.</div>
+    </div>
+
+    <div class="online-badge">&#9889; Online Payment Only — UPI / Cards / Net Banking</div>
+
+    <div class="section-label">Choose Your Plan</div>
+    <div class="plan-grid" id="plan-grid"></div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">How It Works</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Scan QR Code</div>
+          <div class="step-desc">Open phone camera and scan the QR on the left</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num gold">2</div>
+        <div>
+          <div class="step-title">Pay Online</div>
+          <div class="step-desc">Complete payment via UPI, Card, or Net Banking</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Send Screenshot</div>
+          <div class="step-desc">Share payment proof with your software owner on WhatsApp</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num green">4</div>
+        <div>
+          <div class="step-title">Get Activated</div>
+          <div class="step-desc">Owner verifies and reactivates. Click Check License</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="bottom-row">
+      <div class="bank-card">
+        <div class="bank-header">&#9670; Bank Transfer</div>
+        <div class="bank-row" onclick="copyBank()" style="cursor:pointer" title="Click to copy">
+          <span class="bank-label">A/C No.</span>
+          <span class="bank-val">3149272116</span>
+        </div>
+        <div class="bank-row" onclick="copyBank()" style="cursor:pointer" title="Click to copy">
+          <span class="bank-label">IFSC</span>
+          <span class="bank-val">KKBK0002791</span>
+        </div>
+        <div class="bank-row">
+          <span class="bank-label">Branch</span>
+          <span class="bank-val">Rajkot - Bhakti Nagar</span>
+        </div>
+        <div class="bank-row" onclick="copyUPI()" style="cursor:pointer" title="Click to copy UPI">
+          <span class="bank-label">UPI</span>
+          <span class="bank-val">7041126244@kotakbank</span>
+        </div>
+      </div>
+      <div class="pay-card" id="pay-card">
+        <div class="pay-header">&#9670; Your Details</div>
+        <div class="pay-row">
+          <span class="pay-label">Business</span>
+          <span class="pay-val" id="p-biz">--</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-label">Plan</span>
+          <span class="pay-val" id="p-plan">--</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-label">Expired On</span>
+          <span class="pay-val" id="p-expiry">--</span>
+        </div>
+        <div class="pay-row" style="border-top:1px solid rgba(5,150,105,0.12);margin-top:4px;padding-top:4px;">
+          <span class="pay-label">Renewal Amount</span>
+          <span class="pay-val pay-amount" id="p-amount">--</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="contact-row">
+      <div class="contact-chip" onclick="callPhone()" style="cursor:pointer" title="Call now"><span class="cc-icon">&#128222;</span><span class="cc-val">+91 70411 26244</span></div>
+      <div class="contact-chip" onclick="openEmail('AurumOS Subscription Help','Hi, I need help with my subscription.')" style="cursor:pointer" title="Send email"><span class="cc-icon">&#128140;</span><span class="cc-val">support@aurumos.in</span></div>
+      <div class="contact-chip" onclick="openWebsite()" style="cursor:pointer" title="Visit website"><span class="cc-icon">&#127760;</span><span class="cc-val">aurumos.in</span></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-quit" onclick="quitApp()">Quit</button>
+      <button class="btn btn-retry" id="btn-retry" onclick="retryCheck()">&#9654; Check License Again</button>
+    </div>
+    <div class="retry-status" id="retry-status"></div>
+
+    <div class="footer">
+      <div class="footer-left"><span class="dot"></span>BASTION Security</div>
+      <div class="footer-right" id="footer-id">ERR-SUB-EXPIRED</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_BASE='https://aurum-os-admin.vercel.app';
+
+function getHardcodedPlans(){
+  return [
+    {id:'lite',name:'Lite',emoji:'\uD83E\uDD49',price:3000,onboarding:15000,period:'year',desc:'10 Features',features:['local_mode','billing_retail','stock_entry','product_master','client_ledger','staff_login_lockout','tag_printing_local','scale_weighing','sales_report_basic','bastion_core'],accent:'#b45309'},
+    {id:'pro',name:'Pro',emoji:'\uD83E\uDD48',price:7000,onboarding:35000,period:'year',desc:'20 Features',features:['local_mode','billing_retail','stock_entry','product_master','client_ledger','staff_login_lockout','tag_printing_local','scale_weighing','sales_report_basic','bastion_core','karigar_vouchers','touch_groups','full_accounts','tag_audit','stock_med_reports','tsc_network_printing','multi_staff','analytics_dashboard','year_close','bastion_enhanced'],accent:'#6b7280'},
+    {id:'enterprise',name:'Enterprise',emoji:'\uD83E\uDD47',price:15000,onboarding:75000,period:'year',desc:'30 Features',features:['local_mode','billing_retail','stock_entry','product_master','client_ledger','staff_login_lockout','tag_printing_local','scale_weighing','sales_report_basic','bastion_core','lan_multi_pc','karigar_vouchers','touch_groups','full_accounts','tag_audit','stock_med_reports','tsc_network_printing','multi_staff','analytics_dashboard','year_close','bastion_enhanced','cloud_sync','fleet_bastion','customer_loyalty','bastion_ai','nexus_management','bridge_server','custom_db_location','priority_support','api_integration'],accent:'#a87d1e'}
+  ];
+}
+
+async function fetchPlansPywebview(){
+  try{
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.get_plans){
+      var res=await window.pywebview.api.get_plans();
+      if(res&&res.plans&&res.plans.length) return res.plans;
+    }
+  }catch(e){console.log('pywebview bridge failed:',e);}
+  return null;
+}
+
+async function fetchPlansDirect(){
+  try{
+    var res=await fetch(API_BASE+'/api/subscription/plans');
+    var data=await res.json();
+    if(data&&data.plans&&data.plans.length) return data.plans;
+  }catch(e){console.log('Direct fetch failed:',e);}
+  return null;
+}
+
+async function getPlans(){
+  var plans=await fetchPlansPywebview();
+  if(!plans) plans=await fetchPlansDirect();
+  if(!plans) plans=getHardcodedPlans();
+  return plans;
+}
+
+function fmtINR(n){return '\u20B9'+Number(n).toLocaleString('en-IN');}
+
+function getCurrentPlan(){
+  var state=null;
+  try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+  return state?((state.plan||state.effective_plan||'pro').toLowerCase()):'pro';
+}
+
+function getBusinessName(){
+  var state=null;
+  try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+  return state?(state.business||'AurumOS'):'AurumOS';
+}
+
+function renderPlans(plans){
+  var grid=document.getElementById('plan-grid');
+  grid.innerHTML='';
+  var currentPlan=getCurrentPlan();
+  var tierOrder=['lite','pro','enterprise'];
+  var biz=getBusinessName();
+
+  plans.forEach(function(p){
+    var isCurrent=(p.id===currentPlan);
+    var currentIdx=tierOrder.indexOf(currentPlan);
+    var planIdx=tierOrder.indexOf(p.id);
+    var isHigher=planIdx>currentIdx;
+
+    var card=document.createElement('div');
+    card.className='plan-card'+(isCurrent?' active':'');
+    card.id='plan-'+p.id;
+    if(p.accent) card.style.setProperty('--accent',p.accent);
+
+    var featureList=p.features?p.features.length+' Features':(p.desc||'');
+    var btnHtml='';
+    if(isCurrent){
+      btnHtml='<button class="plan-btn btn-renew" onclick="renewPlan(\''+p.id+'\','+p.price+',\''+p.name+'\')">Renew Now</button>';
+    }else if(isHigher){
+      btnHtml='<button class="plan-btn btn-upgrade" onclick="upgradePlan(\''+p.id+'\','+p.price+',\''+p.name+'\')">Upgrade</button>';
+    }else{
+      btnHtml='<button class="plan-btn btn-contact" onclick="contactSupport(\''+p.name+'\')">Contact Support</button>';
+    }
+
+    card.innerHTML=
+      '<div class="plan-emoji">'+(p.emoji||'')+'</div>'+
+      '<div class="plan-name">'+p.name+'</div>'+
+      '<div class="plan-price">'+fmtINR(p.price)+'/yr</div>'+
+      '<div class="plan-onb">+ '+fmtINR(p.onboarding)+' onboarding</div>'+
+      '<div class="plan-desc">'+featureList+'</div>'+
+      btnHtml;
+
+    grid.appendChild(card);
+  });
+}
+
+function renewPlan(planId,price,planName){
+  var biz=getBusinessName();
+  var msg='Hi, I want to renew my AurumOS '+planName+' plan.\n\n'
+    +'Business: '+biz+'\n'
+    +'Plan: '+planName+' ('+fmtINR(price)+'/yr)\n'
+    +'Please share the payment QR/UPI link.';
+  openWhatsApp(msg);
+}
+
+function upgradePlan(planId,price,planName){
+  var biz=getBusinessName();
+  var current=getCurrentPlan().toUpperCase();
+  var msg='Hi, I want to upgrade from '+current+' to '+planName+'.\n\n'
+    +'Business: '+biz+'\n'
+    +'New Plan: '+planName+' ('+fmtINR(price)+'/yr)\n'
+    +'Please share the payment QR/UPI link.';
+  openWhatsApp(msg);
+}
+
+function contactSupport(planName){
+  var biz=getBusinessName();
+  var msg='Hi, I need help with my AurumOS subscription.\n\n'
+    +'Business: '+biz+'\n'
+    +'Current Plan: '+planName+'\n'
+    +'My subscription has expired. Please assist with renewal.';
+  openWhatsApp(msg);
+}
+
+function openWhatsApp(msg){
+  var phone='917041126244';
+  var url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+  if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url){
+    window.pywebview.api.open_url(url);
+  }else{
+    window.open(url,'_blank');
+  }
+}
+
+function openEmail(subject,body){
+  var url='mailto:support@aurumos.in?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.open(url,'_blank');
+}
+
+function openWebsite(){
+  var url='https://aurumos.in';
+  if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url){
+    window.pywebview.api.open_url(url);
+  }else{
+    window.open(url,'_blank');
+  }
+}
+
+function callPhone(){
+  var url='tel:+917041126244';
+  window.open(url,'_blank');
+}
+
+function copyUPI(){
+  var upi='7041126244@kotakbank';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(upi).then(function(){
+      showCopyToast('UPI ID copied: '+upi);
+    });
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=upi;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    showCopyToast('UPI ID copied: '+upi);
+  }
+}
+
+function copyBank(){
+  var details='A/C: 3149272116\nIFSC: KKBK0002791\nBranch: Rajkot - Bhakti Nagar';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(details).then(function(){
+      showCopyToast('Bank details copied!');
+    });
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=details;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    showCopyToast('Bank details copied!');
+  }
+}
+
+function showCopyToast(msg){
+  var existing=document.querySelector('.copy-toast');
+  if(existing) existing.remove();
+  var t=document.createElement('div');
+  t.className='copy-toast';
+  t.innerText=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.classList.add('show');},10);
+  setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},300);},2000);
+}
+
+(function(){
+  var state=null;
+  try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+
+  var biz=getBusinessName();
+  document.getElementById('r-biz').innerHTML='&#9670; '+biz;
+  document.getElementById('p-biz').innerText=biz;
+
+  if(state&&state.subscription&&state.subscription.expires_at){
+    var sub=state.subscription;
+    document.getElementById('p-plan').innerText=(state.plan||'lite').toUpperCase();
+    document.getElementById('p-expiry').innerText=new Date(sub.expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    var amt=sub.renewal_amount||0;
+    document.getElementById('p-amount').innerText=amt?fmtINR(amt):'Contact Support';
+  }else{
+    document.getElementById('p-plan').innerText='PRO';
+    document.getElementById('p-expiry').innerText='--';
+    document.getElementById('p-amount').innerText='Contact Support';
+  }
+  document.getElementById('footer-id').innerText='ERR-SUB-EXPIRED | '+new Date().toLocaleDateString('en-GB');
+
+  getPlans().then(function(plans){renderPlans(plans);});
+})();
+
+async function retryCheck(){
+  var btn=document.getElementById('btn-retry');
+  var st=document.getElementById('retry-status');
+  btn.disabled=true;btn.innerHTML='&#8987; Checking...';
+  st.style.color='var(--ink4)';st.innerText='Contacting AurumOS server...';
+  if(!window.pywebview||!window.pywebview.api){st.innerText='Bridge not ready.';btn.disabled=false;btn.innerHTML='&#9654; Check License Again';return;}
+  try{
+    st.innerText='Checking subscription status...';
+    var status=await window.pywebview.api.reactivate_check();
+    if(status==='ok'){st.style.color='var(--green)';st.innerText='License active! Redirecting...';btn.innerHTML='&#10003; Activated';btn.style.background='var(--green)';setTimeout(function(){window.pywebview.api.navigate('login.html');},1500);return;}
+    else if(status==='expired'){st.style.color='var(--red)';st.innerText='Subscription expired. Please renew your plan.';}
+    else if(status==='offline'){st.style.color='var(--blue)';st.innerText='No internet. Connect and retry.';}
+    else{st.style.color='var(--red)';st.innerText='Still '+status+'. Contact support.';}
+  }catch(e){st.innerText='Error: '+String(e);}
+  btn.disabled=false;btn.innerHTML='&#9654; Check License Again';btn.style.background='';
+}
+
+function quitApp(){
+  if(window.pywebview&&window.pywebview.api&&window.pywebview.api.quit_app)window.pywebview.api.quit_app();
+  else window.close();
+}
+
+(function(){
+  var _pollInflight = false;
+  var _pollTimer = setInterval(function(){
+    if(_pollInflight) return;
+    if(!window.pywebview||!window.pywebview.api||!window.pywebview.api.subscription_poll_check) return;
+    _pollInflight = true;
+    window.pywebview.api.subscription_poll_check().then(function(data){
+      _pollInflight = false;
+      if(data && (data.status==='active'||data.status==='grace') && data.valid){
+        clearInterval(_pollTimer);
+        var st=document.getElementById('retry-status');
+        var btn=document.getElementById('btn-retry');
+        if(st){st.style.color='var(--green)';st.innerText='License reactivated! Redirecting...';}
+        if(btn){btn.innerHTML='&#10003; Activated';btn.style.background='var(--green)';}
+        setTimeout(function(){
+          if(window.pywebview&&window.pywebview.api&&window.pywebview.api.navigate){
+            window.pywebview.api.navigate('login.html');
+          }else{window.location.href='login.html';}
+        },1500);
+      }
+    }).catch(function(){_pollInflight=false;});
+  },8000);
+
+  window.addEventListener('message',function(ev){
+    try{
+      var d=typeof ev.data==='string'?JSON.parse(ev.data):ev.data;
+      if(d&&d.type==='reactivated'){
+        clearInterval(_pollTimer);
+        var st=document.getElementById('retry-status');
+        var btn=document.getElementById('btn-retry');
+        if(st){st.style.color='var(--green)';st.innerText='License reactivated! Redirecting...';}
+        if(btn){btn.innerHTML='&#10003; Activated';btn.style.background='var(--green)';}
+        setTimeout(function(){
+          if(window.pywebview&&window.pywebview.api&&window.pywebview.api.navigate){
+            window.pywebview.api.navigate('login.html');
+          }else{window.location.href='login.html';}
+        },1500);
+      }
+    }catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

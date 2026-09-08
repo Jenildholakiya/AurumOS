@@ -7,6 +7,8 @@ import sys
 import traceback
 from datetime import date, datetime
 
+
+
 # Safe to embed in every distributed EXE -- this key can ONLY mint a
 # per-shop secret for self-registration, nothing else. Set to match
 # AURUM_PROVISION_KEY on the Vercel dashboard. Rotating it just means
@@ -69,6 +71,22 @@ class DBManager:
         print(f"[DB] Dir exists: {os.path.exists(self.db_dir)}")
         print(f"[DB] Dir writable: {os.access(self.db_dir, os.W_OK)}")
         self.initialize_tables()
+        try:
+            self.ensure_retail_columns()
+        except Exception:
+            pass
+        try:
+            self.ensure_notifications_table()
+        except Exception:
+            pass
+        try:
+            self.ensure_urgent_table()
+        except Exception:
+            pass
+        try:
+            self.repair_retail_fine()
+        except Exception:
+            pass
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path, timeout=20,
@@ -135,11 +153,12 @@ class DBManager:
                         score INTEGER,
                         detail TEXT,
                         action_taken TEXT
-                    )
+                    );
                     CREATE TABLE IF NOT EXISTS sales_history (
                         id             INTEGER PRIMARY KEY AUTOINCREMENT,
                         vch_id         TEXT UNIQUE,
                         customer       TEXT,
+                        mobile         TEXT DEFAULT '',
                         status         TEXT DEFAULT 'CREDIT',
                         ledger_fine    REAL, collected_fine REAL, fine_995 REAL,
                         fine_dhal      REAL, remaining_fine REAL, gold_rate REAL,
@@ -204,6 +223,13 @@ class DBManager:
                     )
                     _dblog("[MIGRATION] admin_creds.is_owner added, existing id=1 row flagged as owner")
 
+                # ── permissions: stores staff module assignments
+                # as a JSON array (e.g. ["billing","inventory"]).
+                # New column defaults to '[]' for existing rows.
+                if 'permissions' not in ac_cols:
+                    cursor.execute("ALTER TABLE admin_creds ADD COLUMN permissions TEXT DEFAULT '[]'")
+                    _dblog("[MIGRATION] admin_creds.permissions added")
+
                 kv_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(katti_vouchers)").fetchall()]
                 for col, defn in [('total_packets', 'INTEGER DEFAULT 0'), ('total_pcs', 'INTEGER DEFAULT 0'),
                                   ('touch', 'REAL DEFAULT 0.00'), ('box_id', 'TEXT DEFAULT NULL')]:
@@ -221,6 +247,8 @@ class DBManager:
                         cursor.execute(f"ALTER TABLE stock_inventory ADD COLUMN {col} {defn}")
 
                 sh_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(sales_history)").fetchall()]
+                if 'mobile' not in sh_cols:
+                    cursor.execute("ALTER TABLE sales_history ADD COLUMN mobile TEXT DEFAULT ''")
                 if 'status' not in sh_cols:
                     cursor.execute("ALTER TABLE sales_history ADD COLUMN status TEXT DEFAULT 'CREDIT'")
                 # Discount columns -- added in v2
@@ -314,6 +342,14 @@ class DBManager:
                         key        TEXT PRIMARY KEY,
                         value      TEXT,
                         updated_at TEXT
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bastion_escalation (
+                        attack_type TEXT PRIMARY KEY,
+                        level       INTEGER DEFAULT 1,
+                        last_ts     TEXT,
+                        updated_at  TEXT
                     )
                 """)
 
@@ -1061,6 +1097,14 @@ class DBManager:
         except:
             return None
 
+    def fetch_all(self, query, params=()):
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(query, params).fetchall()
+                return [dict(r) for r in rows]
+        except:
+            return []
+
     def get_scalar(self, query, params=()):
         try:
             with self._get_connection() as conn:
@@ -1159,20 +1203,22 @@ class DBManager:
         try:
             with self._get_connection() as conn:
                 rows = conn.execute(
-                    "SELECT id, username, COALESCE(is_owner,0) as is_owner FROM admin_creds ORDER BY id ASC"
+                    "SELECT id, username, COALESCE(is_owner,0) as is_owner, COALESCE(permissions,'[]') as permissions FROM admin_creds ORDER BY id ASC"
                 ).fetchall()
                 return [{
                     "id": r["id"],
                     "username": r["username"],
-                    "role": "admin" if r["is_owner"] == 1 else "staff"
+                    "role": "admin" if r["is_owner"] == 1 else "staff",
+                    "permissions": json.loads(r["permissions"]) if isinstance(r["permissions"], str) else (r["permissions"] or [])
                 } for r in rows]
         except Exception as e:
             _dblog(f"[STAFF] get_all_staff error: {e}")
             return []
 
-    def add_staff_user(self, username, password):
+    def add_staff_user(self, username, password, permissions=None):
         try:
             import hashlib as _hl
+            import json as _json
             u = str(username).strip()
             p = str(password).strip()
             if not u or not p:
@@ -1180,6 +1226,7 @@ class DBManager:
             if len(p) < 4:
                 return False, "Password must be at least 4 characters."
             hashed = _hl.sha256(p.encode('utf-8')).hexdigest()
+            perms_json = _json.dumps(permissions or [])
             with self._get_connection() as conn:
                 exists = conn.execute(
                     "SELECT COUNT(*) FROM admin_creds WHERE LOWER(TRIM(username))=LOWER(TRIM(?))", (u,)
@@ -1187,8 +1234,8 @@ class DBManager:
                 if exists > 0:
                     return False, f"Username '{u}' is already taken."
                 cur = conn.execute(
-                    "INSERT INTO admin_creds (username, password) VALUES (?,?)",
-                    (u, hashed)
+                    "INSERT INTO admin_creds (username, password, permissions) VALUES (?,?,?)",
+                    (u, hashed, perms_json)
                 )
                 conn.commit()
                 new_id = cur.lastrowid
@@ -1198,6 +1245,22 @@ class DBManager:
                 _dblog(f"[SYNC] stamp skip (admin_creds): {_ase}")
             _dblog(f"[STAFF] Added staff: {u}")
             return True, f"Staff '{u}' registered successfully."
+        except Exception as e:
+            return False, f"Database Error: {str(e)}"
+
+    def update_staff_permissions(self, staff_id, permissions):
+        try:
+            import json as _json
+            sid = int(staff_id)
+            perms_json = _json.dumps(permissions or [])
+            with self._get_connection() as conn:
+                conn.execute(
+                    "UPDATE admin_creds SET permissions=? WHERE id=?",
+                    (perms_json, sid)
+                )
+                conn.commit()
+            _dblog(f"[STAFF] Permissions updated for id={sid}")
+            return True, f"Permissions updated for staff id={sid}."
         except Exception as e:
             return False, f"Database Error: {str(e)}"
 
@@ -1273,6 +1336,64 @@ class DBManager:
         except Exception as e:
             print(f"? [WEIGHT STOCK IT CODES ERROR] {e}");
             return []
+
+    def get_pos_stock(self):
+        """Return live inventory rows used by retail billing."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT id, TRIM(it_code) AS it_code, it_name, tag_id, pcs,
+                           gr_wt, nt_wt, touch, huid
+                    FROM stock_inventory
+                    WHERE TRIM(COALESCE(it_code, '')) != ''
+                      AND (COALESCE(gr_wt, 0) > 0 OR COALESCE(pcs, 0) > 0)
+                    ORDER BY it_code, id
+                """).fetchall()
+                return [dict(row) for row in rows]
+        except Exception as e:
+            _dberr(f"[POS STOCK ERROR] {e}")
+            return []
+
+    def validate_retail_items(self, items):
+        """Validate item identity, touch, and available stock before a retail sale."""
+        try:
+            errors = []
+            requirements = {}
+            with self._get_connection() as conn:
+                for item in items if isinstance(items, list) else []:
+                    code = str(item.get('code') or item.get('it_code') or '').strip()
+                    touch = float(item.get('touch') or 0)
+                    required = float(item.get('weight') or item.get('gr_wt') or 0) * max(int(item.get('qty') or 1), 1)
+                    if not code:
+                        errors.append("IT code is required.")
+                        continue
+                    if touch <= 0:
+                        errors.append(f"Touch is required for IT code {code}.")
+                        continue
+                    requirements[(code, round(touch, 2))] = requirements.get((code, round(touch, 2)), 0.0) + required
+                for (code, touch_key), required in requirements.items():
+                    touch = float(touch_key)
+                    rows = conn.execute("""
+                        SELECT gr_wt, touch FROM stock_inventory
+                        WHERE TRIM(it_code)=? AND COALESCE(gr_wt, 0) > 0
+                    """, (code,)).fetchall()
+                    if not rows:
+                        errors.append(f"IT code {code} is not available in inventory.")
+                        continue
+                    touches = [float(row['touch'] or 0) for row in rows if float(row['touch'] or 0) > 0]
+                    if not any(abs(stock_touch - touch) <= 0.01 for stock_touch in touches):
+                        errors.append(f"Touch {touch:.2f}% is not available for IT code {code}.")
+                        continue
+                    available = sum(float(row['gr_wt'] or 0) for row in rows
+                                    if abs(float(row['touch'] or 0) - touch) <= 0.01)
+                    if available + 0.001 < required:
+                        errors.append(
+                            f"Stock over for IT code {code}: available {available:.3f}g, required {required:.3f}g."
+                        )
+            return {"valid": not errors, "errors": errors}
+        except Exception as e:
+            _dberr(f"[POS STOCK VALIDATION ERROR] {e}")
+            return {"valid": False, "errors": [f"Unable to validate inventory: {e}"]}
 
     def delete_master_entry(self, data_type, entry_id):
         table_map = {
@@ -1394,6 +1515,22 @@ class DBManager:
         with self._get_connection() as conn:
             return [dict(r) for r in conn.execute("SELECT * FROM clients_master ORDER BY name ASC").fetchall()]
 
+    def delete_client(self, client_id):
+        if self._bastion_block():
+            _dberr("[BASTION] Write blocked -- account suspended")
+            return False
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute("SELECT name FROM clients_master WHERE id=?", (int(client_id),)).fetchone()
+                if not row:
+                    return False
+                conn.execute("DELETE FROM clients_master WHERE id=?", (int(client_id),))
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[DB DELETE CLIENT ERROR] {e}")
+            return False
+
     def update_client_limits(self, data):
         try:
             with self._get_connection() as conn:
@@ -1448,10 +1585,6 @@ class DBManager:
         if self._bastion_block():
             _dberr("[BASTION] Write blocked -- account suspended")
             return False
-        # Layer 10: verify session token before katti write
-        if not self._verify_session_token():
-            _dberr("[KATTI] Session token invalid — save BLOCKED")
-            return False
         items = items or []
         try:
             safe_vch_id = str(vch_id).strip().zfill(4)
@@ -1488,6 +1621,7 @@ class DBManager:
                     (safe_vch_id,)
                 )
 
+                stock_tags = []
                 for item in items:
                     if isinstance(item, dict):
                         item_code = str(item.get('it_code') or '').strip()
@@ -1522,19 +1656,22 @@ class DBManager:
                              item_touch, safe_vch_id, item_box)
                         )
                         print(f"[KATTI] Stock inserted: {item_code} tag={unique_tag} wt={item_wt}g")
-                        try:
-                            ks_id = cursor.execute("SELECT id FROM stock_inventory WHERE tag_id=?",
-                                                   (unique_tag,)).fetchone()
-                            if ks_id:
-                                self.stamp_row_for_sync('stock_inventory', ks_id[0])
-                        except Exception as _kse:
-                            _dblog(f"[SYNC] stamp skip (katti stock): {_kse}")
+                        stock_tags.append(unique_tag)
 
                 conn.commit()
+                # Stamp for sync AFTER commit. Doing it inside the open write
+                # transaction opened a 2nd connection that blocked on the WAL
+                # write-lock (busy_timeout 30s) once PER ITEM — that was the
+                # cause of the very slow katti saves.
                 try:
                     self.stamp_row_for_sync('katti_vouchers', safe_vch_id, pk_col='vch_id')
+                    for _tag in stock_tags:
+                        _r = conn.execute("SELECT id FROM stock_inventory WHERE tag_id=?",
+                                          (_tag,)).fetchone()
+                        if _r:
+                            self.stamp_row_for_sync('stock_inventory', _r[0])
                 except Exception as _kve:
-                    _dblog(f"[SYNC] stamp skip (katti_vouchers): {_kve}")
+                    _dblog(f"[SYNC] stamp skip (katti): {_kve}")
                 return True
         except Exception as e:
             print(f"? [KATTI SAVE ERROR] {e}");
@@ -1863,7 +2000,7 @@ class DBManager:
 
                     if is_real_tag:
                         cursor.execute(
-                            "DELETE FROM stock_inventory WHERE TRIM(tag_id)=?", (tag_id,)
+                            "DELETE FROM stock_inventory WHERE LOWER(TRIM(tag_id))=LOWER(?)", (tag_id,)
                         )
                         print(f"? [DEDUCT] Tagged deleted: tag_id={tag_id}")
 
@@ -1902,6 +2039,16 @@ class DBManager:
                                    ORDER BY id ASC LIMIT 1""",
                                 (it_code,)
                             ).fetchone()
+                            if not ref:
+                                ref = cursor.execute(
+                                    """SELECT id, gr_wt, touch FROM stock_inventory
+                                       WHERE LOWER(TRIM(it_code))=LOWER(?)
+                                         AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A'
+                                              OR tag_id LIKE 'KATTI-%')
+                                         AND tag_id NOT LIKE 'OPENING-%'
+                                       ORDER BY id ASC LIMIT 1""",
+                                    (it_code,)
+                                ).fetchone()
                             if ref and ref['touch']:
                                 # Found a stock row -- use its touch for deduction
                                 touch_val = float(ref['touch'])
@@ -1912,7 +2059,7 @@ class DBManager:
                         if use_touch and touch_val is not None:
                             # Fetch ALL rows matching this touch, oldest first
                             rows = cursor.execute(
-                                """SELECT id, gr_wt, it_code FROM stock_inventory
+                                """SELECT id, gr_wt, nt_wt, it_code FROM stock_inventory
                                    WHERE touch=?
                                      AND (tag_id IS NULL OR tag_id=''
                                           OR tag_id='N/A'
@@ -1942,14 +2089,18 @@ class DBManager:
                                           f"it={row['it_code']} EXHAUSTED ({row_wt}g)")
                                 else:
                                     # Partially deduct from this row
-                                    new_wt = round(row_wt - remaining_to_deduct, 3)
+                                    orig_gr_wt = round(float(row['gr_wt'] or 0), 3)
+                                    orig_nt_wt = round(float(row['nt_wt'] or 0), 3)
+                                    new_wt = round(orig_gr_wt - remaining_to_deduct, 3)
+                                    ratio = new_wt / orig_gr_wt if orig_gr_wt > 0 else 0
+                                    new_nt_wt = round(orig_nt_wt * ratio, 3)
                                     cursor.execute(
                                         "UPDATE stock_inventory SET gr_wt=?, nt_wt=? WHERE id=?",
-                                        (new_wt, new_wt, row['id'])
+                                        (new_wt, new_nt_wt, row['id'])
                                     )
                                     print(f"[DEDUCT] touch={touch_val} row={row['id']} "
                                           f"it={row['it_code']} "
-                                          f"{row_wt}g -> {new_wt}g "
+                                          f"{orig_gr_wt}g -> {new_wt}g "
                                           f"(deducted {remaining_to_deduct}g)")
                                     deducted_total += remaining_to_deduct
                                     remaining_to_deduct = 0.0
@@ -2019,36 +2170,97 @@ class DBManager:
             print(f"? [DB STOCK DEDUCTION ERROR] {e}")
             return False
 
-    def record_sale(self, vch_id, customer, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
-                    disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0):
-        if self._bastion_block():
-            _dberr("[BASTION] Write blocked -- account suspended")
-            return False
-        # Session token check before sale write
-        if not self._verify_session_token():
-            _dberr("[SALE] Session token invalid — sale BLOCKED")
-            return False
+    def _retail_fine_from_items(self, items_json):
+        """Single source of truth: retail (R-) fine in grams, derived from items.
+        collected_fine must NEVER hold rupees. Returns 0.0 on bad input."""
+        try:
+            parsed = json.loads(items_json or '[]')
+        except (TypeError, ValueError):
+            return 0.0
+        total = 0.0
+        if isinstance(parsed, list):
+            for it in parsed:
+                if not isinstance(it, dict):
+                    continue
+                try:
+                    if it.get('fine') not in (None, ''):
+                        total += float(it.get('fine') or 0)
+                    else:
+                        total += float(it.get('weight') or it.get('gr_wt') or 0) * float(it.get('touch') or 0) / 100.0
+                except (TypeError, ValueError):
+                    continue
+        return round(total, 3)
+
+    def repair_retail_fine(self):
+        """One-time self-healing: fix legacy R- rows where Rs was stored in
+        collected_fine (equals total_amount, or absurd gram value). Idempotent."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT vch_id, total_amount, collected_fine, items FROM sales_history "
+                    "WHERE UPPER(TRIM(vch_id)) LIKE 'R-%'"
+                ).fetchall()
+                fixed = 0
+                for r in rows:
+                    try:
+                        amt = float(r['total_amount'] or 0)
+                        coll = float(r['collected_fine'] or 0)
+                    except (TypeError, ValueError):
+                        continue
+                    looks_like_rs = (
+                        (amt > 500 and abs(coll - amt) < 0.01) or  # exact Rs copy
+                        coll > 500  # no retail fine is ever >500g per bill
+                    )
+                    if looks_like_rs:
+                        true_fine = self._retail_fine_from_items(r['items'])
+                        conn.execute(
+                            "UPDATE sales_history SET collected_fine=? WHERE vch_id=?",
+                            (true_fine, r['vch_id']))
+                        fixed += 1
+                if fixed:
+                    conn.commit()
+                    _dblog(f"[REPAIR] retail fine fixed on {fixed} R- row(s)")
+        except Exception as e:
+            _dberr(f"[REPAIR] retail fine: {e}")
+
+    def record_sale(self, vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
+                    disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0,
+                    pay_mode='cash', og_value=0.0, og_wt=0.0):
         try:
             safe_vch_id = str(vch_id).strip()
+            safe_mobile = str(mobile or '').strip()
+            safe_pay = str(pay_mode or 'cash').strip().lower()
+            if safe_pay not in ('cash', 'upi', 'card'):
+                safe_pay = 'cash'
+            self.ensure_retail_columns()
+            _dblog(f"[SALE] Recording sale vch_id={safe_vch_id} customer={customer}")
             with self._get_connection() as conn:
                 conn.execute("PRAGMA busy_timeout = 30000")
                 try:
                     parsed = json.loads(items_json)
-                    is_uchak = any(('amount' in i or 'price' in i) for i in parsed) if isinstance(parsed,
-                                                                                                  list) else False
+                    is_uchak = (
+                        not safe_vch_id.upper().startswith('R-') and
+                        any(('amount' in i or 'price' in i) for i in parsed)
+                    ) if isinstance(parsed, list) else False
                 except:
                     is_uchak = False
                 resolved = (
                     'UCHAK_UNPAID' if (status == 'CREDIT' and is_uchak) else
                     'UCHAK_PAID' if (status == 'PAID' and is_uchak) else status
                 )
+                # PERMANENT GUARD: R- collected_fine is grams only, never Rs.
+                # Derive from items; ignore any Rs-like caller value.
+                if safe_vch_id.upper().startswith('R-'):
+                    coll = self._retail_fine_from_items(items_json)
                 conn.execute(
                     """INSERT OR REPLACE INTO sales_history
-                           (vch_id,customer,status,ledger_fine,collected_fine,fine_995,fine_dhal,
+                           (vch_id,customer,mobile,status,ledger_fine,collected_fine,fine_995,fine_dhal,
                             remaining_fine,gold_rate,total_amount,items,date,time_stamp,
-                            discount_type,discount_touch,discount_fine,discount_amount)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,date('now'),time('now'),?,?,?,?)""",
-                    (safe_vch_id, customer, resolved,
+                            discount_type,discount_touch,discount_fine,discount_amount,
+                            payment_mode,old_gold_value,old_gold_wt)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,date('now'),time('now'),?,?,?,?,
+                                ?,?,?)""",
+                    (safe_vch_id, customer, safe_mobile, resolved,
                      0.0 if is_uchak else float(l_fine or 0),
                      0.0 if is_uchak else float(coll or 0),
                      0.0 if is_uchak else float(f995 or 0),
@@ -2059,35 +2271,30 @@ class DBManager:
                      str(disc_type or 'none'),
                      float(disc_touch or 0.0),
                      float(disc_fine or 0.0),
-                     float(disc_amount or 0.0))
+                     float(disc_amount or 0.0),
+                     safe_pay,
+                     0.0 if is_uchak else float(og_value or 0),
+                     0.0 if is_uchak else float(og_wt or 0))
                 )
-                # Remove katti/weight items from stock_inventory on sale
-                # NEVER touch OPENING- rows — they are permanent reference stock
-                try:
-                    parsed_items = json.loads(items_json) if items_json else []
-                except Exception:
-                    parsed_items = []
-                for it in parsed_items:
-                    tid = str(it.get('tag_id') or '').strip()
-                    if not tid:
-                        continue
-                    if tid.startswith('OPENING-'):
-                        continue  # PERMANENT — never delete opening stock rows
-                    if tid.startswith('KATTI-') or tid.startswith('B-'):
-                        conn.execute(
-                            "DELETE FROM stock_inventory WHERE TRIM(tag_id)=TRIM(?) AND tag_id NOT LIKE 'OPENING-%'",
-                            (tid,)
-                        )
-                        _dblog(f"[SALE] Removed katti stock: {tid}")
+                _dblog(f"[SALE] INSERT OR REPLACE succeeded for vch_id={safe_vch_id}")
+                # NOTE: stock_inventory modifications are handled exclusively by
+                # deduct_stock_after_sale() called after this function in generate_bill().
+                # Previously record_sale() also deleted KATTI/B- rows here, causing
+                # DOUBLE stock deduction (once here, once in deduct_stock_after_sale).
                 conn.commit()
-                sale_row_id = conn.execute("SELECT id FROM sales_history WHERE vch_id=?", (safe_vch_id,)).fetchone()[0]
+                _dblog(f"[SALE] Committed sale vch_id={safe_vch_id}")
+                sale_row_id = conn.execute("SELECT id FROM sales_history WHERE vch_id=?", (safe_vch_id,)).fetchone()
+                if sale_row_id is None:
+                    _dberr(f"[SALE] CRITICAL: sale row not found after INSERT for vch_id={safe_vch_id}")
+                    return False
+                _dblog(f"[SALE] Sale row id={sale_row_id[0]} for vch_id={safe_vch_id}")
             try:
-                self.stamp_row_for_sync('sales_history', sale_row_id)
+                self.stamp_row_for_sync('sales_history', sale_row_id[0])
             except Exception as _sse:
                 _dblog(f"[SYNC] stamp skip (sales_history): {_sse}")
             return True
         except Exception as e:
-            print(f"? [DB RECORD SALE ERROR] {e}");
+            _dblog(f"[DB RECORD SALE ERROR] {e}")
             return False
 
     def get_bill_details(self, vch_id):
@@ -2095,9 +2302,10 @@ class DBManager:
         try:
             with self._get_connection() as conn:
                 row = conn.execute(
-                    """SELECT vch_id, customer, status, date,
+                    """SELECT vch_id, customer, mobile, status, date,
                               ledger_fine, collected_fine, fine_995, fine_dhal,
-                              remaining_fine, gold_rate, total_amount, items
+                              remaining_fine, gold_rate, total_amount, items,
+                              discount_type, discount_touch, discount_fine, discount_amount
                          FROM sales_history WHERE vch_id=? LIMIT 1""",
                     (str(vch_id).strip(),)
                 ).fetchone()
@@ -2115,6 +2323,7 @@ class DBManager:
                     'voucher': {
                         'vch_id': row['vch_id'],
                         'customer': row['customer'],
+                        'mobile': row['mobile'] or '',
                         'date': row['date'],
                         'status': st,
                         'ledger_fine': float(row['ledger_fine'] or 0),
@@ -2124,6 +2333,10 @@ class DBManager:
                         'remaining_fine': float(row['remaining_fine'] or 0),
                         'gold_rate': float(row['gold_rate'] or 0),
                         'total_amount': float(row['total_amount'] or 0),
+                        'discount_type': row['discount_type'] or 'none',
+                        'discount_touch': float(row['discount_touch'] or 0),
+                        'discount_fine': float(row['discount_fine'] or 0),
+                        'discount_amount': float(row['discount_amount'] or 0),
                     },
                     'items': items,
                     'is_uchak': is_uchak,
@@ -2145,6 +2358,242 @@ class DBManager:
                     FROM sales_history ORDER BY id DESC
                 """).fetchall()]
         except:
+            return []
+
+    def get_customer_purchases(self, customer_name, mobile=''):
+        """Return every bill recorded for one customer, newest first.
+        UNIT CONTRACT: collected_fine is ALWAYS grams. Cash totals live in
+        total_amount only. Rs must never enter collected_fine."""
+        try:
+            self.repair_retail_fine()
+            safe_name = str(customer_name or '').strip()
+            safe_mobile = ''.join(ch for ch in str(mobile or '') if ch.isalnum())
+            if not safe_name and not safe_mobile:
+                return []
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT vch_id, customer, mobile, status, date, time_stamp,
+                           COALESCE(ledger_fine, 0.0) AS ledger_fine,
+                           COALESCE(collected_fine, 0.0) AS collected_fine,
+                           COALESCE(remaining_fine, 0.0) AS remaining_fine,
+                           COALESCE(gold_rate, 0.0) AS gold_rate,
+                           COALESCE(total_amount, 0.0) AS total_amount,
+                           COALESCE(items, '[]') AS items,
+                           COALESCE(discount_amount, 0.0) AS discount_amount
+                    FROM sales_history
+                    ORDER BY id DESC
+                """).fetchall()
+                def norm(value):
+                    return ' '.join(str(value or '').replace('\u00a0', ' ').split()).casefold()
+                wanted_name = norm(safe_name)
+                result = []
+                for row in rows:
+                    item = dict(row)
+                    same_name = wanted_name and norm(item.get('customer')) == wanted_name
+                    row_mobile = ''.join(ch for ch in str(item.get('mobile') or '') if ch.isalnum())
+                    same_mobile = safe_mobile and row_mobile and row_mobile == safe_mobile
+                    if same_name or same_mobile:
+                        is_retail = str(item.get('vch_id') or '').upper().startswith('R-')
+                        if is_retail:
+                            item['status'] = 'PAID'
+                            # Grams from items; Rs stays in total_amount only.
+                            item['collected_fine'] = self._retail_fine_from_items(item.get('items'))
+                            item['remaining_fine'] = 0.0
+                            try:
+                                parsed_items = json.loads(item.get('items') or '[]')
+                            except (TypeError, ValueError):
+                                parsed_items = []
+                            if not item.get('gold_rate') and isinstance(parsed_items, list):
+                                rates = []
+                                for bill_item in parsed_items:
+                                    if isinstance(bill_item, dict):
+                                        raw_rate = bill_item.get('rate') or bill_item.get('gold_rate')
+                                        try:
+                                            if raw_rate is not None:
+                                                rates.append(float(str(raw_rate).replace(',', '')))
+                                        except (TypeError, ValueError):
+                                            continue
+                                if rates:
+                                    item['gold_rate'] = rates[0]
+                        result.append(item)
+                return result
+        except Exception as e:
+            _dberr(f"[CUSTOMER PURCHASES] {e}")
+            return []
+
+    def get_voucher_history_list(self, limit=1000):
+        """
+        Flat voucher list for ui/voucher_history.html -- one row per sales
+        bill, with its item lines rolled up into the grid columns
+        (touch group, tag ids, pcs, gross wt, net fine).
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT * FROM sales_history ORDER BY id DESC LIMIT ?",
+                    (int(limit or 1000),)
+                ).fetchall()
+
+            out = []
+            for r in rows:
+                row = dict(r)
+                try:
+                    items = json.loads(row.get('items') or '[]')
+                except:
+                    items = []
+                if not isinstance(items, list):
+                    items = []
+
+                touches, tag_ids, norm = [], [], []
+                pcs, gross_wt, net_fine = 0, 0.0, 0.0
+
+                for it in items:
+                    if not isinstance(it, dict):
+                        continue
+                    tv   = float(it.get('touch') or 0)
+                    wt   = float(it.get('weight') or it.get('gr_wt') or it.get('gross_wt') or 0)
+                    para = float(it.get('para') or 0)
+                    less = float(it.get('less') or 0)
+                    ipcs = int(it.get('pcs') or 1)
+                    nt_wt = wt - para - less
+                    # Billing stores the already-computed fine; recompute only
+                    # for legacy rows that predate it.
+                    if it.get('fine') not in (None, ''):
+                        fine = float(it.get('fine') or 0)
+                    else:
+                        fine = nt_wt * (tv + float(it.get('wastage') or 0)) / 100.0
+
+                    tag = str(it.get('tag_id') or '').strip()
+                    if tag and tag not in ('N/A', '---', 'undefined', '-') and tag not in tag_ids:
+                        tag_ids.append(tag)
+                    if tv > 0:
+                        lbl = ('%.2f' % tv).rstrip('0').rstrip('.')
+                        if lbl not in touches:
+                            touches.append(lbl)
+
+                    pcs      += ipcs
+                    gross_wt += wt
+                    net_fine += fine
+
+                    d = dict(it)
+                    d.update({
+                        'tag_id': tag, 'touch': tv, 'pcs': ipcs,
+                        'gross_wt': round(wt, 3), 'net_wt': round(nt_wt, 3),
+                        'net_fine': round(fine, 3),
+                        'it_name': (it.get('it_name') or it.get('name')
+                                    or it.get('code') or it.get('it_code') or ''),
+                    })
+                    norm.append(d)
+
+                dtype = str(row.get('discount_type') or 'none')
+                dval  = (float(row.get('discount_amount') or 0) if dtype == 'amount'
+                         else float(row.get('discount_fine') or 0))
+
+                out.append({
+                    'id':             row.get('id'),
+                    'vch_id':         row.get('vch_id') or '',
+                    'date':           row.get('date') or '',
+                    'customer':       row.get('customer') or '',
+                    'mobile':         row.get('mobile') or '',
+                    'status':         row.get('status') or '',
+                    'fgl':            float(row.get('ledger_fine') or 0),
+                    'f995':           float(row.get('fine_995') or 0),
+                    'dhal':           float(row.get('fine_dhal') or 0),
+                    'collected_fine': float(row.get('collected_fine') or 0),
+                    'remaining_fine': float(row.get('remaining_fine') or 0),
+                    'gold_rate':      float(row.get('gold_rate') or 0),
+                    'total_amount':   float(row.get('total_amount') or 0),
+                    'touches':        touches,
+                    'tag_ids':        tag_ids,
+                    'pcs':            pcs,
+                    'gross_wt':       round(gross_wt, 3),
+                    'net_fine':       round(net_fine, 3),
+                    'discount_type':  dtype,
+                    'discount_value': round(dval, 3),
+                    'discount_fine':  float(row.get('discount_fine') or 0),
+                    'discount_amount': float(row.get('discount_amount') or 0),
+                    'items':          norm,
+                })
+            return out
+        except Exception as e:
+            print(f"? [VOUCHER HISTORY LIST ERROR] {e}")
+            return []
+
+    def get_touch_details(self, touch_val):
+        """Resolve a numeric touch (e.g. 91.6) to its touch_groups row."""
+        try:
+            tv = float(str(touch_val).strip())
+        except:
+            return None
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    """SELECT name, value, wastage FROM touch_groups
+                        WHERE ROUND(value,2)=ROUND(?,2) LIMIT 1""",
+                    (tv,)
+                ).fetchone()
+            if not row:
+                return None
+            return {'name': row['name'] or '', 'value': float(row['value'] or 0),
+                    'wastage': float(row['wastage'] or 0)}
+        except Exception as e:
+            print(f"? [TOUCH DETAILS ERROR] {e}")
+            return None
+
+    def check_uchak_stock_available(self, items):
+        """
+        Pre-flight piece-stock check for uchak bills. Mirrors the lookup in
+        deduct_stock_on_sale() exactly (same it_code -> it_name fallback and
+        same LIMIT 1 row) so this check can never pass where the deduction
+        would then fail.
+        Returns a list of shortfalls: [{it_code, available, requested}].
+        """
+        try:
+            if isinstance(items, str):
+                try:
+                    items = json.loads(items or '[]')
+                except:
+                    return []
+            if not isinstance(items, list):
+                return []
+
+            # Same code can appear on several lines -- total the request.
+            wanted = {}
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                code = str(it.get('it_code') or it.get('code') or it.get('name') or '').strip()
+                if not code:
+                    continue
+                wanted[code] = wanted.get(code, 0) + int(it.get('pcs') or it.get('qty') or 1)
+
+            if not wanted:
+                return []
+
+            short = []
+            with self._get_connection() as conn:
+                for code, req in wanted.items():
+                    row = conn.execute(
+                        """SELECT pcs FROM stock_inventory
+                            WHERE TRIM(it_code)=? AND pcs>0
+                              AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A')
+                            LIMIT 1""",
+                        (code,)
+                    ).fetchone()
+                    if not row:
+                        row = conn.execute(
+                            """SELECT pcs FROM stock_inventory
+                                WHERE TRIM(it_name)=? AND pcs>0
+                                  AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A')
+                                LIMIT 1""",
+                            (code,)
+                        ).fetchone()
+                    avail = int(row['pcs'] or 0) if row else 0
+                    if avail < req:
+                        short.append({'it_code': code, 'available': avail, 'requested': req})
+            return short
+        except Exception as e:
+            print(f"? [UCHAK STOCK CHECK ERROR] {e}")
             return []
 
     # --- DASHBOARD STATS -----------------------------------------------------
@@ -2700,12 +3149,15 @@ class DBManager:
         Called when DB is detected on a new/different PC.
         Wipes ALL business data but keeps app structure intact.
         After wipe: DB is fresh — new PC must go through setup again.
+        Also deletes the setup marker file and db_path.txt so the new PC
+        gets a completely clean start with no traces of the old machine.
         """
-        _dblog("[WIPE] MAC mismatch — wiping business data for new PC")
+        _dblog("[WIPE] Fingerprint mismatch — wiping business data for new PC")
         try:
             with self._get_connection() as conn:
                 # ── Wipe all transaction & stock tables ──
                 tables = [
+                    'admin_creds',
                     'stock_inventory',
                     'katti_vouchers',
                     'katti_voucher_items',
@@ -2720,6 +3172,9 @@ class DBManager:
                     'device_registry',
                     'sync_state',
                     'sync_conflicts',
+                    'bastion_events',
+                    'bastion_alerts',
+                    'bastion_learning',
                 ]
                 for t in tables:
                     try:
@@ -2756,17 +3211,99 @@ class DBManager:
                 except Exception:
                     pass
                 conn.commit()
-                _dblog("[WIPE] complete — DB is fresh for new PC setup")
+                _dblog("[WIPE] DB tables cleared")
         except Exception as e:
-            _dberr(f"[WIPE] error: {e}")
+            _dberr(f"[WIPE] DB wipe error: {e}")
+
+        # ── Delete setup marker file (fingerprint-locked to old PC) ──
+        try:
+            marker = self._setup_marker_path()
+            if os.path.isfile(marker):
+                os.remove(marker)
+                _dblog(f"[WIPE] Deleted marker file: {marker}")
+        except Exception as e:
+            _dberr(f"[WIPE] Marker delete error: {e}")
+
+        # ── Delete .license_key (machine-bound XOR, useless on new PC) ──
+        try:
+            key_file = os.path.join(self.db_dir, '.license_key')
+            if os.path.isfile(key_file):
+                os.remove(key_file)
+                _dblog(f"[WIPE] Deleted .license_key: {key_file}")
+        except Exception as e:
+            _dberr(f"[WIPE] .license_key delete error: {e}")
+
+        # ── Delete .lockout_state (developer's login lockouts) ──
+        try:
+            lockout = os.path.join(self.db_dir, '.lockout_state')
+            if os.path.isfile(lockout):
+                os.remove(lockout)
+                _dblog(f"[WIPE] Deleted .lockout_state: {lockout}")
+        except Exception as e:
+            _dberr(f"[WIPE] .lockout_state delete error: {e}")
+
+        # ── Delete db_path.txt so new PC can choose fresh DB location ──
+        try:
+            if getattr(sys, 'frozen', False):
+                _exe_dir = os.path.dirname(sys.executable)
+            else:
+                _exe_dir = os.path.abspath('.')
+            pref_file = os.path.join(_exe_dir, 'db_path.txt')
+            if os.path.isfile(pref_file):
+                os.remove(pref_file)
+                _dblog(f"[WIPE] Deleted db_path.txt: {pref_file}")
+        except Exception as e:
+            _dberr(f"[WIPE] db_path.txt delete error: {e}")
+
+        _dblog("[WIPE] complete — DB is fresh for new PC setup")
+
+    def _setup_marker_path(self):
+        """Path to the permanent setup-complete marker file (backup to DB flag)."""
+        return os.path.join(self.db_dir, '.setup_complete')
+
+    def _write_setup_marker(self):
+        """Write marker file with current machine fingerprint baked in.
+        If copied to another PC the fingerprint won't match and the marker is ignored."""
+        try:
+            fp = self._machine_fingerprint()
+            marker = self._setup_marker_path()
+            with open(marker, 'w') as f:
+                f.write(fp)
+            _dblog(f"[SETUP] Permanent marker written (fp={fp[:8]}...): {marker}")
+        except Exception as e:
+            _dberr(f"[SETUP] Failed to write marker: {e}")
+
+    def _setup_marker_valid(self):
+        """Check if marker file exists AND was written for THIS machine.
+        Returns True only if the fingerprint inside the marker matches current hardware.
+        If someone copies the database folder to another PC the fingerprints won't match."""
+        try:
+            marker = self._setup_marker_path()
+            if not os.path.isfile(marker):
+                return False
+            with open(marker, 'r') as f:
+                stored_fp = f.read().strip()
+            if not stored_fp:
+                return False
+            current_fp = self._machine_fingerprint()
+            return stored_fp == current_fp
+        except Exception:
+            return False
 
     def is_setup_done(self) -> bool:
         """
-        Returns True only if:
-          1. setup_done = '1' in app_config  (setup was completed)
-          2. machine_fingerprint in DB matches THIS machine's MAC hash
-             (so DB copied to new PC → fingerprint mismatch → show setup)
+        Returns True only if setup was completed on THIS machine.
+        3 layers of protection:
+          1. Fingerprint-locked marker file — fast, can't be copied to another PC
+          2. Database flag (app_config.setup_done = '1') + fingerprint match
+          3. If DB throws error, returns False (forces fresh setup)
         """
+        # Layer 1: Check fingerprint-locked marker (fastest, no DB needed)
+        if self._setup_marker_valid():
+            _dblog("[SETUP] Marker valid for THIS machine -> show login (layer 1)")
+            return True
+
+        # Layer 2: Check database flag + fingerprint
         try:
             fp = self._machine_fingerprint()
             with self._get_connection() as conn:
@@ -2779,40 +3316,30 @@ class DBManager:
             done = rows.get('setup_done') == '1'
             stored_fp = rows.get('machine_fingerprint', '')
 
-            _dblog(f"[SETUP] done={done} stored_fp={stored_fp[:8]}... my_fp={fp[:8]}...")
+            _dblog(f"[SETUP] done={done} my_fp={fp[:8]}... stored_fp={stored_fp[:8] if stored_fp else 'none'}...")
 
             if not done:
                 _dblog("[SETUP] setup_done != 1 -> show setup")
                 return False
 
-            if not stored_fp:
-                _dblog("[SETUP] no fingerprint stored -> new install -> show setup")
+            # DB says done but fingerprint doesn't match -> different PC
+            # Wipe all data so the new PC gets a clean start
+            if stored_fp and stored_fp != fp:
+                _dblog("[SETUP] FINGERPRINT MISMATCH -> DB belongs to another PC, wiping data")
+                try:
+                    self._wipe_business_data()
+                except Exception as wipe_err:
+                    _dberr(f"[SETUP] Wipe failed: {wipe_err}")
                 return False
 
-            if stored_fp != fp:
-                _dblog("[SETUP] app_config fingerprint mismatch -> DB copied to new PC -> WIPING")
-                self._wipe_business_data()
-                return False
-
-            # Second layer: check mac_lock table inside DB
-            try:
-                lock_row = conn.execute(
-                    "SELECT fingerprint FROM mac_lock WHERE id=1"
-                ).fetchone()
-                if lock_row:
-                    lock_fp = lock_row['fingerprint'] if hasattr(lock_row, 'keys') else lock_row[0]
-                    if lock_fp and lock_fp != fp:
-                        _dblog("[SETUP] mac_lock mismatch -> DB copied to new PC -> WIPING")
-                        self._wipe_business_data()
-                        return False
-            except Exception:
-                pass  # mac_lock table may not exist on old DBs — skip
+            # DB says done and fingerprint matches (or first-time write) -> write marker for speed
+            self._write_setup_marker()
 
             _dblog("[SETUP] all checks passed -> show login")
             return True
 
         except Exception as e:
-            _dberr(f"[SETUP] is_setup_done error: {e}")
+            _dberr(f"[SETUP] is_setup_done DB error: {e}")
             return False
 
     def mark_setup_done(self) -> None:
@@ -2837,10 +3364,12 @@ class DBManager:
                 """, (fp, hostname))
                 conn.commit()
             _dblog(f"[SETUP] machine_fingerprint stored: {fp[:8]}...")
+            # Write permanent marker file too
+            self._write_setup_marker()
         except Exception as e:
             _dberr(f"[SETUP] mark_setup_done error: {e}")
 
-    def save_setup(self, business_name, owner_name, owner_phone, city, pin, license_key=''):
+    def save_setup(self, business_name, owner_name, owner_phone, city, pin, license_key='', address=''):
         """Save first-time setup data. Returns True on success, False on failure."""
         import hashlib as _hl, sqlite3 as _sq, datetime as _dt
         conn = None
@@ -2865,6 +3394,7 @@ class DBManager:
                 ('owner_name', str(owner_name or '').strip()),
                 ('owner_phone', str(owner_phone or '').strip()),
                 ('city', str(city or '').strip()),
+                ('address', str(address or '').strip()),
                 ('owner_pin', pin_hash),
                 ('setup_date', now_str),
                 ('license_key', lk),
@@ -2900,6 +3430,10 @@ class DBManager:
             conn.commit()
             _dblog(f"[SETUP] fingerprint stored: {self._machine_fingerprint()[:8]}...")
 
+            # Write permanent marker file — belt-and-suspenders so setup
+            # NEVER shows again even if DB has future issues
+            self._write_setup_marker()
+
         except Exception as e:
             _dberr(f"[SETUP] DB error: {e}")
             _dberr(traceback.format_exc())
@@ -2929,6 +3463,265 @@ class DBManager:
                 return row['value'] if row else default
         except Exception:
             return default
+
+    def set_config(self, key, value):
+        """Insert or update a single config value."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                    (str(key), str(value)))
+                conn.commit()
+                return True
+        except Exception as e:
+            _dberr(f"[CONFIG] set {key}: {e}")
+            return False
+
+    def ensure_retail_columns(self):
+        """Permanent schema migration: payment split + old-gold per bill.
+        Safe to run on every startup (ALTER only if column missing)."""
+        try:
+            with self._get_connection() as conn:
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(sales_history)").fetchall()]
+                for col, ddl in (
+                    ('payment_mode', "ALTER TABLE sales_history ADD COLUMN payment_mode TEXT DEFAULT 'cash'"),
+                    ('old_gold_value', "ALTER TABLE sales_history ADD COLUMN old_gold_value REAL DEFAULT 0"),
+                    ('old_gold_wt', "ALTER TABLE sales_history ADD COLUMN old_gold_wt REAL DEFAULT 0"),
+                ):
+                    if col not in cols:
+                        conn.execute(ddl)
+                        _dblog(f"[MIGRATE] sales_history.{col} added")
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[MIGRATE] retail columns: {e}")
+
+    # ── NOTIFICATION CENTER ──────────────────────────────────────────────
+    # Owner inbox: staff-bill alerts (local) + AurumOS admin messages (remote).
+    # Table is local-only and never synced.
+
+    def ensure_notifications_table(self):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts     TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                        type   TEXT DEFAULT 'info',
+                        title  TEXT DEFAULT '',
+                        body   TEXT DEFAULT '',
+                        page   TEXT DEFAULT '',
+                        source TEXT DEFAULT 'local',
+                        ext_id TEXT DEFAULT '',
+                        read   INTEGER DEFAULT 0)
+                """)
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_ext "
+                             "ON notifications(source, ext_id)")
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[NOTIF] table: {e}")
+
+    def push_notification(self, ntype, title, body, page='', source='local', ext_id=''):
+        """Insert one inbox notification. Admin messages dedupe by ext_id."""
+        try:
+            self.ensure_notifications_table()
+            with self._get_connection() as conn:
+                if source == 'admin' and ext_id:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO notifications(type,title,body,page,source,ext_id) "
+                        "VALUES(?,?,?,?,?,?)",
+                        (ntype, title, body, page, source, ext_id))
+                else:
+                    conn.execute(
+                        "INSERT INTO notifications(type,title,body,page,source) VALUES(?,?,?,?,?)",
+                        (ntype, title, body, page, source))
+                conn.commit()
+                return True
+        except Exception as e:
+            _dberr(f"[NOTIF] push: {e}")
+            return False
+
+    def get_notifications(self, limit=20):
+        try:
+            self.ensure_notifications_table()
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(
+                    "SELECT id, ts, type, title, body, page, source, read "
+                    "FROM notifications ORDER BY id DESC LIMIT ?",
+                    (int(limit or 20),)).fetchall()]
+        except Exception as e:
+            _dberr(f"[NOTIF] list: {e}")
+            return []
+
+    def mark_notification_read(self, nid):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE notifications SET read=1 WHERE id=?", (int(nid),))
+                conn.commit()
+                return True
+        except Exception:
+            return False
+
+    def mark_all_notifications_read(self):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE notifications SET read=1 WHERE read=0")
+                conn.commit()
+                return True
+        except Exception:
+            return False
+
+    # ── URGENT MESSAGES (AurumOS admin → this terminal) ──────────────────
+    # Local-only inbox. Server keeps ~30 recent; we keep last 100.
+
+    def ensure_urgent_table(self):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS urgent_messages (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ext_id      TEXT UNIQUE,
+                        title       TEXT DEFAULT '',
+                        body        TEXT DEFAULT '',
+                        priority    TEXT DEFAULT 'info',
+                        sent_at     TEXT DEFAULT '',
+                        target_mode TEXT DEFAULT '',
+                        read        INTEGER DEFAULT 0,
+                        created_ts  TEXT NOT NULL DEFAULT (datetime('now','localtime')))
+                """)
+                # Tombstones: user-deleted ids are never re-added by catch-up.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS urgent_hidden (
+                        ext_id TEXT PRIMARY KEY,
+                        ts     TEXT NOT NULL DEFAULT (datetime('now','localtime')))
+                """)
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[URGENT] table: {e}")
+
+    def is_urgent_hidden(self, ext_id):
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM urgent_hidden WHERE ext_id=?",
+                    (str(ext_id),)).fetchone()
+                return row is not None
+        except Exception:
+            return False
+
+    @staticmethod
+    def urgent_applies(msg, my_key):
+        """True if a history message targets THIS terminal."""
+        try:
+            if str(msg.get('target_mode') or '').lower() == 'all':
+                return True
+            keys = msg.get('target_keys') or []
+            if isinstance(keys, str):
+                try:
+                    import json as _j
+                    keys = _j.loads(keys)
+                except Exception:
+                    keys = [keys]
+            mine = str(my_key or '').strip().upper()
+            return any(str(k or '').strip().upper() == mine for k in (keys or []))
+        except Exception:
+            return False
+
+    def store_urgent_message(self, msg):
+        """Dedupe by server id. Returns True only when newly inserted."""
+        try:
+            ext = str(msg.get('id') or '').strip()
+            if not ext:
+                return False
+            if self.is_urgent_hidden(ext):
+                return False
+            pri = str(msg.get('priority') or 'info').lower()
+            if pri not in ('info', 'warning', 'critical'):
+                pri = 'info'
+            self.ensure_urgent_table()
+            with self._get_connection() as conn:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO urgent_messages"
+                    "(ext_id,title,body,priority,sent_at,target_mode) "
+                    "VALUES(?,?,?,?,?,?)",
+                    (ext, str(msg.get('title') or '')[:120],
+                     str(msg.get('body') or '')[:1000], pri,
+                     str(msg.get('sent_at') or msg.get('created_at') or ''),
+                     str(msg.get('target_mode') or '')))
+                conn.commit()
+                is_new = cur.rowcount > 0
+            if is_new:
+                self.prune_urgent_messages(keep=100)
+            return is_new
+        except Exception as e:
+            _dberr(f"[URGENT] store: {e}")
+            return False
+
+    def prune_urgent_messages(self, keep=100):
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "DELETE FROM urgent_messages WHERE id NOT IN "
+                    "(SELECT id FROM urgent_messages ORDER BY id DESC LIMIT ?)",
+                    (int(keep),))
+                conn.commit()
+        except Exception:
+            pass
+
+    def get_urgent_messages(self, limit=100):
+        try:
+            self.ensure_urgent_table()
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(
+                    "SELECT ext_id AS id, title, body, priority, sent_at, "
+                    "target_mode, read FROM urgent_messages "
+                    "ORDER BY id DESC LIMIT ?", (int(limit or 100),)).fetchall()]
+        except Exception as e:
+            _dberr(f"[URGENT] list: {e}")
+            return []
+
+    def urgent_unread_count(self):
+        try:
+            self.ensure_urgent_table()
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) AS c FROM urgent_messages WHERE read=0").fetchone()
+                return int(row['c'] or 0) if row else 0
+        except Exception:
+            return 0
+
+    def mark_urgent_read(self, ext_id):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE urgent_messages SET read=1 WHERE ext_id=?",
+                             (str(ext_id),))
+                conn.commit()
+                return True
+        except Exception:
+            return False
+
+    def mark_all_urgent_read(self):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE urgent_messages SET read=1 WHERE read=0")
+                conn.commit()
+                return True
+        except Exception:
+            return False
+
+    def delete_urgent_message(self, ext_id):
+        """Permanently remove one message (used for test cleanup).
+        Records a tombstone so catch-up never brings it back."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute("INSERT OR IGNORE INTO urgent_hidden(ext_id) VALUES(?)",
+                             (str(ext_id),))
+                conn.execute("DELETE FROM urgent_messages WHERE ext_id=?",
+                             (str(ext_id),))
+                conn.commit()
+                return True
+        except Exception:
+            return False
 
     # ── AUDIT LOG ──────────────────────────────────────────────────────────────
 
@@ -3024,12 +3817,24 @@ class DBManager:
                       AND gr_wt > 0
                 """).fetchone()
 
+                # Untagged pieces with weight (added via stock ledger, not yet tagged)
+                untagged_wt = conn.execute("""
+                    SELECT COALESCE(SUM(gr_wt),0) as w FROM stock_inventory
+                    WHERE is_tagged = 0
+                      AND tag_id IS NOT NULL
+                      AND tag_id NOT IN ('N/A','','---','-','undefined','null')
+                      AND tag_id NOT LIKE 'KATTI-%'
+                      AND tag_id NOT LIKE 'OPENING-%'
+                      AND gr_wt > 0
+                """).fetchone()
+
                 # Katti packets (voucher count -- does not reduce)
                 katti = conn.execute(
                     "SELECT COALESCE(SUM(total_packets),0) as p FROM katti_vouchers"
                 ).fetchone()
 
                 # Untagged physical items (real tag_id, not yet printed/tagged)
+                # Include ALL untagged items regardless of gr_wt
                 untagged = conn.execute("""
                     SELECT COUNT(*) as p FROM stock_inventory
                     WHERE is_tagged = 0
@@ -3037,13 +3842,12 @@ class DBManager:
                       AND tag_id NOT IN ('N/A','','---','-','undefined','null')
                       AND tag_id NOT LIKE 'KATTI-%'
                       AND tag_id NOT LIKE 'OPENING-%'
-                      AND gr_wt = 0
                 """).fetchone()
 
                 profile = conn.execute("SELECT owner_name FROM business_profile WHERE id=1").fetchone()
                 owner = profile['owner_name'] if (profile and profile['owner_name']) else None
 
-                # Net weight = tagged showroom + katti remaining (NOT opening — opening is fixed reference)
+                # Net weight = tagged showroom + weight stock only (untagged NOT included)
                 total_w = (showroom['w'] or 0) + (weight_stock['w'] or 0)
 
                 return {
@@ -3072,17 +3876,17 @@ class DBManager:
                 # ? Bin heatmap -- LIVE weight from stock_inventory
                 bins_weight = conn.execute("""
                     SELECT UPPER(TRIM(huid)) as bin_id,
-                           SUM(gr_wt) as weight,
+                           SUM(nt_wt) as weight,
                            json_group_array(json_object(
                                'it_name', it_name,
-                               'nt_wt',   gr_wt,
+                               'nt_wt',   nt_wt,
                                'it_code', it_code
                            )) as items_json
                     FROM stock_inventory
                     WHERE huid IS NOT NULL
                       AND TRIM(huid) NOT IN ('','-','None','N/A')
                       AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%')
-                      AND gr_wt > 0
+                      AND nt_wt > 0
                     GROUP BY UPPER(TRIM(huid))
                 """).fetchall()
 
@@ -3162,6 +3966,29 @@ class DBManager:
         except Exception as e:
             print(f"? [ANALYTICS PAYLOAD ERROR] {e}")
             return {"status": "error", "bins": [], "katti_weight": [], "manual_pcs": [], "uchak_pcs_chart": []}
+
+    def get_items_by_bin(self, bin_id):
+        """Returns all stock items belonging to a specific storage bin."""
+        try:
+            def norm(raw):
+                c = str(raw).replace(' ', '').replace('-', '').upper()
+                return f"B-{c[1:].zfill(3)}" if c.startswith('B') and len(c) > 1 else raw
+
+            bin_id = norm(bin_id)
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT id, it_code, it_name, tag_id, pcs, touch, gr_wt, nt_wt,
+                           para_stone_wt, ls_wt, huid, entry_date,
+                           CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
+                    FROM stock_inventory
+                    WHERE UPPER(TRIM(huid)) = ?
+                      AND nt_wt > 0
+                    ORDER BY id DESC
+                """, (bin_id,)).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"[GET ITEMS BY BIN ERROR] {e}")
+            return []
 
     def get_stock_ledger(self):
         """Returns tagged stock items for the inventory table -- excludes opening stock."""
@@ -3387,6 +4214,7 @@ class DBManager:
                             'pcs': int(r.get('pcs') or 1), 'gr_wt': wt, 'ls_wt': float(r.get('ls_wt') or 0),
                             'in_net_wt': nt, 'out_net_wt': 0.0, 'bal_wt': nt,
                         })
+
                 # -- OPENING: pcs mode --------------------------------------
                 if mode == 'pcs':
                     opn_pcs_rows = conn.execute("""
@@ -3734,6 +4562,39 @@ class DBManager:
             _dberr(f"[LOCK] record_failed_attempt: {e}")
             return {'attempts': 0, 'locked': False}
 
+    # ── One-time unlock nonce helpers ──────────────────────────────
+    def _nonce_path(self):
+        """Path to the one-time-use nonce file shared with generate_unlock_keys.py."""
+        return os.path.join(self.db_dir, '.unlock_nonce')
+
+    def _get_unlock_nonce(self):
+        """Read the current one-time-use nonce. Returns 0 if missing."""
+        try:
+            p = self._nonce_path()
+            if os.path.isfile(p):
+                with open(p, 'r') as f:
+                    return int(f.read().strip())
+        except (ValueError, IOError, OSError):
+            pass
+        return 0
+
+    def _bump_unlock_nonce(self):
+        """Increment the nonce after a successful one-time unlock."""
+        try:
+            n = self._get_unlock_nonce() + 1
+            with open(self._nonce_path(), 'w') as f:
+                f.write(str(n))
+            _dblog(f'[NONCE] incremented to {n}')
+        except Exception as e:
+            _dberr(f'[NONCE] bump error: {e}')
+
+    def _verify_nonce_key(self, lock_code, salt, date_str, entered, nonce):
+        """Check one key candidate against the given nonce. Returns True on match."""
+        expected = hashlib.sha256(
+            (lock_code + salt + date_str + str(nonce)).encode('utf-8')
+        ).hexdigest()[:len(entered)].upper()
+        return entered == expected
+
     def verify_unlock_key(self, unlock_key, lock_code=None):
         import hashlib as _hl
         from datetime import datetime as _dt, timedelta as _td
@@ -3759,27 +4620,34 @@ class DBManager:
                 pass
             lc_list = list(dict.fromkeys(lc_list))
 
-            # Build date variants — IST, UTC, local
+            # Build date variants — IST, UTC, local, ±3 days (matches keygen range)
             now_utc = _dt.utcnow()
             now_ist = now_utc + _td(hours=5, minutes=30)
             now_loc = _dt.now()
             dates = []
             for base in [now_ist, now_utc, now_loc]:
-                for delta in [0, -1, 1]:
+                for delta in range(-3, 4):
                     ds = (base + _td(days=delta)).strftime('%Y-%m-%d')
                     if ds not in dates:
                         dates.append(ds)
 
-            _dblog(f'[LOCK] verify entered={entered[:4]}**** lc={lc_list} dates={dates}')
+            # Try stored nonce + nonce=0 (keygen default)
+            stored_nonce = self._get_unlock_nonce()
+            nonces = list(dict.fromkeys([stored_nonce, 0]))
+
+            _dblog(f'[LOCK] verify entered={entered[:4]}**** lc={lc_list} dates={dates[:7]} nonces={nonces}')
 
             # Try every combination
-            for lc in lc_list:
+            for nonce in nonces:
+              for lc in lc_list:
                 for date_str in dates:
                     expected = _hl.sha256(
-                        (lc + SALT + date_str).encode('utf-8')
+                        (lc + SALT + date_str + str(nonce)).encode('utf-8')
                     ).hexdigest()[:12].upper()
-                    _dblog(f'[LOCK] lc={lc} date={date_str} exp={expected[:4]}**** got={entered[:4]}****')
                     if entered == expected:
+                        # One-time use: increment nonce so old key stops working
+                        if nonce == stored_nonce:
+                            self._bump_unlock_nonce()
                         try:
                             with self._get_connection() as conn:
                                 for k, v in [
@@ -3795,7 +4663,7 @@ class DBManager:
                                 conn.commit()
                         except Exception as _e:
                             _dblog(f'[LOCK] clear error: {_e}')
-                        _dblog(f'[LOCK] UNLOCKED lc={lc} date={date_str}')
+                        _dblog(f'[LOCK] UNLOCKED lc={lc} date={date_str} nonce={nonce}')
                         return {'status': 'success', 'message': 'Account unlocked'}
 
             _dblog('[LOCK] No match — all combinations tried')
@@ -4246,6 +5114,19 @@ class DBManager:
     # ══════════════════════════════════════════════════════════════
     # YEAR-END BALANCE TRANSFER SYSTEM
     # ══════════════════════════════════════════════════════════════
+
+    def tag_audit_delete_session(self, session_id):
+        """Permanently delete an audit session and all its scans/absences."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute("DELETE FROM tag_audit_scans WHERE session_id=?", (session_id,))
+                conn.execute("DELETE FROM tag_audit_absences WHERE session_id=?", (session_id,))
+                conn.execute("DELETE FROM tag_audit_sessions WHERE id=?", (session_id,))
+                conn.commit()
+                return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
 
     def get_year_list(self):
         """Return list of financial years — current + all archived."""
@@ -4999,88 +5880,130 @@ class DBManager:
     }
 
     def bastion_clear(self, admin_key, lock_code=None):
-        """
-        Key formula: SHA256(lock_code + BASTION_SALT + IST_date)[:16]
-        Date-based (yesterday/today/tomorrow in IST), matching the
-        website unlock tool exactly -- no timestamp involved, so there
-        is nothing to copy wrong. IST is used explicitly (not server
-        local time) so the dev PC, shop PC, and website always agree
-        regardless of what timezone each machine is actually set to.
-        """
-        import hashlib as _hl
-        import json as _json
-        from datetime import datetime as _dt, timedelta as _td
+            """
+            Tries ALL lock_code sources x ALL formulas x ALL dates.
+            Guarantees a match regardless of which tool generated the key.
 
-        BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin'  # KEEP SECRET
+            Lock code sources: cache, passed param, machine fingerprint.
+            Formulas: BASTION/REGULAR salt, with/without nonce, IST/UTC/local.
+            """
+            import hashlib as _hl
+            import json as _json
+            from datetime import datetime as _dt, timedelta as _td
 
-        try:
-            if not lock_code:
-                lock_code = self._machine_fingerprint()[:8].upper()
-            else:
-                lock_code = str(lock_code).strip().upper()
+            BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin'
+            REGULAR_SALT = 'AurumOS@Jewel#2024$Prof'
 
-            entered = str(admin_key).strip().upper()
+            try:
+                entered = str(admin_key).strip().upper()
+                nonce = self._get_unlock_nonce()
 
-            # Current time in IST, regardless of this machine's local timezone
-            now_ist = _dt.utcnow() + _td(hours=5, minutes=30)
-            date_candidates = [
-                (now_ist - _td(days=1)).strftime('%Y-%m-%d'),
-                now_ist.strftime('%Y-%m-%d'),
-                (now_ist + _td(days=1)).strftime('%Y-%m-%d'),
-            ]
+                # Collect ALL lock_code candidates
+                lc_candidates = []
+                try:
+                    with self._get_connection() as conn:
+                        row = conn.execute(
+                            "SELECT value FROM app_config WHERE key='lock_code_cache'"
+                        ).fetchone()
+                        if row and row[0]:
+                            lc_candidates.append(row[0].strip().upper())
+                except Exception:
+                    pass
+                if lock_code:
+                    lc_candidates.append(str(lock_code).strip().upper())
+                fp = self._machine_fingerprint()[:8].upper()
+                if fp not in lc_candidates:
+                    lc_candidates.append(fp)
+                if not lc_candidates:
+                    lc_candidates.append('UNKNOWN')
 
-            matched_date = None
-            expected = ''
-            for date_str in date_candidates:
-                candidate = _hl.sha256(
-                    (lock_code + BASTION_SALT + date_str).encode('utf-8')
-                ).hexdigest()[:16].upper()
-                if entered == candidate:
-                    matched_date = date_str
-                    expected = candidate
-                    break
-                expected = candidate  # keep last for logging if no match
+                _dblog(f"[BASTION] lc_candidates={lc_candidates} nonce={nonce} entered={entered[:4]}****")
 
-            _dblog(
-                f"[BASTION] lc={lock_code} dates_tried={date_candidates} entered={entered[:4]}**** matched={matched_date}")
+                # Date candidates (IST, UTC, local, +/-3 days)
+                now_ist = _dt.utcnow() + _td(hours=5, minutes=30)
+                now_utc = _dt.utcnow()
+                now_loc = _dt.now()
+                all_dates = []
+                for base in [now_ist, now_utc, now_loc]:
+                    for delta in range(-3, 4):
+                        ds = (base + _td(days=delta)).strftime('%Y-%m-%d')
+                        if ds not in all_dates:
+                            all_dates.append(ds)
 
-            if matched_date:
-                # Match — clear suspension completely
-                with self._get_connection() as conn:
-                    conn.execute(
-                        "INSERT OR REPLACE INTO app_config(key,value) "
-                        "VALUES('bastion_suspended','0')"
-                    )
-                    conn.execute(
-                        "INSERT OR REPLACE INTO app_config(key,value) "
-                        "VALUES('bastion_record','')"
-                    )
-                    conn.execute(
-                        "INSERT OR REPLACE INTO app_config(key,value) "
-                        "VALUES('account_locked','0')"
-                    )
-                    conn.execute(
-                        "INSERT OR REPLACE INTO app_config(key,value) "
-                        "VALUES('login_attempts','0')"
-                    )
-                    conn.execute(
-                        "DELETE FROM app_config WHERE key='exe_hash'"
-                    )
-                    conn.commit()
-                _dblog(f"[BASTION] Suspension CLEARED — date={matched_date}")
-                self.add_audit_log(
-                    "BASTION Cleared by Admin",
-                    f"Admin key matched for date {matched_date}",
-                    "ADMIN", "security"
-                )
-                return {'status': 'success', 'message': 'Account restored successfully'}
+                # Exhaustive brute-force
+                matched_date = None
+                expected = ''
+                used_salt = ''
+                used_lc = ''
 
-            _dblog("[BASTION] Admin key did not match")
-            return {'status': 'error', 'message': 'Invalid admin key'}
+                for lc in lc_candidates:
+                    if matched_date:
+                        break
+                    for date_str in all_dates:
+                        # A) BASTION + no nonce
+                        c = _hl.sha256(
+                            (lc + BASTION_SALT + date_str).encode('utf-8')
+                        ).hexdigest()[:16].upper()
+                        if entered == c:
+                            matched_date, expected, used_salt, used_lc = date_str, c, 'BASTION', lc
+                            break
+                        # B) BASTION + nonce
+                        c = _hl.sha256(
+                            (lc + BASTION_SALT + date_str + str(nonce)).encode('utf-8')
+                        ).hexdigest()[:16].upper()
+                        if entered == c:
+                            matched_date, expected, used_salt, used_lc = date_str, c, 'BASTION+nonce', lc
+                            break
+                        # C) REGULAR + no nonce (12-char)
+                        if len(entered) == 12:
+                            c = _hl.sha256(
+                                (lc + REGULAR_SALT + date_str).encode('utf-8')
+                            ).hexdigest()[:12].upper()
+                            if entered == c:
+                                matched_date, expected, used_salt, used_lc = date_str, c, 'REGULAR', lc
+                                break
+                            # D) REGULAR + nonce (12-char)
+                            c = _hl.sha256(
+                                (lc + REGULAR_SALT + date_str + str(nonce)).encode('utf-8')
+                            ).hexdigest()[:12].upper()
+                            if entered == c:
+                                matched_date, expected, used_salt, used_lc = date_str, c, 'REGULAR+nonce', lc
+                                break
 
-        except Exception as e:
-            _dberr(f"[BASTION] clear error: {e}")
-            return {'status': 'error', 'message': str(e)}
+                _dblog(
+                    f"[BASTION] lc_used={used_lc} nonce={nonce} dates_tried={len(all_dates)} "
+                    f"entered={entered[:4]}**** matched={matched_date} salt={used_salt} "
+                    f"expected={expected[:4]}****")
+
+                if matched_date:
+                    self._bump_unlock_nonce()
+                    with self._get_connection() as conn:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('bastion_suspended','0')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('bastion_record','')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('bastion_suspend_reason','')"
+                        )
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) "
+                            "VALUES('lock_code_cache','')"
+                        )
+                        conn.commit()
+                    _dblog(f'[BASTION] Suspension cleared with {used_salt} salt on {matched_date} lc={used_lc} nonce={nonce}')
+                    return {'status': 'success', 'message': 'BASTION suspension cleared'}
+
+                _dblog('[BASTION] Admin key did not match ALL combinations')
+                return {'status': 'error', 'message': 'Invalid admin key'}
+
+            except Exception as e:
+                _dberr(f"[BASTION] clear error: {e}")
+                return {'status': 'error', 'message': str(e)}
 
     def bastion_suspend(self, attack_type='unknown', detail=''):
         """
@@ -5099,6 +6022,9 @@ class DBManager:
                 ('Security Violation', str(detail) or 'Unknown attack detected.')
             )
 
+            # Lock code at suspension time — MUST match for unlock key gen
+            lock_code = self._machine_fingerprint()[:8].upper()
+
             record = {
                 'suspended': True,
                 'attack_type': code_name,
@@ -5106,6 +6032,7 @@ class DBManager:
                 'reason': reason,
                 'detail': str(detail),
                 'timestamp': ts,
+                'lock_code': lock_code,
             }
 
             with self._get_connection() as conn:
@@ -5123,9 +6050,13 @@ class DBManager:
                 conn.execute(
                     "INSERT OR REPLACE INTO app_config(key,value) VALUES('login_attempts','99')"
                 )
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)",
+                    (lock_code,)
+                )
                 conn.commit()
 
-            _dberr(f"[BASTION] SUSPENDED — attack={attack_type} detail={detail}")
+            _dberr(f"[BASTION] SUSPENDED — attack={attack_type} detail={detail} lock_code={lock_code}")
 
             # Write to audit log
             self.add_audit_log(
@@ -5148,7 +6079,7 @@ class DBManager:
             with self._get_connection() as conn:
                 rows = {r['key']: r['value'] for r in conn.execute(
                     "SELECT key,value FROM app_config WHERE key IN "
-                    "('bastion_suspended','bastion_record','lock_code_cache')"
+                    "('bastion_suspended','bastion_record')"
                 ).fetchall()}
 
             suspended = rows.get('bastion_suspended', '0') == '1'
@@ -5161,7 +6092,8 @@ class DBManager:
             except Exception:
                 pass
 
-            lock_code = rows.get('lock_code_cache', '') or self._machine_fingerprint()[:8].upper()
+            # Use lock_code from suspension record (set at suspend time)
+            lock_code = record.get('lock_code') or self._machine_fingerprint()[:8].upper()
             record['lock_code'] = lock_code
             record['suspended'] = True
             return record

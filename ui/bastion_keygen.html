@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS BASTION — Unlock Key Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f5f3ee;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(14,12,9,0.08);width:480px;max-width:100%;overflow:hidden}
+.header{background:#0e0c09;padding:24px 28px;border-top:3px solid #a87d1e}
+.header h1{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
+.header p{color:#a89878;font-size:12px;letter-spacing:1px;text-transform:uppercase}
+.body{padding:24px 28px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;font-weight:600;color:#5c5347;margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase}
+.fg input{width:100%;padding:10px 14px;border:1px solid #e0dcd4;border-radius:8px;font-size:15px;font-family:'Courier New',monospace;letter-spacing:1px;color:#0e0c09;background:#faf8f3;transition:border-color 0.2s}
+.fg input:focus{outline:none;border-color:#a87d1e;box-shadow:0 0 0 3px rgba(168,125,30,0.12)}
+.fg input::placeholder{color:#b0a898;letter-spacing:0}
+.btn{width:100%;padding:12px;background:#0e0c09;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.5px;transition:all 0.2s}
+.btn:hover{background:#1a1712}
+.btn:active{transform:scale(0.98)}
+.results{margin-top:20px;display:none}
+.results.show{display:block}
+.result-item{background:#faf6ea;border:1px solid #f0e6cc;border-radius:10px;padding:14px 16px;margin-bottom:10px;position:relative}
+.result-item .date{font-size:11px;color:#a87d1e;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.result-item .key{font-family:'Courier New',monospace;font-size:18px;font-weight:700;color:#0e0c09;letter-spacing:2px;cursor:pointer;user-select:all}
+.result-item .key:hover{color:#a87d1e}
+.result-item .formula{font-size:10px;color:#a89878;margin-top:4px}
+.copy-toast{position:fixed;top:20px;right:20px;background:#0e0c09;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999}
+.copy-toast.show{opacity:1}
+.info{background:#f0f7ff;border:1px solid #c4dafc;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#3b6cba;line-height:1.6}
+.info strong{font-weight:700}
+.tabs{display:flex;gap:0;margin-bottom:16px;border:1px solid #e0dcd4;border-radius:8px;overflow:hidden}
+.tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;background:#faf8f3;color:#5c5347;transition:all 0.2s;border-right:1px solid #e0dcd4}
+.tab:last-child{border-right:none}
+.tab.active{background:#0e0c09;color:#fff}
+.tab:hover:not(.active){background:#f0ece2}
+.nonce-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.nonce-row input[type=number]{width:80px;padding:10px 14px;border:1px solid #e0dcd4;border-radius:8px;font-size:15px;font-family:'Courier New',monospace;text-align:center;color:#0e0c09;background:#faf8f3}
+.nonce-row label{font-size:12px;color:#5c5347}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <p>AurumOS BASTION Security</p>
+    <h1>Unlock Key Generator</h1>
+  </div>
+  <div class="body">
+    <div class="info">
+      <strong>How to use:</strong> Enter the Lock Code from the BASTION lock screen (8 characters). 
+      The tool generates both BASTION (16-char) and Regular (12-char) keys for today and surrounding dates.
+      Click any key to copy it.
+    </div>
+
+    <div class="fg">
+      <label>Lock Code (from BASTION screen)</label>
+      <input id="lc" type="text" maxlength="8" placeholder="e.g. FA20DBA9" 
+             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+    </div>
+
+    <div class="nonce-row">
+      <label>Nonce (use counter):</label>
+      <input id="nonce" type="number" min="0" max="99" value="0">
+      <label style="font-size:10px;color:#a89878">(usually 0, check generate_unlock_keys.py output)</label>
+    </div>
+
+    <button class="btn" onclick="generate()">Generate Keys</button>
+
+    <div class="results" id="results"></div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied to clipboard</div>
+
+<script>
+const BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin';
+const REGULAR_SALT = 'AurumOS@Jewel#2024$Prof';
+
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getISTDates() {
+  const now = new Date();
+  // IST offset = +5:30
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istNow = new Date(utcMs + 5.5 * 3600000);
+  
+  const dates = [];
+  for (let d = -3; d <= 3; d++) {
+    const dt = new Date(istNow);
+    dt.setDate(dt.getDate() + d);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${day}`);
+  }
+  return dates;
+}
+
+function getUTCDates() {
+  const now = new Date();
+  const dates = [];
+  for (let d = -3; d <= 3; d++) {
+    const dt = new Date(now);
+    dt.setDate(dt.getDate() + d);
+    const y = dt.getUTCFullYear();
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dt.getUTCDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${day}`);
+  }
+  return dates;
+}
+
+function getLocalDates() {
+  const now = new Date();
+  const dates = [];
+  for (let d = -3; d <= 3; d++) {
+    const dt = new Date(now);
+    dt.setDate(dt.getDate() + d);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${day}`);
+  }
+  return dates;
+}
+
+async function generate() {
+  const lc = document.getElementById('lc').value.trim().toUpperCase();
+  const nonce = parseInt(document.getElementById('nonce').value) || 0;
+
+  if (lc.length < 4) {
+    alert('Please enter a valid Lock Code (at least 4 characters)');
+    return;
+  }
+
+  // Merge all dates (IST + UTC + local, unique)
+  const istDates = getISTDates();
+  const utcDates = getUTCDates();
+  const localDates = getLocalDates();
+  const allDates = [...new Set([...istDates, ...utcDates, ...localDates])];
+
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = '';
+
+  // Generate for each date
+  for (const dateStr of allDates) {
+    // BASTION key without nonce
+    const bastionNoNonce = await sha256(lc + BASTION_SALT + dateStr);
+    const bKeyNoNonce = bastionNoNonce.substring(0, 16).toUpperCase();
+
+    // BASTION key with nonce
+    const bastionWithNonce = await sha256(lc + BASTION_SALT + dateStr + nonce.toString());
+    const bKeyWithNonce = bastionWithNonce.substring(0, 16).toUpperCase();
+
+    // REGULAR key without nonce
+    const regularNoNonce = await sha256(lc + REGULAR_SALT + dateStr);
+    const rKeyNoNonce = regularNoNonce.substring(0, 12).toUpperCase();
+
+    // REGULAR key with nonce
+    const regularWithNonce = await sha256(lc + REGULAR_SALT + dateStr + nonce.toString());
+    const rKeyWithNonce = regularWithNonce.substring(0, 12).toUpperCase();
+
+    const isToday = dateStr === istDates[3]; // today in IST
+
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    if (isToday) item.style.borderColor = '#a87d1e';
+    item.innerHTML = `
+      <div class="date">${isToday ? '&#9679; ' : ''}${dateStr}${isToday ? ' (Today IST)' : ''}</div>
+      <div class="key" onclick="copyKey(this)" title="Click to copy">${bKeyNoNonce}</div>
+      <div class="formula">BASTION (no nonce) — web / aurum_health.py</div>
+      <div style="margin-top:8px">
+        <div class="key" onclick="copyKey(this)" title="Click to copy">${bKeyWithNonce}</div>
+        <div class="formula">BASTION (nonce=${nonce}) — generate_unlock_keys.py</div>
+      </div>
+      <div style="margin-top:8px;border-top:1px solid #f0e6cc;padding-top:8px">
+        <div class="key" style="font-size:15px" onclick="copyKey(this)" title="Click to copy">${rKeyNoNonce}</div>
+        <div class="formula">REGULAR 12-char (no nonce) — web dashboard</div>
+      </div>
+      <div style="margin-top:6px">
+        <div class="key" style="font-size:15px" onclick="copyKey(this)" title="Click to copy">${rKeyWithNonce}</div>
+        <div class="formula">REGULAR 12-char (nonce=${nonce}) — generate_unlock_keys.py</div>
+      </div>
+    `;
+    resultsDiv.appendChild(item);
+  }
+
+  resultsDiv.classList.add('show');
+}
+
+function copyKey(el) {
+  const key = el.textContent.trim();
+  navigator.clipboard.writeText(key).then(() => {
+    const toast = document.getElementById('toast');
+    toast.textContent = `Copied: ${key}`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+    el.style.color = '#a87d1e';
+    setTimeout(() => el.style.color = '', 500);
+  });
+}
+
+// Auto-generate on Enter
+document.getElementById('lc').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') generate();
+});
+</script>
+</body>
+</html>

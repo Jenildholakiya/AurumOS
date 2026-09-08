@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Sold Tags Ledger</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --primary:#0e0c09;--accent:#2563eb;--accent-light:rgba(37,99,235,0.08);
+    --bg-main:#f8fafb;--card:#ffffff;--border:rgba(14,12,9,0.08);
+    --text-main:#0e0c09;--text-muted:#64748b;--success:#16a34a;--error:#dc2626;
+    --serif:'DM Serif Display',Georgia,serif;--sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+    --num:Arial,'DM Sans',system-ui,sans-serif;
+    --gold-ln:rgba(37,99,235,0.18);--cream2:#f1f5f9;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;}
+body{background:var(--bg-main);color:var(--text-main);min-height:100vh;display:flex;flex-direction:column;}
+.layout{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HEADER */
+header{height:62px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 26px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 4%,var(--gold-ln) 50%,transparent 96%);}
+.brand{display:flex;align-items:center;gap:12px;}
+.back-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all .2s cubic-bezier(.16,1,.3,1);}
+.back-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.2);}
+.brand h1{font-family:var(--serif);font-size:1.1rem;color:var(--primary);display:flex;align-items:center;gap:9px;}
+.brand h1 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px rgba(37,99,235,0.5);}
+.brand h1 em{color:var(--accent);font-style:italic;font-weight:400;}
+.clock{font-family:var(--mono);font-size:0.66rem;color:var(--text-muted);background:var(--cream2);padding:6px 13px;border-radius:6px;border:1px solid var(--border);}
+
+/* FILTER BAR */
+.filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;padding:18px 26px 4px;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:0.55rem;text-transform:uppercase;letter-spacing:0.9px;color:var(--text-muted);font-weight:700;}
+.fld input,.fld select{height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:0.8rem;background:#fff;color:var(--text-main);outline:none;transition:.16s;font-family:var(--sans);}
+.fld input:focus,.fld select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light);}
+.search{flex:1;min-width:220px;position:relative;}
+.search input{width:100%;padding-left:34px;}
+.search svg{position:absolute;left:11px;top:33px;color:var(--text-muted);}
+.btn{height:38px;padding:0 18px;border-radius:9px;font-size:0.76rem;font-weight:600;cursor:pointer;border:1px solid transparent;display:flex;align-items:center;gap:7px;transition:all .2s cubic-bezier(.16,1,.3,1);font-family:var(--sans);}
+.btn-gold{background:var(--accent);color:#fff;}
+.btn-gold:hover{background:#1d4ed8;transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.3);}
+.btn-ghost{background:rgba(14,12,9,0.04);color:var(--text-muted);border-color:var(--border);}
+.btn-ghost:hover{background:#fff;color:var(--primary);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,12,9,.08);}
+
+/* STAT STRIP */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 26px 0;}
+.stat{background:#fff;border:1px solid var(--border);border-radius:13px;padding:14px 16px;box-shadow:0 4px 16px rgba(14,12,9,0.05);}
+.stat .l{font-size:0.55rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);}
+.stat .v{font-family:var(--num);font-size:1.25rem;margin-top:6px;letter-spacing:-0.5px;}
+.stat.s1{border-left:3px solid var(--accent);} .stat.s1 .v{color:var(--accent);}
+.stat.s2{border-left:3px solid var(--success);} .stat.s2 .v{color:var(--success);}
+.stat.s3{border-left:3px solid #2563eb;} .stat.s3 .v{color:#2563eb;}
+.stat.s4{border-left:3px solid var(--error);} .stat.s4 .v{color:var(--error);}
+
+/* TABLE */
+.wrap{flex:1;margin:16px 26px 22px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 6px 22px rgba(14,12,9,0.06);overflow:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+thead th{position:sticky;top:0;background:#fdfdfd;z-index:2;text-align:left;padding:13px 16px;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);border-bottom:2px solid #f8fafc;cursor:pointer;user-select:none;white-space:nowrap;}
+thead th:hover{color:var(--accent);}
+thead th .ar{font-size:0.6rem;opacity:0.5;margin-left:3px;}
+tbody td{padding:12px 16px;border-bottom:1px solid #f4f2ec;white-space:nowrap;}
+tbody tr:hover td{background:rgba(37,99,235,0.04);}
+.tag{font-family:var(--num);font-size:0.72rem;color:var(--accent);background:rgba(37,99,235,0.06);padding:3px 9px;border-radius:6px;border:1px solid rgba(37,99,235,0.15);}
+.num{font-family:var(--num);}
+.net{color:var(--success);font-weight:600;}
+.fine{color:#2563eb;font-weight:600;}
+.vch{font-family:var(--num);font-size:0.7rem;background:var(--cream2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);color:var(--text-muted);}
+.empty{text-align:center;padding:50px;color:var(--text-muted);font-size:0.85rem;}
+.foot{padding:0 26px 18px;font-size:0.65rem;color:var(--text-muted);display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+<div class="layout">
+<header>
+    <div class="brand">
+        <button class="back-btn" onclick="goBack()" title="Back to Inventory">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h1><span class="dot"></span>Sold <em>Tags</em> Ledger</h1>
+    </div>
+    <div class="clock" id="clock">-- --- ---- | --:--:--</div>
+</header>
+
+<div class="filters">
+    <div class="fld search">
+        <label>Search Tag / Item / Vch</label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="q" oninput="searchNow()" placeholder="e.g. TAG000123 or Ring or VCH-0042">
+    </div>
+    <div class="fld"><label>From Date</label><input type="date" id="from" onchange="reload()"></div>
+    <div class="fld"><label>To Date</label><input type="date" id="to" onchange="reload()"></div>
+    <div class="fld"><label>Group / Touch</label>
+        <select id="grp" onchange="reload()">
+            <option value="">All Touch</option>
+            <option value="99">99.x</option><option value="91">91.x</option>
+            <option value="90">90.x</option><option value="88">88.x</option>
+            <option value="84">84.x</option><option value="80">80.x</option>
+            <option value="75">75.x</option><option value="70">70.x</option>
+        </select>
+    </div>
+    <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+    <button class="btn btn-gold" onclick="reload()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="22 4 12 14.01 9 11.01"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Apply
+    </button>
+</div>
+
+<div class="stats">
+    <div class="stat s1"><div class="l">Sold Pieces</div><div class="v" id="st-pcs">0</div></div>
+    <div class="stat s2"><div class="l">Gross Weight</div><div class="v" id="st-gr">0.000g</div></div>
+    <div class="stat s3"><div class="l">Net Weight</div><div class="v" id="st-net">0.000g</div></div>
+    <div class="stat s4"><div class="l">Total Fine</div><div class="v" id="st-fine">0.000g</div></div>
+</div>
+
+<div class="wrap">
+    <table>
+        <thead>
+            <tr id="head">
+                <th data-k="tag_id">Tag ID<span class="ar">⇅</span></th>
+                <th data-k="it_name">Item Name<span class="ar">⇅</span></th>
+                <th data-k="gr_wt">Gross Wt<span class="ar">⇅</span></th>
+                <th data-k="para">Para/Stone<span class="ar">⇅</span></th>
+                <th data-k="less">Less<span class="ar">⇅</span></th>
+                <th data-k="net_wt">Net WT<span class="ar">⇅</span></th>
+                <th data-k="fine">Fine<span class="ar">⇅</span></th>
+                <th data-k="touch">Touch<span class="ar">⇅</span></th>
+                <th data-k="date">Date<span class="ar">⇅</span></th>
+                <th data-k="vch_id">Vch ID<span class="ar">⇅</span></th>
+            </tr>
+        </thead>
+        <tbody id="body"><tr><td colspan="10" class="empty">Loading sold tags…</td></tr></tbody>
+    </table>
+</div>
+
+<div class="foot">
+    <span id="cnt">0 records</span>
+    <span>AurumOS · Sold Tags Ledger</span>
+</div>
+</div>
+
+<script>
+'use strict';
+var sortK='date', sortAsc=false;
+
+function goBack(){
+    var role=ls('aurum_user_role')||'admin', type=ls('aurum_software_type')||'wholesale', user=ls('aurum_active_user')||'';
+    var base=location.href.replace(/[^\/\\]*(\?.*)?$/,'');
+    location.href=base+'inventory.html?role='+role+'&type='+type+(user?'&user='+user:'');
+}
+function ls(k){try{return localStorage.getItem(k);}catch(e){return '';}}
+function h(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function f3(v){return parseFloat(v||0).toFixed(3);}
+
+document.getElementById('head').addEventListener('click',function(e){
+    var th=e.target.closest('th'); if(!th)return;
+    var k=th.getAttribute('data-k'); if(!k)return;
+    if(sortK===k)sortAsc=!sortAsc; else{sortK=k;sortAsc=true;}
+    render();
+});
+
+function resetFilters(){
+    document.getElementById('q').value='';
+    document.getElementById('from').value='';
+    document.getElementById('to').value='';
+    document.getElementById('grp').value='';
+    reload();
+}
+
+// Server does the filtering -> only the rows we need are sent over the bridge.
+var ROWS=[];
+function reload(){
+    if(!window.pywebview||!window.pywebview.api)return;
+    var q=document.getElementById('q').value||'';
+    var from=document.getElementById('from').value||'';
+    var to=document.getElementById('to').value||'';
+    var grp=document.getElementById('grp').value||'';
+    window.pywebview.api.get_sold_tags(from,to,q,grp).then(function(d){
+        ROWS=Array.isArray(d)?d:[];
+        render();
+    }).catch(function(e){
+        console.error(e);
+        document.getElementById('body').innerHTML='<tr><td colspan="10" class="empty">Failed to load.</td></tr>';
+    });
+}
+// Debounce search so we don't hammer the bridge on every keystroke.
+var _st;
+function searchNow(){ clearTimeout(_st); _st=setTimeout(reload,250); }
+
+function render(){
+    var rows=ROWS.slice();
+    rows.sort(function(a,b){
+        var x=a[sortK], y=b[sortK];
+        if(sortK==='gr_wt'||sortK==='para'||sortK==='less'||sortK==='net_wt'||sortK==='fine'||sortK==='touch'){x=parseFloat(x||0);y=parseFloat(y||0);}
+        else{x=String(x||'');y=String(y||'');}
+        if(x<y)return sortAsc?-1:1; if(x>y)return sortAsc?1:-1; return 0;
+    });
+
+    // stats
+    var pcs=rows.length, gr=0, net=0, fine=0;
+    rows.forEach(function(r){gr+=parseFloat(r.gr_wt||0);net+=parseFloat(r.net_wt||0);fine+=parseFloat(r.fine||0);});
+    document.getElementById('st-pcs').innerText=pcs.toLocaleString('en-IN');
+    document.getElementById('st-gr').innerText=f3(gr)+'g';
+    document.getElementById('st-net').innerText=f3(net)+'g';
+    document.getElementById('st-fine').innerText=f3(fine)+'g';
+    document.getElementById('cnt').innerText=pcs+' record'+(pcs===1?'':'s');
+
+    var b=document.getElementById('body');
+    if(!rows.length){ b.innerHTML='<tr><td colspan="10" class="empty">No sold tags match your filters.</td></tr>'; return; }
+    b.innerHTML=rows.map(function(r){
+        return '<tr>'
+            +'<td><span class="tag">'+h(r.tag_id)+'</span></td>'
+            +'<td>'+h(r.it_name||'-')+'</td>'
+            +'<td class="num">'+f3(r.gr_wt)+'</td>'
+            +'<td class="num">'+f3(r.para)+'</td>'
+            +'<td class="num">'+f3(r.less)+'</td>'
+            +'<td class="num net">'+f3(r.net_wt)+'</td>'
+            +'<td class="num fine">'+f3(r.fine)+'</td>'
+            +'<td class="num">'+parseFloat(r.touch||0).toFixed(1)+'%</td>'
+            +'<td class="num" style="color:var(--text-muted);font-size:0.72rem;">'+(r.date||'-')+'</td>'
+            +'<td><span class="vch">'+h(r.vch_id)+'</span></td>'
+            +'</tr>';
+    }).join('');
+}
+
+setInterval(function(){
+    document.getElementById('clock').innerText=
+        new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+' | '+new Date().toLocaleTimeString();
+},1000);
+
+(function(){var a=0;function t(){a++;if(window.pywebview&&window.pywebview.api)reload();else if(a<300)setTimeout(t,50);}t();})();
+</script>
+</body>
+</html>

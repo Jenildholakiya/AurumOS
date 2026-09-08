@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Cash &amp; Bank</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --serif:'DM Serif Display',Georgia,serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
+  --sh2:0 4px 16px rgba(0,0,0,0.08);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+header{height:56px;background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.header-title{font-family:var(--serif);font-size:15px;font-weight:400;color:var(--ink);}
+.header-title em{color:var(--gold3);font-style:italic;}
+#clock{font-family:var(--mono);font-size:11px;color:var(--muted2);background:var(--cream2);
+  border:1px solid var(--rule);border-radius:5px;padding:5px 12px;}
+.content{padding:20px 24px 24px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+
+.stats-ribbon{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px 18px;box-shadow:var(--sh);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.stat-card label{display:block;font-size:9px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;}
+.stat-card span{font-family:var(--serif);font-size:22px;color:var(--ink);letter-spacing:-0.3px;}
+
+/* Toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:center;}
+.btn-entry{height:42px;padding:0 18px;border-radius:9px;border:1px solid var(--rule);background:var(--white);
+  font-family:inherit;font-weight:600;font-size:13px;color:var(--ink2);cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;transition:all .14s;box-shadow:var(--sh);}
+.btn-entry:hover{border-color:var(--gold-ln);color:var(--ink);transform:translateY(-1px);box-shadow:var(--sh2);}
+.btn-entry .dot{width:8px;height:8px;border-radius:50%;background:var(--gold3);}
+.btn-entry.cash .dot{background:var(--gold3);}
+.btn-entry.bank .dot{background:#1d4ed8;}
+.btn-entry.contra .dot{background:var(--ink3);}
+.btn-gold{margin-left:auto;height:42px;padding:0 18px;border-radius:9px;border:1px solid var(--gold-ln);
+  background:var(--ink);color:#fff;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;transition:all .14s;}
+.btn-gold:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:var(--sh2);}
+
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.table-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-size:11px;font-weight:600;color:var(--ink);letter-spacing:0.02em;}
+.table-count{font-family:var(--mono);font-size:10px;color:var(--muted2);background:var(--cream2);
+  border:1px solid var(--rule);border-radius:100px;padding:2px 9px;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;background:var(--cream2);padding:9px 16px;font-size:9px;font-weight:600;color:var(--muted2);
+  text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--rule);}
+td{padding:10px 16px;font-size:12.5px;font-weight:500;border-bottom:1px solid var(--rule2);color:var(--ink);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+.mono{font-family:var(--mono);font-size:11px;color:var(--muted2);}
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:10.5px;font-weight:600;
+  font-family:var(--mono);border:1px solid transparent;text-transform:uppercase;letter-spacing:.04em;}
+.pill-cash{background:var(--gold-bg);color:var(--gold3);border-color:var(--gold-ln);}
+.pill-bank{background:rgba(29,78,216,0.07);color:#1d4ed8;border-color:rgba(29,78,216,0.2);}
+.pill-green{background:var(--green-bg);color:var(--green);border-color:rgba(21,128,61,0.2);}
+.pill-red{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.empty-state{text-align:center;padding:28px;font-size:12.5px;color:var(--muted2);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(14,12,9,0.45);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:500;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);width:420px;max-width:94vw;max-height:92vh;overflow-y:auto;padding:22px;border-radius:12px;
+  box-shadow:0 16px 48px rgba(14,12,9,0.22);border:1px solid var(--rule);animation:modal-in .26s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modal-in{from{transform:scale(.94) translateY(10px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-head h3{font-family:var(--serif);font-size:17px;color:var(--ink);}
+.modal-head h3 em{color:var(--gold3);font-style:italic;}
+.btn-modal-close{width:26px;height:26px;border-radius:6px;border:1px solid var(--rule);background:var(--cream);
+  color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .13s;}
+.btn-modal-close:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.form-group{margin-bottom:11px;}
+.form-group label{display:block;font-size:9px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+input,select{width:100%;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:7px;font-size:13px;font-weight:500;
+  outline:none;background:var(--cream);color:var(--ink);font-family:inherit;transition:border-color .14s,box-shadow .14s,background .14s;}
+select{appearance:none;cursor:pointer;}
+input:focus,select:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hide{display:none!important;}
+.btn-primary{width:100%;height:40px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:inherit;
+  font-weight:600;font-size:13px;cursor:pointer;transition:background .15s,transform .13s,box-shadow .15s;margin-top:12px;}
+.btn-primary:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(14,12,9,0.15);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.vch-no{font-family:var(--mono);font-size:11px;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);
+  border-radius:5px;padding:4px 10px;float:right;}
+.acct-row{display:flex;gap:8px;align-items:flex-end;}
+.acct-row select{flex:1;}
+.btn-addmini{height:36px;width:36px;flex-shrink:0;border-radius:7px;border:1px solid var(--gold-ln);background:var(--gold-bg);
+  color:var(--gold3);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .13s;}
+.btn-addmini:hover{background:var(--gold-ln);color:var(--ink);}
+.quick-add{background:var(--cream);border:1px dashed var(--gold-ln);border-radius:9px;padding:12px;margin-top:8px;}
+.quick-add .qa-title{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold3);margin-bottom:10px;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+  <header>
+    <div class="header-title">Cash &amp; <em>Bank</em></div>
+    <div id="clock">—</div>
+  </header>
+
+  <div class="content">
+    <div class="stats-ribbon">
+      <div class="stat-card"><label>Cash on Hand</label><span id="stat-cash">Rs. 0.00</span></div>
+      <div class="stat-card"><label>Bank Balance</label><span id="stat-bank">Rs. 0.00</span></div>
+      <div class="stat-card"><label>Total Funds</label><span id="stat-total">Rs. 0.00</span></div>
+    </div>
+
+    <!-- Entry toolbar -->
+    <div class="toolbar">
+      <button class="btn-entry cash" onclick="openVch('CASH_RCPT')"><span class="dot"></span>Cash Receipt</button>
+      <button class="btn-entry cash" onclick="openVch('CASH_PAY')"><span class="dot"></span>Cash Payment</button>
+      <button class="btn-entry bank" onclick="openVch('BANK_RCPT')"><span class="dot"></span>Bank Receipt</button>
+      <button class="btn-entry bank" onclick="openVch('BANK_PAY')"><span class="dot"></span>Bank Payment</button>
+      <button class="btn-entry contra" onclick="openVch('CONTRA')"><span class="dot"></span>Contra</button>
+      <button class="btn-gold" onclick="openAdd()">+ Add Account</button>
+    </div>
+
+    <div class="row-2">
+      <!-- Cash / Bank accounts -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title">Cash &amp; Bank Accounts</span>
+          <span class="table-count" id="cb-count">0</span>
+        </div>
+        <table>
+          <thead><tr><th>Account</th><th>Kind</th><th style="text-align:right;">Balance</th></tr></thead>
+          <tbody id="cb-tbody">
+            <tr><td colspan="3" class="empty-state">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Today's vouchers -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title">Today's Vouchers</span>
+          <span class="table-count" id="rc-count">0</span>
+        </div>
+        <table>
+          <thead><tr><th>Voucher</th><th>Type</th><th>Narration</th><th style="text-align:right;">Amount</th></tr></thead>
+          <tbody id="rc-tbody">
+            <tr><td colspan="4" class="empty-state">No vouchers today.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ══════════════════ VOUCHER MODAL ════════════════ -->
+<div class="modal-overlay" id="vch-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>New <em>Entry</em></h3>
+      <button class="btn-modal-close" onclick="closeVch()">✕</button>
+    </div>
+    <span id="preview-no" class="vch-no">—</span>
+    <div class="form-group" style="margin-top:14px;">
+      <label>Entry Type</label>
+      <select id="cb-type" onchange="onTypeChange()">
+        <option value="CASH_RCPT">Cash Receipt</option>
+        <option value="CASH_PAY">Cash Payment</option>
+        <option value="BANK_RCPT">Bank Receipt</option>
+        <option value="BANK_PAY">Bank Payment</option>
+        <option value="CONTRA">Contra (Cash &harr; Bank)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="cb-date">
+    </div>
+
+    <div id="normal-fields">
+      <div class="form-group">
+        <label id="lbl-cb">Cash / Bank Account</label>
+        <div class="acct-row">
+          <select id="cb-account"></select>
+          <button class="btn-addmini" title="Add account" onclick="toggleQuickAdd()">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Against Account</label>
+        <select id="cb-against"></select>
+      </div>
+    </div>
+
+    <div id="contra-fields" class="hide">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>From (Dr)</label>
+          <div class="acct-row">
+            <select id="cb-from"></select>
+            <button class="btn-addmini" title="Add account" onclick="toggleQuickAdd()">+</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>To (Cr)</label>
+          <select id="cb-to"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick add account inside voucher modal -->
+    <div class="quick-add hide" id="quick-add">
+      <div class="qa-title">Add Cash / Bank Account</div>
+      <div class="grid-2">
+        <div class="form-group"><label>Code</label><input type="text" id="q-code" placeholder="e.g. BANK2" style="text-transform:uppercase;"></div>
+        <div class="form-group"><label>Name</label><input type="text" id="q-name" placeholder="e.g. SBI Current"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Kind</label>
+          <select id="q-kind"><option value="CASH">Cash</option><option value="BANK">Bank</option></select>
+        </div>
+        <div class="form-group"><label>Opening (Rs.)</label><input type="number" id="q-opening" placeholder="0.00" step="0.01"></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Bank Name</label><input type="text" id="q-bank" placeholder="optional"></div>
+        <div class="form-group"><label>Account No.</label><input type="text" id="q-accno" placeholder="optional"></div>
+      </div>
+      <div class="form-group"><label>IFSC</label><input type="text" id="q-ifsc" placeholder="optional"></div>
+      <button class="btn-primary" id="btn-quick" onclick="quickAddAccount()" style="margin-top:6px;">Save Account</button>
+    </div>
+
+    <div class="form-group" style="margin-top:10px;">
+      <label>Amount (Rs.)</label>
+      <input type="number" id="cb-amt" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label>Narration</label>
+      <input type="text" id="cb-narration" placeholder="e.g. Sale receipt from counter">
+    </div>
+    <button class="btn-primary" id="btn-post" onclick="submitVoucher()">Post Voucher</button>
+  </div>
+</div>
+
+<!-- ══════════════════ ADD ACCOUNT MODAL ════════════════ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Add <em>Account</em></h3>
+      <button class="btn-modal-close" onclick="closeAdd()">✕</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Code</label><input type="text" id="n-code" placeholder="e.g. BANK2" style="text-transform:uppercase;"></div>
+      <div class="form-group"><label>Name</label><input type="text" id="n-name" placeholder="e.g. SBI Current"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Kind</label>
+        <select id="n-kind"><option value="CASH">Cash</option><option value="BANK">Bank</option></select>
+      </div>
+      <div class="form-group"><label>Opening (Rs.)</label><input type="number" id="n-opening" placeholder="0.00" step="0.01"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Bank Name</label><input type="text" id="n-bank" placeholder="optional"></div>
+      <div class="form-group"><label>Account No.</label><input type="text" id="n-accno" placeholder="optional"></div>
+    </div>
+    <div class="form-group"><label>IFSC</label><input type="text" id="n-ifsc" placeholder="optional"></div>
+    <button class="btn-primary" id="btn-addcb" onclick="addAccount()">Add Account</button>
+  </div>
+</div>
+
+<script>
+function updateClock(){
+  var n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();
+}
+setInterval(updateClock,1000); updateClock();
+
+function fmt(n){return 'Rs. '+(parseFloat(n||0)).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function today(){var d=new Date();return d.toISOString().slice(0,10);}
+function typeLabel(t){return ({CASH_RCPT:'Cash Receipt',CASH_PAY:'Cash Payment',BANK_RCPT:'Bank Receipt',BANK_PAY:'Bank Payment',CONTRA:'Contra'})[t]||t;}
+
+var cbAccounts=[], allAccounts=[];
+
+async function loadAll(){
+  var cb=await window.pywebview.api.get_cash_bank_accounts();
+  cbAccounts=(cb&&cb.accounts)||[];
+  var coa=await window.pywebview.api.get_chart_of_accounts();
+  allAccounts=(coa&&coa.accounts)||[];
+  var cbOpts='<option value="">— select —</option>';
+  cbAccounts.forEach(function(a){ cbOpts+='<option value="'+a.code+'">'+a.name+' ('+a.code+')</option>'; });
+  ['cb-account','cb-from','cb-to'].forEach(function(id){ document.getElementById(id).innerHTML=cbOpts; });
+  var allOpts='<option value="">— select —</option>';
+  allAccounts.forEach(function(a){ allOpts+='<option value="'+a.code+'">'+a.name+' ('+a.code+')</option>'; });
+  document.getElementById('cb-against').innerHTML=allOpts;
+  var tb=document.getElementById('cb-tbody');
+  document.getElementById('cb-count').textContent=cbAccounts.length+' acct'+(cbAccounts.length===1?'':'s');
+  if(!cbAccounts.length){tb.innerHTML='<tr><td colspan="3" class="empty-state">No accounts. Click “+ Add Account”.</td></tr>';}
+  else{
+    tb.innerHTML='';
+    cbAccounts.forEach(function(a){
+      var tr=document.createElement('tr');
+      var kind=a.kind==='BANK'?'<span class="pill pill-bank">Bank</span>':'<span class="pill pill-cash">Cash</span>';
+      var bal=parseFloat(a.current_balance||0);
+      var balPill=bal>=0?'<span class="pill pill-green">'+fmt(bal)+'</span>':'<span class="pill pill-red">'+fmt(bal)+'</span>';
+      var sub=(a.kind==='BANK'&&(a.bank_name||a.account_no))?('<div class="mono">'+(a.bank_name||'')+(a.account_no?' •••'+(a.account_no.slice(-4)):'')+'</div>'):'';
+      tr.innerHTML='<td><b>'+(a.name||'')+'</b><div class="mono">'+(a.code||'')+'</div>'+sub+'</td><td>'+kind+'</td><td style="text-align:right;">'+balPill+'</td>';
+      tb.appendChild(tr);
+    });
+  }
+}
+
+async function loadPosition(){
+  var r=await window.pywebview.api.get_cash_position();
+  if(r&&r.status==='success'){
+    document.getElementById('stat-cash').textContent=fmt(r.cash);
+    document.getElementById('stat-bank').textContent=fmt(r.bank);
+    document.getElementById('stat-total').textContent=fmt(r.total);
+  }
+}
+
+async function loadRecent(){
+  var res=await window.pywebview.api.get_daybook();
+  var rows=(res&&res.entries)||[];
+  var tb=document.getElementById('rc-tbody');
+  document.getElementById('rc-count').textContent=(rows||[]).length+' entries';
+  if(!rows||!rows.length){tb.innerHTML='<tr><td colspan="4" class="empty-state">No vouchers posted today.</td></tr>';return;}
+  tb.innerHTML='';
+  rows.forEach(function(v){
+    var amt='—';
+    var m=(v.lines||'').match(/:(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/);
+    if(m){ amt=fmt(parseFloat(m[1])||parseFloat(m[2])||0); }
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td class="mono">'+(v.vch_no||'')+'</td>'
+      +'<td><span class="pill pill-cash">'+typeLabel(v.type)+'</span></td>'
+      +'<td>'+(v.narration||'—')+'</td>'
+      +'<td style="text-align:right;" class="mono">'+amt+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+async function previewNo(){
+  var t=document.getElementById('cb-type').value;
+  var r=await window.pywebview.api.get_next_voucher_no(t);
+  if(r&&r.status==='success') document.getElementById('preview-no').textContent=r.vch_no;
+}
+
+function onTypeChange(){
+  var t=document.getElementById('cb-type').value;
+  var isContra=(t==='CONTRA');
+  document.getElementById('normal-fields').classList.toggle('hide',isContra);
+  document.getElementById('contra-fields').classList.toggle('hide',!isContra);
+  document.getElementById('lbl-cb').textContent=(t.indexOf('BANK')===0?'Bank Account':'Cash / Bank Account');
+  previewNo();
+}
+
+/* ── Modals ── */
+function openVch(type){
+  document.getElementById('cb-type').value=type;
+  document.getElementById('cb-date').value=today();
+  document.getElementById('cb-amt').value='';
+  document.getElementById('cb-narration').value='';
+  document.getElementById('quick-add').classList.add('hide');
+  onTypeChange();
+  document.getElementById('vch-modal').classList.add('open');
+}
+function closeVch(){ document.getElementById('vch-modal').classList.remove('open'); }
+
+function openAdd(){
+  ['n-code','n-name','n-bank','n-accno','n-ifsc','n-opening'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('n-kind').value='CASH';
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeAdd(){ document.getElementById('add-modal').classList.remove('open'); }
+
+function toggleQuickAdd(){ document.getElementById('quick-add').classList.toggle('hide'); }
+
+function buildLines(){
+  var type=document.getElementById('cb-type').value;
+  var amt=parseFloat(document.getElementById('cb-amt').value)||0;
+  if(amt<=0) return {error:'Enter an amount greater than 0.'};
+  var lines=[];
+  if(type==='CONTRA'){
+    var from=document.getElementById('cb-from').value;
+    var to=document.getElementById('cb-to').value;
+    if(!from||!to) return {error:'Select both From and To accounts.'};
+    if(from===to) return {error:'From and To must be different.'};
+    lines=[{account_code:from,dr:amt,cr:0},{account_code:to,dr:0,cr:amt}];
+  } else {
+    var cb=document.getElementById('cb-account').value;
+    var against=document.getElementById('cb-against').value;
+    if(!cb||!against) return {error:'Select the cash/bank account and the against account.'};
+    if(type==='CASH_RCPT'||type==='BANK_RCPT'){
+      lines=[{account_code:cb,dr:amt,cr:0},{account_code:against,dr:0,cr:amt}];
+    } else {
+      lines=[{account_code:cb,dr:0,cr:amt},{account_code:against,dr:amt,cr:0}];
+    }
+  }
+  return {lines:lines};
+}
+
+async function submitVoucher(){
+  var b=buildLines();
+  if(b.error){ alert(b.error); return; }
+  var btn=document.getElementById('btn-post'); btn.disabled=true; btn.textContent='Posting…';
+  var vch={
+    type:document.getElementById('cb-type').value,
+    date:document.getElementById('cb-date').value||null,
+    narration:document.getElementById('cb-narration').value||typeLabel(document.getElementById('cb-type').value),
+    lines:b.lines
+  };
+  try{
+    var res=await window.pywebview.api.post_voucher(vch);
+    if(res&&res.status==='success'){
+      closeVch();
+      loadAll(); loadPosition(); loadRecent();
+    } else alert('Failed: '+(res&&res.message||'Unknown error'));
+  }catch(e){ alert('Error: '+e); }
+  finally{ btn.disabled=false; btn.textContent='Post Voucher'; }
+}
+
+async function addAccount(){
+  var code=document.getElementById('n-code').value.trim().toUpperCase();
+  var name=document.getElementById('n-name').value.trim();
+  if(!code||!name){ alert('Code and Name required.'); return; }
+  var btn=document.getElementById('btn-addcb'); btn.disabled=true;
+  try{
+    var res=await window.pywebview.api.save_cash_bank_account({
+      code:code, name:name,
+      kind:document.getElementById('n-kind').value,
+      bank_name:document.getElementById('n-bank').value,
+      account_no:document.getElementById('n-accno').value,
+      ifsc:document.getElementById('n-ifsc').value,
+      opening_balance:parseFloat(document.getElementById('n-opening').value)||0
+    });
+    if(res&&res.status==='success'){
+      closeAdd();
+      loadAll(); loadPosition();
+      // if a voucher modal is open, select the new account there
+      if(document.getElementById('vch-modal').classList.contains('open')){
+        document.getElementById('cb-account').value=code;
+        document.getElementById('cb-from').value=code;
+        document.getElementById('cb-to').value=code;
+      }
+    } else alert('Failed: '+(res&&res.message||'Unknown error'));
+  }catch(e){ alert('Error: '+e); }
+  finally{ btn.disabled=false; }
+}
+
+async function quickAddAccount(){
+  var code=document.getElementById('q-code').value.trim().toUpperCase();
+  var name=document.getElementById('q-name').value.trim();
+  if(!code||!name){ alert('Code and Name required.'); return; }
+  var btn=document.getElementById('btn-quick'); btn.disabled=true;
+  try{
+    var res=await window.pywebview.api.save_cash_bank_account({
+      code:code, name:name,
+      kind:document.getElementById('q-kind').value,
+      bank_name:document.getElementById('q-bank').value,
+      account_no:document.getElementById('q-accno').value,
+      ifsc:document.getElementById('q-ifsc').value,
+      opening_balance:parseFloat(document.getElementById('q-opening').value)||0
+    });
+    if(res&&res.status==='success'){
+      await loadAll();
+      ['q-code','q-name','q-bank','q-accno','q-ifsc','q-opening'].forEach(function(id){document.getElementById(id).value='';});
+      document.getElementById('quick-add').classList.add('hide');
+      var t=document.getElementById('cb-type').value;
+      if(t==='CONTRA'){ document.getElementById('cb-from').value=code; document.getElementById('cb-to').value=code; }
+      else { document.getElementById('cb-account').value=code; }
+    } else alert('Failed: '+(res&&res.message||'Unknown error'));
+  }catch(e){ alert('Error: '+e); }
+  finally{ btn.disabled=false; }
+}
+
+/* Close modals on overlay click */
+['vch-modal','add-modal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+});
+
+window.addEventListener('load',function(){
+  initSidebar('cashbank');
+  var t=setInterval(function(){
+    if(!window.pywebview?.api) return;
+    clearInterval(t);
+    loadAll(); loadPosition(); loadRecent();
+  },100);
+});
+</script>
+</body>
+</html>

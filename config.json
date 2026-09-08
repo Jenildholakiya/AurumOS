@@ -1,0 +1,8 @@
+{
+  "mode": "local",
+  "server_ip": "",
+  "server_port": 3000,
+  "is_server": true,
+  "provisioned_at": "1783966993",
+  "api_base_url": "https://aurum-os-admin.vercel.app"
+}
