@@ -97,10 +97,11 @@ def check_for_update(timeout=8) -> dict | None:
     remote_version = tag[1:]
 
     # Compare versions — use installed version (version.lock) if available,
-    # falls back to CURRENT_VERSION for fresh installs
+    # falls back to CURRENT_VERSION for fresh installs.
+    # A release may set "force": true in its manifest (version-reset line):
+    # then it installs even when its number is lower than installed.
     local_version = get_installed_version()
-    if _version_key(remote_version) <= _version_key(local_version):
-        return None
+    older = _version_key(remote_version) <= _version_key(local_version)
 
     # Find version.json asset
     version_json_url = None
@@ -121,6 +122,9 @@ def check_for_update(timeout=8) -> dict | None:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             manifest = json.loads(resp.read().decode())
     except Exception:
+        return None
+
+    if older and not manifest.get('force'):
         return None
 
     # Add metadata — callers expect these keys

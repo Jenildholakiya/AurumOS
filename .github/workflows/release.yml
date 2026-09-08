@@ -53,6 +53,12 @@ jobs:
             echo "$CHANGELOG"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+          # A tag message containing [force] marks a version-reset release
+          # (e.g. restarting the line at v1.0.1): terminals install it even
+          # when its number is lower than what's installed.
+          FORCE_FLAG=""
+          case "$CHANGELOG" in *"[force]"*) FORCE_FLAG=1;; esac
+          if [ -n "$FORCE_FLAG" ]; then export AURUM_FORCE=1; fi
           python3 gen_version_manifest.py "$VER" "$CHANGELOG"
           # Stage assets driven by the manifest itself (single source of truth):
           # _internal/ui/X -> ui/X (flat name X), backend a/b.py -> a__b.py
