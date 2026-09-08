@@ -534,6 +534,28 @@ function _fillDynamic() {
                     _cacheSet('aurum_app_version', v);
                 }).catch(function(){});
             } catch(e) {}
+            // Silent auto-updates change the version mid-session — repaint
+            // the pill immediately instead of showing a stale number.
+            try {
+                window.addEventListener('aurum-auto-updated', function(e) {
+                    var v=(e.detail&&e.detail.version)||'';
+                    if (!v) {
+                        try {
+                            window.pywebview.api.get_current_version &&
+                            window.pywebview.api.get_current_version().then(function(rv) {
+                                if (!rv) return;
+                                var el2 = document.getElementById('sb-ver-pill');
+                                if (el2) el2.innerText = 'v' + rv;
+                                _cacheSet('aurum_app_version', rv);
+                            }).catch(function(){});
+                        } catch(err) {}
+                        return;
+                    }
+                    var el = document.getElementById('sb-ver-pill');
+                    if (el) el.innerText = 'v' + v;
+                    _cacheSet('aurum_app_version', v);
+                });
+            } catch(e) {}
 
             if (_getRole() === 'staff') {
                 _loadStaffAccess();
