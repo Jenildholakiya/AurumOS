@@ -105,6 +105,9 @@ def main():
             fpath = os.path.join(UI_DIR, fname)
             if not os.path.isfile(fpath):
                 continue
+            if os.path.getsize(fpath) == 0:
+                print(f"  SKIP (empty): {fname}")
+                continue
             rel = f"_internal/ui/{fname}"
             asset = fname  # flat name: dashboard.html, boot.js, etc.
             url = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/v{version}/{asset}"
@@ -127,6 +130,9 @@ def main():
         for fname in sorted(os.listdir(dirpath)):
             fpath = os.path.join(dirpath, fname)
             if not os.path.isfile(fpath):
+                continue
+            if os.path.getsize(fpath) == 0:
+                print(f"  SKIP (empty): {dirname}/{fname}")
                 continue
             ext = os.path.splitext(fname)[1].lower()
             if ext not in BACKEND_EXTS:
