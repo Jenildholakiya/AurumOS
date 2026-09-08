@@ -56,23 +56,7 @@ jobs:
           python3 gen_version_manifest.py "$VER" "$CHANGELOG"
           # Stage assets driven by the manifest itself (single source of truth):
           # _internal/ui/X -> ui/X (flat name X), backend a/b.py -> a__b.py
-          mkdir -p release_assets
-          python3 -c "
-import json, shutil, os
-m = json.load(open('version.json'))
-n = 0
-for f in m['files']:
-    rel = f['path'].replace(chr(92), '/')
-    if rel.startswith('_internal/ui/'):
-        src, asset = os.path.join('ui', rel.split('/')[-1]), rel.split('/')[-1]
-    else:
-        src, asset = rel, rel.replace('/', '__')
-    if os.path.isfile(src):
-        shutil.copyfile(src, os.path.join('release_assets', asset)); n += 1
-    else:
-        print('MISSING:', src)
-          print('staged:', n, 'of', len(m['files']))
-"
+          python3 stage_release_assets.py release_assets
           cp version.json release_assets/
           echo "--- assets ---"
           ls release_assets | head -n 100
