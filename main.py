@@ -15,41 +15,58 @@ except Exception:
 # ── APPLY STAGED BACKEND UPDATES (before any app imports) ─────────────────
 def _apply_staged_updates():
     """Copy _update_staging/ files to their final locations, then delete staging.
-    Must run BEFORE any app imports so updated modules are loaded fresh."""
+    Must run BEFORE any app imports so updated modules are loaded fresh.
+    Checks BOTH the EXE directory and the app root, because the downloader
+    stages relative to get_app_root() while the EXE may live in dist/ —
+    checking only one side silently dropped backend updates forever."""
     import shutil
     try:
         if getattr(_sys, 'frozen', False):
-            base = _os.path.dirname(_os.path.abspath(_sys.executable))
+            exe_base = _os.path.dirname(_os.path.abspath(_sys.executable))
         else:
-            base = _os.getcwd()
-        staging = _os.path.join(base, '_update_staging')
-        if not _os.path.isdir(staging):
-            return  # nothing staged
-        applied = 0
-        for dirpath, _, filenames in _os.walk(staging):
-            for fname in filenames:
-                src = _os.path.join(dirpath, fname)
-                rel = _os.path.relpath(src, staging).replace('\\', '/')
-                dst = _os.path.join(base, rel.replace('/', _os.sep))
-                try:
-                    _os.makedirs(_os.path.dirname(dst), exist_ok=True)
-                    shutil.copy2(src, dst)
-                    applied += 1
-                except Exception:
-                    pass
-        # Clean up staging
-        shutil.rmtree(staging, ignore_errors=True)
+            exe_base = _os.getcwd()
+        try:
+            from updater import get_app_root as _gar
+            app_base = str(_gar())
+        except Exception:
+            app_base = exe_base
+        bases = []
+        for b in (exe_base, app_base, _os.getcwd()):
+            if b and b not in bases:
+                bases.append(b)
+        for base in bases:
+            staging = _os.path.join(base, '_update_staging')
+            if not _os.path.isdir(staging):
+                continue
+            applied = 0
+            for dirpath, _, filenames in _os.walk(staging):
+                for fname in filenames:
+                    src = _os.path.join(dirpath, fname)
+                    rel = _os.path.relpath(src, staging).replace('\\', '/')
+                    dst = _os.path.join(base, rel.replace('/', _os.sep))
+                    try:
+                        _os.makedirs(_os.path.dirname(dst), exist_ok=True)
+                        shutil.copy2(src, dst)
+                        applied += 1
+                    except Exception:
+                        pass
+            # Clean up staging
+            shutil.rmtree(staging, ignore_errors=True)
+            if applied:
+                _ANY_APPLIED = applied
         # Mark update as applied (prevents duplicate banner)
-        if applied:
-            marker = _os.path.join(base, '.update_applied')
-            # Read version from version.lock if present
-            vlock = _os.path.join(base, 'version.lock')
-            ver = ''
-            if _os.path.isfile(vlock):
-                with open(vlock, 'r', encoding='utf-8') as f:
-                    ver = f.read().strip()
-            with open(marker, 'w', encoding='utf-8') as f:
-                f.write(ver)
+        if '_ANY_APPLIED' in dir():
+            try:
+                marker = _os.path.join(exe_base, '.update_applied')
+                vlock = _os.path.join(exe_base, 'version.lock')
+                ver = ''
+                if _os.path.isfile(vlock):
+                    with open(vlock, 'r', encoding='utf-8') as f:
+                        ver = f.read().strip()
+                with open(marker, 'w', encoding='utf-8') as f:
+                    f.write(ver)
+            except Exception:
+                pass
     except Exception:
         pass
 
