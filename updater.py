@@ -132,22 +132,51 @@ def check_for_update(timeout=8) -> dict | None:
     return manifest
 
 
+def _lock_candidates() -> list:
+    """All places version.lock may live (newest wins).
+
+    History left locks in two spots: beside the EXE (dist/) on some installs
+    and at the project root on others. Read/write the same resolved file so
+    the sidebar version can never disagree with the updater again.
+    """
+    root = get_app_root()
+    cands = [root / 'version.lock']
+    try:
+        if getattr(sys, 'frozen', False):
+            exe_lock = Path(sys.executable).parent / 'version.lock'
+            if exe_lock != cands[0]:
+                cands.insert(0, exe_lock)
+        else:
+            dist_lock = Path(root) / 'dist' / 'version.lock'
+            if dist_lock != cands[0]:
+                cands.insert(0, dist_lock)
+    except Exception:
+        pass
+    return cands
+
+
 def set_installed_version(version: str):
     """Write version.lock file to mark installed version."""
     try:
-        root = get_app_root()
-        (root / 'version.lock').write_text(version.strip(), encoding='utf-8')
+        _lock_candidates()[0].write_text(version.strip(), encoding='utf-8')
     except Exception:
         pass
 
 
 def get_installed_version() -> str:
-    """Read version.lock if exists, else return CURRENT_VERSION."""
+    """Read the newest version.lock among known locations, else baked version."""
     try:
-        root = get_app_root()
-        lock = root / 'version.lock'
-        if lock.exists():
-            return lock.read_text(encoding='utf-8').strip()
+        best, best_key = '', (0, 0, 0)
+        for lock in _lock_candidates():
+            try:
+                if lock.exists():
+                    v = lock.read_text(encoding='utf-8').strip()
+                    if _version_key(v) > best_key:
+                        best, best_key = v, _version_key(v)
+            except Exception:
+                pass
+        if best:
+            return best
     except Exception:
         pass
     return CURRENT_VERSION
