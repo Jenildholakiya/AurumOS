@@ -35,6 +35,9 @@ def main():
             src = os.path.join(ROOT, rel)
             asset = rel.replace('/', '__')
         if os.path.isfile(src):
+            if os.path.getsize(src) == 0:
+                print(f"SKIP (empty, GitHub rejects 0-byte assets): {rel}")
+                continue
             shutil.copyfile(src, os.path.join(OUT, asset))
             staged += 1
         else:
