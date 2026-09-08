@@ -96,6 +96,9 @@ def _asset_name(rel):
 def main():
     version = sys.argv[1] if len(sys.argv) > 1 else get_version_from_updater()
     changelog = [sys.argv[2]] if len(sys.argv) > 2 else ["Bug fixes and improvements"]
+    # AURUM_FORCE=1 marks a version-reset release: terminals install it even
+    # when its number is lower than what's installed (e.g. restarting at 1.0.1).
+    forced = os.environ.get('AURUM_FORCE', '').strip() == '1'
 
     files = []
 
@@ -166,7 +169,7 @@ def main():
         "size_bytes": total_size,
         "changelog": changelog,
         "files": files,
-        "force": False,
+        "force": forced,
     }
 
     out_path = os.path.join(ROOT, 'version.json')
