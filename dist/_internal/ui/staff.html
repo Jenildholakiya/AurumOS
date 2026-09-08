@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Staff Management</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --primary:#0f172a;--accent:#2563eb;--accent2:#3b82f6;--accent3:#1d4ed8;
+    --accent-light:rgba(37,99,235,0.06);--accent-glow:rgba(37,99,235,0.08);
+    --bg-main:#f8fafb;--card:#ffffff;--border:#e2e8f0;--light:#f1f5f9;--white:#ffffff;
+    --text-main:#0f172a;--text-muted:#64748b;--text-muted2:#94a3b8;
+    --success:#16a34a;--warning:#b45309;--error:#dc2626;
+    --shadow-lux:0 1px 3px rgba(15,23,42,0.04),0 4px 16px rgba(15,23,42,0.06);
+    --shadow-hover:0 8px 28px rgba(37,99,235,0.12),0 2px 8px rgba(15,23,42,0.04);
+    --blue-ln:rgba(37,99,235,0.18);--green-ln:rgba(22,163,74,0.18);
+    --ink:#0f172a;--ink2:#1e293b;--ink3:#475569;
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+    --rule:#e2e8f0;--rule2:rgba(15,23,42,0.05);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.06);
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+    --blue-bg:rgba(37,99,235,0.06);
+    --mono:Arial,sans-serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg-main);color:var(--ink);}
+
+.page-wrap{display:flex;height:100vh;overflow:hidden;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* Header */
+header{
+  height:58px;background:var(--white);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;position:relative;z-index:100;
+}
+.h-title{font-size:0.95rem;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:8px;}
+.h-title::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.15);}
+.btn-add{
+  display:inline-flex;align-items:center;gap:7px;
+  height:36px;padding:0 18px;
+  background:var(--accent);color:#fff;
+  border:none;border-radius:8px;
+  font-family:inherit;font-size:0.76rem;font-weight:700;
+  cursor:pointer;transition:all 0.2s;
+}
+.btn-add:hover{background:var(--accent3);transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,0.3);}
+
+/* Content */
+.content{flex:1;overflow-y:auto;padding:20px 24px 28px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.content::-webkit-scrollbar{width:4px;}.content::-webkit-scrollbar-thumb{background:var(--cream3);border-radius:10px;}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.stat-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:14px;padding:20px 22px;box-shadow:var(--shadow-lux);
+  position:relative;overflow:hidden;transition:box-shadow 0.3s;
+}
+.stat-card:hover{box-shadow:var(--shadow-hover);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-card.blue::before{background:var(--accent);}
+.stat-card.green::before{background:var(--success);}
+.stat-card.slate::before{background:var(--ink3);}
+.stat-lbl{font-size:0.58rem;font-weight:700;color:var(--text-muted2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.stat-val{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--primary);letter-spacing:-0.5px;}
+.stat-val.green{color:var(--success);}
+.stat-val.accent{color:var(--accent);}
+
+/* Table Card */
+.card{
+  background:var(--white);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;box-shadow:var(--shadow-lux);transition:box-shadow 0.3s;
+}
+.card:hover{box-shadow:var(--shadow-hover);}
+.card-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);
+}
+.card-ttl{font-size:0.82rem;font-weight:700;color:var(--primary);}
+.card-badge{font-size:0.62rem;background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-ln);padding:4px 12px;border-radius:8px;font-family:var(--mono);font-weight:600;}
+.search-inp{
+  height:36px;padding:0 14px;
+  border:1px solid var(--border);border-radius:8px;
+  font-size:0.78rem;font-family:var(--mono);
+  outline:none;background:var(--bg-main);color:var(--ink);
+  width:200px;transition:all 0.2s;
+}
+.search-inp:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+
+/* Table */
+table{width:100%;border-collapse:collapse;}
+th{
+  padding:11px 16px;text-align:left;
+  font-size:0.58rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.8px;
+  color:var(--text-muted2);border-bottom:1px solid var(--border);
+  background:var(--cream2);white-space:nowrap;
+}
+td{padding:13px 16px;font-size:0.82rem;color:var(--ink);border-bottom:1px solid var(--rule2);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr.staff-row{cursor:pointer;transition:background 0.15s;}
+tr.staff-row:hover td{background:var(--accent-light)!important;}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:8px;font-size:0.62rem;font-weight:700;}
+.badge-admin{background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-ln);}
+.badge-staff{background:var(--cream2);color:var(--text-muted);border:1px solid var(--border);}
+.badge-active{background:rgba(22,163,74,0.06);color:var(--success);border:1px solid var(--green-ln);}
+.badge-permission{background:var(--accent-light);color:var(--accent3);border:1px solid var(--blue-ln);font-size:0.58rem;text-transform:uppercase;padding:2px 8px;margin-left:4px;font-weight:700;}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
+
+/* Avatar */
+.avatar{
+  width:34px;height:34px;border-radius:9px;
+  background:var(--accent-light);border:1px solid var(--blue-ln);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:0.78rem;font-weight:800;
+  color:var(--accent);text-transform:uppercase;flex-shrink:0;
+}
+.avatar.admin-av{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+/* Action buttons */
+.act-wrap{display:flex;align-items:center;gap:4px;justify-content:flex-end;}
+.act-btn{
+  border:none;background:none;cursor:pointer;
+  padding:6px 11px;border-radius:7px;
+  font-size:0.72rem;font-weight:700;
+  transition:all 0.2s;font-family:inherit;
+}
+.act-pw{color:var(--accent);}
+.act-pw:hover{background:var(--accent-light);box-shadow:0 2px 8px rgba(37,99,235,0.1);}
+.act-del{color:var(--text-muted2);}
+.act-del:hover{background:var(--red-bg);color:var(--red);}
+.owner-tag{font-size:0.65rem;color:var(--text-muted2);font-style:italic;}
+.restricted-tag{font-size:0.65rem;color:var(--text-muted2);font-style:italic;display:inline-flex;align-items:center;gap:4px;}
+
+/* ── MODALS ── */
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(15,23,42,0.4);backdrop-filter:blur(6px);
+  z-index:9999;display:none;
+  align-items:center;justify-content:center;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--white);border-radius:16px;
+  width:420px;max-width:94vw;
+  box-shadow:0 20px 60px rgba(15,23,42,0.2);border:1px solid var(--border);
+  overflow:visible;position:relative;
+  animation:pop .28s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{transform:scale(.92) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-bar{height:4px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));border-top-left-radius:16px;border-top-right-radius:16px;}
+.modal-bar.red{background:linear-gradient(90deg,var(--red),#ef4444);border-top-left-radius:16px;border-top-right-radius:16px;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 0;}
+.modal-ttl{font-size:1rem;font-weight:800;color:var(--primary);}
+.modal-x{
+  width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+  background:var(--white);cursor:pointer;color:var(--text-muted);
+  font-size:16px;display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.modal-x:hover{background:var(--red-bg);color:var(--red);border-color:rgba(220,38,38,0.15);}
+.modal-body{padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;}
+
+/* Fields */
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted2);}
+.fld-wrap{position:relative;}
+.fld input{
+  width:100%;height:42px;padding:0 42px 0 14px;
+  border:1px solid var(--border);border-radius:9px;
+  font-size:0.85rem;font-family:var(--mono);
+  color:var(--ink);background:var(--bg-main);
+  outline:none;transition:all 0.2s;
+}
+.fld input:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--text-muted2);font-size:0.85rem;padding:2px;transition:color 0.2s;}
+.eye:hover{color:var(--accent);}
+
+/* Dropdown */
+.custom-dropdown-container{position:relative;width:100%;}
+.dropdown-trigger-pill{
+  width:100%;height:42px;padding:0 16px;
+  background:var(--bg-main);border:1px solid var(--border);
+  border-radius:9px;display:flex;align-items:center;
+  justify-content:space-between;font-size:0.82rem;
+  font-weight:600;color:var(--ink2);cursor:pointer;
+  user-select:none;outline:none;transition:all 0.2s;
+}
+.custom-dropdown-container.active .dropdown-trigger-pill,
+.dropdown-trigger-pill:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.dropdown-arrow-indicator{font-size:0.55rem;color:var(--text-muted2);transition:transform 0.2s ease;}
+.custom-dropdown-container.active .dropdown-arrow-indicator{transform:rotate(180deg);}
+.dropdown-options-tray{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--white);border:1px solid var(--border);
+  border-radius:10px;box-shadow:0 12px 40px rgba(15,23,42,0.12);
+  z-index:10000;display:none;flex-direction:column;padding:6px;
+}
+.custom-dropdown-container.active .dropdown-options-tray{display:flex;}
+.option-select-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border-radius:7px;cursor:pointer;transition:all 0.15s;
+}
+.option-select-row:hover,.option-select-row.focused-item{background:var(--accent-light);}
+.option-select-row.focused-item{outline:1px solid var(--blue-ln);}
+.option-label-wrapper{display:flex;flex-direction:column;gap:2px;}
+.option-label-text{font-size:0.8rem;font-weight:700;color:var(--ink);}
+.option-sub-text{font-size:0.65rem;color:var(--text-muted);}
+.option-select-row input[type="checkbox"]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer;}
+
+/* For label */
+.for-badge{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--bg-main);
+  border:1px solid var(--border);border-radius:9px;
+}
+.for-av{width:30px;height:30px;border-radius:8px;background:var(--accent-light);border:1px solid var(--blue-ln);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.75rem;font-weight:800;color:var(--accent);text-transform:uppercase;}
+.for-name{font-size:0.82rem;font-weight:700;color:var(--ink);}
+.for-role{font-size:0.62rem;color:var(--text-muted);}
+
+/* Strength bar */
+.strength-wrap{height:4px;background:var(--border);border-radius:99px;overflow:hidden;display:none;}
+.strength-wrap.vis{display:block;}
+.strength-fill{height:100%;width:0;border-radius:99px;transition:width .3s,background .3s;}
+
+/* Alert */
+.alert{font-size:0.75rem;padding:10px 14px;border-radius:9px;display:none;line-height:1.5;font-weight:600;}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,0.15);display:block;}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-ln);display:block;}
+
+/* Footer */
+.modal-foot{display:flex;gap:8px;}
+.btn-save{flex:1;height:42px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-save:hover:not(:disabled){background:var(--accent3);transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,0.3);}
+.btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-ghost{height:42px;padding:0 18px;background:var(--cream2);color:var(--text-muted);border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn-ghost:hover{background:var(--cream3);}
+.btn-danger{flex:1;height:42px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-danger:hover{background:#991b1b;transform:translateY(-1px);}
+
+.confirm-body{padding:24px 22px;text-align:center;}
+.confirm-icon{font-size:2rem;margin-bottom:12px;opacity:0.4;}
+.confirm-txt{font-size:0.78rem;color:var(--text-muted);margin-bottom:18px;line-height:1.6;}
+
+.empty{text-align:center;padding:52px 20px;color:var(--text-muted2);font-size:0.82rem;line-height:1.8;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div class="page-wrap">
+<div id="sidebar-container"></div>
+
+<main>
+
+<!-- ADD MODAL -->
+<div class="overlay" id="add-ov">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div class="modal-ttl">Add Staff Member</div>
+      <button class="modal-x" onclick="closeModal('add-ov')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fld">
+        <label>Username *</label>
+        <div class="fld-wrap">
+          <input id="au" type="text" placeholder="e.g. arjun_sales" autocomplete="off" data-next="ap">
+        </div>
+      </div>
+      <div class="fld">
+        <label>Password *</label>
+        <div class="fld-wrap">
+          <input id="ap" type="password" placeholder="Min 4 characters" oninput="strength('ap','asw','asf')" data-next="ap2">
+          <button class="eye" onclick="toggleEye('ap',this)" tabindex="-1">eye</button>
+        </div>
+        <div class="strength-wrap" id="asw"><div class="strength-fill" id="asf"></div></div>
+      </div>
+      <div class="fld">
+        <label>Confirm Password *</label>
+        <div class="fld-wrap">
+          <input id="ap2" type="password" placeholder="Re-enter password" data-next="add-btn">
+          <button class="eye" onclick="toggleEye('ap2',this)" tabindex="-1">eye</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Authorized Access Profile</label>
+        <div class="custom-dropdown-container" id="dropdown-add-container">
+            <div class="dropdown-trigger-pill" tabindex="0" onclick="toggleDropdownTray('dropdown-add-container')">
+                <span id="dropdown-add-placeholder">Select authorized modules...</span>
+                <span class="dropdown-arrow-indicator">&#9660;</span>
+            </div>
+            <div class="dropdown-options-tray" id="dropdown-add-tray"></div>
+        </div>
+      </div>
+      <div class="alert" id="add-alert"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('add-ov')">Cancel</button>
+        <button class="btn-save" id="add-btn" onclick="doAdd()">Add Staff Member</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="overlay" id="pw-ov">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div class="modal-ttl">Edit Staff Privileges</div>
+      <button class="modal-x" onclick="closeModal('pw-ov')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="for-badge">
+        <div class="for-av" id="pw-av">?</div>
+        <div>
+          <div class="for-name" id="pw-name">--</div>
+          <div class="for-role" id="pw-role">Staff</div>
+        </div>
+      </div>
+      <div class="fld">
+        <label>New Password (Leave blank to keep current)</label>
+        <div class="fld-wrap">
+          <input id="np" type="password" placeholder="Min 4 characters" oninput="strength('np','nsw','nsf')" data-next="np2">
+          <button class="eye" onclick="toggleEye('np',this)" tabindex="-1">eye</button>
+        </div>
+        <div class="strength-wrap" id="nsw"><div class="strength-fill" id="nsf"></div></div>
+      </div>
+      <div class="fld">
+        <label>Confirm Password</label>
+        <div class="fld-wrap">
+          <input id="np2" type="password" placeholder="Re-enter password">
+          <button class="eye" onclick="toggleEye('np2',this)" tabindex="-1">eye</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Modify Clearance Profiles</label>
+        <div class="custom-dropdown-container" id="dropdown-edit-container">
+            <div class="dropdown-trigger-pill" tabindex="0" onclick="toggleDropdownTray('dropdown-edit-container')">
+                <span id="dropdown-edit-placeholder">Select authorized modules...</span>
+                <span class="dropdown-arrow-indicator">&#9660;</span>
+            </div>
+            <div class="dropdown-options-tray" id="dropdown-edit-tray"></div>
+        </div>
+      </div>
+      <div class="alert" id="pw-alert"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('pw-ov')">Cancel</button>
+        <button class="btn-save" id="pw-btn" onclick="doPw()">Update Configuration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="del-ov">
+  <div class="modal">
+    <div class="modal-bar red"></div>
+    <div class="confirm-body">
+      <div class="modal-ttl" style="margin-bottom:8px;">Remove Staff</div>
+      <div class="confirm-txt" id="del-txt">Are you sure?</div>
+      <div class="modal-foot" style="width:100%;">
+        <button class="btn-ghost" onclick="closeModal('del-ov')">Cancel</button>
+        <button class="btn-danger" onclick="doDelete()">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="h-title">Staff Management</div>
+  <button class="btn-add" id="header-add-btn" onclick="openAdd()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Staff
+  </button>
+</header>
+
+<div class="content">
+  <div class="stats-row">
+    <div class="stat-card blue">
+      <div class="stat-lbl">Total Staff</div>
+      <div class="stat-val" id="st-total">--</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-lbl">Active</div>
+      <div class="stat-val green" id="st-active">--</div>
+    </div>
+    <div class="stat-card slate">
+      <div class="stat-lbl">Admins</div>
+      <div class="stat-val accent" id="st-admin">--</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl">All Members</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input class="search-inp" placeholder="Search staff..." oninput="render(this.value)">
+        <span class="card-badge" id="staff-count">0 members</span>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:44px;">#</th>
+          <th>Member</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th style="text-align:right;padding-right:20px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="5" class="empty">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</main>
+</div>
+
+<script>
+'use strict';
+var LIST     = [];
+var editId   = null;
+var deleteId = null;
+var SESSION_ROLE = 'admin';
+var dropdownActiveIndex = -1;
+
+var SHOWROOM_PAGES_REGISTRY = [
+    { id: 'billing', label: 'RETAIL POS / BILLING', desc: 'Retail invoices, estimates, customers, payments' },
+    { id: 'inventory', label: 'INVENTORY MODULE', desc: 'Stock ledger, katti, uchak, touch masters' }
+];
+
+(function boot(n){
+    if (window.pywebview && window.pywebview.api) { load(); buildDropdownOptions(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+    else document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty">Bridge not ready.</td></tr>';
+})(50);
+
+function load() {
+    if (!window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.get_session().then(function(session) {
+        if (session && session.status === 'ok') {
+            SESSION_ROLE = String(session.role).toLowerCase().trim();
+            if (SESSION_ROLE === 'staff') {
+                var addBtn = document.getElementById('header-add-btn');
+                if (addBtn) addBtn.style.display = 'none';
+            }
+        }
+        return window.pywebview.api.get_all_staff();
+    }).then(function(data) {
+        LIST = Array.isArray(data) ? data : [];
+        stats(); render('');
+    }).catch(function(e) {
+        document.getElementById('tbody').innerHTML =
+            '<tr><td colspan="5" class="empty">Error loading staff: ' + e + '</td></tr>';
+    });
+}
+
+function stats() {
+    document.getElementById('st-total').innerText  = LIST.length;
+    document.getElementById('st-active').innerText = LIST.length;
+    document.getElementById('st-admin').innerText  = LIST.filter(function(s){ return s.role === 'admin'; }).length;
+    document.getElementById('staff-count').innerText = LIST.length + ' member' + (LIST.length===1?'':'s');
+}
+
+function buildDropdownOptions() {
+    var addTray = document.getElementById('dropdown-add-tray');
+    var editTray = document.getElementById('dropdown-edit-tray');
+    var addHtml = SHOWROOM_PAGES_REGISTRY.map(function(p, idx) {
+        return '<div class="option-select-row" data-index="' + idx + '" onclick="toggleCheckboxViaRow(this, \'add\')">' +
+               '<div class="option-label-wrapper">' +
+                 '<span class="option-label-text">' + p.label + '</span>' +
+                 '<span class="option-sub-text">' + p.desc + '</span>' +
+               '</div>' +
+               '<input type="checkbox" class="add-perm-cb" value="' + p.id + '" onclick="stopPropagation(event)" onchange="updateDropdownPlaceholder(\'dropdown-add-container\')">' +
+               '</div>';
+    }).join('');
+    var editHtml = SHOWROOM_PAGES_REGISTRY.map(function(p, idx) {
+        return '<div class="option-select-row" data-index="' + idx + '" onclick="toggleCheckboxViaRow(this, \'edit\')">' +
+               '<div class="option-label-wrapper">' +
+                 '<span class="option-label-text">' + p.label + '</span>' +
+                 '<span class="option-sub-text">' + p.desc + '</span>' +
+               '</div>' +
+               '<input type="checkbox" class="edit-perm-cb" value="' + p.id + '" onclick="stopPropagation(event)" onchange="updateDropdownPlaceholder(\'dropdown-edit-container\')">' +
+               '</div>';
+    }).join('');
+    if (addTray) addTray.innerHTML = addHtml;
+    if (editTray) editTray.innerHTML = editHtml;
+}
+
+function toggleDropdownTray(containerId) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var wasActive = el.classList.contains('active');
+    document.querySelectorAll('.custom-dropdown-container').forEach(function(c) { c.classList.remove('active'); });
+    dropdownActiveIndex = -1;
+    clearDropdownFocusStyles(el);
+    if (!wasActive) el.classList.add('active');
+}
+
+function toggleCheckboxViaRow(rowElement, currentPrefix) {
+    var cb = rowElement.querySelector('input[type="checkbox"]');
+    if (cb) { cb.checked = !cb.checked; updateDropdownPlaceholder('dropdown-' + currentPrefix + '-container'); }
+}
+
+function updateDropdownPlaceholder(containerId) {
+    var container = document.getElementById(containerId);
+    var placeholder = container.querySelector('span[id$="-placeholder"]');
+    var checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+    if (checkboxes.length === 0) { placeholder.innerText = "Select authorized modules..."; }
+    else if (checkboxes.length === 1) {
+        var match = SHOWROOM_PAGES_REGISTRY.find(function(p) { return p.id === checkboxes[0].value; });
+        placeholder.innerText = match ? match.label : "1 module authorized";
+    } else { placeholder.innerText = "All Modules Enabled"; }
+}
+
+function stopPropagation(e) { e.stopPropagation(); }
+function clearDropdownFocusStyles(container) { container.querySelectorAll('.option-select-row').forEach(function(row) { row.classList.remove('focused-item'); }); }
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-dropdown-container')) {
+        document.querySelectorAll('.custom-dropdown-container').forEach(function(c) { c.classList.remove('active'); });
+        dropdownActiveIndex = -1;
+    }
+});
+
+function render(q) {
+    var tbody = document.getElementById('tbody');
+    var rows  = LIST;
+    if (q) {
+        var lq = q.toLowerCase();
+        rows = rows.filter(function(s){ return (s.username||'').toLowerCase().includes(lq) || (s.role||'').toLowerCase().includes(lq); });
+    }
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">' + (q ? 'No results found.' : 'No staff yet. Add your first member.') + '</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(function(s, i) {
+        var isOwner = s.id === 1;
+        var initial = (s.username || '?').charAt(0).toUpperCase();
+        var avCls   = isOwner ? 'avatar admin-av' : 'avatar';
+
+        var pLabels = [];
+        SHOWROOM_PAGES_REGISTRY.forEach(function(p) {
+            if (s['allow_' + p.id] || s.permissions?.includes(p.id)) { pLabels.push(p.label.split(' ')[0]); }
+        });
+        var pBadge = pLabels.length > 0 ? '<span class="badge badge-permission">' + pLabels.join(', ') + '</span>' : '';
+
+        var roleBadge = isOwner
+            ? '<span class="badge badge-admin"><span class="dot"></span>Admin</span>'
+            : '<span class="badge badge-staff">Staff</span>' + pBadge;
+
+        var actions = "";
+        if (SESSION_ROLE === 'staff') {
+            actions = '<span class="restricted-tag">Administrative View Only</span>';
+        } else {
+            actions = isOwner
+                ? '<span class="owner-tag">Owner account</span>'
+                : '<div class="act-wrap">'
+                  + '<button class="act-btn act-pw" data-id="' + s.id + '" onclick="openPwById(this)">Edit</button>'
+                  + '<button class="act-btn act-del" data-id="' + s.id + '" onclick="openDelById(this)">Remove</button>'
+                  + '</div>';
+        }
+
+        return '<tr class="staff-row">'
+            + '<td style="color:var(--text-muted2);font-size:0.72rem;">' + (i+1) + '</td>'
+            + '<td><div style="display:flex;align-items:center;gap:10px;">'
+              + '<div class="' + avCls + '">' + h(initial) + '</div>'
+              + '<span style="font-family:var(--mono);font-weight:700;">' + h(s.username||'') + '</span>'
+              + '</div></td>'
+            + '<td>' + roleBadge + '</td>'
+            + '<td><span class="badge badge-active"><span class="dot"></span>Active</span></td>'
+            + '<td style="text-align:right;padding-right:12px;">' + actions + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+function openAdd() {
+    if (SESSION_ROLE === 'staff') return alert("Access Denied: Administrative Clearance Required.");
+    document.getElementById('au').value  = '';
+    document.getElementById('ap').value  = '';
+    document.getElementById('ap2').value = '';
+    document.querySelectorAll('.add-perm-cb').forEach(function(cb) { cb.checked = false; });
+    updateDropdownPlaceholder('dropdown-add-container');
+    msg('add-alert','','');
+    document.getElementById('asw').classList.remove('vis');
+    document.getElementById('add-ov').classList.add('open');
+    setTimeout(function(){ document.getElementById('au').focus(); }, 80);
+}
+
+function doAdd() {
+    if (SESSION_ROLE === 'staff') return alert("Access Denied: Action blocked.");
+    var user  = document.getElementById('au').value.trim();
+    var pass  = document.getElementById('ap').value;
+    var pass2 = document.getElementById('ap2').value;
+    var perms = [];
+    document.querySelectorAll('.add-perm-cb:checked').forEach(function(cb) { perms.push(cb.value); });
+    if (!user)           { msg('add-alert','Username is required.','err'); return; }
+    if (pass.length < 4) { msg('add-alert','Password must be at least 4 characters.','err'); return; }
+    if (pass !== pass2)  { msg('add-alert','Passwords do not match.','err'); return; }
+    if (perms.length === 0) { msg('add-alert','Select at least one module assignment.','err'); return; }
+    setBtn('add-btn', 'Adding...', true);
+    window.pywebview.api.add_staff(user, pass, perms).then(function(r) {
+        if (r && r.status === 'success') {
+            msg('add-alert','Staff member added successfully!','ok');
+            setTimeout(function(){ closeModal('add-ov'); load(); }, 800);
+        } else {
+            msg('add-alert',(r && r.message) || 'Failed to add.','err');
+            setBtn('add-btn','Add Staff Member',false);
+        }
+    }).catch(function(e){ msg('add-alert','Error: '+e,'err'); setBtn('add-btn','Add Staff Member',false); });
+}
+
+function openPwById(btn) {
+    if (SESSION_ROLE === 'staff') return;
+    var sid = parseInt(btn.getAttribute('data-id'));
+    var s = LIST.find(function(item) { return item.id === sid; });
+    if (!s) return;
+    editId = s.id;
+    document.getElementById('pw-av').innerText   = (s.username||'?').charAt(0).toUpperCase();
+    document.getElementById('pw-name').innerText = s.username || '--';
+    document.getElementById('pw-role').innerText = (s.role||'staff').charAt(0).toUpperCase() + (s.role||'staff').slice(1);
+    document.getElementById('np').value  = '';
+    document.getElementById('np2').value = '';
+    document.querySelectorAll('.edit-perm-cb').forEach(function(cb) {
+        cb.checked = s['allow_' + cb.value] || s.permissions?.includes(cb.value);
+    });
+    updateDropdownPlaceholder('dropdown-edit-container');
+    msg('pw-alert','','');
+    document.getElementById('nsw').classList.remove('vis');
+    document.getElementById('pw-ov').classList.add('open');
+    setTimeout(function(){ document.getElementById('np').focus(); }, 80);
+}
+
+function doPw() {
+    if (SESSION_ROLE === 'staff') return alert("Access Denied: Action blocked.");
+    var pass  = document.getElementById('np').value;
+    var pass2 = document.getElementById('np2').value;
+    var perms = [];
+    document.querySelectorAll('.edit-perm-cb:checked').forEach(function(cb) { perms.push(cb.value); });
+    if (pass.length > 0 && pass.length < 4) { msg('pw-alert','Password must be at least 4 characters.','err'); return; }
+    if (pass !== pass2)  { msg('pw-alert','Passwords do not match.','err'); return; }
+    if (perms.length === 0) { msg('pw-alert','Must assign at least one active module.','err'); return; }
+    if (!editId)         { msg('pw-alert','No staff selected.','err'); return; }
+    setBtn('pw-btn','Updating...',true);
+    window.pywebview.api.update_staff_password(editId, pass, perms).then(function(r) {
+        if (r && r.status === 'success') {
+            msg('pw-alert','Configuration updated successfully!','ok');
+            setTimeout(function(){ closeModal('pw-ov'); load(); }, 900);
+        } else {
+            msg('pw-alert',(r && r.message)||'Failed to update.','err');
+            setBtn('pw-btn','Update Configuration',false);
+        }
+    }).catch(function(e){ msg('pw-alert','Error: '+e,'err'); setBtn('pw-btn','Update Configuration',false); });
+}
+
+function openDelById(btn) {
+    if (SESSION_ROLE === 'staff') return;
+    var sid = parseInt(btn.getAttribute('data-id'));
+    var s = LIST.find(function(item) { return item.id === sid; });
+    if (!s) return;
+    openDel(s.id, s.username);
+}
+
+function openDel(id, name) {
+    if (SESSION_ROLE === 'staff') return;
+    deleteId = id;
+    document.getElementById('del-txt').innerHTML =
+        'Remove <strong>' + h(name) + '</strong> from staff?<br>This action cannot be undone.';
+    document.getElementById('del-ov').classList.add('open');
+}
+
+function doDelete() {
+    if (SESSION_ROLE === 'staff' || !deleteId) return;
+    window.pywebview.api.delete_staff(deleteId).then(function() {
+        closeModal('del-ov'); load();
+    }).catch(function(){ closeModal('del-ov'); load(); });
+    deleteId = null;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function msg(id, txt, type) {
+    var el = document.getElementById(id);
+    el.innerText  = txt;
+    el.className  = 'alert' + (type ? ' '+type : '');
+}
+function setBtn(id, label, disabled) {
+    var btn = document.getElementById(id);
+    btn.innerText = label;
+    btn.disabled  = disabled;
+}
+function toggleEye(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.innerText = inp.type === 'password' ? 'eye' : 'eye';
+}
+function strength(inputId, wrapId, fillId) {
+    var val  = document.getElementById(inputId).value;
+    var wrap = document.getElementById(wrapId);
+    var fill = document.getElementById(fillId);
+    if (!val) { wrap.classList.remove('vis'); return; }
+    wrap.classList.add('vis');
+    var score = 0;
+    if (val.length >= 4) score++;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    fill.style.width    = Math.min(100, score * 20) + '%';
+    fill.style.background = score <= 1 ? '#ef4444' : score <= 3 ? '#f59e0b' : '#16a34a';
+}
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        ['add-ov','pw-ov','del-ov'].forEach(function(id){ closeModal(id); });
+        dropdownActiveIndex = -1;
+    }
+    var activeContainer = null;
+    var currentPrefix = '';
+    if (document.getElementById('add-ov').classList.contains('open')) {
+        activeContainer = document.getElementById('dropdown-add-container');
+        currentPrefix = 'add';
+    } else if (document.getElementById('pw-ov').classList.contains('open')) {
+        activeContainer = document.getElementById('dropdown-edit-container');
+        currentPrefix = 'edit';
+    }
+    if (activeContainer && activeContainer.classList.contains('active')) {
+        var rows = activeContainer.querySelectorAll('.option-select-row');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            dropdownActiveIndex = (dropdownActiveIndex + 1) % rows.length;
+            highlightDropdownItem(rows, dropdownActiveIndex);
+            return;
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            dropdownActiveIndex = (dropdownActiveIndex - 1 + rows.length) % rows.length;
+            highlightDropdownItem(rows, dropdownActiveIndex);
+            return;
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (dropdownActiveIndex >= 0 && dropdownActiveIndex < rows.length) {
+                toggleCheckboxViaRow(rows[dropdownActiveIndex], currentPrefix);
+            } else { toggleDropdownTray(activeContainer.id); }
+            return;
+        }
+    }
+    if (e.key === 'Enter') {
+        var el = document.activeElement;
+        var nid = el ? el.getAttribute('data-next') : null;
+        if (nid) {
+            e.preventDefault();
+            var next = document.getElementById(nid);
+            if (next) {
+                if (next.tagName === 'BUTTON') next.click();
+                else if (next.classList.contains('dropdown-trigger-pill')) { toggleDropdownTray(nid.replace('-trigger-pill','')); next.focus(); }
+                else next.focus();
+            }
+            return;
+        }
+        if (document.getElementById('add-ov').classList.contains('open')) { e.preventDefault(); doAdd(); }
+        else if (document.getElementById('pw-ov').classList.contains('open')) { e.preventDefault(); doPw(); }
+    }
+});
+
+function highlightDropdownItem(rows, targetIndex) {
+    rows.forEach(function(row, idx) {
+        if (idx === targetIndex) { row.classList.add('focused-item'); row.scrollIntoView({ block: 'nearest' }); }
+        else { row.classList.remove('focused-item'); }
+    });
+}
+
+initSidebar('staff');
+</script>
+</body>
+</html>

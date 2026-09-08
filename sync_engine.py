@@ -27,7 +27,7 @@ import socket
 import threading
 import time
 import traceback
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 import logging as _logging
 _sync_logger = _logging.getLogger('aurumos.sync')
@@ -54,6 +54,9 @@ PEER_STALE_AFTER   = 30      # s    — drop peer if silent this long
 
 class _SyncRequestHandler(BaseHTTPRequestHandler):
     db_manager = None
+    # Reuse the port immediately after shutdown (avoids TIME_WAIT "address
+    # already in use" on restart).
+    allow_reuse_address = True
 
     def log_message(self, fmt, *args):
         pass   # silence default HTTP log spam
@@ -84,6 +87,42 @@ class _SyncRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            if self.path.startswith('/brain/register'):
+                length = int(self.headers.get('Content-Length', 0))
+                raw = self.rfile.read(length)
+                payload = json.loads(raw.decode())
+                machine_id = payload.get("machine_id")
+                hostname = payload.get("hostname")
+                ip_address = payload.get("ip_address")
+                self.db_manager.register_machine(
+                    machine_id,
+                    hostname,
+                    ip_address
+                )
+                self._send_json({
+                    "status": "success",
+                    "message": "Machine Registered"
+                })
+                return
+            if self.path.startswith('/brain/check-access'):
+                length = int(self.headers.get('Content-Length', 0))
+                raw = self.rfile.read(length)
+                payload = json.loads(raw.decode())
+                machine_id = payload.get("machine_id")
+                machine = self.db_manager.get_machine(machine_id)
+
+                if not machine:
+                    self._send_json({
+                        "approved": False
+                    })
+                    return
+
+                self._send_json({
+                    "approved": bool(machine.get("approved", 0)),
+                    "role": machine.get("role", ""),
+                    "username": machine.get("username", "")
+                })
+                return
             if not self.path.startswith('/aurum-sync/exchange'):
                 self._send_json({'status': 'error', 'message': 'unknown endpoint'}, 404)
                 return
@@ -126,7 +165,14 @@ class _SyncRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-            self._send_json(my_changes)
+            # Tell the requester how far WE have pulled ITS rows so it only
+            # sends new rows next time (incremental bidirectional sync).
+            ack = {}
+            try:
+                ack = self.db_manager.get_my_sync_versions(peer_device_id, direction='in')
+            except Exception:
+                pass
+            self._send_json({'status': 'success', 'changes': reply, 'ack_versions': ack})
 
         except Exception as e:
             _log(f"do_POST error: {e}\n{traceback.format_exc()}")
@@ -160,30 +206,89 @@ class SyncEngine:
                  interval_seconds=SYNC_INTERVAL,
                  fresh_install=False):
 
-        self.db               = db_manager
-        self.port             = port
-        self.discovery_port   = discovery_port
-        self.interval         = interval_seconds
-        self._fresh_install   = fresh_install
+        self.db = db_manager
+        self.port = port
+        self.discovery_port = discovery_port
+        self.interval = interval_seconds
+        self._fresh_install = fresh_install
 
-        self._server          = None
-        self._server_thread   = None
+        self._server = None
+        self._server_thread = None
         self._broadcast_thread = None
-        self._listen_thread   = None
-        self._poll_thread     = None
-        self._stop_flag       = threading.Event()
+        self._listen_thread = None
+        self._poll_thread = None
+        self._stop_flag = threading.Event()
+
+        # BRAIN / CLIENT MODE
+
+        self.is_brain = False
+        self.brain_id = None
+        self.connected_brain = None
+        self.device_id = self.db.get_or_create_device_id()
+
+        # NETWORK PEERS
+
 
         # {device_id: {'ip': str, 'port': int, 'last_seen': float}}
-        self._peers      = {}
+        self._peers = {}
         self._peers_lock = threading.Lock()
-
-        # Set of device_ids we have already triggered an immediate sync for
-        # (so we don't hammer a new peer with 10 instant syncs in a row).
-        self._greeted    = set()
-
+        self._greeted = set()
         self.last_sync_ok = False
         self.last_sync_at = None
-        self.last_error   = ''
+        self.last_error = ""
+
+        # RESTORE SAVED ROLE
+
+        try:
+            role = self.db.get_config_value(
+                "network_role"
+            )
+            if role == "brain":
+                self.is_brain = True
+                print(
+                    f"[BRAIN] Loaded Brain Mode "
+                    f"({self.device_id})"
+                )
+
+            elif role == "client":
+                self.is_brain = False
+                self.brain_id = self.db.get_config_value(
+                    "brain_id"
+                )
+                print(
+                    f"[CLIENT] Loaded Client Mode "
+                    f"Brain={self.brain_id}"
+                )
+            else:
+                print(
+                    "[NETWORK] No role assigned yet"
+                )
+        except Exception as e:
+            print(
+                f"[NETWORK] Role restore failed: {e}"
+            )
+
+    def set_brain_mode(self):
+        self.is_brain = True
+
+        self.db.set_config(
+            "network_role",
+            "brain"
+        )
+
+    def set_client_mode(self, brain_id):
+        self.is_brain = False
+        self.brain_id = brain_id
+
+        self.db.set_config(
+            "network_role",
+            "client"
+        )
+
+        self.db.set_config(
+            "brain_id",
+            brain_id
+        )
 
     # -----------------------------------------------------------------------
     # PUBLIC — start / stop / status
@@ -279,11 +384,17 @@ class SyncEngine:
     def _start_server(self):
         try:
             _SyncRequestHandler.db_manager = self.db
-            self._server = HTTPServer(('0.0.0.0', self.port), _SyncRequestHandler)
+            # ThreadingHTTPServer: when BOTH PCs fire /exchange at the same
+            # instant, each request runs in its own thread instead of one
+            # blocking behind the other. Critical for stable simultaneous
+            # two-way sync.
+            self._server = ThreadingHTTPServer(('0.0.0.0', self.port), _SyncRequestHandler)
+            self._server.daemon_threads = True
+            self._server.timeout = 5
             self._server_thread = threading.Thread(
                 target=self._server.serve_forever, daemon=True, name='SyncHTTP')
             self._server_thread.start()
-            _log(f"Server listening on 0.0.0.0:{self.port}")
+            _log(f"Server listening on 0.0.0.0:{self.port} (threaded)")
         except OSError as e:
             _log(f"Could not start sync server: {e}")
         except Exception as e:
@@ -492,8 +603,12 @@ class SyncEngine:
                 return False
 
             # 2. Build outgoing payload
-            since_versions  = self.db.get_my_sync_versions(peer_device_id)
-            my_outgoing     = self.db.get_changes_since(peer_device_id, {})
+            # out_v = how far this peer has already pulled OUR rows (its last
+            # ACK). We only send the delta beyond that, so two PCs running
+            # simultaneously exchange tiny payloads every cycle instead of
+            # re-sending their entire history.
+            out_v           = self.db.get_my_sync_versions(peer_device_id, direction='out')
+            my_outgoing     = self.db.get_changes_since(peer_device_id, out_v)
             outgoing_changes = my_outgoing.get('changes', {})
 
             if outgoing_changes:
@@ -503,7 +618,7 @@ class SyncEngine:
             body = json.dumps({
                 'device_id':      my_id,
                 'shop_id':        my_shop_id,
-                'since_versions': since_versions,
+                'since_versions': out_v,
                 'changes':        outgoing_changes,
             }).encode('utf-8')
 
@@ -525,9 +640,93 @@ class SyncEngine:
                 self.db.apply_incoming_rows(peer_device_id, incoming)
                 self.db.detect_stock_conflicts()
 
+            # 5. Store the peer's ACK of how far it pulled OUR rows, so the
+            #    next sync only sends the new delta.
+            ack = reply.get('ack_versions') or {}
+            for tbl, v in ack.items():
+                try:
+                    self.db.set_sync_cursor(peer_device_id, tbl, v, direction='out')
+                except Exception:
+                    pass
+
             _log(f"Sync with {peer_ip} OK")
             return True
 
         except Exception as e:
             _log(f"Could not sync with {peer_ip}: {e}")
             return False
+
+    def register_with_brain(
+            self,
+            brain_ip,
+            machine_id,
+            hostname):
+        import urllib.request
+        try:
+            payload = {
+                "machine_id": machine_id,
+                "hostname": hostname,
+                "ip_address": self._get_local_ip()
+            }
+            body = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                f"http://{brain_ip}:{self.port}/brain/register",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            urllib.request.urlopen(
+                req,
+                timeout=5
+            )
+            return True
+        except Exception as e:
+            _log(
+                f"Registration Failed : {e}"
+            )
+            return False
+
+    def _get_local_ip(self):
+        try:
+            s = socket.socket(
+                socket.AF_INET,
+                socket.SOCK_DGRAM
+            )
+            s.connect(
+                ("8.8.8.8", 80)
+            )
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "127.0.0.1"
+
+    def check_brain_access(
+            self,
+            brain_ip,
+            machine_id):
+        import urllib.request
+        try:
+            payload = {
+                "machine_id": machine_id
+            }
+            body = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                f"http://{brain_ip}:{self.port}/brain/check-access",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(
+                    req,
+                    timeout=5) as resp:
+                return json.loads(
+                    resp.read().decode()
+                )
+        except Exception as e:
+            _log(
+                f"Access Check Failed : {e}"
+            )
+            return {
+                "approved": False
+            }

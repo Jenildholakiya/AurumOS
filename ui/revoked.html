@@ -1,817 +1,465 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AurumOS | BASTION Security Alert</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>AurumOS | License Revoked</title>
+<link rel="stylesheet" href="fonts.css">
 <style>
-:root {
-  --cream:    #f5efe0;
-  --cream2:   #ede4cc;
-  --cream3:   #e2d5b0;
-  --gold:     #b8922a;
-  --gold2:    #d4a83a;
-  --gold3:    #e8c050;
-  --gold-dim: rgba(184,146,42,0.18);
-  --ink:      #1a1508;
-  --ink2:     #2e2510;
-  --seal:     #8b1a1a;
-  --seal2:    #a52020;
-  --seal-dim: rgba(139,26,26,0.12);
-  --muted:    rgba(26,21,8,0.45);
+:root{
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#64748b;--muted2:#94a3b8;
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.18);
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);--green-border:rgba(22,163,74,0.18);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--cream);display:flex;align-items:center;justify-content:center;height:100vh;}
+
+/* ── CONTAINER ── */
+.container{
+    width:680px;max-width:94vw;
+    animation:lift 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes lift{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:none;}}
+
+/* ── HEADER CARD ── */
+.header-card{
+    background:linear-gradient(140deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);
+    border-radius:16px 16px 0 0;padding:36px 40px 30px;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+}
+.header-card::before{
+    content:'';position:absolute;inset:0;
+    background:
+        radial-gradient(circle at 20% 80%,rgba(37,99,235,0.1) 0%,transparent 50%),
+        radial-gradient(circle at 80% 20%,rgba(220,38,38,0.06) 0%,transparent 50%);
+    pointer-events:none;
+}
+.header-card::after{
+    content:'';position:absolute;width:200px;height:200px;bottom:-60px;left:-40px;
+    border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.08),transparent 70%);
+    animation:drift 10s ease-in-out infinite;pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,-20px);}}
+
+/* brand strip */
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;z-index:2;}
+.brand-logo{
+    width:36px;height:36px;border-radius:9px;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);
+    display:flex;align-items:center;justify-content:center;
+}
+.brand-logo span{font-size:0.75rem;font-weight:700;color:var(--gold2);font-style:italic;}
+.brand-name{font-size:0.88rem;font-weight:600;color:#fff;}
+.brand-name em{color:var(--gold2);font-style:normal;}
+
+/* icon */
+.icon-area{position:relative;width:100px;height:100px;margin-bottom:22px;z-index:2;}
+.icon-pulse{
+    position:absolute;inset:-8px;border-radius:50%;
+    border:1.5px solid rgba(220,38,38,0.15);
+    animation:pulse 3s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.2);opacity:0;}}
+.icon-pulse:nth-child(2){animation-delay:1s;}
+.icon-circle{
+    position:absolute;inset:0;border-radius:50%;
+    background:rgba(220,38,38,0.1);border:1.5px solid rgba(220,38,38,0.2);
+    display:flex;align-items:center;justify-content:center;
+}
+.icon-circle svg{width:38px;height:38px;stroke:var(--red);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+/* status badge */
+.status-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 14px;border-radius:99px;
+    background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.2);
+    margin-bottom:16px;z-index:2;
+    animation:badgeGlow 3s ease-in-out infinite;
+}
+@keyframes badgeGlow{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.12);}50%{box-shadow:0 0 0 8px rgba(220,38,38,0);}}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.8s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.status-text{font-size:0.54rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);}
+
+/* title */
+.header-title{font-family:var(--serif);font-size:1.8rem;font-weight:400;color:#fff;margin-bottom:8px;z-index:2;letter-spacing:-0.5px;}
+.header-sub{font-size:0.78rem;color:rgba(255,255,255,0.4);line-height:1.6;max-width:420px;z-index:2;}
+
+/* ── BODY CARD ── */
+.body-card{
+    background:var(--white);border:1px solid var(--rule);border-top:none;
+    border-radius:0 0 16px 16px;padding:28px 32px 24px;
+    box-shadow:0 8px 32px rgba(14,12,9,0.08);
 }
 
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+/* info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.info-cell{
+    background:var(--cream);border:1px solid var(--rule2);border-radius:8px;
+    padding:12px 14px;text-align:center;transition:all 0.15s;
+}
+.info-cell:hover{border-color:var(--gold-ln);background:var(--gold-bg);transform:translateY(-1px);}
+.info-cell-label{font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px;}
+.info-cell-val{font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--ink);}
+.info-cell-val.red{color:var(--red);}
 
-body {
-  min-height: 100vh;
-  background: var(--cream);
-  font-family: 'DM Sans', sans-serif;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* reason box */
+.reason-box{
+    background:var(--red-bg);border:1px solid var(--red-border);
+    border-radius:10px;padding:14px 18px;margin-bottom:18px;
+    animation:slideIn 0.4s ease 0.2s both;
 }
+@keyframes slideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.reason-label{font-size:0.48rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--red);margin-bottom:5px;}
+.reason-text{font-size:0.72rem;color:var(--ink2);line-height:1.6;}
 
-/* ── ANIMATED PAPER TEXTURE BACKGROUND ── */
-.bg-texture {
-  position: fixed; inset: 0; z-index: 0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(184,146,42,0.025) 2px,
-      rgba(184,146,42,0.025) 3px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 80px,
-      rgba(184,146,42,0.02) 80px,
-      rgba(184,146,42,0.02) 81px
-    );
+/* check result */
+.check-result{
+    display:none;padding:10px 14px;border-radius:8px;font-size:0.72rem;
+    font-weight:500;margin-bottom:14px;align-items:center;gap:8px;
+    animation:slideIn 0.25s ease;
 }
+.check-result.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.check-result.fail{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.check-result.show{display:flex;}
 
-/* ── AMBIENT LIGHT BLOBS ── */
-.blob {
-  position: fixed; z-index: 0;
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: blobDrift 12s ease-in-out infinite;
-}
-.blob-1 {
-  width: 600px; height: 600px;
-  top: -150px; right: -100px;
-  background: radial-gradient(circle, rgba(212,168,58,0.12) 0%, transparent 70%);
-  animation-delay: 0s;
-}
-.blob-2 {
-  width: 500px; height: 500px;
-  bottom: -100px; left: -80px;
-  background: radial-gradient(circle, rgba(184,146,42,0.09) 0%, transparent 70%);
-  animation-delay: -6s;
-}
-.blob-3 {
-  width: 300px; height: 300px;
-  top: 40%; left: 50%;
-  transform: translate(-50%,-50%);
-  background: radial-gradient(circle, rgba(139,26,26,0.06) 0%, transparent 70%);
-  animation-delay: -3s;
-}
-@keyframes blobDrift {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33%      { transform: translate(30px,-20px) scale(1.05); }
-  66%      { transform: translate(-20px,15px) scale(0.97); }
-}
+/* divider */
+.divider{height:1px;background:var(--rule);margin:0 0 16px;}
 
-/* ── DECORATIVE CORNER ORNAMENTS ── */
-.corner {
-  position: fixed; z-index: 1;
-  width: 120px; height: 120px;
-  opacity: 0.25;
+/* contact row */
+.contact-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.chip{
+    display:flex;align-items:center;gap:5px;padding:6px 13px;
+    background:var(--cream);border:1px solid var(--rule);border-radius:7px;
+    font-size:0.62rem;color:var(--muted);cursor:pointer;transition:all 0.15s;
 }
-.corner svg { width: 100%; height: 100%; }
-.corner-tl { top: 28px; left: 28px; }
-.corner-tr { top: 28px; right: 28px; transform: scaleX(-1); }
-.corner-bl { bottom: 28px; left: 28px; transform: scaleY(-1); }
-.corner-br { bottom: 28px; right: 28px; transform: scale(-1,-1); }
+.chip:hover{border-color:var(--gold2);background:var(--gold-bg);transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,0.06);}
+.chip-icon{font-size:0.78rem;}
+.chip-val{font-family:var(--mono);font-size:0.58rem;color:var(--ink2);}
 
-/* ── FLOATING PARTICLES ── */
-.particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.particle {
-  position: absolute;
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: var(--gold2);
-  opacity: 0;
-  animation: particleFloat linear infinite;
+/* buttons */
+.btn-row{display:flex;gap:8px;}
+.btn{
+    height:40px;border-radius:8px;font-family:var(--sans);
+    font-size:0.72rem;font-weight:600;cursor:pointer;
+    transition:all 0.18s;border:none;display:flex;align-items:center;
+    justify-content:center;gap:7px;
 }
-@keyframes particleFloat {
-  0%   { opacity: 0; transform: translateY(0) scale(0); }
-  10%  { opacity: 0.6; transform: translateY(-20px) scale(1); }
-  90%  { opacity: 0.3; }
-  100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+.btn-ghost{
+    flex:0 0 auto;padding:0 18px;background:var(--white);
+    color:var(--muted);border:1px solid var(--rule);
 }
+.btn-ghost:hover{border-color:var(--muted2);color:var(--ink);transform:translateY(-1px);}
+.btn-contact{
+    flex:1;background:var(--ink);color:#fff;
+    box-shadow:0 2px 8px rgba(14,12,9,0.12);
+}
+.btn-contact:hover{background:var(--ink2);box-shadow:0 6px 20px rgba(14,12,9,0.15);transform:translateY(-1px);}
+.btn-check{
+    flex:1;background:var(--gold3);color:#fff;
+    box-shadow:0 2px 8px rgba(37,99,235,0.2);
+}
+.btn-check:hover{background:var(--gold);box-shadow:0 6px 20px rgba(37,99,235,0.3);transform:translateY(-1px);}
+.btn-check:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-check .spinner{
+    display:none;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);
+    border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;
+}
+.btn-check.loading .spinner{display:inline-block;}
+.btn-check.loading .btn-label{display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-/* ── MAIN CARD ── */
-.card {
-  position: relative; z-index: 10;
-  width: 540px;
-  background: linear-gradient(160deg, #fdfaf2 0%, #f7edcf 50%, #f0e4b8 100%);
-  border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(184,146,42,0.3),
-    0 1px 0 0 rgba(255,255,255,0.8) inset,
-    0 -1px 0 0 rgba(184,146,42,0.2) inset,
-    8px 32px 80px rgba(26,21,8,0.18),
-    0 4px 16px rgba(26,21,8,0.10);
-  overflow: hidden;
-  animation: cardReveal 0.9s cubic-bezier(0.16,1,0.3,1) both;
+/* footer */
+.footer-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-top:16px;padding-top:12px;border-top:1px solid var(--rule);
 }
-@keyframes cardReveal {
-  from { opacity:0; transform:translateY(40px) scale(0.96); }
-  to   { opacity:1; transform:translateY(0)    scale(1);    }
-}
+.footer-l{font-size:0.5rem;color:var(--muted2);display:flex;align-items:center;gap:5px;}
+.footer-l .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+.footer-r{font-family:var(--mono);font-size:0.46rem;color:var(--muted2);letter-spacing:0.5px;}
 
-/* Gold top stripe — animated shimmer */
-.card-stripe {
-  height: 4px;
-  background: linear-gradient(90deg, var(--gold), var(--gold2), var(--gold3), var(--gold2), var(--gold));
-  background-size: 200% 100%;
-  animation: stripeShimmer 3s linear infinite;
-}
-@keyframes stripeShimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
-}
-
-/* Wax seal decoration */
-.seal-wrap {
-  display: flex; justify-content: center;
-  padding: 36px 0 0;
-  animation: sealDrop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.3s both;
-}
-@keyframes sealDrop {
-  from { opacity:0; transform:scale(0.4) rotate(-15deg); }
-  to   { opacity:1; transform:scale(1)   rotate(0deg);   }
-}
-.seal {
-  width: 88px; height: 88px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--seal2), var(--seal));
-  box-shadow:
-    0 0 0 3px rgba(139,26,26,0.15),
-    0 0 0 6px rgba(139,26,26,0.07),
-    inset 0 2px 4px rgba(255,255,255,0.1),
-    0 8px 24px rgba(139,26,26,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem;
-  position: relative;
-  animation: sealPulse 4s ease-in-out infinite 1s;
-}
-@keyframes sealPulse {
-  0%,100% { box-shadow: 0 0 0 3px rgba(139,26,26,0.15), 0 0 0 6px rgba(139,26,26,0.07), inset 0 2px 4px rgba(255,255,255,0.1), 0 8px 24px rgba(139,26,26,0.3); }
-  50%     { box-shadow: 0 0 0 3px rgba(139,26,26,0.25), 0 0 0 12px rgba(139,26,26,0.08), inset 0 2px 4px rgba(255,255,255,0.1), 0 12px 32px rgba(139,26,26,0.4); }
-}
-.seal::after {
-  content: '';
-  position: absolute; inset: 6px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-/* Divider ornament */
-.ornament {
-  display: flex; align-items: center; gap: 12px;
-  margin: 0 40px;
-  animation: fadeSlideUp 0.6s ease-out 0.5s both;
-}
-.ornament-line {
-  flex: 1; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-}
-.ornament-diamond {
-  width: 6px; height: 6px;
-  background: var(--gold2);
-  transform: rotate(45deg);
-  flex-shrink: 0;
-}
-
-/* Text content */
-.card-body { padding: 28px 48px 40px; }
-
-.status-tag {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.55rem; font-weight: 500;
-  letter-spacing: 3px; text-transform: uppercase;
-  color: var(--seal);
-  margin-bottom: 16px;
-  animation: fadeSlideUp 0.6s ease-out 0.55s both;
-}
-.status-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--seal);
-  animation: dotBlink 1.8s ease-in-out infinite;
-}
-@keyframes dotBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-.card-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.4rem; font-weight: 300;
-  color: var(--ink);
-  letter-spacing: -0.5px;
-  text-align: center;
-  line-height: 1.2;
-  margin-bottom: 6px;
-  animation: fadeSlideUp 0.6s ease-out 0.6s both;
-}
-.card-title em {
-  font-style: italic; color: var(--seal);
-  font-weight: 400;
-}
-
-.card-subtitle {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.95rem; font-weight: 400; font-style: italic;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 28px;
-  animation: fadeSlideUp 0.6s ease-out 0.65s both;
-}
-
-/* Gold rule */
-.gold-rule {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold2), var(--gold-dim), transparent);
-  margin: 0 0 28px;
-  animation: ruleExpand 0.8s ease-out 0.7s both;
-}
-@keyframes ruleExpand {
-  from { transform: scaleX(0); opacity: 0; }
-  to   { transform: scaleX(1); opacity: 1; }
-}
-
-/* Message */
-.revoke-msg {
-  font-size: 0.82rem; font-weight: 400;
-  color: rgba(26,21,8,0.6);
-  text-align: center;
-  line-height: 1.75;
-  margin-bottom: 28px;
-  animation: fadeSlideUp 0.6s ease-out 0.75s both;
-}
-.revoke-msg strong { color: var(--ink); font-weight: 600; }
-
-/* Reason pill */
-.reason-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--seal-dim);
-  border: 1px solid rgba(139,26,26,0.2);
-  border-radius: 2px;
-  padding: 6px 16px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--seal);
-  margin: 0 auto 28px;
-  display: flex; justify-content: center;
-  animation: fadeSlideUp 0.6s ease-out 0.8s both;
-}
-
-/* Contact section */
-.contact-section {
-  background: rgba(184,146,42,0.06);
-  border: 1px solid rgba(184,146,42,0.2);
-  border-radius: 3px;
-  padding: 20px 24px;
-  margin-bottom: 28px;
-  animation: fadeSlideUp 0.6s ease-out 0.85s both;
-}
-.contact-header {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.75rem; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--gold);
-  text-align: center;
-  margin-bottom: 16px;
-}
-.contact-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.contact-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid rgba(184,146,42,0.15);
-  border-radius: 2px;
-  transition: background 0.2s, border-color 0.2s;
-}
-.contact-item:hover {
-  background: rgba(255,255,255,0.85);
-  border-color: rgba(184,146,42,0.35);
-}
-.contact-item-icon {
-  font-size: 1.1rem; flex-shrink: 0;
-  filter: grayscale(0.2);
-}
-.contact-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.contact-item-label {
-  font-size: 0.5rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 1px;
-  color: var(--muted);
-}
-.contact-item-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.68rem; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-/* Buttons */
-.btn-row {
-  display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px;
-  animation: fadeSlideUp 0.6s ease-out 0.95s both;
-}
-.btn-quit {
-  height: 44px; border-radius: 2px;
-  border: 1px solid rgba(26,21,8,0.18);
-  background: transparent;
-  color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.72rem; font-weight: 500;
-  cursor: pointer; transition: all 0.18s;
-  letter-spacing: 0.5px;
-}
-.btn-quit:hover {
-  background: rgba(26,21,8,0.05);
-  border-color: rgba(26,21,8,0.3);
-  color: var(--ink);
-}
-.btn-retry {
-  height: 44px; border-radius: 2px;
-  border: 1px solid var(--gold);
-  background: linear-gradient(135deg, var(--gold), var(--gold2));
-  color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.78rem; font-weight: 600;
-  cursor: pointer; transition: all 0.18s;
-  letter-spacing: 0.5px;
-  position: relative; overflow: hidden;
-}
-.btn-retry::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
-  transform: translateX(-100%);
-  transition: transform 0.4s;
-}
-.btn-retry:hover::before { transform: translateX(100%); }
-.btn-retry:hover {
-  box-shadow: 0 4px 16px rgba(184,146,42,0.35);
-  transform: translateY(-1px);
-}
-.btn-retry:disabled {
-  opacity: 0.5; cursor: not-allowed; transform: none;
-  box-shadow: none;
-}
-
-/* Retry status */
-.retry-status {
-  text-align: center;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  color: var(--muted);
-  margin-top: 12px;
-  min-height: 18px;
-  animation: fadeSlideUp 0.6s ease-out 1s both;
-  letter-spacing: 0.5px;
-}
-
-/* Stamp watermark */
-.stamp-watermark {
-  position: absolute;
-  top: 50%; right: -30px;
-  transform: translateY(-50%) rotate(8deg);
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 5rem; font-weight: 600; font-style: italic;
-  color: rgba(139,26,26,0.06);
-  letter-spacing: -2px;
-  user-select: none; pointer-events: none;
-  white-space: nowrap;
-  animation: stampFade 1.2s ease-out 0.4s both;
-}
-@keyframes stampFade { from{opacity:0} to{opacity:1} }
-
-/* Bottom filigree */
-.card-footer {
-  border-top: 1px solid rgba(184,146,42,0.15);
-  padding: 14px 48px;
-  display: flex; align-items: center; justify-content: space-between;
-  animation: fadeSlideUp 0.5s ease-out 1.05s both;
-}
-.footer-brand {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.78rem; font-style: italic;
-  color: var(--gold);
-  display: flex; align-items: center; gap: 6px;
-}
-.footer-brand span {
-  font-style: normal; color: var(--muted);
-  font-size: 0.62rem; font-family: 'DM Mono', monospace;
-  letter-spacing: 1px;
-}
-.footer-id {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.58rem; color: var(--muted);
-  letter-spacing: 1px;
-}
-
-@keyframes fadeSlideUp {
-  from { opacity:0; transform:translateY(14px); }
-  to   { opacity:1; transform:translateY(0);    }
-}
-
-/* ── SCANNING LINE animation (top to bottom, repeating) ── */
-.scan-line {
-  position: fixed; inset: 0; z-index: 2; pointer-events: none;
-}
-.scan-line::after {
-  content: '';
-  position: absolute; left: 0; right: 0; top: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 10%, rgba(184,146,42,0.25) 50%, transparent 90%);
-  animation: scanDown 8s linear infinite;
-}
-@keyframes scanDown {
-  from { top: -2px; opacity: 0; }
-  5%   { opacity: 1; }
-  95%  { opacity: 0.5; }
-  to   { top: 100vh; opacity: 0; }
-}
-
-/* ── BASTION Badge ── */
-.bastion-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:rgba(14,12,9,0.05);border:1px solid rgba(14,12,9,0.1);font-size:0.58rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(14,12,9,0.4);font-family:'DM Mono',monospace;user-select:none;}
-.bastion-badge .bb-dot{width:6px;height:6px;border-radius:50%;background:#15803d;animation:bb-pulse 2.5s ease-in-out infinite;flex-shrink:0;}
-.bastion-badge .bb-shield{font-size:0.7rem;}
-@keyframes bb-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
-.bastion-badge.green{background:rgba(21,128,61,0.08);border:1px solid rgba(21,128,61,0.2);color:#15803d;}
-.bastion-badge.green .bb-dot{background:#15803d;}
-.bastion-badge.dark{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);}
-
-/* ═══════════════════════════════════════════════════
-   BASTION™ Security Badge — AurumOS
-   ═══════════════════════════════════════════════════ */
-.bastion-footer-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 16px;
-    border-radius: 99px;
-    background: rgba(14,12,9,0.04);
-    border: 1px solid rgba(14,12,9,0.08);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: rgba(14,12,9,0.35);
-    user-select: none;
-    transition: all 0.2s;
-}
-.bastion-footer-badge:hover {
-    background: rgba(14,12,9,0.07);
-    color: rgba(14,12,9,0.55);
-}
-.bastion-footer-badge .bfb-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #15803d;
-    animation: bfb-blink 2.5s ease-in-out infinite;
-    flex-shrink: 0;
-}
-@keyframes bfb-blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.25; }
-}
-/* Header variant — green pill */
-.bastion-header-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 5px;
-    background: rgba(21,128,61,0.07);
-    border: 1px solid rgba(21,128,61,0.18);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: #15803d;
-    user-select: none;
-    flex-shrink: 0;
-}
-.bastion-header-badge .bhb-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #15803d;
-    animation: bfb-blink 2.5s ease-in-out infinite;
-    flex-shrink: 0;
-}
-/* Revoked variant — red pill */
-.bastion-revoked-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 18px;
-    border-radius: 99px;
-    background: rgba(185,28,28,0.08);
-    border: 1px solid rgba(185,28,28,0.2);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: rgba(248,113,113,0.8);
-    user-select: none;
-}
-.bastion-revoked-badge .brb-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #f87171;
-    animation: brb-pulse 1.5s ease-in-out infinite;
-    flex-shrink: 0;
-}
-@keyframes brb-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.3; transform: scale(0.7); }
+@media(max-width:600px){
+    .container{width:100vw;max-width:100vw;}
+    .header-card{padding:28px 20px 22px;border-radius:12px 12px 0 0;}
+    .header-title{font-size:1.3rem;}
+    .header-sub{font-size:0.68rem;}
+    .body-card{padding:20px 18px 18px;border-radius:0 0 12px 12px;}
+    .info-grid{grid-template-columns:1fr;}
+    .btn-row{flex-direction:column;}
+    .contact-row{flex-direction:column;}
 }
 </style>
 </head>
 <body>
 
-<!-- Background elements -->
-<div class="bg-texture"></div>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-<div class="scan-line"></div>
-
-<!-- Corner ornaments -->
-<div class="corner corner-tl">
-  <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 8 L8 60 M8 8 L60 8" stroke="#b8922a" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M20 8 L8 20" stroke="#b8922a" stroke-width="0.75" opacity="0.5"/>
-    <circle cx="8" cy="8" r="3" fill="#b8922a" opacity="0.6"/>
-    <path d="M8 35 Q20 20 35 8" stroke="#b8922a" stroke-width="0.5" fill="none" opacity="0.3"/>
-  </svg>
-</div>
-<div class="corner corner-tr">
-  <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 8 L8 60 M8 8 L60 8" stroke="#b8922a" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M20 8 L8 20" stroke="#b8922a" stroke-width="0.75" opacity="0.5"/>
-    <circle cx="8" cy="8" r="3" fill="#b8922a" opacity="0.6"/>
-    <path d="M8 35 Q20 20 35 8" stroke="#b8922a" stroke-width="0.5" fill="none" opacity="0.3"/>
-  </svg>
-</div>
-<div class="corner corner-bl">
-  <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 8 L8 60 M8 8 L60 8" stroke="#b8922a" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="8" cy="8" r="3" fill="#b8922a" opacity="0.6"/>
-  </svg>
-</div>
-<div class="corner corner-br">
-  <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 8 L8 60 M8 8 L60 8" stroke="#b8922a" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="8" cy="8" r="3" fill="#b8922a" opacity="0.6"/>
-  </svg>
-</div>
-
-<!-- Floating particles -->
-<div class="particles" id="particles"></div>
-
-<!-- Main card -->
-<div class="card">
-  <div class="card-stripe"></div>
-  <div class="stamp-watermark">REVOKED</div>
-
-  <div class="seal-wrap">
-    <div class="seal">&#128683;</div>
-  </div>
-
-  <div style="margin: 20px 40px 16px;">
-    <div class="ornament">
-      <div class="ornament-line"></div>
-      <div class="ornament-diamond"></div>
-      <div class="ornament-line"></div>
-    </div>
-  </div>
-
-  <div class="card-body">
-    <div class="status-tag">
-      <div class="status-dot"></div>
-      <span id="status-label">License Revoked</span>
-      <div class="status-dot"></div>
-    </div>
-
-    <div class="card-title">Access <em>Suspended</em></div>
-    <div class="card-subtitle">BASTION™ has suspended access to this installation</div>
-
-    <div class="gold-rule"></div>
-
-    <div class="revoke-msg" id="revoke-msg">
-      Your <strong>AurumOS</strong> license has been revoked by the administrator.
-      This installation is no longer authorized to operate.<br>
-      Please contact AurumOS support to resolve this matter.
-    </div>
-
-    <div class="reason-pill" id="reason-pill">
-      <div class="status-dot"></div>
-      <span id="reason-text">License Revoked by Administrator</span>
-    </div>
-
-    <div class="contact-section">
-      <div class="contact-header">&#9670; Contact Support &#9670;</div>
-      <div class="contact-grid">
-        <div class="contact-item">
-          <div class="contact-item-icon">&#128222;</div>
-          <div class="contact-item-text">
-            <span class="contact-item-label">WhatsApp</span>
-            <span class="contact-item-val">+91 70411 26244</span>
-          </div>
+<div class="container">
+    <!-- HEADER -->
+    <div class="header-card">
+        <div class="brand">
+            <div class="brand-logo"><span>A</span></div>
+            <div class="brand-name">Aurum<em>OS</em></div>
         </div>
-        <div class="contact-item">
-          <div class="contact-item-icon">&#128140;</div>
-          <div class="contact-item-text">
-            <span class="contact-item-label">Email</span>
-            <span class="contact-item-val">support@aurumos.in</span>
-          </div>
+
+        <div class="icon-area">
+            <div class="icon-pulse"></div>
+            <div class="icon-pulse"></div>
+            <div class="icon-circle">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
         </div>
-        <div class="contact-item">
-          <div class="contact-item-icon">&#127760;</div>
-          <div class="contact-item-text">
-            <span class="contact-item-label">Website</span>
-            <span class="contact-item-val">aurumos.in/support</span>
-          </div>
+
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span class="status-text">License Revoked</span>
         </div>
-        <div class="contact-item">
-          <div class="contact-item-icon">&#128336;</div>
-          <div class="contact-item-text">
-            <span class="contact-item-label">Hours</span>
-            <span class="contact-item-val">10am – 7pm IST</span>
-          </div>
-        </div>
-      </div>
+
+        <div class="header-title">Access Suspended</div>
+        <div class="header-sub">Your software license has been deactivated by the administrator. This is not a subscription expiry — access has been intentionally suspended.</div>
     </div>
 
-    <div class="btn-row">
-      <button class="btn-quit" onclick="quitApp()">Quit AurumOS</button>
-      <button class="btn-retry" id="btn-retry" onclick="retryCheck()">
-        &#9670; Check License Again
-      </button>
-    </div>
+    <!-- BODY -->
+    <div class="body-card">
+        <!-- info grid -->
+        <div class="info-grid">
+            <div class="info-cell">
+                <div class="info-cell-label">Business</div>
+                <div class="info-cell-val" id="p-biz">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Plan</div>
+                <div class="info-cell-val" id="p-plan">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Status</div>
+                <div class="info-cell-val red">REVOKED</div>
+            </div>
+        </div>
 
-    <div class="retry-status" id="retry-status"></div>
-  </div>
+        <!-- reason -->
+        <div class="reason-box">
+            <div class="reason-label">Why am I seeing this?</div>
+            <div class="reason-text">Your license was revoked by the administrator. This may be due to policy violation, non-payment, or a request from your organization. Contact your software owner or AurumOS support for more information.</div>
+        </div>
 
-  <div class="card-footer">
-    <div class="footer-brand">
-      AurumOS <span>BASTION™ SECURITY</span>
+        <!-- check result -->
+        <div class="check-result" id="check-result"></div>
+
+        <div class="divider"></div>
+
+        <!-- contact -->
+        <div class="contact-row">
+            <div class="chip" onclick="callPhone()" title="Call now">
+                <span class="chip-icon">&#128222;</span>
+                <span class="chip-val">+91 70411 26244</span>
+            </div>
+            <div class="chip" onclick="openEmail('AurumOS License Revoked','Hi, my AurumOS license has been revoked. Please help me resolve this.')" title="Send email">
+                <span class="chip-icon">&#128140;</span>
+                <span class="chip-val">support@aurumos.in</span>
+            </div>
+            <div class="chip" onclick="openWebsite()" title="Visit website">
+                <span class="chip-icon">&#127760;</span>
+                <span class="chip-val">aurumos.in</span>
+            </div>
+        </div>
+
+        <!-- buttons -->
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="quitApp()">Quit</button>
+            <button class="btn btn-contact" onclick="contactOwner()">Contact Support</button>
+            <button class="btn btn-check" id="btn-check" onclick="checkLicense()">
+                <span class="spinner"></span>
+                <span class="btn-label">Check License</span>
+            </button>
+        </div>
+
+        <!-- footer -->
+        <div class="footer-bar">
+            <div class="footer-l"><span class="dot"></span>BASTION Security</div>
+            <div class="footer-r" id="footer-id">ERR-LICENSE-REVOKED</div>
+        </div>
     </div>
-    <div class="footer-id" id="footer-id">ERR-REVOKED</div>
-  </div>
 </div>
 
 <script>
-// ── Read reason (injected via evaluate_js OR localStorage) ───────────────────
+'use strict';
+
+function getBusinessName(){
+    var state=null;
+    try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+    return state?(state.business||'AurumOS'):'AurumOS';
+}
+
 (function(){
-  // evaluate_js sets window.__revokeReason before this runs in some cases
-  // localStorage set by Python before navigation as fallback
-  var r = window.__revokeReason
-       || (function(){ try{ return localStorage.getItem('aurum_revoke_reason'); }catch(e){ return null; } })()
-       || (new URLSearchParams(window.location.search)).get('reason')
-       || 'revoked';
-  // Store for retry button
-  window.__revokeReasonFinal = r;
-
-  var labels = {
-    revoked:   'License Revoked by Administrator',
-    invalid:   'License Invalid',
-    not_found: 'License Not Found on Server',
-    expired:   'License Expired',
-  };
-  var msgs = {
-    revoked:   'Your <strong>AurumOS</strong> license has been <strong>revoked</strong> by the administrator. This installation is no longer authorized to operate. Please contact AurumOS support to resolve this matter.',
-    invalid:   'Your <strong>AurumOS</strong> license is no longer <strong>valid</strong>. This may happen if the license was transferred or cancelled. Please contact support to verify your purchase.',
-    not_found: 'The license key on this device was <strong>not found</strong> on the AurumOS server. Please contact support to verify your purchase.',
-    expired:   'Your <strong>AurumOS</strong> license has <strong>expired</strong>. Please renew your subscription to continue using the software.',
-  };
-  var statusLabels = {
-    revoked:   'Access Revoked',
-    invalid:   'License Invalid',
-    not_found: 'License Not Found',
-    expired:   'License Expired',
-  };
-
-  var el = function(id){ return document.getElementById(id); };
-  if(el('reason-text')) el('reason-text').innerText = labels[r]   || labels.revoked;
-  if(el('revoke-msg'))  el('revoke-msg').innerHTML  = msgs[r]     || msgs.revoked;
-  if(el('status-label'))el('status-label').innerText= statusLabels[r]||statusLabels.revoked;
-
-  // Error code in footer
-  var code = { revoked:'ERR-001', invalid:'ERR-002', not_found:'ERR-003', expired:'ERR-004' }[r] || 'ERR-000';
-  if(el('footer-id')) el('footer-id').innerText = code + ' | ' + new Date().toLocaleDateString('en-GB');
+    var biz=getBusinessName();
+    document.getElementById('p-biz').innerText=biz;
+    var state=null;
+    try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+    if(state){
+        document.getElementById('p-plan').innerText=(state.plan||'lite').toUpperCase();
+    }
+    document.getElementById('footer-id').innerText='ERR-LICENSE-REVOKED | '+new Date().toLocaleDateString('en-GB');
 })();
 
-// ── Floating particles ────────────────────────────────────────────────────────
-(function(){
-  var wrap = document.getElementById('particles');
-  for(var i = 0; i < 18; i++){
-    var p = document.createElement('div');
-    p.className = 'particle';
-    p.style.cssText = [
-      'left:' + Math.random()*100 + '%',
-      'top:' + (60 + Math.random()*40) + '%',
-      'animation-duration:' + (6 + Math.random()*8) + 's',
-      'animation-delay:' + (Math.random()*8) + 's',
-      'width:' + (2 + Math.random()*2) + 'px',
-      'height:' + (2 + Math.random()*2) + 'px',
-      'opacity:0'
-    ].join(';');
-    wrap.appendChild(p);
-  }
-})();
+function checkLicense(){
+    var btn=document.getElementById('btn-check');
+    var result=document.getElementById('check-result');
+    btn.classList.add('loading');
+    btn.disabled=true;
+    result.className='check-result';
 
-// ── Retry check ───────────────────────────────────────────────────────────────
-async function retryCheck(){
-  var btn = document.getElementById('btn-retry');
-  var st  = document.getElementById('retry-status');
-  btn.disabled = true;
-  btn.innerText = 'Connecting to server...';
-  st.style.color = 'rgba(26,21,8,0.4)';
-  st.innerText   = 'Contacting AurumOS license server...';
+    var api = window.pywebview && window.pywebview.api;
 
-  if(!window.pywebview || !window.pywebview.api){
-    st.innerText = 'Application bridge not ready. Please wait and try again.';
-    btn.disabled = false;
-    btn.innerHTML = '&#9670; Check License Again';
-    return;
-  }
+    if(!api || Object.keys(api).length === 0){
+        checkLicenseDone(false,'Bridge not ready. Waiting...');
+        var tries = 0;
+        var poll = setInterval(function(){
+            api = window.pywebview && window.pywebview.api;
+            if(api && Object.keys(api).length > 0){
+                clearInterval(poll);
+                doCheck(api);
+            } else if(++tries > 50){
+                clearInterval(poll);
+                checkLicenseDone(false,'Unable to connect. Please restart the app.');
+            }
+        }, 200);
+        return;
+    }
+    doCheck(api);
+}
 
-  try {
-    // Use reactivate_check -- it handles flag deletion + key re-caching
-    var status = await window.pywebview.api.reactivate_check();
-
-    if(status === 'ok'){
-      // License is active again -- show success then go to login
-      st.style.color = '#2d6a4f';
-      st.innerText   = 'License is active! Taking you to login...';
-      btn.innerText  = 'Activated!';
-      btn.style.background = 'linear-gradient(135deg,#15803d,#166534)';
-
-      setTimeout(function(){
-        window.pywebview.api.navigate('login.html');
-      }, 1500);
-      return;
-
-    } else if(status === 'offline'){
-      st.style.color = '#7c6a2a';
-      st.innerText   = 'No internet connection. Connect to internet and try again.';
-
-    } else {
-      // Still revoked
-      st.style.color = '#8b1a1a';
-      st.innerText   = 'License is still ' + status + '. Please contact AurumOS support.';
+function doCheck(api){
+    var method = null;
+    if(typeof api.check_license === 'function') method = 'check_license';
+    else if(typeof api.reactivate_check === 'function') method = 'reactivate_check';
+    else {
+        directFetchCheck();
+        return;
     }
 
-  } catch(e) {
-    st.innerText = 'Check failed: ' + String(e);
-  }
-
-  btn.disabled = false;
-  btn.innerHTML = '&#9670; Check License Again';
-  btn.style.background = '';
+    var result = api[method]();
+    if(result && typeof result.then === 'function'){
+        result.then(function(res){
+            handleCheckResult(res, method);
+        }).catch(function(e){
+            directFetchCheck();
+        });
+    } else {
+        handleCheckResult(result, method);
+    }
 }
 
+function directFetchCheck(){
+    var key = window.__aurum_key || localStorage.getItem('aurum_key') || '';
+    var machineId = window.__aurum_mid || localStorage.getItem('aurum_mid') || '';
+    if(!key){
+        checkLicenseDone(false,'License key not found locally. Please restart the app.');
+        return;
+    }
+    checkLicenseDone(false,'Checking directly with server...');
+    fetch('https://aurum-os-admin.vercel.app/api/check',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({key:key,machine_id:machineId})
+    }).then(function(r){return r.json();}).then(function(data){
+        if(data && data.valid){
+            checkLicenseDone(false,'Checking subscription status...');
+            var api = window.pywebview && window.pywebview.api;
+            if(api && typeof api.reactivate_check === 'function'){
+                api.reactivate_check().then(function(status){
+                    if(status === 'ok'){
+                        checkLicenseDone(true, 'License is active! Refreshing...');
+                        setTimeout(function(){ window.location.href='login.html'; }, 1500);
+                    } else if(status === 'expired'){
+                        checkLicenseDone(false, 'Subscription expired. Please renew your plan.');
+                    } else {
+                        checkLicenseDone(false, 'License is still ' + status + '. Please contact support.');
+                    }
+                }).catch(function(){
+                    checkLicenseDone(false, 'Unable to verify. Please restart the app.');
+                });
+            } else {
+                checkLicenseDone(true,'License is active! Refreshing...');
+                setTimeout(function(){ window.location.href='login.html'; },1000);
+            }
+        } else {
+            var reason = (data && data.status) || 'revoked';
+            checkLicenseDone(false,'License is '+reason+'. Please contact support.');
+        }
+    }).catch(function(e){
+        checkLicenseDone(false,'Unable to reach license server: '+String(e));
+    });
+}
+
+function handleCheckResult(res, method){
+    if(method === 'check_license'){
+        if(res && res.status==='success' && res.license_valid!==false){
+            checkLicenseDone(true, res.message || 'License is active! Refreshing...');
+            setTimeout(function(){
+                try{
+                    if(typeof window.pywebview.api.reload === 'function') window.pywebview.api.reload();
+                    else window.location.href='login.html';
+                }catch(e){ window.location.href='login.html'; }
+            }, 1500);
+        } else {
+            checkLicenseDone(false, (res && res.message) || 'License is still revoked. Please contact support.');
+        }
+    } else {
+        if(res === 'ok'){
+            checkLicenseDone(true, 'License is active! Refreshing...');
+            setTimeout(function(){ window.location.href='login.html'; }, 1500);
+        } else if(res === 'expired'){
+            checkLicenseDone(false, 'License has expired. Please renew to continue.');
+        } else if(res === 'offline'){
+            checkLicenseDone(false, 'Cannot reach license server. Check your internet connection.');
+        } else if(res === 'error'){
+            directFetchCheck();
+        } else {
+            checkLicenseDone(false, 'License is still ' + (res || 'revoked') + '. Please contact support.');
+        }
+    }
+}
+
+function checkLicenseDone(ok,msg){
+    var btn=document.getElementById('btn-check');
+    var result=document.getElementById('check-result');
+    btn.classList.remove('loading');
+    btn.disabled=false;
+    result.className='check-result show '+(ok?'ok':'fail');
+    result.innerHTML=(ok?'&#10003; ':'&#10007; ')+msg;
+}
+
+function openWhatsApp(msg){
+    var url='https://wa.me/917041126244?text='+encodeURIComponent(msg);
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url)window.pywebview.api.open_url(url);
+    else window.open(url,'_blank');
+}
+function openEmail(s,b){window.open('mailto:support@aurumos.in?subject='+encodeURIComponent(s)+'&body='+encodeURIComponent(b),'_blank');}
+function openWebsite(){
+    var u='https://aurumos.in';
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url)window.pywebview.api.open_url(u);
+    else window.open(u,'_blank');
+}
+function callPhone(){window.open('tel:+917041126244','_blank');}
+function contactOwner(){
+    var biz=getBusinessName();
+    openWhatsApp('Hi, my AurumOS license has been revoked.\n\nBusiness: '+biz+'\nPlease help me reactivate my license.');
+}
 function quitApp(){
-  if(window.pywebview && window.pywebview.api && window.pywebview.api.quit_app){
-    window.pywebview.api.quit_app();
-  } else {
-    window.close();
-  }
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.quit_app)window.pywebview.api.quit_app();
+    else window.close();
 }
 </script>
-    <!-- BASTION™ Badge -->
-    <div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:20;">
-        <span class="bastion-revoked-badge">
-            <span class="brb-dot"></span>
-            &#128683;&nbsp; BASTION&#8482; — Access Suspended
-        </span>
-    </div>
 </body>
 </html>

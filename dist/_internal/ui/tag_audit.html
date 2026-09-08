@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AurumOS | Tag Audit</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root {
+  --c:#f8fafb; --c2:#f1f5f9; --c3:#e2e8f0;
+  --w:#ffffff;
+  --ink:#0e0c09; --ink2:#2c2a24; --ink3:#5c5a52;
+  --g:#2563eb; --g2:#3b82f6; --g3:#1d4ed8;
+  --gb:rgba(37,99,235,.08); --gl:rgba(37,99,235,.22); --gg:linear-gradient(135deg,#1d4ed8,#3b82f6);
+  --r:rgba(14,12,9,.08); --r2:rgba(14,12,9,.05);
+  --gr:#15803d; --grb:rgba(21,128,61,.10); --grl:rgba(21,128,61,.25);
+  --rd:#b91c1c; --rdb:rgba(185,28,28,.09); --rdl:rgba(185,28,28,.22);
+  --am:#b45309; --amb:rgba(180,83,9,.10);  --aml:rgba(180,83,9,.25);
+  --serif:"DM Serif Display",Georgia,serif;
+  --mono:Arial,sans-serif;
+  --sans:"DM Sans",system-ui,sans-serif;
+  --sh:0 1px 3px rgba(14,12,9,.05),0 8px 24px rgba(14,12,9,.06);
+  --sh-lg:0 12px 40px rgba(14,12,9,.14);
+  --rad:16px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;background:var(--c);color:var(--ink);}
+body{display:flex;flex-direction:column;overflow:hidden;}
+main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.tb{height:56px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--r);display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;position:relative;z-index:20;}
+.tb::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 4%,var(--g) 50%,transparent 96%);opacity:.55;}
+.tb-l{display:flex;align-items:center;gap:12px;}
+.logo{width:30px;height:30px;background:var(--gg);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(29,78,216,.2);}
+.logo svg{width:17px;height:17px;fill:#fff;}
+.app-name{font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink2);}
+.app-name em{color:var(--g);font-style:normal;}
+.tb-sep{width:1px;height:18px;background:var(--r);}
+.page-title{font-family:var(--serif);font-size:1.02rem;color:var(--ink2);}
+.sess-pill{font-family:var(--mono);font-size:.62rem;background:var(--gb);color:var(--g3);border:1px solid var(--gl);border-radius:20px;padding:3px 11px;letter-spacing:1px;font-weight:600;}
+.tb-r{display:flex;gap:8px;align-items:center;}
+.btn-tb{height:30px;padding:0 13px;border-radius:8px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid var(--r);background:var(--w);color:var(--ink3);transition:all .2s cubic-bezier(.16,1,.3,1);box-shadow:var(--sh);}
+.btn-tb:hover{background:var(--c2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,12,9,.08);}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── SETUP ── */
+#setup{flex:1;overflow-y:auto;padding:34px 40px 48px;}
+.setup-wrap{max-width:1400px;margin:0 auto;display:flex;gap:26px;align-items:flex-start;}
+.su-l{flex:1;min-width:0;}
+.su-r{width:380px;flex-shrink:0;position:sticky;top:0;}
+.hero-card{background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,.65));border:1px solid var(--r);border-radius:20px;padding:26px 28px;box-shadow:var(--sh);margin-bottom:22px;position:relative;overflow:hidden;}
+.hero-card::before{content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.12),transparent 70%);}
+.sel-card{background:var(--w);border:1px solid var(--r);border-radius:20px;padding:24px 26px;box-shadow:var(--sh);margin-bottom:22px;}
+.eyebrow{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--g);margin-bottom:10px;font-weight:600;}
+.page-h{font-family:var(--serif);font-size:2.1rem;color:var(--ink2);line-height:1.1;margin-bottom:8px;letter-spacing:-.5px;}
+.page-sub{font-size:.82rem;color:var(--mu);margin-bottom:28px;line-height:1.65;max-width:500px;}
+.sec-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:12px;display:block;font-weight:600;}
+.all-tile{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--gb),rgba(255,255,255,.6));border:1.5px solid var(--gl);border-radius:14px;padding:16px 20px;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);margin-bottom:12px;box-shadow:var(--sh);}
+.all-tile:hover{transform:translateY(-2px);box-shadow:var(--sh-lg);}
+.all-tile.sel{border-color:var(--g);background:linear-gradient(135deg,var(--gb),rgba(37,99,235,.14));box-shadow:0 8px 26px rgba(37,99,235,.22);}
+.at-name{font-family:var(--serif);font-size:1rem;color:var(--g3);}
+.at-meta{font-size:.7rem;color:var(--mu);margin-top:3px;}
+.touch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:24px;}
+.tt{position:relative;overflow:hidden;border:1.5px solid var(--r);border-radius:12px;padding:13px 15px;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);background:var(--w);box-shadow:var(--sh);}
+.tt::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--g);opacity:0;transition:opacity .2s;}
+.tt:hover{transform:translateY(-3px);border-color:var(--gl);box-shadow:var(--sh-lg);}
+.tt:hover::before{opacity:.5;}
+.tt.sel{border-color:var(--g);background:var(--gb);box-shadow:0 8px 24px rgba(37,99,235,.18);}
+.tt.sel::before{opacity:1;}
+.tt-pct{font-family:var(--mono);font-size:1.15rem;font-weight:700;color:var(--ink2);}
+.tt-pcs{font-size:.66rem;color:var(--mu);margin-top:4px;}
+.tt-wt{font-size:.63rem;color:var(--g3);margin-top:2px;font-weight:600;}
+.by-wrap{background:var(--w);border:1px solid var(--r);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--sh);}
+.by-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:8px;display:block;font-weight:600;}
+.by-inp{width:100%;height:42px;background:var(--c);border:1px solid var(--r);border-radius:9px;font-size:.88rem;padding:0 14px;outline:none;color:var(--ink);transition:all .15s;}
+.by-inp:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(37,99,235,.10);}
+.launch{width:100%;height:50px;background:var(--gg);border:none;border-radius:12px;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;justify-content:center;gap:11px;letter-spacing:.3px;box-shadow:0 8px 24px rgba(37,99,235,.28);}
+.launch:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(37,99,235,.36);filter:brightness(1.04);}
+.launch:active{transform:translateY(0) scale(.99);}
+.launch-ico{width:22px;height:22px;background:rgba(255,255,255,.22);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;}
+.launch:hover .launch-ico{transform:translateX(3px);}
+.hist-panel{background:var(--w);border:1px solid var(--r);border-radius:var(--rad);padding:20px;box-shadow:var(--sh);}
+.hp-h{font-family:var(--serif);font-size:1rem;color:var(--ink2);margin-bottom:3px;}
+.hp-s{font-size:.68rem;color:var(--mu);margin-bottom:14px;}
+.hr{display:flex;align-items:center;justify-content:space-between;padding:11px 10px;border-bottom:1px solid var(--r2);cursor:pointer;transition:all .15s;border-radius:8px;}
+.hr:last-child{border-bottom:none;}
+.hr:hover{background:var(--c);transform:translateX(2px);}
+.hr-ref{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--ink2);}
+.hr-meta{font-size:.62rem;color:var(--mu);margin-top:3px;}
+.hr-pills{display:flex;gap:5px;flex-shrink:0;}
+.pill{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:20px;}
+.p-gr{background:var(--grb);color:var(--gr);}
+.p-rd{background:var(--rdb);color:var(--rd);}
+.p-am{background:var(--amb);color:var(--am);}
+.hist-empty{font-size:.72rem;color:var(--mu);text-align:center;padding:20px 0;font-style:italic;}
+.hr-del{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;font-size:.62rem;color:var(--mu);cursor:pointer;margin-left:3px;transition:all .15s;flex-shrink:0;}
+.hr-del:hover{background:var(--rdb);color:var(--rd);}
+.hr-active{cursor:pointer;}
+.hr-hint{font-size:.58rem;color:var(--g3);font-weight:600;margin-top:3px;}
+
+/* ── AUDIT ── */
+#audit{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);flex-shrink:0;background:var(--w);border-bottom:1px solid var(--r);box-shadow:var(--sh);z-index:5;}
+.kpi{padding:18px 22px 16px;border-right:1px solid var(--r2);cursor:pointer;transition:all .18s;position:relative;overflow:hidden;}
+.kpi:last-child{border-right:none;}
+.kpi:hover{background:var(--c);}
+.kpi.on{background:linear-gradient(180deg,var(--gb),transparent);}
+.kpi.on::after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--gg);}
+.kpi-ico{position:absolute;top:14px;right:16px;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:.16;}
+.kpi-ico svg{width:15px;height:15px;}
+.k-all .kpi-ico{background:var(--ink2);}
+.k-found .kpi-ico{background:var(--gr);}
+.k-miss .kpi-ico{background:var(--rd);}
+.k-extra .kpi-ico{background:var(--am);}
+.kpi-n{font-family:var(--mono);font-size:1.85rem;font-weight:800;line-height:1;margin-bottom:5px;letter-spacing:-1px;}
+.kpi-l{font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:600;}
+.k-all .kpi-n{color:var(--ink2);}
+.k-found .kpi-n{color:var(--gr);}
+.k-miss .kpi-n{color:var(--rd);}
+.k-extra .kpi-n{color:var(--am);}
+.prog{padding:11px 20px;border-bottom:1px solid var(--r);background:rgba(255,255,255,.7);flex-shrink:0;display:flex;align-items:center;gap:16px;}
+.prog-track{flex:1;height:8px;background:var(--c3);border-radius:6px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(14,12,9,.08);}
+.prog-fill{height:100%;background:var(--gg);border-radius:6px;transition:width .5s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;}
+.prog-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shimmer 1.6s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+.prog-txt{font-size:.68rem;color:var(--mu);white-space:nowrap;}
+.prog-pct{font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--g3);min-width:40px;text-align:right;}
+.ab{flex:1;display:grid;grid-template-columns:1fr 420px;overflow:hidden;gap:0;}
+.lc{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--r);}
+.lt{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--r);flex-shrink:0;background:var(--w);}
+.ls{flex:1;height:38px;background:var(--c);border:1px solid var(--r);border-radius:9px;font-size:.8rem;padding:0 14px;outline:none;color:var(--ink);transition:all .15s;}
+.ls:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(37,99,235,.10);}
+.lf{height:38px;background:var(--c);border:1px solid var(--r);border-radius:9px;font-size:.74rem;padding:0 12px;cursor:pointer;outline:none;color:var(--ink);transition:all .15s;}
+.lf:hover{border-color:var(--gl);background:var(--w);}
+.lh{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;gap:0;padding:0 16px;background:var(--c2);border-bottom:2px solid var(--r);flex-shrink:0;}
+.lhc{font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:700;padding:9px 5px;}
+.lhc.r{text-align:right;}
+.lhc.c{text-align:center;}
+.tl{flex:1;overflow-y:auto;padding:6px 0;}
+.tl::-webkit-scrollbar{width:6px;}
+.tl::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px;}
+.ti{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;align-items:center;gap:0;padding:0 16px;height:46px;margin:0 8px;border-bottom:1px solid var(--r2);border-radius:8px;cursor:pointer;transition:all .14s;position:relative;}
+.ti::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;}
+.ti:hover{background:var(--c);transform:translateX(2px);}
+.ti.f::before{background:var(--gr);}
+.ti.m::before{background:var(--rd);}
+.ti.e::before{background:var(--am);}
+.ti.a::before{background:#ccc;}
+.ti.a{opacity:.55;}
+.ti.sel-row{background:var(--gb);box-shadow:0 2px 10px rgba(37,99,235,.14);}
+.ti.sel-row::before{background:var(--g);}
+.ti.ti-pop{animation:rowPop .55s cubic-bezier(.16,1,.3,1);}
+@keyframes rowPop{
+  0%{transform:scale(.96);background:rgba(37,99,235,.18);}
+  40%{transform:scale(1.015);}
+  100%{transform:scale(1);}
+}
+.kpi.kpi-bump .kpi-n{animation:numBump .45s cubic-bezier(.16,1,.3,1);}
+@keyframes numBump{0%{transform:scale(1);}40%{transform:scale(1.22);color:var(--g);}100%{transform:scale(1);}}
+.ti-ico{display:flex;align-items:center;justify-content:center;}
+.ti-id{font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--ink2);padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ti-nm{font-size:.76rem;color:var(--ink3);padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ti-tc{font-size:.72rem;font-family:var(--mono);color:var(--ink3);text-align:center;padding:0 5px;}
+.ti-wt{font-size:.72rem;font-family:var(--mono);color:var(--mu);text-align:right;padding:0 5px;}
+.ti-st{font-size:.55rem;font-weight:700;letter-spacing:.8px;padding:3px 8px;border-radius:20px;text-align:center;margin:0 5px;display:inline-block;white-space:nowrap;}
+.sf{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.sm{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.se{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.sa{background:#f1f1f1;color:#aaa;border:1px solid #e6e6e6;}
+.tl-empty{padding:48px 24px;text-align:center;font-size:.78rem;color:var(--mu);font-style:italic;}
+.rc{display:flex;flex-direction:column;overflow:hidden;background:var(--w);}
+.sz{padding:18px;border-bottom:1px solid var(--r);flex-shrink:0;background:linear-gradient(180deg,var(--c),var(--w));}
+.sz-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sz-lbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);font-weight:700;}
+.sz-save{display:flex;align-items:center;gap:6px;font-size:.62rem;color:var(--gr);font-weight:600;}
+.sz-dot{width:7px;height:7px;background:var(--gr);border-radius:50%;animation:pulse 2s infinite;box-shadow:0 0 0 0 rgba(21,128,61,.5);}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(21,128,61,.45);}50%{opacity:.4;box-shadow:0 0 0 5px rgba(21,128,61,0);}}
+.sz-row{display:flex;gap:9px;position:relative;}
+.scan-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--g);pointer-events:none;z-index:1;}
+.sf-inp{flex:1;height:50px;background:var(--w);border:2px solid var(--gl);border-radius:11px;font-family:var(--mono);font-size:1rem;padding:0 16px 0 40px;outline:none;letter-spacing:2px;color:var(--ink);transition:all .2s cubic-bezier(.16,1,.3,1);box-shadow:var(--sh);}
+.sf-inp::placeholder{letter-spacing:0;font-size:.8rem;color:#94a3b8;}
+.sf-inp:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(37,99,235,.12);transform:translateY(-1px);}
+.sf-inp.fg{border-color:var(--gr);background:var(--grb);}
+.sf-inp.fr{border-color:var(--rd);background:var(--rdb);}
+.sf-inp.fa{border-color:var(--am);background:var(--amb);}
+.sf-inp.fgy{border-color:#ddd;background:#f8f8f8;}
+.btn-enter{height:50px;width:50px;background:var(--gg);border:none;border-radius:11px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;box-shadow:0 6px 18px rgba(29,78,216,.25);}
+.btn-enter:hover{transform:translateY(-2px) scale(1.04);filter:brightness(1.05);}
+.btn-enter:active{transform:scale(.96);}
+.ls-res{padding:14px 18px;border-bottom:1px solid var(--r);flex-shrink:0;min-height:82px;display:flex;flex-direction:column;justify-content:center;background:var(--w);}
+.lsr-empty{font-size:.74rem;color:var(--mu);font-style:italic;}
+.lsr-badge{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:6px;animation:pop .25s cubic-bezier(.16,1,.3,1);}
+@keyframes pop{0%{transform:scale(.9);opacity:0;}100%{transform:scale(1);opacity:1;}}
+.lsr-f{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.lsr-e{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.lsr-d{background:#f1f1f1;color:#aaa;border:1px solid #e6e6e6;}
+.lsr-m{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.lsr-tag{font-family:var(--mono);font-size:.98rem;font-weight:700;color:var(--ink2);}
+.lsr-nm{font-size:.73rem;color:var(--ink3);margin-top:3px;}
+.lsr-detail{font-size:.7rem;color:var(--mu);margin-top:3px;}
+.dp{flex:1;overflow-y:auto;}
+.dp::-webkit-scrollbar{width:6px;}
+.dp::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px;}
+.dp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:24px;}
+.dp-ei{width:48px;height:48px;background:var(--gb);border:1.5px solid var(--gl);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.dp-et{font-size:.76rem;color:var(--mu);text-align:center;line-height:1.7;}
+.dp-head{padding:16px 18px 12px;border-bottom:1px solid var(--r);}
+.dp-tag-id{font-family:var(--mono);font-size:1rem;font-weight:800;color:var(--ink2);}
+.dp-name{font-size:.78rem;color:var(--ink3);margin-top:4px;}
+.dp-spill{font-size:.58rem;font-weight:700;letter-spacing:.8px;padding:4px 11px;border-radius:20px;display:inline-block;margin-top:9px;}
+.dp-fields{padding:12px 18px;}
+.dp-kv{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--r2);}
+.dp-kv:last-child{border-bottom:none;}
+.dp-k{font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;}
+.dp-v{font-size:.78rem;font-weight:700;font-family:var(--mono);color:var(--ink2);}
+.dp-acts{padding:14px 18px;border-top:1px solid var(--r);display:flex;flex-direction:column;gap:8px;}
+.dp-btn{height:38px;width:100%;border-radius:9px;font-size:.72rem;font-weight:600;cursor:pointer;border:none;transition:all .2s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;justify-content:center;gap:6px;}
+.db-warn{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.db-warn:hover{background:var(--am);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(180,83,9,.3);}
+.db-dan{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.db-dan:hover{background:var(--rd);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(185,28,28,.3);}
+.db-ok{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.db-ok:hover{background:var(--gr);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(21,128,61,.3);}
+.bb{height:52px;background:rgba(20,18,14,.96);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;}
+.bb-info{font-size:.66rem;color:rgba(255,255,255,.5);font-family:var(--mono);}
+.bb-btns{display:flex;gap:8px;}
+.bbb{height:30px;padding:0 14px;border-radius:7px;font-size:.67rem;font-weight:600;cursor:pointer;border:none;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:5px;}
+.bb-pause{background:rgba(180,83,9,.28);color:var(--am);}
+.bb-pause:hover{background:var(--am);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(180,83,9,.3);}
+.bb-close{background:rgba(185,28,28,.25);color:#f0a3a3;}
+.bb-close:hover{background:var(--rd);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(185,28,28,.3);}
+.bb-miss{background:rgba(180,83,9,.28);color:var(--am);}
+.bb-miss:hover{background:var(--am);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(180,83,9,.3);}
+.dlg-overlay{display:none;position:fixed;inset:0;background:rgba(14,12,9,.55);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;animation:fade .2s ease;}
+.dlg-overlay.open{display:flex;}
+@keyframes fade{from{opacity:0;}to{opacity:1;}}
+.dlg{background:var(--w);border-radius:18px;padding:28px;max-width:400px;width:90%;box-shadow:var(--sh-lg);border-top:3px solid var(--g);animation:rise .25s cubic-bezier(.16,1,.3,1);}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+.dlg.dlg-warn{border-top-color:var(--am);}
+.dlg.dlg-danger{border-top-color:var(--rd);}
+.dlg.dlg-success{border-top-color:var(--gr);}
+.dlg-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.dlg-icon-info{background:var(--gb);}
+.dlg-icon-warn{background:var(--amb);}
+.dlg-icon-danger{background:var(--rdb);}
+.dlg-icon-success{background:var(--grb);}
+.dlg-title{font-family:var(--serif);font-size:1.12rem;color:var(--ink2);margin-bottom:6px;}
+.dlg-body{font-size:.8rem;color:var(--ink3);line-height:1.7;margin-bottom:18px;}
+.dlg-kv-list{background:var(--c);border-radius:10px;padding:14px 16px;margin-bottom:16px;}
+.dlg-kv{display:flex;justify-content:space-between;padding:5px 0;font-size:.78rem;border-bottom:1px solid var(--r2);}
+.dlg-kv:last-child{border-bottom:none;}
+.dlg-kv-k{color:var(--mu);}
+.dlg-kv-v{font-weight:700;font-family:var(--mono);color:var(--ink2);}
+.dlg-inp{width:100%;height:40px;background:var(--c);border:1px solid var(--r);border-radius:9px;font-size:.84rem;padding:0 14px;outline:none;color:var(--ink);margin-bottom:14px;transition:all .15s;}
+.dlg-inp:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(37,99,235,.10);}
+.dlg-btns{display:flex;gap:8px;justify-content:flex-end;}
+.dlg-btn{height:36px;padding:0 18px;border-radius:9px;font-size:.74rem;font-weight:600;cursor:pointer;border:none;transition:all .2s cubic-bezier(.16,1,.3,1);}
+.dlg-btn-primary{background:var(--gg);color:#fff;}
+.dlg-btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.3);}
+.dlg-btn-danger{background:var(--rd);color:#fff;}
+.dlg-btn-danger:hover{background:#991b1b;transform:translateY(-1px);box-shadow:0 4px 12px rgba(185,28,28,.3);}
+.dlg-btn-ghost{background:transparent;border:1px solid var(--r);color:var(--mu);}
+.dlg-btn-ghost:hover{background:var(--c2);transform:translateY(-1px);box-shadow:0 2px 8px rgba(14,12,9,.06);}
+.lrb{background:var(--w);border:1px solid var(--r);border-radius:14px;padding:15px 17px;margin-bottom:14px;cursor:pointer;transition:all .15s;display:none;box-shadow:var(--sh);}
+.lrb:hover{background:var(--c);transform:translateY(-1px);}
+.lrb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.lrb-label{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);font-weight:600;}
+.lrb-status{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;}
+.lrb-pass{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.lrb-fail{background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);}
+.lrb-ref{font-family:var(--mono);font-size:.7rem;color:var(--ink3);margin-bottom:12px;}
+.lrb-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+.lrb-count{text-align:center;}
+.lrb-n{font-family:var(--mono);font-size:1.15rem;font-weight:800;line-height:1;}
+.lrb-l{font-size:.58rem;color:var(--mu);margin-top:2px;}
+.toast-wrap{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);z-index:9998;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;}
+.toast{font-size:.74rem;font-weight:600;padding:9px 19px;border-radius:10px;box-shadow:var(--sh-lg);animation:toast-in .22s cubic-bezier(.16,1,.3,1);white-space:nowrap;}
+.toast-info{background:var(--ink2);color:#fff;}
+.toast-ok{background:var(--gr);color:#fff;}
+.toast-err{background:var(--rd);color:#fff;}
+.toast-warn{background:var(--am);color:#fff;}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.save-ind{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;color:var(--gr);opacity:0;transition:opacity .3s;font-weight:600;}
+.save-ind.show{opacity:1;}
+.save-ind-dot{width:6px;height:6px;background:var(--gr);border-radius:50%;animation:pulse 2s infinite;}
+</style>
+</head>
+<body>
+<main>
+<div class="tb">
+  <div class="tb-l">
+    <div class="logo"><svg viewBox="0 0 20 20"><polygon points="10,2 18,7 18,13 10,18 2,13 2,7"/></svg></div>
+    <div class="app-name">Aurum<em>OS</em></div>
+    <div class="tb-sep"></div>
+    <span class="page-title">Tag Audit</span>
+    <span class="sess-pill" id="top-session">Ready</span>
+    <span class="save-ind" id="save-ind"><span class="save-ind-dot"></span>Saved</span>
+  </div>
+  <div class="tb-r">
+    <button class="btn-tb" onclick="goBack()">&#8592; Inventory</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="setup-wrap">
+    <div class="su-l">
+      <div class="hero-card">
+        <div class="eyebrow">AurumOS · Stock Verification</div>
+        <h1 class="page-h">Tag Audit</h1>
+        <p class="page-sub">Scan each tagged piece to verify physical stock against book records. Every scan saves instantly. Resume any time.</p>
+      </div>
+
+      <div class="sel-card">
+        <span class="sec-lbl">Choose what to audit</span>
+        <div class="all-tile sel" id="all-tile" onclick="selectTouch('ALL')">
+          <div>
+            <div class="at-name">All Touches</div>
+            <div class="at-meta" id="all-meta">Loading...</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="touch-grid" id="touch-grid"><div style="font-size:.74rem;color:var(--mu);padding:8px;">Loading...</div></div>
+        <div class="lrb" id="last-result-banner"></div>
+      </div>
+
+      <div class="by-wrap">
+        <span class="by-lbl">Conducted by</span>
+        <input class="by-inp" id="dash-by" type="text" placeholder="Your name" value="Admin">
+      </div>
+      <button class="launch" id="btn-start-audit" onclick="startAudit()">
+        <div class="launch-ico">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+        Start Tag Audit
+      </button>
+    </div>
+    <div class="su-r">
+      <div class="hist-panel">
+        <div class="hp-h">Recent Audits</div>
+        <div class="hp-s">Click to view summary</div>
+        <div id="history-list"><div class="hist-empty">No audits yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT -->
+<div id="audit">
+  <div class="kpi-strip">
+    <div class="kpi k-all on" onclick="setFilter('all')"><span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><div class="kpi-n" id="kpi-total">0</div><div class="kpi-l">Book Total</div></div>
+    <div class="kpi k-found" onclick="setFilter('found')"><span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span><div class="kpi-n" id="kpi-found">0</div><div class="kpi-l">Found</div></div>
+    <div class="kpi k-miss" onclick="setFilter('missing')"><span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><div class="kpi-n" id="kpi-missing">0</div><div class="kpi-l">Missing</div></div>
+    <div class="kpi k-extra" onclick="setFilter('extra')"><span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><div class="kpi-n" id="kpi-extra">0</div><div class="kpi-l">Extra</div></div>
+  </div>
+  <div class="prog">
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <span class="prog-txt" id="prog-label">0 of 0 accounted for</span>
+    <span class="prog-pct" id="prog-pct">0%</span>
+  </div>
+  <div class="ab">
+    <div class="lc">
+      <div class="lt">
+        <input class="ls" id="search-inp" type="text" placeholder="Search tag ID or item name..." oninput="renderList()">
+        <select class="lf" id="filter-sel" onchange="renderList()">
+          <option value="all">All Tags</option>
+          <option value="missing">Missing</option>
+          <option value="found">Found</option>
+          <option value="extra">Extra</option>
+          <option value="absent">Absent</option>
+        </select>
+      </div>
+      <div class="lh">
+        <div class="lhc"></div>
+        <div class="lhc">Tag ID</div>
+        <div class="lhc">Item Name</div>
+        <div class="lhc c">Touch</div>
+        <div class="lhc r">Gr. Wt</div>
+        <div class="lhc c">Status</div>
+      </div>
+      <div class="tl" id="tag-list"><div class="tl-empty">Start an audit to see tags here</div></div>
+    </div>
+    <div class="rc">
+      <div class="sz">
+        <div class="sz-head">
+          <span class="sz-lbl">Scan Tag Barcode</span>
+          <span class="sz-save"><span class="sz-dot"></span>Auto-saving</span>
+        </div>
+        <div class="sz-row">
+          <svg class="scan-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18"/></svg>
+          <input class="sf-inp" id="scan-inp" type="text" placeholder="Scan or type tag ID" onkeydown="onScanKey(event)" oninput="onScanInput(this)" autocomplete="off" spellcheck="false">
+          <button class="btn-enter" onclick="processScan()" title="Enter">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ls-res" id="last-scan"><div class="lsr-empty">Scan a tag to begin...</div></div>
+      <div class="dp" id="detail-panel">
+        <div class="dp-empty">
+          <div class="dp-ei">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div class="dp-et">Click any tag in the list<br>or scan a tag to see details</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bb">
+    <span class="bb-info" id="bb-info">Session loading...</span>
+    <div class="bb-btns">
+      <button class="bbb bb-pause" id="btn-pause" onclick="togglePause()">&#9646;&#9646; Pause</button>
+      <button class="bbb bb-miss" id="btn-missing" style="display:none;" onclick="openMissingReport()">&#9888; Missing (<span id="bb-missing-n">0</span>)</button>
+      <button class="bbb bb-close" onclick="dlgCloseAudit()">&#10003; Close Audit</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ABSENT MODAL -->
+<div class="dlg-overlay" id="dlg-absent">
+  <div class="dlg dlg-warn">
+    <div class="dlg-icon dlg-icon-warn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--am)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="dlg-title">Mark as Absent</div>
+    <div class="dlg-body" id="dlg-absent-tag">Enter the reason this tag is not physically present.</div>
+    <input class="dlg-inp" id="absent-reason" type="text" placeholder="e.g. Sent for repair, Given to client..." onkeydown="if(event.key==='Enter') confirmAbsent()">
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-absent')">Cancel</button>
+      <button class="dlg-btn dlg-btn-primary" onclick="confirmAbsent()">Mark Absent</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESUME MODAL -->
+<div class="dlg-overlay" id="dlg-resume">
+  <div class="dlg">
+    <div class="dlg-icon dlg-icon-info">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2.5"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="dlg-title">Resume Previous Audit?</div>
+    <div class="dlg-kv-list" id="dlg-resume-info"></div>
+    <div class="dlg-body">An audit session is still active. Resume it or start a fresh one.</div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-resume')">Start Fresh</button>
+      <button class="dlg-btn dlg-btn-primary" onclick="doResume()">Resume Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLOSE AUDIT CONFIRM -->
+<div class="dlg-overlay" id="dlg-close">
+  <div class="dlg dlg-danger">
+    <div class="dlg-icon dlg-icon-danger">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="dlg-title">Close Audit?</div>
+    <div class="dlg-kv-list" id="dlg-close-info"></div>
+    <div class="dlg-body" id="dlg-close-warn"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-close')">Continue Scanning</button>
+      <button class="dlg-btn dlg-btn-danger" onclick="doCloseAudit()">Close Audit</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION SUMMARY -->
+<div class="dlg-overlay" id="dlg-summary">
+  <div class="dlg dlg-success">
+    <div class="dlg-icon dlg-icon-success">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="dlg-title" id="dlg-summary-title">Audit Summary</div>
+    <div class="dlg-kv-list" id="dlg-summary-info"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="printAuditReport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:5px;vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Report
+      </button>
+      <button class="dlg-btn dlg-btn-primary" onclick="closeDlg('dlg-summary')">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO DIALOG -->
+<div class="dlg-overlay" id="dlg-info">
+  <div class="dlg" id="dlg-info-box">
+    <div class="dlg-title" id="dlg-info-title">Notice</div>
+    <div class="dlg-body" id="dlg-info-body"></div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-primary" onclick="closeDlg('dlg-info')">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- MISSING PIECES REPORT -->
+<div class="dlg-overlay" id="dlg-missing">
+  <div class="dlg dlg-danger" style="max-width:540px;">
+    <div class="dlg-icon dlg-icon-danger">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="dlg-title" id="dlg-missing-title">Missing Pieces</div>
+    <div class="dlg-body" style="margin-bottom:10px;">These booked tags were not found during the audit. Copy or export the list, or mark them all absent at once.</div>
+    <div id="missing-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--r);border-radius:8px;background:var(--c);"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin:12px 0;">
+      <input class="dlg-inp" id="missing-reason" type="text" placeholder="Reason (used by bulk 'mark absent')" style="margin-bottom:0;flex:1;">
+      <button class="dlg-btn dlg-btn-ghost" onclick="markAllMissingAbsent()">Mark all absent</button>
+    </div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="copyMissingIds()">Copy IDs</button>
+      <button class="dlg-btn dlg-btn-ghost" onclick="exportMissingCSV()">Export CSV</button>
+      <button class="dlg-btn dlg-btn-primary" onclick="closeDlg('dlg-missing')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE AUDIT CONFIRM -->
+<div class="dlg-overlay" id="dlg-delaudit">
+  <div class="dlg dlg-danger">
+    <div class="dlg-icon dlg-icon-danger">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </div>
+    <div class="dlg-title">Delete Audit?</div>
+    <div class="dlg-kv-list" id="dlg-delaudit-info"></div>
+    <div class="dlg-body">This permanently removes the audit record and all of its saved scans. This cannot be undone.</div>
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-btn-ghost" onclick="closeDlg('dlg-delaudit')">Cancel</button>
+      <button class="dlg-btn dlg-btn-danger" onclick="doDeleteSession()">Delete Audit</button>
+    </div>
+  </div>
+</div>
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────
+var SESSION_ID      = null;
+var SESSION_REF     = '';
+var SNAPSHOT        = [];
+var BOOK_MAP        = {};
+var SCANNED         = {};
+var ABSENT          = {};
+var SELECTED_TOUCH  = 'ALL';
+var PAUSED          = false;
+var MODAL_TAG       = null;
+var PENDING_SESSION = null;
+var AUDIT_BY        = 'Admin';
+var AUDIT_TOUCH     = 'ALL';
+var LAST_CLOSED     = null;
+
+// ── DIALOG HELPERS ────────────────────────────────────────────────
+function openDlg(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'dlg-overlay open';
+}
+function closeDlg(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'dlg-overlay';
+}
+function showInfo(title, body, type) {
+    var box = document.getElementById('dlg-info-box');
+    var t   = document.getElementById('dlg-info-title');
+    var b   = document.getElementById('dlg-info-body');
+    if (box) box.className = 'dlg' + (type ? ' dlg-' + type : '');
+    if (t) t.innerText = title;
+    if (b) b.innerText = body;
+    openDlg('dlg-info');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type, duration) {
+    var wrap = document.getElementById('toast-wrap');
+    if (!wrap) return;
+    var el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'info');
+    el.innerText = msg;
+    wrap.appendChild(el);
+    setTimeout(function() {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity .3s';
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+    }, duration || 2000);
+}
+
+// ── SAVE INDICATOR ────────────────────────────────────────────────
+function showSaved() {
+    var el = document.getElementById('save-ind');
+    if (!el) return;
+    el.className = 'save-ind show';
+    setTimeout(function() { el.className = 'save-ind'; }, 1500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+    loadTouches();
+    loadHistory();
+    checkActiveSession();
+});
+
+// ── TOUCHES ───────────────────────────────────────────────────────
+function loadTouches() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadTouches, 300); return; }
+    window.pywebview.api.tag_audit_get_available_touches().then(function(r) {
+        if (!r || r.status !== 'success') return;
+        var touches = r.touches || [];
+        var total = 0;
+        for (var i = 0; i < touches.length; i++) { total += touches[i].pcs; }
+        var el = document.getElementById('all-meta');
+        if (el) el.innerText = total + ' pcs across ' + touches.length + ' touch groups';
+        var grid = document.getElementById('touch-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        for (var j = 0; j < touches.length; j++) {
+            (function(t) {
+                var btn = document.createElement('div');
+                btn.className = 'tt';
+                btn.setAttribute('data-tv', String(t.touch));
+                btn.innerHTML = '<div class="tt-pct">' + t.touch + '%</div>'
+                    + '<div class="tt-pcs">' + t.pcs + ' pcs</div>'
+                    + '<div class="tt-wt">' + parseFloat(t.total_wt || 0).toFixed(3) + 'g</div>';
+                btn.onclick = function() { selectTouch(this.getAttribute('data-tv')); };
+                grid.appendChild(btn);
+            })(touches[j]);
+        }
+        selectTouch('ALL');
+    }).catch(function() {});
+}
+
+function selectTouch(tv) {
+    SELECTED_TOUCH = tv;
+    var at = document.getElementById('all-tile');
+    if (at) at.className = 'all-tile' + (tv === 'ALL' ? ' sel' : '');
+    var btns = document.querySelectorAll('.tt');
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].className = 'tt' + (btns[i].getAttribute('data-tv') === tv ? ' sel' : '');
+    }
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────
+function loadHistory() {
+    if (!window.pywebview || !window.pywebview.api) { setTimeout(loadHistory, 300); return; }
+    window.pywebview.api.tag_audit_get_sessions(10).then(function(r) {
+        var list   = document.getElementById('history-list');
+        var banner = document.getElementById('last-result-banner');
+        if (!list) return;
+        if (!r || !r.sessions || !r.sessions.length) {
+            list.innerHTML = '<div class="hist-empty">No audits yet</div>';
+            if (banner) banner.style.display = 'none';
+            return;
+        }
+        var lastClosed = null;
+        for (var x = 0; x < r.sessions.length; x++) {
+            if (r.sessions[x].status === 'closed') { lastClosed = r.sessions[x]; break; }
+        }
+        if (banner && lastClosed) {
+            var pct  = lastClosed.total_book > 0 ? Math.round((lastClosed.total_found || 0) / lastClosed.total_book * 100) : 0;
+            var pass = (lastClosed.total_missing || 0) === 0;
+            banner.style.display = 'block';
+            banner.innerHTML = '<div class="lrb-head">'
+                + '<span class="lrb-label">Last Audit Result</span>'
+                + '<span class="lrb-status ' + (pass ? 'lrb-pass' : 'lrb-fail') + '">' + (pass ? 'PASSED' : 'INCOMPLETE') + '</span>'
+                + '</div>'
+                + '<div class="lrb-ref">' + lastClosed.session_ref + ' \u00b7 ' + (lastClosed.started_at || '').slice(0, 10) + '</div>'
+                + '<div class="lrb-counts">'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--gr);">' + (lastClosed.total_found || 0) + '</div><div class="lrb-l">Found</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--rd);">' + (lastClosed.total_missing || 0) + '</div><div class="lrb-l">Missing</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n" style="color:var(--am);">' + (lastClosed.total_extra || 0) + '</div><div class="lrb-l">Extra</div></div>'
+                + '<div class="lrb-count"><div class="lrb-n">' + pct + '%</div><div class="lrb-l">Done</div></div>'
+                + '</div>';
+            banner.onclick = function() { showSessionSummary(lastClosed); };
+        } else if (banner) {
+            banner.style.display = 'none';
+        }
+        list.innerHTML = '';
+        for (var i = 0; i < r.sessions.length; i++) {
+            (function(s) {
+                var row = document.createElement('div');
+                row.className = 'hr' + (s.status === 'active' ? ' hr-active' : '');
+                var tag = s.status === 'active'
+                    ? ' <span style="font-size:.55rem;background:var(--gb);color:var(--g);padding:1px 6px;border-radius:4px;margin-left:4px;">ACTIVE</span>'
+                    : '';
+                var hint = s.status === 'active'
+                    ? '<div class="hr-hint">Double-click to open this session</div>'
+                    : '';
+                row.innerHTML = '<div><div class="hr-ref">' + s.session_ref + tag + '</div>'
+                    + '<div class="hr-meta">' + (s.started_at || '').slice(0, 16) + ' \u2014 ' + (s.started_by || 'Admin') + '</div>'
+                    + hint + '</div>'
+                    + '<div class="hr-pills">'
+                    + '<span class="pill p-gr">' + (s.total_found || 0) + '</span>'
+                    + '<span class="pill p-rd">' + (s.total_missing || 0) + '</span>'
+                    + '<span class="pill p-am">' + (s.total_extra || 0) + '</span>'
+                    + '<span class="hr-del" title="Delete audit">\u2715</span>'
+                    + '</div>';
+                if (s.status === 'active') {
+                    row.ondblclick = function() { resumeSession(s); };
+                } else {
+                    row.ondblclick = function() { showSessionSummary(s); };
+                }
+                row.onclick = function() { onRowClick(s); };
+                var del = row.querySelector('.hr-del');
+                if (del) del.onclick = function(e) { e.stopPropagation(); confirmDeleteSession(s); };
+                list.appendChild(row);
+            })(r.sessions[i]);
+        }
+    }).catch(function() {});
+}
+
+// ── CHECK ACTIVE SESSION ──────────────────────────────────────────
+function checkActiveSession() {
+    if (!window.pywebview || !window.pywebview.api) {
+        setTimeout(checkActiveSession, 400);
+        return;
+    }
+    window.pywebview.api.tag_audit_get_sessions(1).then(function(r) {
+        if (!r || !r.sessions || !r.sessions.length) return;
+        var last = r.sessions[0];
+        if (last.status !== 'active') return;
+        PENDING_SESSION = last;
+        var info = document.getElementById('dlg-resume-info');
+        if (info) {
+            info.innerHTML =
+                '<div class="dlg-kv"><span class="dlg-kv-k">Session</span><span class="dlg-kv-v">' + last.session_ref + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Started</span><span class="dlg-kv-v">' + (last.started_at || '').slice(0, 16) + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Touch</span><span class="dlg-kv-v">' + (last.touch_filter || 'ALL') + '</span></div>'
+                + '<div class="dlg-kv"><span class="dlg-kv-k">Booked</span><span class="dlg-kv-v">' + last.total_book + ' tags</span></div>';
+        }
+        openDlg('dlg-resume');
+    }).catch(function(e) {});
+}
+
+// ── RESUME — FIX: use snapshot API, keep original session_id ─────
+function resumeSession(sess) {
+    closeDlg('dlg-resume');
+    closeDlg('dlg-summary');
+    if (!sess || !window.pywebview || !window.pywebview.api) return;
+
+    // FIX 1: Keep the ORIGINAL session_id — never create a new session on resume
+    SESSION_ID  = sess.id;
+    SESSION_REF = sess.session_ref;
+    SCANNED = {}; ABSENT = {}; SNAPSHOT = []; BOOK_MAP = {};
+
+    // Step 1: Restore scans already saved to DB for this session
+    window.pywebview.api.tag_audit_get_status(SESSION_ID).then(function(r) {
+        if (r && r.scans) {
+            for (var i = 0; i < r.scans.length; i++) {
+                var sc = r.scans[i];
+                // FIX 2: Always uppercase keys — processScan uses toUpperCase()
+                var tid = (sc.tag_id || '').toUpperCase();
+                SCANNED[tid] = {
+                    status: sc.status,
+                    info: { it_name: sc.it_name || '', touch: sc.touch || 0, gr_wt: sc.gr_wt || 0 }
+                };
+            }
+        }
+        if (r && r.absent_ids) {
+            for (var j = 0; j < r.absent_ids.length; j++) {
+                ABSENT[(r.absent_ids[j] || '').toUpperCase()] = 'Marked absent';
+            }
+        }
+
+        // Step 2: Get snapshot WITHOUT creating a new session
+        // FIX 3: tag_audit_start_snapshot is READ-ONLY — does not create a session
+        window.pywebview.api.tag_audit_start_snapshot(SESSION_ID, sess.touch_filter || 'ALL').then(function(sr) {
+            if (sr && sr.snapshot) {
+                SNAPSHOT = sr.snapshot;
+                BOOK_MAP = {};
+                for (var k = 0; k < SNAPSHOT.length; k++) {
+                    // Uppercase BOOK_MAP keys to match SCANNED keys.
+                    // Resume only restores scans ALREADY saved for THIS session
+                    // (handled above via tag_audit_get_status) — no extra
+                    // auto-found logic needed here.
+                    var key = (SNAPSHOT[k].tag_id || '').toUpperCase();
+                    BOOK_MAP[key] = SNAPSHOT[k];
+                    SNAPSHOT[k].tag_id = key;
+                }
+            }
+            showAuditScreen();
+            updateKPIs();
+            renderList();
+            focusScan();
+            toast('Session resumed \u2014 ' + Object.keys(SCANNED).length + ' scans restored', 'ok', 3000);
+        }).catch(function() {
+            showAuditScreen(); updateKPIs(); renderList(); focusScan();
+        });
+    }).catch(function() {
+        showAuditScreen(); updateKPIs(); renderList(); focusScan();
+    });
+}
+
+function doResume() { resumeSession(PENDING_SESSION); }
+
+// Single-click vs double-click on a history row: a lone click opens the
+// summary; a quick second click (double-click) is suppressed so it doesn't
+// also pop the summary before an ACTIVE row resumes.
+var _rowClickTimer = null;
+function onRowClick(s) {
+    if (_rowClickTimer) { clearTimeout(_rowClickTimer); _rowClickTimer = null; return; }
+    _rowClickTimer = setTimeout(function() {
+        _rowClickTimer = null;
+        showSessionSummary(s);
+    }, 280);
+}
+
+// ── DELETE AUDIT SESSION ────────────────────────────────────────
+var DEL_AUDIT_ID = null;
+function confirmDeleteSession(s) {
+    DEL_AUDIT_ID = s.id;
+    var info = document.getElementById('dlg-delaudit-info');
+    if (info) {
+        info.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-kv-k">Session</span><span class="dlg-kv-v">' + s.session_ref + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Status</span><span class="dlg-kv-v">' + (s.status || '').toUpperCase() + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + (s.total_found || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + (s.total_missing || 0) + '</span></div>';
+    }
+    openDlg('dlg-delaudit');
+}
+function doDeleteSession() {
+    closeDlg('dlg-delaudit');
+    if (DEL_AUDIT_ID == null || !window.pywebview || !window.pywebview.api) return;
+    var id = DEL_AUDIT_ID; DEL_AUDIT_ID = null;
+    if (PENDING_SESSION && PENDING_SESSION.id === id) { PENDING_SESSION = null; closeDlg('dlg-resume'); }
+    // Backend method must exist. If the app wasn't restarted (or is running an
+    // old compiled .exe), the new Python delete endpoint won't be present.
+    if (typeof window.pywebview.api.tag_audit_delete_session !== 'function') {
+        toast('Delete endpoint missing — restart the app (rebuild if using the .exe)', 'err', 4000);
+        return;
+    }
+    window.pywebview.api.tag_audit_delete_session(id).then(function(r) {
+        if (r && r.status === 'success') {
+            toast('Audit deleted', 'ok');
+            loadHistory();
+        } else {
+            toast('Could not delete: ' + (r && r.message || 'unknown'), 'err');
+        }
+    }).catch(function(e) { toast('Delete error: ' + e, 'err'); });
+}
+
+// ── SESSION SUMMARY ───────────────────────────────────────────────
+function showSessionSummary(s) {
+    var pct   = s.total_book > 0 ? Math.round((s.total_found || 0) / s.total_book * 100) : 0;
+    var title = document.getElementById('dlg-summary-title');
+    var info  = document.getElementById('dlg-summary-info');
+    if (title) title.innerText = s.session_ref;
+    if (info) {
+        info.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-kv-k">Date</span><span class="dlg-kv-v">' + (s.started_at || '').slice(0, 16) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">By</span><span class="dlg-kv-v">' + (s.started_by || 'Admin') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Touch</span><span class="dlg-kv-v">' + (s.touch_filter || 'ALL') + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Book Total</span><span class="dlg-kv-v">' + (s.total_book || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + (s.total_found || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + (s.total_missing || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + (s.total_extra || 0) + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Progress</span><span class="dlg-kv-v">' + pct + '%</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Status</span><span class="dlg-kv-v">' + (s.status || '').toUpperCase() + '</span></div>';
+    }
+    openDlg('dlg-summary');
+}
+
+// ── START AUDIT ───────────────────────────────────────────────────
+function startAudit() {
+    var byEl = document.getElementById('dash-by');
+    var by   = byEl ? byEl.value.trim() || 'Admin' : 'Admin';
+    AUDIT_BY = by;
+    AUDIT_TOUCH = SELECTED_TOUCH;
+    if (!window.pywebview || !window.pywebview.api) { showInfo('Not Connected', 'Cannot reach AurumOS API.', 'danger'); return; }
+    var btn = document.getElementById('btn-start-audit');
+    if (btn) { btn.disabled = true; btn.innerText = 'Loading...'; }
+    window.pywebview.api.tag_audit_start(by, SELECTED_TOUCH).then(function(r) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Start Tag Audit'; }
+        if (!r || r.status !== 'success') { showInfo('Error', r && r.message ? r.message : 'Failed to start audit.', 'danger'); return; }
+        if (!r.total_book) { showInfo('No Tagged Pieces', 'No tagged pieces found' + (SELECTED_TOUCH !== 'ALL' ? ' for touch ' + SELECTED_TOUCH + '%' : '') + '. Tag your stock first.', 'warn'); return; }
+        SESSION_ID  = r.session_id;
+        SESSION_REF = r.session_ref;
+        SNAPSHOT    = r.snapshot || [];
+        BOOK_MAP    = {}; SCANNED = {}; ABSENT = {};
+        // Normalise BOOK_MAP keys to uppercase.
+        // PERMANENT RULE: every piece starts MISSING by default.
+        // The backend has ALREADY pre-inserted 'found' scan rows for any
+        // tag_id that was Found in the last CLOSED audit (carry-forward).
+        // We load those via tag_audit_get_status right after this.
+        for (var i = 0; i < SNAPSHOT.length; i++) {
+            var key = (SNAPSHOT[i].tag_id || '').toUpperCase();
+            BOOK_MAP[key] = SNAPSHOT[i];
+            SNAPSHOT[i].tag_id = key;
+        }
+
+        // Pull the scans the backend just carried forward (if any)
+        // so previously-verified pieces show as Found immediately,
+        // while brand-new/never-scanned pieces remain Missing.
+        window.pywebview.api.tag_audit_get_status(SESSION_ID).then(function(st) {
+            if (st && st.scans) {
+                for (var j = 0; j < st.scans.length; j++) {
+                    var sc  = st.scans[j];
+                    var tid = (sc.tag_id || '').toUpperCase();
+                    SCANNED[tid] = {
+                        status: sc.status,
+                        info: { it_name: sc.it_name || '', touch: sc.touch || 0, gr_wt: sc.gr_wt || 0 }
+                    };
+                }
+            }
+            showAuditScreen();
+            updateKPIs(); renderList(); focusScan();
+            var autoMsg = (r.auto_found > 0) ? (' \u2014 ' + r.auto_found + ' carried forward as Found from last audit') : '';
+            toast('Audit started \u2014 ' + r.total_book + ' tags to verify' + autoMsg, 'info', 3000);
+        }).catch(function() {
+            showAuditScreen(); updateKPIs(); renderList(); focusScan();
+        });
+    }).catch(function(e) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Start Tag Audit'; }
+        showInfo('Error', String(e), 'danger');
+    });
+}
+
+function showAuditScreen() {
+    var setup = document.getElementById('setup');
+    var audit = document.getElementById('audit');
+    var ts    = document.getElementById('top-session');
+    var bi    = document.getElementById('bb-info');
+    if (setup) setup.style.display = 'none';
+    if (audit) audit.style.display = 'flex';
+    if (ts)    ts.innerText = SESSION_REF;
+    if (bi)    bi.innerText = SESSION_REF + ' \u2014 ' + SNAPSHOT.length + ' tags booked';
+}
+
+// ── SCAN — FIX: proper state sync after every scan ────────────────
+function onScanKey(e) { if (e.key === 'Enter') { e.preventDefault(); processScan(); } }
+
+// Auto-submit as soon as a full tag code is typed/scanned —
+// no Enter key needed. Tag IDs are exactly 10 digits (see
+// generate_unique_tag_id in db_manager.py). Most barcode
+// scanners type fast with no Enter at all, so this catches
+// that case while onkeydown above still handles real Enter presses.
+var SCAN_AUTO_TIMER = null;
+function onScanInput(el) {
+    if (PAUSED) return;
+    var val = (el.value || '').trim();
+    if (SCAN_AUTO_TIMER) { clearTimeout(SCAN_AUTO_TIMER); SCAN_AUTO_TIMER = null; }
+
+    // Standard tag IDs are 10 digits -- auto-submit immediately on reaching that length
+    if (/^[0-9]{10}$/.test(val)) {
+        processScan();
+        return;
+    }
+    // NOTE: we intentionally do NOT auto-submit on a short pause while
+    // typing. Barcode scanners fire all 10 digits at once (caught above);
+    // manual typing only submits on Enter or a complete 10-digit code,
+    // so a half-typed tag ID never gets added by accident.
+}
+
+function processScan() {
+    if (PAUSED) return;
+    var inp = document.getElementById('scan-inp');
+    if (!inp) return;
+    var raw = inp.value.trim().toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+    if (!raw) return;
+    inp.value = '';
+
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+
+    window.pywebview.api.tag_audit_scan(SESSION_ID, raw, {}).then(function(r) {
+        if (!r) { flashInput('fr'); return; }
+
+        if (r.status === 'found') {
+            // FIX: Update SCANNED immediately and synchronously before any render
+            SCANNED[raw] = {
+                status: 'found',
+                // FIX: Prefer tag_info from DB, fallback to BOOK_MAP (uppercase key)
+                info: r.tag_info || BOOK_MAP[raw] || {}
+            };
+            flashInput('fg');
+            showSaved();
+            updateKPIs();
+            renderList();
+            popScannedRow(raw, 'k-found');
+            showLastScan(raw, r);
+            showTagDetail(raw);
+
+        } else if (r.status === 'extra') {
+            SCANNED[raw] = { status: 'extra', info: r.tag_info || {} };
+            flashInput('fa');
+            showSaved();
+            updateKPIs();
+            renderList();
+            popScannedRow(raw, 'k-extra');
+            showLastScan(raw, r);
+            showTagDetail(raw);
+
+        } else if (r.status === 'duplicate') {
+            flashInput('fgy');
+            toast(raw + ' already scanned', 'warn', 1500);
+            // FIX: Still refresh detail panel so user sees current state
+            showTagDetail(raw);
+
+        } else {
+            // 'error' or unexpected status — do NOT update SCANNED
+            flashInput('fr');
+            toast('Scan error: ' + (r.message || 'Tag not found in stock'), 'err', 2000);
+        }
+
+    }).catch(function(err) {
+        flashInput('fr');
+        toast('Connection error', 'err', 2000);
+    });
+
+    setTimeout(function() { focusScan(); }, 100);
+}
+
+// Animate the just-scanned row (pop) + bump its KPI tile.
+function popScannedRow(raw, kpiCls) {
+    var rw = document.getElementById('row-' + raw);
+    if (rw) {
+        rw.classList.add('ti-pop');
+        setTimeout(function() { if (rw) rw.classList.remove('ti-pop'); }, 600);
+    }
+    if (kpiCls) {
+        var k = document.querySelector('.' + kpiCls);
+        if (k) {
+            k.classList.add('kpi-bump');
+            setTimeout(function() { if (k) k.classList.remove('kpi-bump'); }, 500);
+        }
+    }
+}
+
+function flashInput(cls) {
+    var inp = document.getElementById('scan-inp');
+    if (!inp) return;
+    inp.className = 'sf-inp ' + cls;
+    setTimeout(function() { inp.className = 'sf-inp'; }, 700);
+}
+
+// ── LAST SCAN ─────────────────────────────────────────────────────
+function showLastScan(tag_id, r) {
+    var panel = document.getElementById('last-scan');
+    if (!panel) return;
+    var info   = r.tag_info || BOOK_MAP[tag_id] || {};
+    var badges = { found: 'lsr-badge lsr-f', extra: 'lsr-badge lsr-e', duplicate: 'lsr-badge lsr-d' };
+    var texts  = { found: '\u2713 Found', extra: '+ Extra', duplicate: 'Already scanned' };
+    var bclass = badges[r.status] || 'lsr-badge lsr-m';
+    var btext  = texts[r.status]  || '\u2717 Not in book';
+    var h = '<div class="' + bclass + '">' + btext + '</div><div class="lsr-tag">' + tag_id + '</div>';
+    if (info.it_name) { h += '<div class="lsr-nm">' + info.it_name + '</div>'; }
+    if (info.touch || info.gr_wt) {
+        h += '<div class="lsr-detail">'
+            + (info.touch ? info.touch + '%' : '')
+            + (info.touch && info.gr_wt ? ' \u00b7 ' : '')
+            + (info.gr_wt ? parseFloat(info.gr_wt).toFixed(3) + 'g' : '')
+            + '</div>';
+    }
+    panel.innerHTML = h;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────
+function updateKPIs() {
+    var total   = SNAPSHOT.length;
+    var found   = 0; var extra = 0;
+    var keys    = Object.keys(SCANNED);
+    for (var i = 0; i < keys.length; i++) {
+        if (SCANNED[keys[i]].status === 'found') { found++; }
+        if (SCANNED[keys[i]].status === 'extra') { extra++; }
+    }
+    var absent  = Object.keys(ABSENT).length;
+    var missing = Math.max(0, total - found - absent);
+    var pct     = total > 0 ? Math.round((found + absent) / total * 100) : 0;
+    var kt = document.getElementById('kpi-total');   if (kt) kt.innerText = total;
+    var kf = document.getElementById('kpi-found');   if (kf) kf.innerText = found;
+    var km = document.getElementById('kpi-missing'); if (km) km.innerText = missing;
+    var ke = document.getElementById('kpi-extra');   if (ke) ke.innerText = extra;
+    var pf = document.getElementById('prog-fill');   if (pf) pf.style.width = pct + '%';
+    var pl = document.getElementById('prog-label');  if (pl) pl.innerText = (found + absent) + ' of ' + total + ' accounted for';
+    var pp = document.getElementById('prog-pct');    if (pp) pp.innerText = pct + '%';
+    var mb = document.getElementById('btn-missing');
+    var mn = document.getElementById('bb-missing-n');
+    if (mn) mn.innerText = missing;
+    if (mb) mb.style.display = missing > 0 ? 'inline-flex' : 'none';
+}
+
+// ── FILTER ────────────────────────────────────────────────────────
+function setFilter(f) {
+    var sel = document.getElementById('filter-sel');
+    if (sel) sel.value = f;
+    var kpis = document.querySelectorAll('.kpi');
+    for (var i = 0; i < kpis.length; i++) { kpis[i].classList.remove('on'); }
+    var fmap = { all: 0, found: 1, missing: 2, extra: 3 };
+    if (fmap[f] !== undefined && kpis[fmap[f]]) { kpis[fmap[f]].classList.add('on'); }
+    renderList();
+}
+
+// ── RENDER LIST — FIX: reads from SCANNED which is always up-to-date ─
+function renderList() {
+    var search = ((document.getElementById('search-inp') || {}).value || '').toLowerCase();
+    var filter = (document.getElementById('filter-sel') || {}).value || 'all';
+    var listEl = document.getElementById('tag-list');
+    if (!listEl) return;
+
+    var allTags = [];
+
+    // Book tags — status driven by SCANNED (source of truth)
+    for (var i = 0; i < SNAPSHOT.length; i++) {
+        var t  = SNAPSHOT[i];
+        var tid = (t.tag_id || '').toUpperCase(); // always uppercase
+        var sc = SCANNED[tid];  // FIX: lookup with uppercase key
+        var ab = ABSENT[tid];
+        var st = ab ? 'absent' : (sc ? sc.status : 'missing');
+        allTags.push({
+            tag_id:  tid,
+            it_name: t.it_name,
+            touch:   t.touch,
+            gr_wt:   t.gr_wt,
+            status:  st
+        });
+    }
+
+    // Extra tags — in SCANNED but not in BOOK_MAP
+    var ekeys = Object.keys(SCANNED);
+    for (var j = 0; j < ekeys.length; j++) {
+        if (SCANNED[ekeys[j]].status === 'extra') {
+            var inf = SCANNED[ekeys[j]].info || {};
+            allTags.push({
+                tag_id:  ekeys[j],
+                it_name: inf.it_name || '',
+                touch:   inf.touch || 0,
+                gr_wt:   inf.gr_wt || 0,
+                status:  'extra'
+            });
+        }
+    }
+
+    // Filter
+    var visible = [];
+    for (var k = 0; k < allTags.length; k++) {
+        var tag = allTags[k];
+        if ((filter === 'all' || tag.status === filter) &&
+            (!search || (tag.tag_id + ' ' + tag.it_name).toLowerCase().indexOf(search) >= 0)) {
+            visible.push(tag);
+        }
+    }
+
+    // Sort: missing first, then extra, found, absent
+    var ORDER = { missing: 0, extra: 1, found: 2, absent: 3 };
+    visible.sort(function(a, b) {
+        return (ORDER[a.status] || 9) - (ORDER[b.status] || 9) || a.tag_id.localeCompare(b.tag_id);
+    });
+
+    if (!visible.length) {
+        listEl.innerHTML = '<div class="tl-empty">No tags match</div>';
+        return;
+    }
+
+    var icof = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+    var icom = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var icoe = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--am)" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+    var icoa = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+
+    var icoM = { found: icof, missing: icom, extra: icoe, absent: icoa };
+    var pilM = { found: 'ti-st sf', missing: 'ti-st sm', extra: 'ti-st se', absent: 'ti-st sa' };
+    var txtM = { found: 'FOUND', missing: 'MISSING', extra: 'EXTRA', absent: 'ABSENT' };
+    var scM  = { found: 'f', missing: 'm', extra: 'e', absent: 'a' };
+
+    var html = '';
+    for (var n = 0; n < visible.length; n++) {
+        var v   = visible[n];
+        var vid = v.tag_id;
+        html += '<div class="ti ' + (scM[v.status] || 'm') + '" id="row-' + vid + '" onclick="showTagDetail(\'' + vid + '\')">'
+            + '<div class="ti-ico">' + (icoM[v.status] || icoa) + '</div>'
+            + '<div class="ti-id">' + vid + '</div>'
+            + '<div class="ti-nm">' + (v.it_name || '\u2014') + '</div>'
+            + '<div class="ti-tc">' + (v.touch ? v.touch + '%' : '\u2014') + '</div>'
+            + '<div class="ti-wt">' + (v.gr_wt ? parseFloat(v.gr_wt).toFixed(3) + 'g' : '\u2014') + '</div>'
+            + '<div><span class="' + (pilM[v.status] || 'ti-st sm') + '">' + (txtM[v.status] || 'MISSING') + '</span></div>'
+            + '</div>';
+    }
+    listEl.innerHTML = html;
+}
+
+// ── TAG DETAIL ────────────────────────────────────────────────────
+function showTagDetail(tag_id) {
+    var tid = (tag_id || '').toUpperCase(); // FIX: normalise to uppercase
+    var rows = document.querySelectorAll('.ti');
+    for (var i = 0; i < rows.length; i++) { rows[i].classList.remove('sel-row'); }
+    var ar = document.getElementById('row-' + tid);
+    if (ar) ar.classList.add('sel-row');
+    var panel   = document.getElementById('detail-panel');
+    if (!panel) return;
+    var bookT   = BOOK_MAP[tid];
+    var scanT   = SCANNED[tid];
+    var absentR = ABSENT[tid];
+    var status  = absentR ? 'absent' : (scanT ? scanT.status : (bookT ? 'missing' : 'unknown'));
+    var info    = bookT || (scanT && scanT.info) || {};
+    var pcM = {
+        found:   'background:var(--grb);color:var(--gr);border:1px solid var(--grl);',
+        missing: 'background:var(--rdb);color:var(--rd);border:1px solid var(--rdl);',
+        extra:   'background:var(--amb);color:var(--am);border:1px solid var(--aml);'
+    };
+    var pc = pcM[status] || 'background:#f0f0f0;color:#aaa;border:1px solid #e5e5e5;';
+    var h = '<div class="dp-head">'
+        + '<div class="dp-tag-id">' + tid + '</div>'
+        + '<div class="dp-name">' + (info.it_name || 'Unknown Item') + '</div>'
+        + '<span class="dp-spill" style="' + pc + '">' + status.toUpperCase() + '</span>'
+        + '</div><div class="dp-fields">'
+        + '<div class="dp-kv"><span class="dp-k">Touch</span><span class="dp-v">' + (info.touch ? info.touch + '%' : '\u2014') + '</span></div>'
+        + '<div class="dp-kv"><span class="dp-k">Gross Wt</span><span class="dp-v">' + (info.gr_wt ? parseFloat(info.gr_wt).toFixed(3) + ' g' : '\u2014') + '</span></div>'
+        + '<div class="dp-kv"><span class="dp-k">Net Wt</span><span class="dp-v">' + (info.nt_wt ? parseFloat(info.nt_wt).toFixed(3) + ' g' : '\u2014') + '</span></div>'
+        + (info.huid ? '<div class="dp-kv"><span class="dp-k">HUID</span><span class="dp-v" style="font-size:.68rem;">' + info.huid + '</span></div>' : '')
+        + (absentR ? '<div class="dp-kv"><span class="dp-k">Absent</span><span class="dp-v" style="font-size:.7rem;color:var(--mu);">' + absentR + '</span></div>' : '')
+        + '</div><div class="dp-acts">';
+    if (status === 'missing') {
+        h += '<button class="dp-btn db-warn" data-tid="' + tid + '" onclick="openAbsentModal(this.getAttribute(\'data-tid\'))">Mark as Absent</button>';
+        h += '<button class="dp-btn db-ok"   data-tid="' + tid + '" onclick="reScanTag(this.getAttribute(\'data-tid\'))">\u21ba Scan This Tag</button>';
+    } else if (status === 'found') {
+        h += '<button class="dp-btn db-dan"  data-tid="' + tid + '" onclick="undoScan(this.getAttribute(\'data-tid\'))">\u2190 Undo Scan</button>';
+    } else if (status === 'extra') {
+        h += '<button class="dp-btn db-dan"  data-tid="' + tid + '" onclick="undoScan(this.getAttribute(\'data-tid\'))">\u2190 Remove Extra</button>';
+    } else if (status === 'absent') {
+        h += '<button class="dp-btn db-ok"   data-tid="' + tid + '" onclick="removeAbsent(this.getAttribute(\'data-tid\'))">\u2190 Remove Absent</button>';
+        h += '<button class="dp-btn db-warn" data-tid="' + tid + '" onclick="reScanTag(this.getAttribute(\'data-tid\'))">\u21ba Scan Instead</button>';
+    }
+    h += '</div>';
+    panel.innerHTML = h;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────
+function reScanTag(tag_id) {
+    var inp = document.getElementById('scan-inp');
+    if (inp) { inp.value = tag_id; inp.focus(); inp.select(); }
+}
+
+function undoScan(tag_id) {
+    var tid = (tag_id || '').toUpperCase();
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_remove_scan(SESSION_ID, tid).then(function(r) {
+        if (r && r.status === 'success') {
+            delete SCANNED[tid];
+            updateKPIs(); renderList();
+            var panel = document.getElementById('detail-panel');
+            if (panel) panel.innerHTML = '<div class="dp-empty"><div class="dp-ei"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div><div class="dp-et">Scan removed</div></div>';
+            toast('Scan removed for ' + tid, 'warn', 2000);
+            showSaved();
+        }
+    }).catch(function() {});
+}
+
+function openAbsentModal(tag_id) {
+    MODAL_TAG = (tag_id || '').toUpperCase();
+    var sub = document.getElementById('dlg-absent-tag');
+    var inp = document.getElementById('absent-reason');
+    if (sub) sub.innerText = 'Tag ' + MODAL_TAG + ' \u2014 enter reason for absence.';
+    if (inp) inp.value = '';
+    openDlg('dlg-absent');
+    setTimeout(function() { var i = document.getElementById('absent-reason'); if (i) i.focus(); }, 100);
+}
+
+function confirmAbsent() {
+    if (!MODAL_TAG || !SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    var inp    = document.getElementById('absent-reason');
+    var reason = (inp ? inp.value : '').trim() || 'Not available';
+    var tid    = MODAL_TAG;
+    window.pywebview.api.tag_audit_mark_absent(SESSION_ID, tid, reason).then(function(r) {
+        if (r && r.status === 'success') {
+            ABSENT[tid] = reason;
+            closeDlg('dlg-absent');
+            updateKPIs(); renderList(); showTagDetail(tid);
+            toast(tid + ' marked absent', 'warn', 2000);
+            showSaved();
+        }
+    }).catch(function() { closeDlg('dlg-absent'); });
+    MODAL_TAG = null;
+}
+
+function removeAbsent(tag_id) {
+    var tid = (tag_id || '').toUpperCase();
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_remove_absence(SESSION_ID, tid).then(function(r) {
+        if (r && r.status === 'success') {
+            delete ABSENT[tid];
+            updateKPIs(); renderList(); showTagDetail(tid);
+            toast('Absent mark removed', 'ok', 1500);
+            showSaved();
+        }
+    }).catch(function() {});
+}
+
+// ── PAUSE ─────────────────────────────────────────────────────────
+function togglePause() {
+    PAUSED = !PAUSED;
+    var btn = document.getElementById('btn-pause');
+    var inp = document.getElementById('scan-inp');
+    if (PAUSED) {
+        if (btn) { btn.innerHTML = '\u25b6 Resume'; btn.style.background = 'rgba(21,128,61,.2)'; btn.style.color = 'var(--gr)'; }
+        if (inp) inp.disabled = true;
+        toast('Scanning paused', 'warn', 1500);
+    } else {
+        if (btn) { btn.innerHTML = '\u23f8 Pause'; btn.style.background = ''; btn.style.color = ''; }
+        if (inp) inp.disabled = false;
+        focusScan();
+        toast('Scanning resumed', 'ok', 1500);
+    }
+}
+
+// ── CLOSE AUDIT ───────────────────────────────────────────────────
+function dlgCloseAudit() {
+    var found   = parseInt((document.getElementById('kpi-found')   || {}).innerText) || 0;
+    var missing = parseInt((document.getElementById('kpi-missing') || {}).innerText) || 0;
+    var extra   = parseInt((document.getElementById('kpi-extra')   || {}).innerText) || 0;
+    var total   = parseInt((document.getElementById('kpi-total')   || {}).innerText) || 0;
+    var pct     = total > 0 ? Math.round(found / total * 100) : 0;
+    var info    = document.getElementById('dlg-close-info');
+    var warn    = document.getElementById('dlg-close-warn');
+    if (info) {
+        info.innerHTML =
+            '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + found + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + missing + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + extra + '</span></div>'
+            + '<div class="dlg-kv"><span class="dlg-kv-k">Progress</span><span class="dlg-kv-v">' + pct + '%</span></div>';
+    }
+    if (warn) warn.innerText = missing > 0 ? missing + ' piece(s) are not accounted for. Close anyway?' : 'All pieces accounted for. Ready to close.';
+    openDlg('dlg-close');
+}
+
+function doCloseAudit() {
+    closeDlg('dlg-close');
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) return;
+    window.pywebview.api.tag_audit_close(SESSION_ID).then(function(r) {
+        if (r && r.status === 'success') {
+            var found   = r.found || 0;
+            var missing = r.missing || 0;
+            var extra   = r.extra || 0;
+            // Capture everything needed for the printable report BEFORE
+            // we wipe the in-memory state below.
+            LAST_CLOSED = {
+                ref:     SESSION_REF,
+                by:      AUDIT_BY,
+                touch:   AUDIT_TOUCH,
+                found:   found,
+                missing: missing,
+                extra:   extra,
+                missingTags: getMissingTags()
+            };
+            SESSION_ID = null; SESSION_REF = '';
+            SNAPSHOT = []; BOOK_MAP = {}; SCANNED = {}; ABSENT = {};
+            var setup = document.getElementById('setup');
+            var audit = document.getElementById('audit');
+            var ts    = document.getElementById('top-session');
+            if (audit) audit.style.display = 'none';
+            if (setup) setup.style.display = 'flex';
+            if (ts)    ts.innerText = 'Ready';
+            loadHistory();
+            var sinfo = document.getElementById('dlg-summary-info');
+            var stit  = document.getElementById('dlg-summary-title');
+            if (stit) stit.innerText = 'Audit Complete';
+            if (sinfo) {
+                sinfo.innerHTML =
+                    '<div class="dlg-kv"><span class="dlg-kv-k">Found</span><span class="dlg-kv-v" style="color:var(--gr);">' + found + '</span></div>'
+                    + '<div class="dlg-kv"><span class="dlg-kv-k">Missing</span><span class="dlg-kv-v" style="color:var(--rd);">' + missing + '</span></div>'
+                    + '<div class="dlg-kv"><span class="dlg-kv-k">Extra</span><span class="dlg-kv-v" style="color:var(--am);">' + extra + '</span></div>'
+                    + '<div class="dlg-kv"><span class="dlg-kv-k">Result</span><span class="dlg-kv-v" style="color:' + (missing === 0 ? 'var(--gr)' : 'var(--rd)') + ';">' + (missing === 0 ? 'PASSED' : 'INCOMPLETE') + '</span></div>';
+            }
+            openDlg('dlg-summary');
+        } else {
+            toast('Error closing audit: ' + (r && r.message || 'Unknown'), 'err');
+        }
+    }).catch(function(e) { toast('Connection error: ' + e, 'err'); });
+}
+
+// ── PRINT AUDIT REPORT ──────────────────────────────────────────
+function printAuditReport() {
+    if (!LAST_CLOSED) { toast('No completed audit to print', 'warn'); return; }
+    var lc = LAST_CLOSED;
+    var now = new Date();
+    var dt = now.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    var tm = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+    function build(biz) {
+        biz = biz || 'Jewellery Business Management';
+        var missRows = (lc.missingTags || []).map(function(x, i) {
+            return '<tr>'
+                + '<td style="padding:7px 10px;font-size:8pt;color:#1d4ed8;font-family:Arial,sans-serif;text-align:center;">' + (i + 1) + '</td>'
+                + '<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:8.5pt;color:#1d4ed8;">' + x.tag_id + '</td>'
+                + '<td style="padding:7px 10px;font-size:9pt;">' + (x.it_name || '—') + '</td>'
+                + '<td style="padding:7px 10px;text-align:center;font-family:Arial,sans-serif;font-size:8.5pt;">' + (x.touch ? x.touch + '%' : '—') + '</td>'
+                + '<td style="padding:7px 10px;text-align:right;font-family:Arial,sans-serif;font-size:8.5pt;color:#5c5a52;">' + (x.gr_wt ? parseFloat(x.gr_wt).toFixed(3) + 'g' : '—') + '</td>'
+                + '</tr>';
+        }).join('');
+        if (!missRows) missRows = '<tr><td colspan="5" style="padding:18px;text-align:center;font-size:9pt;color:#15803d;font-style:italic;">All booked tags accounted for — no missing pieces. ✓</td></tr>';
+
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AurumOS Tag Audit ' + lc.ref + '</title>'
+            + '<style>'
+            + '@page{size:A4;margin:0;}'
+            + '*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+            + 'html,body{font-family:Arial,Helvetica,sans-serif;color:#0e0c09;background:#fff;}'
+            + '.page{width:210mm;min-height:297mm;margin:0 auto;display:flex;flex-direction:column;}'
+            + '.topbar{height:6px;background:linear-gradient(90deg,#1d4ed8,#2563eb,#3b82f6,#2563eb,#1d4ed8);}'
+            + '.hdr{padding:14mm 16mm 9mm;}'
+            + '.brand{font-family:Georgia,serif;font-size:22pt;color:#0e0c09;}'
+            + '.brand em{color:#1d4ed8;font-style:italic;}'
+            + '.brand-sub{font-size:6.5pt;color:#9e9890;text-transform:uppercase;letter-spacing:3px;margin-top:3px;}'
+            + '.rpt{float:right;text-align:right;}'
+            + '.rpt-title{font-family:Georgia,serif;font-size:15pt;color:#0e0c09;}'
+            + '.rpt-title em{color:#1d4ed8;font-style:italic;}'
+            + '.rpt-meta{font-size:6.5pt;color:#7a7268;margin-top:4px;}'
+            + '.band{margin:0 16mm;background:#f8fafb;border:1px solid rgba(37,99,235,.2);border-left:4px solid #2563eb;border-radius:8px;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;}'
+            + '.band-ref{font-family:Georgia,serif;font-size:12pt;color:#0e0c09;}'
+            + '.band-meta{font-size:6.5pt;color:#7a7268;text-align:right;}'
+            + '.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8mm 16mm;}'
+            + '.sc{border:1px solid rgba(14,12,9,.1);border-radius:6px;padding:8px 12px;}'
+            + '.sc.b{border-top:3px solid #1d4ed8;background:#eff6ff;}.sc.g{border-top:3px solid #15803d;background:#f0fdf4;}.sc.o{border-top:3px solid #2563eb;background:#fefce8;}.sc.r{border-top:3px solid #b91c1c;background:#fef2f2;}'
+            + '.sc label{display:block;font-size:5.5pt;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px;}'
+            + '.sc.b label{color:#1d4ed8;}.sc.g label{color:#22c55e;}.sc.o label{color:#d97706;}.sc.r label{color:#dc2626;}'
+            + '.sc span{font-family:Arial,sans-serif;font-size:13pt;}'
+            + '.sc.b span{color:#1d4ed8;}.sc.g span{color:#15803d;}.sc.o span{color:#1d4ed8;}.sc.r span{color:#b91c1c;}'
+            + '.sec{margin:0 16mm;}'
+            + '.sec-h{font-family:Georgia,serif;font-size:11pt;color:#0e0c09;margin-bottom:6px;}'
+            + '.tbl{width:100%;border-collapse:collapse;border:1px solid rgba(14,12,9,.12);border-radius:6px;overflow:hidden;}'
+            + '.tbl th{background:#f2efe7;font-size:6pt;text-transform:uppercase;letter-spacing:.5px;color:#5c5a52;padding:7px 10px;text-align:left;border-bottom:1px solid rgba(14,12,9,.15);}'
+            + '.tbl th.c{text-align:center;}.tbl th.r{text-align:right;}'
+            + '.tbl td{border-bottom:1px solid rgba(14,12,9,.06);}'
+            + '.tbl tr:last-child td{border-bottom:none;}'
+            + '.foot{margin-top:auto;padding:6mm 16mm 8mm;border-top:1px solid rgba(37,99,235,.2);}'
+            + '.sigs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:6mm;}'
+            + '.sig{text-align:center;}'
+            + '.sigline{border-top:1px solid rgba(14,12,9,.25);padding-top:5px;font-size:6.5pt;color:#7a7268;}'
+            + '.fbar{display:flex;justify-content:space-between;align-items:flex-end;font-size:6pt;color:#9e9890;}'
+            + '.fbrand{font-family:Georgia,serif;font-size:9pt;color:#0e0c09;text-align:right;}'
+            + '.fbrand em{color:#1d4ed8;font-style:italic;}'
+            + '.fbsub{font-size:5pt;color:#9e9890;letter-spacing:1px;text-transform:uppercase;}'
+            + '.botbar{height:5px;background:linear-gradient(90deg,#1d4ed8,#2563eb,#3b82f6,#2563eb,#1d4ed8);}'
+            + '</style></head><body>'
+            + '<div class="page">'
+            + '<div class="topbar"></div>'
+            + '<div class="hdr">'
+                + '<div class="brand">Aurum<em>OS</em></div>'
+                + '<div class="brand-sub">' + biz + '</div>'
+                + '<div class="rpt"><div class="rpt-title">Tag <em>Audit</em> Report</div><div class="rpt-meta">' + dt + ' &nbsp;·&nbsp; ' + tm + '</div></div>'
+            + '</div>'
+            + '<div class="band">'
+                + '<div><div class="band-ref">' + lc.ref + '</div><div class="band-meta">Conducted by ' + (lc.by || 'Admin') + ' &nbsp;·&nbsp; Touch: ' + (lc.touch || 'ALL') + '</div></div>'
+                + '<div class="band-meta"><b style="color:' + (lc.missing === 0 ? '#15803d' : '#b91c1c') + ';">' + (lc.missing === 0 ? 'PASSED' : 'INCOMPLETE') + '</b></div>'
+            + '</div>'
+            + '<div class="strip">'
+                + '<div class="sc b"><label>Found</label><span>' + lc.found + '</span></div>'
+                + '<div class="sc r"><label>Missing</label><span>' + lc.missing + '</span></div>'
+                + '<div class="sc o"><label>Extra</label><span>' + lc.extra + '</span></div>'
+                + '<div class="sc g"><label>Booked</label><span>' + (lc.found + lc.missing + lc.extra) + '</span></div>'
+            + '</div>'
+            + '<div class="sec"><div class="sec-h">Missing Pieces (' + lc.missing + ')</div>'
+                + '<table class="tbl"><thead><tr><th class="c" style="width:26px;">#</th><th>Tag ID</th><th>Item Name</th><th class="c">Touch</th><th class="r">Gr Wt</th></tr></thead><tbody>' + missRows + '</tbody></table></div>'
+            + '<div class="foot">'
+                + '<div class="sigs"><div class="sig"><div class="sigline">Prepared By</div></div><div class="sig"><div class="sigline">Verified By</div></div><div class="sig"><div class="sigline">Authorised Signatory</div></div></div>'
+                + '<div class="fbar"><div>Generated ' + dt + ' at ' + tm + '. System report from AurumOS.</div><div><div class="fbrand">Aurum<em>OS</em></div><div class="fbsub">Jewellery Business Management</div></div></div>'
+            + '</div>'
+            + '<div class="botbar"></div>'
+            + '</div>'
+            + '</body></html>';
+    }
+
+    function open(biz) {
+        var html = build(biz);
+        // Use pywebview's native print window (avoids the blocked-popup problem).
+        // open_print_window injects its own auto-print script, so we pass html
+        // without one. The window.open fallback is only for plain browsers.
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.open_print_window) {
+            window.pywebview.api.open_print_window(html).then(function(r) {
+                if (!r || r.status !== 'success') toast('Could not open print window', 'err');
+            }).catch(function() { toast('Print error', 'err'); });
+        } else {
+            html = html.replace('</body>', '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();},400);};</scr' + 'ipt></body>');
+            var w = window.open('', '_blank', 'width=900,height=750');
+            if (!w) { toast('Pop-up blocked — allow pop-ups to print', 'err'); return; }
+            w.document.open(); w.document.write(html); w.document.close();
+        }
+    }
+
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_settings) {
+        window.pywebview.api.get_settings().then(function(res) {
+            var biz = '';
+            if (res && res.data) { var d = res.data; biz = d.business_name || d.owner_name || ''; }
+            open(biz);
+        }).catch(function() { open(''); });
+    } else { open(''); }
+}
+
+// ── MISSING PIECES REPORT ────────────────────────────────────────
+function getMissingTags() {
+    var miss = [];
+    for (var k in BOOK_MAP) {
+        if (ABSENT[k]) continue;                       // accounted as absent
+        var sc = SCANNED[k];
+        if (sc && (sc.status === 'found' || sc.status === 'extra')) continue; // found
+        var t = BOOK_MAP[k];
+        miss.push({
+            tag_id:  k,
+            it_name: t.it_name || '',
+            touch:   t.touch || 0,
+            gr_wt:   t.gr_wt || 0
+        });
+    }
+    return miss;
+}
+
+function openMissingReport() {
+    var m = getMissingTags();
+    var title = document.getElementById('dlg-missing-title');
+    if (title) title.innerText = 'Missing Pieces (' + m.length + ')';
+    renderMissingList(m);
+    openDlg('dlg-missing');
+}
+
+function renderMissingList(m) {
+    var el = document.getElementById('missing-list');
+    if (!el) return;
+    if (!m.length) {
+        el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--gr);font-style:italic;">No missing pieces — all booked tags accounted for. ✓</div>';
+        return;
+    }
+    var h = '';
+    for (var i = 0; i < m.length; i++) {
+        var x = m[i];
+        h += '<div style="display:grid;grid-template-columns:1fr 64px 72px;gap:0;padding:8px 12px;border-bottom:1px solid rgba(14,12,9,.05);align-items:center;font-size:.74rem;">'
+            + '<div><div style="font-family:var(--mono);font-weight:700;color:var(--ink2);">' + x.tag_id + '</div>'
+            + '<div style="font-size:.68rem;color:var(--mu);">' + (x.it_name || '—') + '</div></div>'
+            + '<div style="text-align:center;font-family:var(--mono);color:var(--ink3);">' + (x.touch ? x.touch + '%' : '—') + '</div>'
+            + '<div style="text-align:right;font-family:var(--mono);color:var(--mu);">' + (x.gr_wt ? parseFloat(x.gr_wt).toFixed(3) + 'g' : '—') + '</div>'
+            + '</div>';
+    }
+    el.innerHTML = h;
+}
+
+function copyMissingIds() {
+    var m = getMissingTags();
+    var ids = m.map(function(x) { return x.tag_id; }).join('\n');
+    if (!ids) { toast('No missing tags to copy', 'info'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ids).then(
+            function() { toast('Copied ' + m.length + ' tag IDs', 'ok'); },
+            function() { fallbackCopy(ids, m.length); }
+        );
+    } else { fallbackCopy(ids, m.length); }
+}
+function fallbackCopy(t, n) {
+    var ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Copied ' + (n || 0) + ' tag IDs', 'ok'); }
+    catch (e) { toast('Copy failed', 'err'); }
+    document.body.removeChild(ta);
+}
+
+function exportMissingCSV() {
+    var m = getMissingTags();
+    if (!m.length) { toast('No missing tags to export', 'info'); return; }
+    var head = ['Tag ID', 'Item Name', 'Touch %', 'Gross Wt (g)'];
+    var rows = m.map(function(x) {
+        return [x.tag_id, x.it_name || '', x.touch || '', parseFloat(x.gr_wt || 0).toFixed(3)];
+    });
+    var csv = [head.join(',')].concat(rows.map(function(r) {
+        return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+    })).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'missing_tags_' + (SESSION_REF || 'audit') + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    toast('Exported ' + m.length + ' missing tags', 'ok');
+}
+
+function markAllMissingAbsent() {
+    var m = getMissingTags();
+    if (!m.length) { toast('No missing tags', 'info'); return; }
+    var inp = document.getElementById('missing-reason');
+    var reason = (inp ? inp.value : '').trim() || 'Not available';
+    if (!SESSION_ID || !window.pywebview || !window.pywebview.api) { toast('Not connected', 'err'); return; }
+    var api = window.pywebview.api;
+    var pending = m.length, done = 0, ok = 0;
+    toast('Marking ' + m.length + ' absent...', 'warn', 1500);
+    m.forEach(function(x) {
+        api.tag_audit_mark_absent(SESSION_ID, x.tag_id, reason).then(function(r) {
+            if (r && r.status === 'success') { ABSENT[x.tag_id.toUpperCase()] = reason; ok++; }
+        }).catch(function() {}).then(function() {
+            done++;
+            if (done === pending) {
+                updateKPIs(); renderList(); openMissingReport();
+                toast(ok + ' marked absent', 'ok', 2500); showSaved();
+            }
+        });
+    });
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+function focusScan() {
+    var el = document.getElementById('scan-inp');
+    if (el && !el.disabled) el.focus();
+}
+
+function goBack() {
+    var role = (typeof _getRole === 'function') ? _getRole() : 'admin';
+    var dest = (role === 'staff') ? 'billing.html' : 'inventory.html';
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
+        window.pywebview.api.navigate(dest);
+    } else {
+        location.href = dest;
+    }
+}
+
+</script>
+</body>
+</html>

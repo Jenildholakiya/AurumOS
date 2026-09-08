@@ -11,9 +11,55 @@ try:
 except Exception:
     pass
 
+
+# ── APPLY STAGED BACKEND UPDATES (before any app imports) ─────────────────
+def _apply_staged_updates():
+    """Copy _update_staging/ files to their final locations, then delete staging.
+    Must run BEFORE any app imports so updated modules are loaded fresh."""
+    import shutil
+    try:
+        if getattr(_sys, 'frozen', False):
+            base = _os.path.dirname(_os.path.abspath(_sys.executable))
+        else:
+            base = _os.getcwd()
+        staging = _os.path.join(base, '_update_staging')
+        if not _os.path.isdir(staging):
+            return  # nothing staged
+        applied = 0
+        for dirpath, _, filenames in _os.walk(staging):
+            for fname in filenames:
+                src = _os.path.join(dirpath, fname)
+                rel = _os.path.relpath(src, staging).replace('\\', '/')
+                dst = _os.path.join(base, rel.replace('/', _os.sep))
+                try:
+                    _os.makedirs(_os.path.dirname(dst), exist_ok=True)
+                    shutil.copy2(src, dst)
+                    applied += 1
+                except Exception:
+                    pass
+        # Clean up staging
+        shutil.rmtree(staging, ignore_errors=True)
+        # Mark update as applied (prevents duplicate banner)
+        if applied:
+            marker = _os.path.join(base, '.update_applied')
+            # Read version from version.lock if present
+            vlock = _os.path.join(base, 'version.lock')
+            ver = ''
+            if _os.path.isfile(vlock):
+                with open(vlock, 'r', encoding='utf-8') as f:
+                    ver = f.read().strip()
+            with open(marker, 'w', encoding='utf-8') as f:
+                f.write(ver)
+    except Exception:
+        pass
+
+_apply_staged_updates()
+# ── END STAGED UPDATE APPLY ───────────────────────────────────────────────
+
 import threading
 import time
 import hashlib
+import re
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -21,9 +67,76 @@ import base64
 import uuid
 import hmac
 import struct
-import webview
 import os
 import sys
+
+# ── Defer webview import — pywebview internally imports clr which ──
+# loads System.Windows.Forms. If .NET is missing this crashes immediately.
+# We import it lazily AFTER checking .NET availability in run_aur_os().
+webview = None
+
+# ── Monkey-patch pywebview to suppress stale callback / .NET async crashes ──
+# Applied lazily when webview is first imported.
+_webview_patched = False
+def _patch_webview():
+    global webview, _webview_patched
+    if _webview_patched:
+        return
+    import importlib
+    try:
+        webview = importlib.import_module('webview')
+    except ImportError:
+        webview = None
+        return
+    try:
+        webview.settings['OPEN_DEVTOOLS_IN_DEBUG'] = False
+        webview.settings['ALLOW_DOWNLOADS'] = True
+    except Exception:
+        pass
+    try:
+        from webview.window import Window as _WVWindow
+        _orig_eval_js = _WVWindow.evaluate_js
+        def _safe_eval_js(self, script, **kwargs):
+            try:
+                return _orig_eval_js(self, script, **kwargs)
+            except Exception:
+                return None
+        _WVWindow.evaluate_js = _safe_eval_js
+    except Exception:
+        pass
+    _webview_patched = True
+
+
+def _ensure_webview():
+    """Guarantee webview is importable or exit with a clear message."""
+    global webview
+    if webview is not None and hasattr(webview, 'create_window'):
+        return
+    _patch_webview()
+    if webview is not None and hasattr(webview, 'create_window'):
+        return
+    # Last-chance fallback: direct import
+    try:
+        import importlib
+        webview = importlib.import_module('webview')
+        if hasattr(webview, 'create_window'):
+            return
+    except Exception:
+        pass
+    # Nothing worked — tell the user exactly what to do
+    _msg = (
+        "AurumOS cannot start because 'pywebview' is not installed or is broken.\n\n"
+        "Fix — run this command:\n\n"
+        "    pip install --force-reinstall pywebview\n\n"
+        "If you already installed it, make sure you are using the same\n"
+        "Python interpreter that is running this script."
+    )
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, _msg, "AurumOS — Missing Dependency", 0x10)
+    except Exception:
+        print(_msg, file=sys.stderr)
+    sys.exit(1)
 
 # Set DB path env var BEFORE DBManager import so it always uses EXE directory
 def _get_db_base():
@@ -37,8 +150,18 @@ import json
 import random
 from datetime import datetime
 from pathlib import Path
-from database.db_manager import DBManager
+
+# ── License key format validation ────────────────────────────────────────────
+# Accepted prefixes: AU- (standard), AR- (retail).  Format: XX-XXXX-XXXX-XXXX-XXXX (22 chars)
+_VALID_KEY_PREFIXES = ("AU-", "AR-")
+def _is_valid_key_format(key):
+    """Return True if *key* matches AU-XXXX-XXXX-XXXX-XXXX or AR-XXXX-XXXX-XXXX-XXXX."""
+    return isinstance(key, str) and len(key) == 22 and key.upper().startswith(_VALID_KEY_PREFIXES)
+# noinspection PyUnresolvedReferences
+from database.db_manager import DBManager  # obfuscated module — resolved at runtime
 from sync_engine import SyncEngine
+from subscription_manager import SubscriptionManager
+from sse_listener import LicenseEventListener
 try:
     from database.bastion_ai import BastionAI
     _BASTION_AVAILABLE = True
@@ -58,11 +181,58 @@ except ImportError:
     CURRENT_VERSION = '1.0.6'
     def check_for_update(**kw): return None
     def download_and_install(*a, **kw): pass
-from core.tag_engine import TagFactory
+# noinspection PyUnresolvedReferences
+from core.tag_engine import TagFactory  # obfuscated module — resolved at runtime
+
+try:
+    from core.ai_support import AISupport
+    _AI_AVAILABLE = True
+except Exception:
+    _AI_AVAILABLE = False
+    class AISupport:
+        def __init__(self, *a, **k): pass
+        def ask(self, *a, **k): return {"status": "error", "message": "AI assistant unavailable."}
+        def get_status(self): return {"provider": "openai", "model": "", "configured": False, "key_masked": ""}
+        def save_config(self, *a, **k): pass
 
 HOT_RELOAD = False
-webview.settings['OPEN_DEVTOOLS_IN_DEBUG'] = False
-webview.settings['ALLOW_DOWNLOADS'] = True
+
+# ── SUPPRESS pythonnet .NET interop crashes ──────────────────────────
+# pythonnet sometimes fails to convert obscure .NET exceptions
+# (InvalidAsynchronousStateException etc.) into Python objects, causing
+# a hard crash. This hook swallows those so the app stays alive.
+import sys as _sys
+_original_excepthook = _sys.excepthook
+def _safe_excepthook(exc_type, exc_value, exc_tb):
+    try:
+        _estr = str(exc_value) if exc_value else ''
+        if 'InvalidAsynchronousStateException' in _estr or 'TypeManager' in _estr:
+            try: print(f'[PYNET-SAFE] Suppressed .NET interop crash: {_estr[:120]}', flush=True)
+            except: pass
+            return
+    except Exception:
+        pass
+    _original_excepthook(exc_type, exc_value, exc_tb)
+_sys.excepthook = _safe_excepthook
+
+# Also catch it in background threads
+import threading as _threading
+_orig_thread_exc_hook = getattr(_threading, 'excepthook', None)
+def _safe_thread_exc_hook(args):
+    try:
+        _estr = str(args.exc_value) if args and args.exc_value else ''
+        if 'InvalidAsynchronousStateException' in _estr or 'TypeManager' in _estr:
+            try: print(f'[PYNET-SAFE] Suppressed .NET crash in thread: {_estr[:120]}', flush=True)
+            except: pass
+            return
+    except Exception:
+        pass
+    if _orig_thread_exc_hook:
+        _orig_thread_exc_hook(args)
+try:
+    _threading.excepthook = _safe_thread_exc_hook
+except AttributeError:
+    pass
 
 
 # -- PERSISTENT LOG FILE -------------------------------------------------------
@@ -601,6 +771,18 @@ class AurumAPI:
             self.db = DBManager()
         LOG(f"[DB] DBManager initialized, setup_done={self.db.is_setup_done()}")
 
+        # ── SUBSCRIPTION MANAGER ────────────────────────────────────────
+        self.sub = SubscriptionManager()
+        try:
+            api_base = self._get_license_check_url()
+            self.sub.set_api_base(api_base)
+        except Exception:
+            pass
+        LOG("[SUB] SubscriptionManager initialized")
+
+        # ── RENEWAL GRACE TIMESTAMP ────────────────────────────────────
+        self._renewed_at = 0
+
         # Ensure backup dir exists
         self.ensure_backup_structure()
 
@@ -679,6 +861,11 @@ class AurumAPI:
         self._window = None
         self.TEMP_KEY = "aurum-dev-2026"
         self.tag_factory = TagFactory()
+        try:
+            self.ai = AISupport()
+        except Exception as _ae:
+            LOG(f"[AI] init skipped: {_ae}")
+            self.ai = AISupport()
         global _api_db_ref
         _api_db_ref = self.db
         self._session_role     = None
@@ -780,6 +967,385 @@ class AurumAPI:
             ERR(f"[GREETING] {e}")
             return {"status": "error", "greeting_prefix": "Welcome", "owner_title": "Director"}
 
+    def get_metal_rates(self):
+        """Editable per-gram rates shown on the retail dashboard."""
+        try:
+            def _f(key, default):
+                try:
+                    return float(self.db.get_config(key, default) or default)
+                except (TypeError, ValueError):
+                    return float(default)
+            return {"status": "success", "gold_22k": _f('gold_rate_22k', 0),
+                    "gold_24k": _f('gold_rate_24k', 0), "silver": _f('silver_rate', 0)}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def set_metal_rates(self, data):
+        """Save editable per-gram rates from the retail dashboard."""
+        try:
+            d = data or {}
+            for key, field in (('gold_rate_22k', 'gold_22k'), ('gold_rate_24k', 'gold_24k'),
+                               ('silver_rate', 'silver')):
+                if field in d:
+                    try:
+                        self.db.set_config(key, float(d[field] or 0))
+                    except (TypeError, ValueError):
+                        pass
+            return self.get_metal_rates()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    # -- NOTIFICATION CENTER -------------------------------------------------
+    # Owner inbox: staff-bill alerts (local) + AurumOS admin messages (remote).
+
+    # -- URGENT MESSAGES (admin → this terminal) -------------------------------
+    # Python daemon is the always-on receiver: persist + forward to any open
+    # page. Display rules live in ui/urgent.js. Informational only — NEVER
+    # locks billing/stock (only status_change revoked/expired does that).
+
+    def urgent_list(self, limit=100):
+        try:
+            return {"status": "success",
+                    "messages": self.db.get_urgent_messages(limit),
+                    "unread": self.db.urgent_unread_count()}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "messages": []}
+
+    def urgent_mark_read(self, mid):
+        try:
+            return {"status": "success" if self.db.mark_urgent_read(mid) else "error"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def urgent_mark_all_read(self):
+        try:
+            return {"status": "success" if self.db.mark_all_urgent_read() else "error"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def urgent_delete(self, mid):
+        try:
+            return {"status": "success" if self.db.delete_urgent_message(mid) else "error"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def urgent_ingest(self, msg):
+        """JS-side ingest: target-filter + dedupe store. Returns stored flag."""
+        try:
+            if not isinstance(msg, dict) or msg.get('id') is None:
+                return {"status": "error", "stored": False}
+            key = str(getattr(self, '_sse_key', '') or '').strip().upper()
+            if not key:
+                try:
+                    key = str(self.db.get_config('license_key', '') or '').strip().upper()
+                except Exception:
+                    key = ''
+            applies = False
+            if str(msg.get('broadcast') or '').lower() == 'all':
+                applies = True
+            elif msg.get('key') is not None:
+                applies = (str(msg.get('key') or '').strip().upper() == key)
+            else:
+                applies = DBManager.urgent_applies(msg, key)
+            if not applies:
+                return {"status": "ignored", "stored": False}
+            stored = self.db.store_urgent_message(msg)
+            return {"status": "success", "stored": bool(stored)}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "stored": False}
+
+    def _sse_on_urgent_message(self, data):
+        """Python-side receiver: dedupe + persist, then poke the open page."""
+        try:
+            if not isinstance(data, dict):
+                return
+            is_new = self.db.store_urgent_message(data)
+            self._forward_urgent_to_ui(data)
+            LOG(f"[URGENT] id={data.get('id')} priority={data.get('priority')} new={is_new}")
+        except Exception as e:
+            ERR(f"[URGENT] receive: {e}")
+
+    def _forward_urgent_to_ui(self, data):
+        """Best-effort push to the open webview page (dedupe happens in JS)."""
+        try:
+            import json as _js
+            if getattr(self, '_window', None):
+                payload = _js.dumps(data or {})
+                self._window.evaluate_js(
+                    "window.dispatchEvent(new CustomEvent('aurum-urgent',"
+                    " {detail:" + payload + "}));")
+        except Exception:
+            pass
+
+    def urgent_fetch_missed(self):
+        """Catch-up: GET /api/messages, keep what targets THIS terminal.
+        Silent on network error. Returns count of newly stored messages."""
+        try:
+            import urllib.request as _url, urllib.parse as _qp, json as _js
+            key = str(getattr(self, '_sse_key', '') or '').strip().upper()
+            if not key:
+                try:
+                    key = str(self.db.get_config('license_key', '') or '').strip().upper()
+                except Exception:
+                    key = ''
+            base = self._get_server_url().rstrip('/')
+            url = base + '/api/messages?key=' + _qp.quote(key) + '&limit=30'
+            req = _url.Request(url, headers={'User-Agent': 'AurumOS-Client'})
+            with _url.urlopen(req, timeout=10) as resp:
+                data = _js.loads(resp.read().decode('utf-8', 'replace'))
+            items = data.get('messages', []) if isinstance(data, dict) else []
+            fresh = 0
+            for m in (items or [])[:30]:
+                if not isinstance(m, dict):
+                    continue
+                if not DBManager.urgent_applies(m, key):
+                    continue
+                if self.db.store_urgent_message(m):
+                    fresh += 1
+                    self._forward_urgent_to_ui(m)
+            LOG(f"[URGENT] missed-fetch: {fresh} new")
+            return {"status": "success", "new": fresh}
+        except Exception as e:
+            LOG(f"[URGENT] missed-fetch skipped: {e}")
+            return {"status": "offline", "new": 0}
+
+    def _urgent_watchdog(self):
+        """Polling fallback: SSE silent >60s → fetch missed every 5 min."""
+        import time as _t
+        last_poll = 0.0
+        while getattr(self, '_urgent_watch', False):
+            try:
+                _t.sleep(30)
+                if not getattr(self, '_urgent_watch', False):
+                    break
+                lst = getattr(self, '_sse_listener', None)
+                if lst is None:
+                    continue
+                idle = lst.seconds_since_activity()
+                now = _t.time()
+                if idle > 60 and (now - last_poll) > 300:
+                    last_poll = now
+                    try:
+                        self.urgent_fetch_missed()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+    def get_notifications(self, limit=20):
+        """Newest-first inbox. Best-effort admin sync first (silent offline)."""
+        try:
+            self._sync_admin_notices()
+        except Exception:
+            pass
+        try:
+            return {"status": "success",
+                    "notifications": self.db.get_notifications(limit)}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "notifications": []}
+
+    def mark_notification_read(self, nid):
+        try:
+            return {"status": "success" if self.db.mark_notification_read(nid) else "error"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def mark_all_notifications_read(self):
+        try:
+            return {"status": "success" if self.db.mark_all_notifications_read() else "error"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def _notify_staff_bill(self, vch_id, customer, amount):
+        """Owner gets an inbox alert whenever STAFF raises a bill."""
+        try:
+            if getattr(self, '_session_role', '') != 'staff':
+                return
+            user = getattr(self, '_session_username', 'staff') or 'staff'
+            try:
+                amt = float(amount or 0)
+            except (TypeError, ValueError):
+                amt = 0.0
+            self.db.push_notification(
+                'bill', f"Bill {vch_id} by {user}",
+                f"{user} billed Rs. {amt:,.2f} to {customer or 'Walk-in'}.",
+                'voucher_history.html')
+        except Exception as e:
+            ERR(f"[NOTIF] staff bill: {e}")
+
+    def _sync_admin_notices(self):
+        """Pull AurumOS owner messages. Silent no-op when offline."""
+        try:
+            import urllib.request as _url, urllib.parse as _qp, json as _js
+            base = (self.db.get_config('api_base_url', '') or
+                    'https://aurum-os-admin.vercel.app').rstrip('/')
+            shop = self.db.get_config('shop_id', '') or ''
+            url = base + '/api/notices?shop_id=' + _qp.quote(str(shop))
+            req = _url.Request(url, headers={'User-Agent': 'AurumOS-Client'})
+            with _url.urlopen(req, timeout=8) as resp:
+                data = _js.loads(resp.read().decode('utf-8', 'replace'))
+            items = data if isinstance(data, list) else data.get('notices', [])
+            for n in (items or []):
+                if not isinstance(n, dict):
+                    continue
+                nid = str(n.get('id') or n.get('title') or '')
+                if not nid:
+                    continue
+                self.db.push_notification(
+                    str(n.get('type') or 'admin'),
+                    str(n.get('title') or 'AurumOS'),
+                    str(n.get('body') or n.get('message') or ''),
+                    str(n.get('page') or ''), 'admin', nid)
+        except Exception:
+            pass
+
+    def _retail_dashboard_data(self, conn, today_str):
+        """Retail dashboard block: sales, rates, pay split, dues, stock value,
+        old gold, low stock, top customers, recent bills, category split."""
+        out = {"today_amount": 0.0, "today_bills": 0, "pay_split": {"cash": 0.0, "upi": 0.0, "card": 0.0},
+               "rates": {"gold_10g": 0.0, "gold_g": 0.0},
+               "stock_value": 0.0, "old_gold": {"wt": 0.0, "value": 0.0},
+               "low_stock": [], "top_customers": [], "recent_bills": [],
+               "category_split": {"labels": [], "values": []}}
+        # Gold rate comes from billing itself: latest non-zero bill rate.
+        # Whenever billing uses a new rate, the dashboard follows automatically.
+        try:
+            rrow = conn.execute(
+                "SELECT gold_rate FROM sales_history WHERE COALESCE(gold_rate,0)>0 "
+                "ORDER BY id DESC LIMIT 1").fetchone()
+            try:
+                g10 = float(rrow['gold_rate'] or 0) if rrow else 0.0
+            except (TypeError, ValueError):
+                g10 = 0.0
+            out["rates"] = {"gold_10g": round(g10, 2), "gold_g": round(g10 / 10.0, 2)}
+        except Exception:
+            pass
+        try:
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(sales_history)").fetchall()]
+            has_pay = 'payment_mode' in cols
+            pay_expr = "LOWER(COALESCE(payment_mode,'cash'))" if has_pay else "'cash'"
+            ogv_expr = "COALESCE(old_gold_value,0)" if 'old_gold_value' in cols else "0"
+            ogw_expr = "COALESCE(old_gold_wt,0)" if 'old_gold_wt' in cols else "0"
+            trows = conn.execute(
+                f"SELECT total_amount, {pay_expr} AS pay, COALESCE(fine_995,0) AS f9, "
+                f"COALESCE(fine_dhal,0) AS fd, COALESCE(gold_rate,0) AS gr, {ogv_expr} AS ogv, "
+                f"{ogw_expr} AS ogw FROM sales_history WHERE date=? "
+                "AND UPPER(TRIM(status)) NOT IN ('ESTIMATE','CREDIT')", (today_str,)).fetchall()
+            for r in trows:
+                try:
+                    amt = float(r['total_amount'] or 0)
+                except (TypeError, ValueError):
+                    amt = 0.0
+                out["today_amount"] += amt
+                out["today_bills"] += 1
+                pay = str(r['pay'] or 'cash').lower()
+                if pay not in ('cash', 'upi', 'card'):
+                    pay = 'cash'
+                out["pay_split"][pay] += amt
+                try:
+                    f99 = float(r['f9'] or 0) + float(r['fd'] or 0)
+                    gr = float(r['gr'] or 0)
+                    ogv = float(r['ogv'] or 0) + f99 * gr / 10.0
+                    ogw = float(r['ogw'] or 0) + f99
+                except (TypeError, ValueError):
+                    ogv, ogw = 0.0, 0.0
+                out["old_gold"]["wt"] += ogw
+                out["old_gold"]["value"] += ogv
+            out["today_amount"] = round(out["today_amount"], 2)
+            for k in out["pay_split"]:
+                out["pay_split"][k] = round(out["pay_split"][k], 2)
+            out["old_gold"]["wt"] = round(out["old_gold"]["wt"], 3)
+            out["old_gold"]["value"] = round(out["old_gold"]["value"], 2)
+        except Exception:
+            pass
+        try:
+            rate10 = out["rates"]["gold_10g"]
+            srow = conn.execute(
+                "SELECT COALESCE(SUM(COALESCE(nt_wt,gr_wt,0)*COALESCE(touch,0)/100.0),0) AS fw "
+                "FROM stock_inventory WHERE COALESCE(gr_wt,0)>0 AND COALESCE(touch,0)>0").fetchone()
+            try:
+                fw = float(srow['fw'] or 0) if srow else 0.0
+            except (TypeError, ValueError):
+                fw = 0.0
+            out["stock_value"] = round(fw * rate10 / 10.0, 2)
+            out["stock_fine_wt"] = round(fw, 3)
+        except Exception:
+            pass
+        try:
+            out["low_stock"] = [dict(r) for r in conn.execute(
+                "SELECT COALESCE(it_code,'—') AS code, COALESCE(it_name,'') AS name, "
+                "COALESCE(SUM(pcs),0) AS pcs, COALESCE(SUM(gr_wt),0) AS wt "
+                "FROM stock_inventory GROUP BY COALESCE(it_code,'—') "
+                "HAVING SUM(COALESCE(pcs,0))<=2 ORDER BY SUM(COALESCE(pcs,0)) ASC LIMIT 8").fetchall()]
+        except Exception:
+            pass
+        try:
+            out["top_customers"] = [dict(r) for r in conn.execute(
+                "SELECT customer AS name, COUNT(*) AS bills, ROUND(SUM(COALESCE(total_amount,0)),2) AS total "
+                "FROM sales_history WHERE UPPER(TRIM(status)) NOT IN ('ESTIMATE') "
+                "GROUP BY customer ORDER BY SUM(COALESCE(total_amount,0)) DESC LIMIT 5").fetchall()]
+            out["recent_bills"] = [dict(r) for r in conn.execute(
+                "SELECT vch_id, customer, status, date, ROUND(COALESCE(total_amount,0),2) AS total "
+                "FROM sales_history WHERE UPPER(TRIM(status)) NOT IN ('ESTIMATE') "
+                "ORDER BY id DESC LIMIT 8").fetchall()]
+        except Exception:
+            pass
+        try:
+            band_rows = conn.execute(
+                "SELECT items, COALESCE(total_amount,0) AS total_amount FROM sales_history "
+                "WHERE date>=date('now','-30 days') "
+                "AND UPPER(TRIM(status)) NOT IN ('ESTIMATE','CREDIT')").fetchall()
+            bands = {}
+            for br in band_rows:
+                try:
+                    items = json.loads(br['items'] or '[]')
+                except (TypeError, ValueError):
+                    continue
+                if not isinstance(items, list):
+                    continue
+                try:
+                    bill_total = float(br['total_amount'] or 0)
+                except (TypeError, ValueError):
+                    bill_total = 0.0
+                # Scale item amounts to the bill total so categories always
+                # sum to the actual billed Rs (discount-adjusted).
+                sum_amt = 0.0
+                for it in items:
+                    if isinstance(it, dict):
+                        try:
+                            sum_amt += float(it.get('amount') or 0)
+                        except (TypeError, ValueError):
+                            pass
+                factor = (bill_total / sum_amt) if sum_amt > 0 else 0.0
+                for it in items:
+                    if not isinstance(it, dict):
+                        continue
+                    try:
+                        t = float(it.get('touch') or 0)
+                    except (TypeError, ValueError):
+                        t = 0.0
+                    try:
+                        a = float(it.get('amount') or 0) * factor
+                    except (TypeError, ValueError):
+                        a = 0.0
+                    if t >= 99:
+                        b = '24K'
+                    elif t >= 91:
+                        b = '22K'
+                    elif t >= 74:
+                        b = '18K'
+                    elif t > 0:
+                        b = 'Other gold'
+                    else:
+                        b = 'Silver/Others'
+                    bands[b] = bands.get(b, 0.0) + a
+            order = ['24K', '22K', '18K', 'Other gold', 'Silver/Others']
+            out["category_split"] = {"labels": [b for b in order if bands.get(b, 0) > 0],
+                                     "values": [round(bands[b], 2) for b in order if bands.get(b, 0) > 0]}
+        except Exception:
+            pass
+        return out
+
     def get_live_command_metrics(self):
         try:
             from datetime import timedelta
@@ -791,11 +1357,53 @@ class AurumAPI:
             db_stats = safe(self.db.get_inventory_stats,
                             {"net":0,"pcs":0,"uchak_pcs":0,"packets":0,"owner_name":None})
             spine = [(datetime.now()-timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6,-1,-1)]
+            def item_fine(items):
+                total = 0.0
+                for item in items if isinstance(items, list) else []:
+                    if not isinstance(item, dict):
+                        continue
+                    try:
+                        if item.get('fine') not in (None, ''):
+                            total += float(item.get('fine') or 0)
+                        else:
+                            total += float(item.get('weight') or item.get('gr_wt') or 0) * float(item.get('touch') or 0) / 100
+                    except (TypeError, ValueError):
+                        continue
+                return total
+
+            def resolve_fine(vch_id, db_fine, total_amt, parsed_items):
+                """Grams only. R- always from items. Any Rs-contaminated
+                value (equals Rs total, or absurd grams) falls back to items."""
+                try:
+                    db_f = float(db_fine or 0)
+                except (TypeError, ValueError):
+                    db_f = 0.0
+                try:
+                    amt = float(total_amt or 0)
+                except (TypeError, ValueError):
+                    amt = 0.0
+                if str(vch_id or '').upper().startswith('R-'):
+                    return item_fine(parsed_items)
+                if amt > 500 and abs(db_f - amt) < 0.01:
+                    return item_fine(parsed_items)
+                if db_f > 500:
+                    return item_fine(parsed_items)
+                return db_f
+
             rows = safe(lambda: list(self.db._get_connection().__enter__().execute(
-                "SELECT date, COALESCE(SUM(total_amount),0.0) as rev, COALESCE(SUM(collected_fine),0.0) as fine "
-                "FROM sales_history WHERE date>=? GROUP BY date", (spine[0],)).fetchall()), [])
-            rev_map  = {r['date']: float(r['rev'])  for r in rows}
-            fine_map = {r['date']: float(r['fine']) for r in rows}
+                "SELECT date, vch_id, status, total_amount, collected_fine, items "
+                "FROM sales_history WHERE date>=? AND UPPER(TRIM(status)) NOT IN ('ESTIMATE','CREDIT')", (spine[0],)).fetchall()), [])
+            rev_map = {}
+            fine_map = {}
+            for row in rows:
+                date_key = row['date']
+                rev_map[date_key] = rev_map.get(date_key, 0.0) + float(row['total_amount'] or 0)
+                try:
+                    parsed_items = json.loads(row['items'] or '[]')
+                except (TypeError, ValueError):
+                    parsed_items = []
+                fine_value = resolve_fine(row['vch_id'], row['collected_fine'], row['total_amount'], parsed_items)
+                fine_map[date_key] = fine_map.get(date_key, 0.0) + fine_value
             chart_labels=[]; chart_revenue=[]; chart_fine=[]
             for d in spine:
                 try: label = datetime.strptime(d,'%Y-%m-%d').strftime('%a %d')
@@ -804,11 +1412,12 @@ class AurumAPI:
                 chart_revenue.append(round(rev_map.get(d,0.0),2))
                 chart_fine.append(round(fine_map.get(d,0.0),3))
             credit_risk_list=[]
+            dues_total = 0.0
             for cl in self.db.get_all_clients():
                 bal = self.get_client_balances(cl['name'])
                 cash_out = float(bal.get('cash',0.0))
-                cash_lim = float(cl.get('cash_limit',0.0))
                 if cash_out > 0:
+                    dues_total += cash_out
                     ratio = (cash_out/cash_lim*100) if cash_lim>0 else 0
                     credit_risk_list.append({
                         "account_name": cl['name'], "outstanding": cash_out,
@@ -831,8 +1440,17 @@ class AurumAPI:
             if not live_audit_logs:
                 live_audit_logs=[{"time":"--:--:--","msg":"&#9679; No activity recorded yet."}]
             with self.db._get_connection() as conn:
-                fine_row=conn.execute("SELECT COALESCE(SUM(collected_fine),0.0) as cf FROM sales_history").fetchone()
-                total_fine=float(fine_row['cf'] or 0.0)
+                fine_rows=conn.execute(
+                    "SELECT vch_id, status, collected_fine, total_amount, items FROM sales_history "
+                    "WHERE UPPER(TRIM(status)) NOT IN ('ESTIMATE','CREDIT')"
+                ).fetchall()
+                total_fine = 0.0
+                for row in fine_rows:
+                    try:
+                        parsed_items = json.loads(row['items'] or '[]')
+                    except (TypeError, ValueError):
+                        parsed_items = []
+                    total_fine += resolve_fine(row['vch_id'], row['collected_fine'], row['total_amount'], parsed_items)
                 inv_rows=conn.execute(
                     "SELECT CAST(touch AS TEXT) || '%' as it_code, "
                     "COALESCE(SUM(gr_wt),0) as total_wt FROM stock_inventory "
@@ -840,6 +1458,14 @@ class AurumAPI:
                     "AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%' OR tag_id LIKE 'OPENING-%') "
                     "GROUP BY CAST(touch AS TEXT) ORDER BY total_wt DESC LIMIT 10"
                 ).fetchall()
+                try:
+                    retail = self._retail_dashboard_data(conn, today_str)
+                except Exception as _re:
+                    ERR(f"[DASHBOARD-RETAIL] {_re}")
+                    retail = {}
+            dues_total = round(dues_total, 2)
+            if not isinstance(retail, dict):
+                retail = {}
             return {
                 "status":"success",
                 "accumulated_sales": rev_map.get(today_str,0.0),
@@ -849,7 +1475,8 @@ class AurumAPI:
                 "huid_status":"100% Verified","sync_node":"Operational",
                 "chart":{"labels":chart_labels,"revenue":chart_revenue,"fine":chart_fine},
                 "inventory_chart":{"labels":[r['it_code'] for r in inv_rows],"weights":[round(float(r['total_wt']),3) for r in inv_rows]},
-                "risk_monitor":credit_risk_list,"audit_logs":live_audit_logs
+                "risk_monitor":credit_risk_list,"audit_logs":live_audit_logs,
+                "retail": retail, "dues_total": round(dues_total, 2)
             }
         except Exception as e:
             ERR(f"[DASHBOARD] {e}")
@@ -881,7 +1508,8 @@ class AurumAPI:
 
             def open_window():
                 try:
-                    webview.create_window(
+                    _wv = webview if webview is not None else __import__('webview')
+                    _wv.create_window(
                         "AurumOS — Stock Report",
                         html      = html_content,
                         js_api    = self,
@@ -899,10 +1527,90 @@ class AurumAPI:
             ERR(f"[PRINT_WIN] outer: {e}")
             return {"status": "error", "message": str(e)}
 
+    def _resolve_printer_name(self, item_data=None):
+        """Printer the user selected (per-item) falls back to TagFactory default."""
+        name = ''
+        if isinstance(item_data, dict):
+            name = str(item_data.get('printer') or '').strip()
+        if not name:
+            try:
+                name = str(getattr(self.tag_factory, 'PRINTER_NAME', '') or '').strip()
+            except Exception:
+                name = ''
+        return name
+
+    def _apply_printer(self, item_data=None):
+        """Point TagFactory at the selected printer (no-op if unavailable)."""
+        name = self._resolve_printer_name(item_data)
+        if name:
+            try:
+                self.tag_factory.set_printer(name)
+            except Exception as e:
+                ERR(f"[PRINT] set_printer({name}) failed: {e}")
+        return name
+
+    def _check_printer_status(self, printer_name=''):
+        """Replacement for the missing TagFactory.check_printer_status().
+        Returns (ok, msg). Only blocks when there is genuinely no usable
+        printer — benign driver statuses never stop a print."""
+        try:
+            import win32print
+            flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+            installed = {p[2] for p in win32print.EnumPrinters(flags)}
+            if not installed:
+                return False, "No printer installed on this PC."
+            target = (printer_name or '').strip()
+            if target and target not in installed:
+                try:
+                    default = win32print.GetDefaultPrinter()
+                except Exception:
+                    default = ''
+                if default:
+                    return True, f"'{target}' not found; using default '{default}'."
+                return False, f"Printer '{target}' not found."
+            probe = target or ''
+            if not probe:
+                try:
+                    probe = win32print.GetDefaultPrinter()
+                except Exception:
+                    probe = ''
+            if probe:
+                try:
+                    h = win32print.OpenPrinter(probe)
+                    try:
+                        info = win32print.GetPrinter(h, 2)
+                    finally:
+                        win32print.ClosePrinter(h)
+                    status = info.get('Status', 0) if isinstance(info, dict) else 0
+                    fatal = (win32print.PRINTER_STATUS_OFFLINE
+                             | win32print.PRINTER_STATUS_PAPER_OUT
+                             | win32print.PRINTER_STATUS_PAPER_JAM
+                             | win32print.PRINTER_STATUS_ERROR)
+                    if status & fatal:
+                        probs = []
+                        if status & win32print.PRINTER_STATUS_OFFLINE:   probs.append("offline")
+                        if status & win32print.PRINTER_STATUS_PAPER_OUT:  probs.append("out of paper")
+                        if status & win32print.PRINTER_STATUS_PAPER_JAM:  probs.append("paper jam")
+                        if status & win32print.PRINTER_STATUS_ERROR:      probs.append("error")
+                        return False, "Printer " + ", ".join(probs) + "."
+                except Exception as pe:
+                    LOG(f"[PRINT] status probe skipped: {pe}")
+            return True, "Printer ready."
+        except Exception as e:
+            # win32print missing/failed — never block printing on the check itself
+            LOG(f"[PRINT] printer check skipped: {e}")
+            return True, f"Printer check skipped ({e})."
+
+    def check_printer_status(self):
+        """Exposed to UI: quick readiness check for the default/selected printer."""
+        ok, msg = self._check_printer_status(self._resolve_printer_name())
+        return {"ok": ok, "ready": ok, "message": msg}
+
     def print_multiple_tags(self, items_list):
         LOG(f"[PRINT] print_multiple_tags called with {len(items_list)} item(s)")
         try:
-            is_ok, msg = self.tag_factory.check_printer_status()
+            target = self._resolve_printer_name(items_list[0] if items_list else None)
+            is_ok, msg = self._check_printer_status(target)
             LOG(f"[PRINT] Printer status: {msg}")
             if not is_ok:
                 return {"status":"error","message":f"Printer not ready: {msg}"}
@@ -911,6 +1619,7 @@ class AurumAPI:
                 try:
                     item_data['tag_id'] = self._extract_tag_id(item_data)
                     item_data = normalize_tag_item(item_data)
+                    self._apply_printer(item_data)
                     LOG(f"[PRINT] variation={item_data.get('variation')} touch={item_data.get('touch')} "
                         f"wastage={item_data.get('wastage')} gross={item_data.get('gross_wt')} tag={item_data.get('tag_id')}")
                     try:
@@ -937,12 +1646,14 @@ class AurumAPI:
 
     def print_tag(self, item_data):
         try:
-            is_ok, msg = self.tag_factory.check_printer_status()
+            target = self._resolve_printer_name(item_data)
+            is_ok, msg = self._check_printer_status(target)
             LOG(f"[PRINTER] {msg}")
             if not is_ok:
                 return {"status":"error","message":msg}
             item_data['tag_id'] = self._extract_tag_id(item_data)
             item_data = normalize_tag_item(item_data)
+            self._apply_printer(item_data)
             tag_img = self.tag_factory.generate_tag_image(item_data)
             self.tag_factory.print_to_thermal_printer(tag_img)
             item_id = item_data.get('id')
@@ -970,52 +1681,224 @@ class AurumAPI:
             ERR(f"[PREVIEW ERR] {e} | item={item_data}")
             return {"status":"error","message":str(e)}
 
+    def get_available_printers(self):
+        """Return installed printers as [{name, is_default}]. Used by tag print UI."""
+        try:
+            import win32print
+            try:
+                default = win32print.GetDefaultPrinter()
+            except Exception:
+                default = ''
+            flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+            printers = []
+            for p in win32print.EnumPrinters(flags):
+                name = p[2]
+                if name:
+                    printers.append({"name": name, "is_default": (name == default)})
+            LOG(f"[PRINTERS] {len(printers)} found, default={default}")
+            return printers
+        except Exception as e:
+            ERR(f"[PRINTERS] enum failed: {e}")
+            return []
+
+    def get_printers(self):
+        """Alias for get_available_printers (UI calls either name)."""
+        return self.get_available_printers()
+
+    def set_default_printer(self, printer_name):
+        """Set the system default printer. Used before bill print."""
+        try:
+            import win32print
+            if printer_name and str(printer_name).strip():
+                win32print.SetDefaultPrinter(str(printer_name).strip())
+                LOG(f"[PRINT] Default printer set to: {printer_name}")
+                return {"status":"success"}
+            return {"status":"error","message":"No printer name provided"}
+        except Exception as e:
+            ERR(f"[PRINT] set_default_printer failed: {e}")
+            return {"status":"error","message":str(e)}
+
+    # -- BASTION AI (ChatGPT support assistant) --------------------------------
+    def ai_ask(self, question, history=None):
+        """Ask the ChatGPT-backed support assistant a question."""
+        try:
+            return self.ai.ask(question, history)
+        except Exception as e:
+            ERR(f"[AI] ask failed: {e}")
+            return {"status": "error", "message": f"AI error: {e}"}
+
+    def ai_get_config(self):
+        """Return AI config state (never exposes the raw key)."""
+        try:
+            st = self.ai.get_status()
+            st["status"] = "success"
+            return st
+        except Exception as e:
+            ERR(f"[AI] get_config failed: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def ai_save_config(self, provider, api_key, model):
+        """Persist an owner-supplied OpenAI key/model to config.json."""
+        try:
+            self.ai.save_config(provider, api_key, model)
+            return {"status": "success"}
+        except Exception as e:
+            ERR(f"[AI] save_config failed: {e}")
+            return {"status": "error", "message": str(e)}
+
     # -- LICENSE ---------------------------------------------------------------
-    def check_license_revoked(self):
+    @staticmethod
+    def _ssl_context():
+        import ssl as _ssl
+        try:
+            return _ssl.create_default_context()
+        except Exception:
+            return _ssl._create_unverified_context()
+
+    def _safe_urlopen(self, req, timeout=10):
+        """urlopen that retries without SSL verification on cert errors."""
+        import urllib.request, urllib.error, ssl as _ssl
+        ctx = self._ssl_context()
+        try:
+            return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, (_ssl.SSLCertVerificationError, _ssl.SSLError, OSError)):
+                LOG(f'[SSL] Retrying without verification: {e.reason}')
+                ctx2 = _ssl._create_unverified_context()
+                return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
+            raise
+        except (_ssl.SSLCertVerificationError, _ssl.SSLError):
+            LOG('[SSL] Retrying without verification')
+            ctx2 = _ssl._create_unverified_context()
+            return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
+
+    def check_license_revoked(self, network=True):
+        # network=False -> only the instant LOCAL checks (.revoked flag + key
+        # recovery), skipping the remote POST. Used at startup so the window
+        # opens immediately; the live remote revocation check still runs a few
+        # seconds later on the background thread (see _bg_check in run_aur_os).
         import urllib.request, json as _j, uuid as _uuid
         base = os.path.dirname(sys.executable) if getattr(sys,"frozen",False) else os.path.abspath(".")
         flag_path = os.path.join(base,"database",".revoked")
         key_path  = os.path.join(base,"database",".license_key")
-        if os.path.exists(flag_path):
+        _TRANSIENT = ("server_error", "timeout", "error")
+
+        # Resolve key from file or DB (needed for both flagged and non-flagged paths)
+        key = ""
+        if os.path.exists(key_path):
             try:
-                reason = open(flag_path,"r").read().strip() or "revoked"
-                LOG(f"[LICENSE] .revoked flag: {reason}")
-                return reason if reason in ("revoked","invalid","not_found","expired") else "revoked"
-            except: return "revoked"
-        if not os.path.exists(key_path):
-            LOG("[LICENSE] No .license_key -- skip check")
-            return "ok"
-        try:
-            enc = open(key_path,"rb").read()
-            key = decrypt_license_key(enc).strip().upper()
-        except Exception as e:
-            ERR(f"[LICENSE] Key read error: {e}"); key = ""
-        if not key or not key.startswith("AU-"):
-            LOG("[LICENSE] Key decrypt failed -- trying DB recovery")
+                enc = open(key_path,"rb").read()
+                key = decrypt_license_key(enc).strip().upper()
+            except Exception as e:
+                ERR(f"[LICENSE] Key read error: {e}")
+        if not key or not _is_valid_key_format(key):
             try:
                 db_key = self.db.get_config("license_key","").strip().upper()
-                if db_key and db_key.startswith("AU-"):
-                    enc2 = encrypt_license_key(db_key)
-                    open(key_path,"wb").write(enc2)
+                if db_key and _is_valid_key_format(db_key):
                     key = db_key
-                    LOG("[LICENSE] .license_key re-encrypted for this machine")
-                else:
-                    try: os.remove(key_path)
+                    # Re-create key file from DB so future checks work
+                    try:
+                        enc2 = encrypt_license_key(db_key)
+                        open(key_path,"wb").write(enc2)
+                    except: pass
+            except: pass
+
+        has_flag = os.path.exists(flag_path)
+        flag_reason = ""
+        if has_flag:
+            try:
+                flag_reason = open(flag_path,"r").read().strip() or "revoked"
+            except:
+                flag_reason = "revoked"
+            LOG(f"[LICENSE] .revoked flag present: {flag_reason}")
+
+        # If flagged but we have a key and network is available, re-check server
+        # so reactivation on the server is picked up immediately
+        if has_flag and key and _is_valid_key_format(key) and network:
+            LOG("[LICENSE] Re-checking server despite .revoked flag (key exists)")
+            try:
+                machine_id = str(_uuid.getnode())
+                CHECK_URL  = self._get_license_check_url() + "/api/check"
+                payload    = _j.dumps({"key":key,"machine_id":machine_id}).encode()
+                req = urllib.request.Request(CHECK_URL,data=payload,
+                    headers={"Content-Type":"application/json","User-Agent":f"AurumOS/{CURRENT_VERSION}"},
+                    method="POST")
+                with self._safe_urlopen(req,timeout=10) as resp:
+                    data = _j.loads(resp.read().decode())
+                if data.get("valid"):
+                    LOG(f"[LICENSE] REACTIVATED on server ({key[:10]}...) — clearing .revoked flag")
+                    try: os.remove(flag_path)
                     except: pass
                     return "ok"
-            except Exception as dbe:
-                ERR(f"[LICENSE] DB recovery failed: {dbe}")
-                try: os.remove(key_path)
+                else:
+                    reason = data.get("status", flag_reason)
+                    LOG(f"[LICENSE] Still revoked on server: {reason}")
+                    if reason == "expired" and self._renewed_at and (time.time() - self._renewed_at < 300):
+                        LOG(f"[LICENSE] Server says expired but recently renewed — clearing flag")
+                        try: os.remove(flag_path)
+                        except: pass
+                        return "ok"
+                    if reason in ("revoked","invalid","not_found"):
+                        try: open(flag_path,"w").write(reason)
+                        except: pass
+                        return reason
+                    if reason in ("expired", "subscription_expired"):
+                        # Don't write 'expired' to .revoked flag — let subscription system handle it
+                        try:
+                            if os.path.exists(flag_path): os.remove(flag_path)
+                        except: pass
+                        return "expired"
+                    if reason in _TRANSIENT:
+                        LOG(f"[LICENSE] Server transient error ({reason}) — removing stale flag")
+                        try: os.remove(flag_path)
+                        except: pass
+                        return "error"
+                    return "revoked"
+            except urllib.error.URLError:
+                LOG("[LICENSE] Network unavailable during flag re-check — using cached flag")
+                return flag_reason if flag_reason in ("revoked","invalid","not_found","expired") else "revoked"
+            except Exception as e:
+                ERR(f"[LICENSE] Flag re-check error: {e}")
+                return flag_reason if flag_reason in ("revoked","invalid","not_found","expired") else "revoked"
+
+        # Flagged + key exists but network=False: treat as ok for startup fast-path;
+        # the background thread will do the authoritative remote check.
+        if has_flag and key and _is_valid_key_format(key) and not network:
+            LOG("[LICENSE] .revoked flag present but network=False — treating as ok for startup")
+            return "ok"
+
+        # Flagged with no key: can't re-check server — remove stale flag
+        if has_flag:
+            if not key or not _is_valid_key_format(key):
+                LOG("[LICENSE] .revoked flag exists but no key — removing stale flag")
+                try: os.remove(flag_path)
                 except: pass
                 return "ok"
+            if flag_reason in _TRANSIENT:
+                LOG(f"[LICENSE] .revoked flag is transient ({flag_reason}) — removing")
+                try: os.remove(flag_path)
+                except: pass
+                return "error"
+            return flag_reason if flag_reason in ("revoked","invalid","not_found","expired") else "revoked"
+
+        # No flag, no key: nothing to check
+        if not key or not _is_valid_key_format(key):
+            LOG("[LICENSE] No key available -- skip check")
+            return "ok"
+
+        if not network:
+            # Startup fast-path: no local .revoked flag -> treat as ok for now;
+            # the background thread will do the authoritative remote check.
+            return "ok"
+
         try:
             machine_id = str(_uuid.getnode())
-            CHECK_URL  = "https://aurum-os-admin.vercel.app/api/check"
+            CHECK_URL  = self._get_license_check_url() + "/api/check"
             payload    = _j.dumps({"key":key,"machine_id":machine_id}).encode()
             req = urllib.request.Request(CHECK_URL,data=payload,
                 headers={"Content-Type":"application/json","User-Agent":f"AurumOS/{CURRENT_VERSION}"},
                 method="POST")
-            with urllib.request.urlopen(req,timeout=10) as resp:
+            with self._safe_urlopen(req,timeout=10) as resp:
                 data = _j.loads(resp.read().decode())
             if data.get("valid"):
                 LOG(f"[LICENSE] VALID ({key[:10]}...)")
@@ -1025,12 +1908,26 @@ class AurumAPI:
                 return "ok"
             else:
                 reason = data.get("status","revoked")
-                LOG(f"[LICENSE] REVOKED reason={reason}")
-                try: open(flag_path,"w").write(reason)
-                except: pass
-                try: os.remove(key_path)
-                except: pass
-                return reason if reason in ("revoked","invalid","not_found","expired") else "revoked"
+                LOG(f"[LICENSE] Server status: {reason}")
+                # If we just renewed, server may still say expired — treat as transient
+                if reason == "expired" and self._renewed_at and (time.time() - self._renewed_at < 300):
+                    LOG(f"[LICENSE] Server says expired but recently renewed — treating as transient")
+                    try: os.remove(flag_path)
+                    except: pass
+                    return "ok"
+                if reason in ("revoked","invalid","not_found"):
+                    try: open(flag_path,"w").write(reason)
+                    except: pass
+                    return reason
+                if reason in ("expired", "subscription_expired"):
+                    try:
+                        if os.path.exists(flag_path): os.remove(flag_path)
+                    except: pass
+                    return "expired"
+                if reason in _TRANSIENT:
+                    LOG(f"[LICENSE] Server transient error ({reason}) — offline grace")
+                    return "offline"
+                return "revoked"
         except urllib.error.URLError as e:
             LOG(f"[LICENSE] Network unavailable -- offline grace")
             return "offline"
@@ -1038,14 +1935,55 @@ class AurumAPI:
             ERR(f"[LICENSE] Check error: {e}")
             return "error"
 
+    def check_license(self):
+        """Public API: check if the current license is active. Called from revoked.html."""
+        try:
+            result = self.check_license_revoked(network=True)
+            if result == 'ok':
+                return {"status": "success", "license_valid": True, "message": "License is active."}
+            elif result == 'expired':
+                return {"status": "success", "license_valid": False, "message": "License has expired. Please renew."}
+            elif result in ('revoked', 'invalid', 'not_found'):
+                return {"status": "success", "license_valid": False, "message": f"License {result}. Contact AurumOS support."}
+            elif result == 'offline':
+                return {"status": "success", "license_valid": True, "message": "License check offline — using local status."}
+            else:
+                return {"status": "success", "license_valid": False, "message": f"License status: {result}"}
+        except Exception as e:
+            ERR(f"[LICENSE] check_license error: {e}")
+            return {"status": "error", "license_valid": False, "message": str(e)}
+
+    def reload(self):
+        """Public API: reload the main window to billing page."""
+        try:
+            if self._window:
+                self._window.evaluate_js("window.location.href='billing.html'")
+        except Exception as e:
+            ERR(f"[LICENSE] reload error: {e}")
+
     def fire_revoked_screen(self, reason='revoked'):
         try:
+            # Route: expired/subscription_expired → expiry.html, revoked → revoked.html
+            page = 'expiry.html' if reason in ('expired', 'subscription_expired') else 'revoked.html'
+            if self._window:
+                try:
+                    cur = self._window.get_current_url() or ''
+                    cur_page = cur.split('/')[-1].split('?')[0].lower()
+                    # Already on the CORRECT page — skip
+                    if cur_page == page:
+                        LOG(f'[LICENSE] Already on {page} — skipping navigation')
+                        return
+                    # On wrong page — navigate to correct one
+                    if cur_page in ('revoked.html', 'expiry.html'):
+                        LOG(f'[LICENSE] On {cur_page} but should be {page} — navigating')
+                except Exception:
+                    pass
             msg_map={'revoked':'Your license has been revoked. Please contact AurumOS support.',
                      'not_found':'License key not found on server. Please contact AurumOS support.',
                      'invalid':'Your license is no longer valid. Please contact AurumOS support.',
-                     'expired':'Your license has expired. Please renew to continue.'}
+                     'expired':'Your subscription has expired. Please renew to continue.'}
             msg = msg_map.get(reason,'License issue detected. Please contact AurumOS support.')
-            js  = f"window.location.href='revoked.html?reason={reason}&msg={msg.replace(chr(39),'')}'",
+            js  = f"window.location.href='{page}?reason={reason}&msg={msg.replace(chr(39),'')}'",
             if self._window: self._window.evaluate_js(js[0])
         except Exception as e:
             ERR(f'[LICENSE] Revoked screen error: {e}')
@@ -1058,21 +1996,21 @@ class AurumAPI:
         key = ''
         try: key = self.db.get_config('license_key','').strip().upper()
         except: pass
-        if not key or not key.startswith('AU-'):
+        if not key or not _is_valid_key_format(key):
             try:
                 enc = open(key_path,'rb').read()
                 key = decrypt_license_key(enc).strip().upper()
             except: key = ''
-        if not key or not key.startswith('AU-'):
+        if not key or not _is_valid_key_format(key):
             return 'error'
         try:
             machine_id = str(_uuid.getnode())
-            CHECK_URL  = 'https://aurum-os-admin.vercel.app/api/check'
+            CHECK_URL  = self._get_license_check_url() + '/api/check'
             payload    = _j.dumps({'key':key,'machine_id':machine_id}).encode()
             req = urllib.request.Request(CHECK_URL,data=payload,
                 headers={'Content-Type':'application/json','User-Agent':f'AurumOS/{CURRENT_VERSION}'},
                 method='POST')
-            with urllib.request.urlopen(req,timeout=10) as resp:
+            with self._safe_urlopen(req,timeout=10) as resp:
                 data = _j.loads(resp.read().decode())
             if data.get('valid'):
                 LOG(f'[REACTIVATE] License ACTIVE again ({key[:10]}...)')
@@ -1083,6 +2021,20 @@ class AurumAPI:
                     enc = encrypt_license_key(key)
                     open(key_path,'wb').write(enc)
                 except: pass
+                # Also check subscription status — don't allow login if expired
+                try:
+                    self.sub.set_license_key(key)
+                    self.sub.set_window(self._window)
+                    self.sub.sync_subscription()
+                    sub_state = self.sub.get_state_json()
+                    st = sub_state.get('status', 'active')
+                    if st == 'grace':
+                        LOG(f'[REACTIVATE] Subscription in grace — allowing login')
+                    elif st in ('expired', 'revoked') or not sub_state.get('valid', True):
+                        LOG(f'[REACTIVATE] Subscription {st} — blocking login')
+                        return 'expired'
+                except Exception as _sub_err:
+                    LOG(f'[REACTIVATE] Subscription check error: {_sub_err}')
                 try:
                     if self._window:
                         self._window.evaluate_js("try{localStorage.removeItem('aurum_revoke_reason');}catch(e){}")
@@ -1090,13 +2042,638 @@ class AurumAPI:
                 return 'ok'
             else:
                 reason = data.get('status','revoked')
-                try: open(flag_path,'w').write(reason)
-                except: pass
-                return reason if reason in ('revoked','invalid','not_found','expired') else 'revoked'
+                if reason in ('revoked','invalid','not_found'):
+                    try: open(flag_path,'w').write(reason)
+                    except: pass
+                elif reason in ('expired', 'subscription_expired'):
+                    try:
+                        if os.path.exists(flag_path): os.remove(flag_path)
+                    except: pass
+                return reason if reason in ('revoked','invalid','not_found','expired','subscription_expired') else 'revoked'
         except urllib.error.URLError:
             return 'offline'
         except Exception as e:
             ERR(f'[REACTIVATE] {e}'); return 'error'
+
+    # -- SSE REAL-TIME STREAM ---------------------------------------------------
+    def _read_license_key(self):
+        """Read the current license key from file or DB."""
+        base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        key_path = os.path.join(base, 'database', '.license_key')
+        key = ''
+        if os.path.exists(key_path):
+            try:
+                enc = open(key_path, 'rb').read()
+                key = decrypt_license_key(enc).strip().upper()
+            except Exception:
+                pass
+        if not key or not _is_valid_key_format(key):
+            try:
+                key = self.db.get_config('license_key', '').strip().upper()
+            except Exception:
+                pass
+        return key if key and _is_valid_key_format(key) else ''
+
+    def _get_server_url(self):
+        """Resolve the SSE server base URL from config.json.
+        Priority: server_ip:port (local dev) > api_base_url > production default.
+        Used ONLY for the SSE stream — license checks always use api_base_url."""
+        base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        server_url = 'https://aurum-os-admin.vercel.app'
+        try:
+            raw_cfg = open(os.path.join(base, 'config.json'), 'r', encoding='utf-8').read()
+            cfg = json.loads(raw_cfg)
+            local_ip = (cfg.get('server_ip') or '').strip()
+            if local_ip:
+                local_port = cfg.get('server_port') or 3000
+                server_url = f'http://{local_ip}:{local_port}'
+            elif cfg.get('api_base_url'):
+                server_url = cfg['api_base_url']
+        except Exception:
+            pass
+        return server_url
+
+    def _get_license_check_url(self):
+        """License check ALWAYS goes to the production server."""
+        return 'https://aurum-os-admin.vercel.app'
+    def start_sse_stream(self):
+        """Start Python SSE listener for real-time license events.
+        Called from _bg_check after the first successful license verification."""
+        try:
+            base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+            key_path = os.path.join(base, 'database', '.license_key')
+            key = ''
+            # Try encrypted file first
+            if os.path.exists(key_path):
+                try:
+                    enc = open(key_path, 'rb').read()
+                    key = decrypt_license_key(enc).strip().upper()
+                except Exception:
+                    pass
+            # Fallback to DB
+            if not key or not _is_valid_key_format(key):
+                try:
+                    key = self.db.get_config('license_key', '').strip().upper()
+                except Exception:
+                    pass
+            if not key or not _is_valid_key_format(key):
+                LOG('[SSE-PY] No valid license key found — skipping stream')
+                return
+
+            server_url = self._get_server_url()
+            LOG(f'[SSE-PY] Starting Python listener for key={key[:10]}... server={server_url}')
+
+            # Stop existing listener if any
+            if hasattr(self, '_sse_listener') and self._sse_listener:
+                self._sse_listener.stop()
+
+            # Create and start Python SSE listener
+            self._sse_key = key
+            self._sse_listener = LicenseEventListener(
+                license_key=key,
+                server_url=server_url,
+                on_plan_change=self._sse_on_plan_change,
+                on_status_change=self._sse_on_status_change,
+                on_connected=self._sse_on_connected,
+                on_urgent_message=self._sse_on_urgent_message
+            )
+            self._sse_listener.start()
+            LOG('[SSE-PY] Python listener started')
+
+            # Urgent-message safety net: catch-up now + watchdog polling
+            try:
+                threading.Thread(target=self.urgent_fetch_missed, daemon=True).start()
+            except Exception:
+                pass
+            try:
+                if not getattr(self, '_urgent_watch', False):
+                    self._urgent_watch = True
+                    threading.Thread(target=self._urgent_watchdog, daemon=True).start()
+            except Exception:
+                pass
+
+            # Also inject JS SSE for browser-side UI updates
+            js_path = os.path.join(get_asset_path('ui'), 'sse_stream.js')
+            if os.path.exists(js_path) and self._window:
+                try:
+                    with open(js_path, 'r', encoding='utf-8') as f:
+                        sse_js = f.read()
+                    self._window.evaluate_js(sse_js)
+                    self._window.evaluate_js(
+                        f"window.__aurumSSEConnect('{server_url}', '{key}')"
+                    )
+                    LOG('[SSE-PY] JS SSE script also injected for UI')
+                except Exception as js_err:
+                    LOG(f'[SSE-PY] JS inject skipped: {js_err}')
+
+            # Urgent-message display module (toasts/modal/inbox wiring)
+            try:
+                urg_path = os.path.join(get_asset_path('ui'), 'urgent.js')
+                if os.path.exists(urg_path) and self._window:
+                    with open(urg_path, 'r', encoding='utf-8') as f:
+                        self._window.evaluate_js(f.read())
+                    LOG('[SSE-PY] urgent.js injected for UI')
+            except Exception as urg_err:
+                LOG(f'[SSE-PY] urgent.js inject skipped: {urg_err}')
+
+            # Inject subscription.js
+            sub_js_path = os.path.join(get_asset_path('ui'), 'subscription.js')
+            if os.path.exists(sub_js_path) and self._window:
+                try:
+                    with open(sub_js_path, 'r', encoding='utf-8') as f:
+                        sub_js = f.read()
+                    self._window.evaluate_js(sub_js)
+                    self._window.evaluate_js(
+                        f"window.__aurumSubInit && window.__aurumSubInit('{key}')"
+                    )
+                    LOG('[SSE-PY] Subscription script injected')
+                except Exception as sub_err:
+                    LOG(f'[SSE-PY] Subscription inject skipped: {sub_err}')
+
+        except Exception as e:
+            ERR(f'[SSE-PY] start_sse_stream error: {e}')
+
+    def _sse_on_connected(self, data=None):
+        """Called when SSE connection is established."""
+        LOG('[SSE-PY] Connected to AurumOS server')
+        # Sync subscription on connect
+        try:
+            self.sub.sync_subscription()
+        except Exception:
+            pass
+        # Reconnect catch-up: SSE events expire after ~5 min
+        try:
+            threading.Thread(target=self.urgent_fetch_missed, daemon=True).start()
+        except Exception:
+            pass
+
+    def _sse_on_plan_change(self, data):
+        """Called when admin changes plan — apply features immediately."""
+        from subscription_manager import PLAN_FEATURES, LITE_FEATURES, _clamp_expiry, SUBSCRIPTION_DAYS
+        new_plan = data.get('plan', 'lite')
+        LOG(f'[SSE-PY] Plan change received: {new_plan}')
+
+        # Try sync with server first
+        try:
+            self.sub.sync_subscription()
+        except Exception as e:
+            LOG(f'[SSE-PY] Sync after plan_change error: {e}')
+
+        # Check if sync gave us a valid active state — if not, apply SSE data directly
+        current = self.sub.get_state_json()
+        if not current.get('valid') or current.get('status') not in ('active', 'grace'):
+            LOG(f'[SSE-PY] Sync result not active (status={current.get("status")}) — applying SSE data directly')
+            try:
+                features = data.get('features') or PLAN_FEATURES.get(new_plan, list(LITE_FEATURES))
+                expires = _clamp_expiry(data.get('subscription_expires_at'))
+                remaining = _clamp_remaining(data.get('remaining_days', SUBSCRIPTION_DAYS))
+                self.sub._set_state({
+                    'valid': True,
+                    'status': 'active',
+                    'effective_plan': new_plan,
+                    'features': features,
+                    'business': data.get('business', ''),
+                    'owner': data.get('owner', ''),
+                    'plan': new_plan,
+                    'is_trial': data.get('is_trial', False),
+                    'trial_end_ms': data.get('trial_end_ms'),
+                    'subscription': {
+                        'status': 'active',
+                        'expires_at': expires,
+                        'remaining_days': remaining,
+                        'grace_remaining_days': data.get('grace_remaining_days', 15),
+                        'renewal_amount': data.get('renewal_amount', 0)
+                    }
+                })
+                self.sub._save_cache()
+                self._renewed_at = time.time()
+                try: self.sub.set_force_active(300)
+                except Exception: pass
+                LOG(f'[SSE-PY] Applied SSE data: plan={new_plan} expires={expires}')
+            except Exception as e:
+                ERR(f'[SSE-PY] Apply SSE data error: {e}')
+        else:
+            # Sync returned active — just clamp the expiry if needed
+            try:
+                sub = current.get('subscription', {})
+                clamped = _clamp_expiry(sub.get('expires_at'))
+                if clamped != sub.get('expires_at'):
+                    self.sub._state['subscription']['expires_at'] = clamped
+                    self.sub._save_cache()
+                    LOG(f'[SSE-PY] Clamped existing expiry to {clamped}')
+            except Exception:
+                pass
+
+        # Send the FULL subscription state to JS (not raw SSE data)
+        # This ensures features array is always present and correct
+        if self._window:
+            try:
+                full_state = self.sub.get_state_json()
+                js_data = json.dumps(full_state)
+                # Push to current page AND save to localStorage for future pages
+                safe_js_data = js_data.replace('\\', '\\\\').replace("'", "\\'")
+                self._window.evaluate_js(
+                    f"window.__onSubscriptionEvent && window.__onSubscriptionEvent('plan_change', {js_data});"
+                    f"try{{localStorage.setItem('aurum_sub_state', '{safe_js_data}');}}catch(e){{}}"
+                )
+                LOG(f'[SSE-PY] JS notified: plan={full_state.get("effective_plan")} features={len(full_state.get("features",[]))}')
+            except Exception as e:
+                LOG(f'[SSE-PY] JS notify error: {e}')
+
+        # Save to local cache for offline use
+        try:
+            cache_path = os.path.join(
+                os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.'),
+                'database', '.subscription_cache'
+            )
+            full_state = self.sub.get_state_json()
+            cache = {
+                'state': full_state,
+                'plan': new_plan,
+                'features': full_state.get('features', []),
+                'expires_at': full_state.get('subscription', {}).get('expires_at'),
+                'cached_at': time.time()
+            }
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, 'w') as f:
+                json.dump(cache, f)
+            LOG(f'[SSE-PY] Cached plan={new_plan}')
+        except Exception as e:
+            ERR(f'[SSE-PY] Cache error: {e}')
+
+    def _sse_on_status_change(self, data):
+        """Called when license status changes (revoked/activated)."""
+        status = data.get('status', 'unknown')
+        message = data.get('message', '')
+        key = data.get('key', '')
+
+        LOG(f'[SSE-PY] Status change: {status} — {message}')
+
+        if status in ('revoked', 'expired', 'disabled', 'suspended'):
+            # If recently renewed, ignore server revoke
+            if time.time() < self.sub._force_active_until:
+                LOG(f'[SSE-PY] Ignoring server status={status} — in force-active grace period')
+                return
+            # Handle revoke — same as existing sse_handle_revoke
+            self.sse_handle_revoke(status, message)
+        elif status == 'active':
+            # License reactivated — trust SSE, set state directly (don't sync server)
+            was_active = self.sub._state.get('valid', False) and self.sub._state.get('status', '') in ('active', 'grace')
+            LOG(f'[SSE-PY] License reactivated via SSE — setting state to active (was_active={was_active})')
+            try:
+                from subscription_manager import LITE_FEATURES, PLAN_FEATURES
+                plan = 'pro'
+                features = PLAN_FEATURES.get(plan, LITE_FEATURES)
+                self.sub._set_state({
+                    'valid': True,
+                    'status': 'active',
+                    'effective_plan': plan,
+                    'features': features,
+                    'business': '',
+                    'owner': '',
+                    'plan': plan,
+                    'is_trial': False,
+                    'trial_end_ms': None,
+                    'subscription': {
+                        'status': 'active',
+                        'expires_at': None,
+                        'remaining_days': 365,
+                        'grace_remaining_days': 15,
+                        'renewal_amount': 0
+                    }
+                })
+                self.sub._save_cache()
+                self.sub.set_force_active(300)
+            except Exception as e:
+                ERR(f'[SSE-PY] Set active state error: {e}')
+            # Clear revoked flag
+            try:
+                base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+                flag_path = os.path.join(base, 'database', '.revoked')
+                if os.path.exists(flag_path):
+                    os.remove(flag_path)
+            except Exception:
+                pass
+            # Push reactivation event to JS only on actual transition
+            if self._window and not was_active:
+                try:
+                    state_json = json.dumps(self.sub.get_state_json())
+                    self._window.evaluate_js(
+                        f"window.__onSubscriptionEvent && window.__onSubscriptionEvent('reactivated', {state_json});"
+                    )
+                except Exception:
+                    pass
+                try:
+                    self._window.evaluate_js("window.location.href='login.html'")
+                except Exception:
+                    pass
+
+    def sse_handle_revoke(self, reason='revoked', message=''):
+        """Called from JS when SSE receives a revoke/expire event.
+        Clears cached license state and forces the revoked screen."""
+        LOG(f'[SSE] Revoke received: reason={reason} msg={message}')
+        # If recently renewed, ignore revoke
+        if time.time() < self.sub._force_active_until:
+            LOG(f'[SSE] Ignoring revoke={reason} — in force-active grace period')
+            return
+        # Notify subscription manager
+        try:
+            self.sub.handle_sse_revoke(reason, message)
+        except Exception:
+            pass
+        try:
+            base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+            # Write .revoked flag so it persists across restarts
+            # BUT: don't write for 'expired' — let subscription system handle expiry
+            # Writing 'expired' to .revoked flag causes false expiry screens on startup
+            flag_path = os.path.join(base, 'database', '.revoked')
+            if reason not in ('expired', 'subscription_expired'):
+                try:
+                    open(flag_path, 'w').write(reason if reason in ('revoked', 'disabled', 'suspended') else 'revoked')
+                except Exception:
+                    pass
+            else:
+                # For expired: remove any stale .revoked flag so startup doesn't block
+                try:
+                    if os.path.exists(flag_path):
+                        os.remove(flag_path)
+                except Exception:
+                    pass
+            # Only delete license key for actual revocation (not expiry — user needs key to renew)
+            if reason not in ('expired', 'subscription_expired'):
+                key_path = os.path.join(base, 'database', '.license_key')
+                try:
+                    if os.path.exists(key_path):
+                        os.remove(key_path)
+                        LOG('[SSE] Removed cached .license_key file')
+                except Exception:
+                    pass
+                # Clear license key from DB so it doesn't fall back to old key
+                try:
+                    with self.db._get_connection() as conn:
+                        conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('license_key','')")
+                    LOG('[SSE] Cleared license key from DB')
+                except Exception as db_err:
+                    ERR(f'[SSE] DB key clear failed: {db_err}')
+            # Clear any session state
+            self._session_role = None
+            self._session_username = None
+        except Exception as e:
+            ERR(f'[SSE] sse_handle_revoke cleanup error: {e}')
+        # Navigate to revoked page
+        self.fire_revoked_screen(reason)
+
+    # ── SUBSCRIPTION API (for frontend) ─────────────────────────────────
+    def subscription_startup_check(self):
+        """Called from frontend on EVERY page load.
+        ALWAYS does a synchronous server check — never trusts stale cache.
+        Only falls back to state file if server is unreachable.
+        This ensures expired/revoked status is enforced immediately."""
+        try:
+            # Read key
+            base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+            key_path = os.path.join(base, 'database', '.license_key')
+            key = ''
+            if os.path.exists(key_path):
+                try:
+                    enc = open(key_path, 'rb').read()
+                    key = decrypt_license_key(enc).strip().upper()
+                except Exception:
+                    pass
+            if not key or not _is_valid_key_format(key):
+                try:
+                    key = self.db.get_config('license_key', '').strip().upper()
+                except Exception:
+                    pass
+            if not key or not _is_valid_key_format(key):
+                from subscription_manager import LITE_FEATURES
+                return {'valid': False, 'status': 'unknown', 'effective_plan': 'lite',
+                        'features': list(LITE_FEATURES), 'subscription': {'status': 'unknown',
+                        'expires_at': None, 'remaining_days': 0, 'grace_remaining_days': 0,
+                        'renewal_amount': 0}, 'business': '', 'owner': '', 'plan': 'lite',
+                        'is_trial': False, 'trial_end_ms': None}
+
+            self.sub.set_license_key(key)
+            self.sub.set_window(self._window)
+
+            # If we just renewed (within 5 min), skip server check and use cached active state
+            if self._renewed_at and (time.time() - self._renewed_at < 300):
+                LOG('[SUB] Recently renewed — skipping server check, using cached active state')
+                self.sub._load_cache()
+                return self.sub.get_state_json()
+
+            # ALWAYS do a synchronous server check — this is the source of truth
+            try:
+                self.sub.startup_check(key)
+                result = self.sub.get_state_json()
+                LOG(f'[SUB] Startup server check: valid={result.get("valid")} '
+                    f'status={result.get("status")} plan={result.get("effective_plan")} '
+                    f'features={len(result.get("features", []))}')
+                return result
+            except Exception as server_err:
+                ERR(f'[SUB] Startup server check failed: {server_err}')
+                # Server unreachable — fall back to state file
+                file_state = self.sub.load_state_file()
+                if file_state:
+                    self.sub._apply_cache_data({'state': file_state, '_hours_old': 0})
+                    LOG(f'[SUB] Startup: server failed, loaded from file — plan={file_state.get("effective_plan")}')
+                    return self.sub.get_state_json()
+                # No file either — return default (expired-safe)
+                from subscription_manager import LITE_FEATURES
+                return {'valid': False, 'status': 'unknown', 'effective_plan': 'lite',
+                        'features': list(LITE_FEATURES), 'subscription': {'status': 'unknown',
+                        'expires_at': None, 'remaining_days': 0, 'grace_remaining_days': 0,
+                        'renewal_amount': 0}, 'business': '', 'owner': '', 'plan': 'lite',
+                        'is_trial': False, 'trial_end_ms': None}
+        except Exception as e:
+            ERR(f'[SUB] startup_check error: {e}')
+            return self.sub.get_state_json()
+
+    def subscription_sync(self):
+        """Manual sync trigger from frontend."""
+        try:
+            result = self.sub.sync_subscription()
+            return self.sub.get_state_json()
+        except Exception as e:
+            ERR(f'[SUB] sync error: {e}')
+            return self.sub.get_state_json()
+
+    def subscription_check_update(self):
+        """Lightweight poll: returns state file timestamp. JS calls this every 5s."""
+        try:
+            ts = self.sub.get_state_file_timestamp()
+            return {'ts': ts}
+        except Exception:
+            return {'ts': 0}
+
+    def subscription_poll_check(self):
+        """Called by JS every 8s. Polls /api/poll for reactivation changes."""
+        try:
+            self.sub._do_poll()
+            return self.sub.get_state_json()
+        except Exception as e:
+            ERR(f'[SUB] poll error: {e}')
+            return self.sub.get_state_json()
+
+    def renew_subscription(self):
+        """Call POST /api/subscription/renew after user pays.
+        Returns {ok, plan, subscription_expires_at} or {ok:false, error}."""
+        import urllib.request, urllib.error, json as _j, uuid as _uuid
+        LOG('[RENEW] renew_subscription called')
+        base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        flag_path = os.path.join(base, 'database', '.revoked')
+        key_path = os.path.join(base, 'database', '.license_key')
+        key = ''
+        try:
+            key = self.db.get_config('license_key', '').strip().upper()
+        except Exception:
+            pass
+        if not key or not _is_valid_key_format(key):
+            if os.path.exists(key_path):
+                try:
+                    enc = open(key_path, 'rb').read()
+                    key = decrypt_license_key(enc).strip().upper()
+                except Exception:
+                    pass
+        if not key or not _is_valid_key_format(key):
+            LOG('[RENEW] No valid license key found')
+            return {'ok': False, 'error': 'No valid license key'}
+        LOG(f'[RENEW] Key: {key[:10]}...')
+
+        machine_id = str(_uuid.getnode())
+        url = self._get_license_check_url() + '/api/subscription/renew'
+        payload = _j.dumps({'key': key, 'machine_id': machine_id}).encode()
+        LOG(f'[RENEW] POST {url}')
+
+        try:
+            req = urllib.request.Request(url, data=payload, headers={
+                'Content-Type': 'application/json',
+                'User-Agent': f'AurumOS/{CURRENT_VERSION}'
+            }, method='POST')
+            with self._safe_urlopen(req, timeout=15) as resp:
+                raw = resp.read().decode('utf-8', errors='replace')
+            LOG(f'[RENEW] Response: {raw[:200]}')
+            data = _j.loads(raw)
+
+            if data.get('ok'):
+                LOG(f'[RENEW] Renewed: plan={data.get("plan")} expires={data.get("subscription_expires_at")}')
+                try:
+                    self.sub.set_license_key(key)
+                    self.sub.set_window(self._window)
+                except Exception as _se:
+                    ERR(f'[RENEW] Sub setup after renew: {_se}')
+                # Force subscription state to active from renewal response
+                try:
+                    from subscription_manager import LITE_FEATURES, PRO_FEATURES, ENTERPRISE_FEATURES, PLAN_FEATURES, _clamp_expiry, _clamp_remaining, SUBSCRIPTION_DAYS
+                    plan = data.get('plan', 'pro')
+                    features = PLAN_FEATURES.get(plan, PRO_FEATURES)
+                    expires = _clamp_expiry(data.get('subscription_expires_at'))
+                    remaining = _clamp_remaining(data.get('remaining_days', SUBSCRIPTION_DAYS))
+                    self.sub._set_state({
+                        'valid': True,
+                        'status': 'active',
+                        'effective_plan': plan,
+                        'features': features,
+                        'business': data.get('business', ''),
+                        'owner': data.get('owner', ''),
+                        'plan': plan,
+                        'is_trial': data.get('is_trial', False),
+                        'trial_end_ms': data.get('trial_end_ms'),
+                        'subscription': {
+                            'status': 'active',
+                            'expires_at': expires,
+                            'remaining_days': remaining,
+                            'grace_remaining_days': data.get('grace_remaining_days', 15),
+                            'renewal_amount': data.get('renewal_amount', 0)
+                        }
+                    })
+                    self.sub._save_cache()
+                    LOG(f'[RENEW] Subscription state forced active: plan={plan}')
+                except Exception as _fe:
+                    ERR(f'[RENEW] Force state after renew: {_fe}')
+                self._renewed_at = time.time()
+                try: self.sub.set_force_active(300)
+                except Exception: pass
+                # Push active state to JS so localStorage is updated before navigation
+                try:
+                    if self._window:
+                        import json as _j2
+                        sub_json = _j2.dumps(self.sub.get_state_json())
+                        self._window.evaluate_js(
+                            f"try{{localStorage.setItem('aurum_sub_state','{sub_json.replace(chr(39),chr(92)+chr(39))}');}}catch(e){{}}"
+                        )
+                except Exception as _jse:
+                    ERR(f'[RENEW] Push state to JS: {_jse}')
+                try:
+                    if os.path.exists(flag_path):
+                        os.remove(flag_path)
+                except Exception:
+                    pass
+                try:
+                    if self._window:
+                        self._window.evaluate_js("try{localStorage.removeItem('aurum_revoke_reason');}catch(e){}")
+                except Exception:
+                    pass
+                return data
+            else:
+                error = data.get('error', 'unknown')
+                LOG(f'[RENEW] Failed: {error}')
+                return {'ok': False, 'error': error}
+        except urllib.error.HTTPError as e:
+            body = ''
+            try:
+                body = e.read().decode('utf-8', errors='replace')
+            except Exception:
+                pass
+            ERR(f'[RENEW] HTTP {e.code}: {body[:200]}')
+            if e.code == 404:
+                return {'ok': False, 'error': 'Renewal endpoint not configured on server. Contact support.'}
+            return {'ok': False, 'error': f'Server error ({e.code}). Try again later.'}
+        except urllib.error.URLError as e:
+            ERR(f'[RENEW] Network error: {e}')
+            return {'ok': False, 'error': 'offline'}
+        except ValueError as e:
+            ERR(f'[RENEW] JSON parse error: {e}')
+            return {'ok': False, 'error': 'Invalid response from server. Contact support.'}
+        except Exception as e:
+            ERR(f'[RENEW] Error: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    def subscription_check_feature(self, feature_id):
+        """Check if a specific feature is allowed."""
+        try:
+            return self.sub.check_feature(feature_id)
+        except Exception as e:
+            return {'allowed': False, 'plan': 'lite', 'required_plan': 'pro', 'features': []}
+
+    def subscription_get_state(self):
+        """Return full subscription state for frontend."""
+        try:
+            return self.sub.get_state_json()
+        except Exception as e:
+            return {'valid': False, 'status': 'unknown', 'effective_plan': 'lite', 'features': []}
+
+    def subscription_start_sync(self, interval_minutes=30):
+        """Start periodic background sync."""
+        try:
+            self.sub.start_periodic_sync(interval_minutes)
+            return {'status': 'ok'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def get_trial_status(self):
+        """Return trial status for dashboard."""
+        try:
+            state = self.sub.get_state_json()
+            return {
+                'is_trial': state.get('is_trial', False),
+                'status': state.get('status', 'unknown'),
+                'expiry_ms': state.get('trial_end_ms'),
+                'effective_plan': state.get('effective_plan', 'lite'),
+                'remaining_days': state.get('subscription', {}).get('remaining_days', 0)
+            }
+        except Exception as e:
+            return {'is_trial': False, 'status': 'unknown', 'expiry_ms': None}
 
     def quit_app(self):
         try:
@@ -1104,23 +2681,46 @@ class AurumAPI:
             sys.exit(0)
         except: pass
 
+    def get_plans(self):
+        """Fetch plan details from server for revoked.html display."""
+        import urllib.request, json as _json
+        api_base = self._get_license_check_url()
+        url = api_base + '/api/subscription/plans'
+        try:
+            req = urllib.request.Request(url, headers={
+                'Content-Type': 'application/json',
+                'User-Agent': 'AurumOS/Client'
+            })
+            with self._safe_urlopen(req, timeout=10) as resp:
+                data = _json.loads(resp.read().decode())
+            return data
+        except Exception as e:
+            ERR(f'[PLANS] fetch error: {e}')
+            return {
+                'plans': [
+                    {'id': 'lite', 'name': 'Lite', 'emoji': '\U0001f949', 'price': 3000, 'onboarding': 15000, 'period': 'year', 'desc': '10 Features', 'features': ['local_mode', 'billing_retail', 'stock_entry', 'product_master', 'client_ledger', 'staff_login_lockout', 'tag_printing_local', 'scale_weighing', 'sales_report_basic', 'bastion_core'], 'accent': '#b45309'},
+                    {'id': 'pro', 'name': 'Pro', 'emoji': '\U0001f948', 'price': 7000, 'onboarding': 35000, 'period': 'year', 'desc': '20 Features', 'features': ['local_mode', 'billing_retail', 'stock_entry', 'product_master', 'client_ledger', 'staff_login_lockout', 'tag_printing_local', 'scale_weighing', 'sales_report_basic', 'bastion_core', 'karigar_vouchers', 'touch_groups', 'full_accounts', 'tag_audit', 'stock_med_reports', 'tsc_network_printing', 'multi_staff', 'analytics_dashboard', 'year_close', 'bastion_enhanced'], 'accent': '#6b7280'},
+                    {'id': 'enterprise', 'name': 'Enterprise', 'emoji': '\U0001f947', 'price': 15000, 'onboarding': 75000, 'period': 'year', 'desc': '30 Features', 'features': ['local_mode', 'billing_retail', 'stock_entry', 'product_master', 'client_ledger', 'staff_login_lockout', 'tag_printing_local', 'scale_weighing', 'sales_report_basic', 'bastion_core', 'lan_multi_pc', 'karigar_vouchers', 'touch_groups', 'full_accounts', 'tag_audit', 'stock_med_reports', 'tsc_network_printing', 'multi_staff', 'analytics_dashboard', 'year_close', 'bastion_enhanced', 'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai', 'nexus_management', 'bridge_server', 'custom_db_location', 'priority_support', 'api_integration'], 'accent': '#a87d1e'}
+                ]
+            }
+
     def verify_key(self, key):
         import urllib.request, json as _json, uuid as _uuid
         key = str(key).strip().upper()
         if key.lower() == self.TEMP_KEY:
             return {"status":"success","business":"Dev Mode","owner":"Developer"}
-        if not key.startswith("AU-") or len(key) != 22:
-            return {"status":"error","message":"Invalid key format. Expected AU-XXXX-XXXX-XXXX-XXXX"}
+        if not _is_valid_key_format(key):
+            return {"status":"error","message":"Invalid key format. Expected AU/AR-XXXX-XXXX-XXXX-XXXX"}
         try: machine_id = str(_uuid.getnode())
         except: machine_id = "unknown"
-        CHECK_URL = "https://aurum-os-admin.vercel.app/api/check"
+        CHECK_URL = self._get_license_check_url() + "/api/check"
         LOG(f"[LICENSE] Checking key={key[:10]}... machine={machine_id[:8]}")
         try:
             payload = _json.dumps({"key":key,"machine_id":machine_id}).encode()
             req = urllib.request.Request(CHECK_URL,data=payload,
                 headers={"Content-Type":"application/json","User-Agent":f"AurumOS/{CURRENT_VERSION}"},
                 method="POST")
-            with urllib.request.urlopen(req,timeout=10) as resp:
+            with self._safe_urlopen(req,timeout=10) as resp:
                 raw = resp.read().decode()
                 LOG(f"[LICENSE] Server: {raw}")
                 data = _json.loads(raw)
@@ -1186,6 +2786,214 @@ class AurumAPI:
         except: pass
 
     # -- LOGIN -----------------------------------------------------------------
+    # ══════════════════════════════════════════════════════════════════
+    # TWO-FACTOR AUTHENTICATION (TOTP · RFC 6238) — owner account
+    # The shared secret + hashed backup codes live in app_config. TOTP codes
+    # are computed with the Python standard library (hmac/hashlib), so no extra
+    # third-party package (pyotp) needs to be bundled. UI contract:
+    #   settings.html : totp_status / totp_begin_enroll / totp_confirm_enroll / totp_disable
+    #   login.html    : verify_login -> {status:'2fa_required'} -> verify_2fa
+    # ══════════════════════════════════════════════════════════════════
+    def _tfa_get(self, key, default=None):
+        try:
+            with self.db._get_connection() as _c:
+                r = _c.execute("SELECT value FROM app_config WHERE key=?", (key,)).fetchone()
+            return r["value"] if r else default
+        except Exception:
+            return default
+
+    def _tfa_set(self, key, value):
+        with self.db._get_connection() as _c:
+            _c.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)", (key, value))
+            _c.commit()
+
+    def _tfa_del(self, *keys):
+        try:
+            with self.db._get_connection() as _c:
+                _c.execute(
+                    "DELETE FROM app_config WHERE key IN (%s)" % ",".join("?" * len(keys)),
+                    keys)
+                _c.commit()
+        except Exception:
+            pass
+
+    @staticmethod
+    def _totp_code(secret_b32, when=None, step=30, digits=6):
+        import hmac as _hm, hashlib as _hl, base64 as _b64, struct as _st, time as _tm
+        if when is None:
+            when = _tm.time()
+        pad = '=' * ((8 - len(secret_b32) % 8) % 8)
+        key = _b64.b32decode(secret_b32 + pad, casefold=True)
+        msg = _st.pack('>Q', int(when // step))
+        h = _hm.new(key, msg, _hl.sha1).digest()
+        o = h[-1] & 0x0F
+        val = (_st.unpack('>I', h[o:o + 4])[0] & 0x7FFFFFFF) % (10 ** digits)
+        return str(val).zfill(digits)
+
+    def _totp_verify(self, secret_b32, code, window=1):
+        import time as _tm
+        code = ''.join(ch for ch in str(code) if ch.isdigit())
+        if len(code) != 6:
+            return False
+        now = _tm.time()
+        for w in range(-window, window + 1):
+            if self._totp_code(secret_b32, now + w * 30) == code:
+                return True
+        return False
+
+    def _totp_is_enabled(self):
+        try:
+            return self._tfa_get('totp_enabled', '0') == '1' and bool(self._tfa_get('totp_secret'))
+        except Exception:
+            return False
+
+    def totp_status(self):
+        try:
+            return {"enabled": self._totp_is_enabled()}
+        except Exception as e:
+            ERR(f"[2FA] status error: {e}")
+            return {"enabled": False}
+
+    def totp_begin_enroll(self):
+        import os as _os, io as _io, base64 as _b64, urllib.parse as _up
+        try:
+            secret = _b64.b32encode(_os.urandom(20)).decode('ascii').rstrip('=')
+            self._tfa_set('totp_pending_secret', secret)
+            try:
+                biz = (self.db.get_config('business_name', '') or 'owner').strip() or 'owner'
+            except Exception:
+                biz = 'owner'
+            label = _up.quote('AurumOS:' + biz)
+            uri = ("otpauth://totp/%s?secret=%s&issuer=AurumOS&algorithm=SHA1&digits=6&period=30"
+                   % (label, secret))
+            qr_uri = ''
+            try:
+                import qrcode as _qr
+                img = _qr.make(uri)
+                buf = _io.BytesIO()
+                img.save(buf, format='PNG')
+                qr_uri = 'data:image/png;base64,' + _b64.b64encode(buf.getvalue()).decode('ascii')
+            except Exception as qe:
+                LOG(f"[2FA] QR generation skipped: {qe}")
+            LOG("[2FA] Enrollment started")
+            return {"status": "success", "secret": secret, "qr": qr_uri, "otpauth": uri}
+        except Exception as e:
+            ERR(f"[2FA] begin_enroll error: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def totp_confirm_enroll(self, code):
+        import os as _os, base64 as _b64, hashlib as _hl, json as _j
+        try:
+            secret = self._tfa_get('totp_pending_secret')
+            if not secret:
+                return {"status": "error", "message": "Setup expired — please start again."}
+            if not self._totp_verify(secret, code):
+                return {"status": "error", "message": "Incorrect code. Check your authenticator app and try again."}
+            self._tfa_set('totp_secret', secret)
+            self._tfa_set('totp_enabled', '1')
+            self._tfa_del('totp_pending_secret')
+            codes = []
+            for _ in range(10):
+                raw = _b64.b32encode(_os.urandom(5)).decode('ascii').rstrip('=')[:8].upper()
+                codes.append(raw[:4] + '-' + raw[4:8])
+            hashed = [_hl.sha256(c.replace('-', '').encode()).hexdigest() for c in codes]
+            self._tfa_set('totp_backup_codes', _j.dumps(hashed))
+            try:
+                self._audit("2FA enabled", "TOTP activated for owner account", "auth")
+            except Exception:
+                pass
+            LOG("[2FA] Enrollment confirmed — 2FA enabled")
+            return {"status": "success", "backup_codes": codes}
+        except Exception as e:
+            ERR(f"[2FA] confirm_enroll error: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def totp_disable(self, password):
+        try:
+            auth = self.db.authenticate_user_by_password(password or "")
+            if not auth.get("authenticated") or auth.get("role") == "staff":
+                return {"status": "error", "message": "Incorrect owner password."}
+            self._tfa_del('totp_secret', 'totp_enabled', 'totp_backup_codes', 'totp_pending_secret')
+            try:
+                self._audit("2FA disabled", "TOTP removed for owner account", "auth")
+            except Exception:
+                pass
+            LOG("[2FA] Disabled")
+            return {"status": "success"}
+        except Exception as e:
+            ERR(f"[2FA] disable error: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def verify_2fa(self, code):
+        import json as _j, hashlib as _hl
+        try:
+            pending = getattr(self, '_pending_2fa', None)
+            if not pending:
+                return {"status": "error", "message": "Session expired — please sign in again."}
+            secret = self._tfa_get('totp_secret')
+            raw = ''.join(ch for ch in str(code) if ch.isalnum())
+            ok = False
+            backup_used = False
+            backup_remaining = None
+            # 1) TOTP (6 digits)
+            if secret and raw.isdigit() and len(raw) == 6:
+                ok = self._totp_verify(secret, raw)
+            # 2) One-time backup code (8 alphanumerics)
+            if not ok and len(raw) >= 8:
+                try:
+                    codes = _j.loads(self._tfa_get('totp_backup_codes', '[]') or '[]')
+                except Exception:
+                    codes = []
+                h = _hl.sha256(raw[:8].upper().encode()).hexdigest()
+                if h in codes:
+                    codes.remove(h)
+                    self._tfa_set('totp_backup_codes', _j.dumps(codes))
+                    ok = True
+                    backup_used = True
+                    backup_remaining = len(codes)
+            if not ok:
+                return {"status": "error", "message": "Invalid code. Try again."}
+            self._pending_2fa = None
+            from datetime import datetime as _dt
+            res = self._finalize_login(pending["role"], pending["username"],
+                                       pending["landing"], _dt.now(), _dt)
+            if backup_used:
+                res["backup_used"] = True
+                res["backup_remaining"] = backup_remaining
+                LOG(f"[2FA] Backup code used — {backup_remaining} remaining")
+            return res
+        except Exception as e:
+            ERR(f"[2FA] verify error: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def _finalize_login(self, role, username, landing, now, _dt):
+        """Complete a successful owner/staff login (shared by the direct
+        password path and the post-2FA path)."""
+        self._login_attempts = 0
+        self._lockout_until  = None
+        self._session_role     = role
+        self._session_username = username
+        try:
+            with self.db._get_connection() as _lc:
+                _lc.execute("CREATE TABLE IF NOT EXISTS login_log (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL DEFAULT 'owner', role TEXT NOT NULL DEFAULT 'admin', login_time TEXT NOT NULL DEFAULT (datetime('now')), ip TEXT DEFAULT '')")
+                _lc.execute("INSERT INTO login_log(username,role,login_time) VALUES(?,?,?)",
+                            (username, role, now.strftime('%Y-%m-%d %H:%M:%S')))
+                _lc.commit()
+        except Exception as _le:
+            LOG(f"[LOGIN] login_log write error: {_le}")
+        try:
+            lf = self._get_lockout_file()
+            if os.path.exists(lf):
+                os.remove(lf)
+        except Exception:
+            pass
+        self._audit(f"Login: {username}", f"Role: {role}", "auth")
+        try:
+            self.bastion.notify_session_active(True)
+        except Exception:
+            pass
+        return {"status": "success", "role": role, "username": username, "landing": landing}
+
     def verify_login(self, password):
         import json as _json
         try:
@@ -1273,44 +3081,28 @@ class AurumAPI:
 
         auth = self.db.authenticate_user_by_password(password)
         if auth["authenticated"]:
-            self._login_attempts = 0
-            self._lockout_until  = None
-            self._session_role     = auth.get("role", "staff")
-            self._session_username = auth.get("username", "owner")
-            # Record successful login
-            try:
-                with self.db._get_connection() as _lc:
-                    _lc.execute("CREATE TABLE IF NOT EXISTS login_log (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL DEFAULT 'owner', role TEXT NOT NULL DEFAULT 'admin', login_time TEXT NOT NULL DEFAULT (datetime('now')), ip TEXT DEFAULT '')")
-                    _lc.execute("INSERT INTO login_log(username,role,login_time) VALUES(?,?,?)",
-                                (self._session_username, self._session_role,
-                                 now.strftime('%Y-%m-%d %H:%M:%S')))
-                    _lc.commit()
-            except Exception as _le:
-                LOG(f"[LOGIN] login_log write error: {_le}")
-            try:
-                lf = self._get_lockout_file()
-                if os.path.exists(lf): os.remove(lf)
-            except: pass
-            role=auth["role"]; username=auth.get("username","Admin")
-            landing="billing.html" if role=="staff" else "dashboard.html"
-            self._audit(f"Login: {username}",f"Role: {role}","auth")
-            try: self.bastion.notify_session_active(True)
-            except Exception: pass
-            return {"status":"success","role":role,"username":username,"landing":landing}
+            role = auth["role"]; username = auth.get("username", "Admin")
+            landing = "billing.html" if role == "staff" else "dashboard.html"
+            # ── TWO-FACTOR GATE (owner/admin only) ──────────────────────
+            # Password is correct; if the owner has 2FA enabled, defer the
+            # actual session finalization until verify_2fa() confirms the TOTP
+            # or a backup code. Staff logins are never gated by owner 2FA.
+            if role != "staff" and self._totp_is_enabled():
+                self._pending_2fa = {"role": role, "username": username, "landing": landing}
+                LOG(f"[2FA] Password OK for {username}; awaiting TOTP code")
+                return {"status": "2fa_required", "username": username}
+            return self._finalize_login(role, username, landing, now, _dt)
         self._login_attempts += 1
         left = self._MAX_ATTEMPTS - self._login_attempts
         if self._login_attempts >= self._MAX_ATTEMPTS:
             self._lockout_until = now + _td(seconds=self._LOCKOUT_SECONDS)
             self._save_lockout_state()
-            # Generate lock code for unlock key generation
+            # Generate lock code using machine fingerprint (consistent with verify_unlock_key)
             try:
-                _lc = self.db.generate_lock_code() if hasattr(self.db,'generate_lock_code') else None
-                if not _lc:
-                    import hashlib, platform
-                    _lc = hashlib.sha256(platform.node().encode()).hexdigest()[:8].upper()
+                _lc = self.db._machine_fingerprint()[:8].upper()
             except:
                 _lc = "LOCKED01"
-            # Also save to app_config for health page
+            # Also save to app_config for health page and verification
             try:
                 with self.db._get_connection() as _cc:
                     _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)", (_lc,))
@@ -1329,7 +3121,12 @@ class AurumAPI:
         try:
             if self._lockout_until and _dt.now() < self._lockout_until:
                 remaining = int((self._lockout_until-_dt.now()).total_seconds())
-                return {"locked":True,"remaining":remaining,"attempts":self._login_attempts}
+                # Return lock code so lock screen can display it
+                try:
+                    _lc = self.db._machine_fingerprint()[:8].upper()
+                except:
+                    _lc = ''
+                return {"locked":True,"remaining":remaining,"attempts":self._login_attempts,"lock_code":_lc}
             return {"locked":False,"attempts":self._login_attempts,"max":self._MAX_ATTEMPTS}
         except:
             return {"locked":False,"attempts":0,"max":3}
@@ -1354,19 +3151,50 @@ class AurumAPI:
                 license_key = str(data.get('licenseKey')   or data.get('license_key')   or '').strip()
                 phone       = str(data.get('phone')        or data.get('owner_phone')   or '').strip()
                 city        = str(data.get('city')         or '').strip()
+                address     = str(data.get('address')      or '').strip()
             else:
                 return {"status":"error","message":"Invalid setup data"}
             if not biz_name or not owner_name:
                 return {"status":"error","message":"Business name and owner name are required"}
-            ok = self.db.save_setup(biz_name, owner_name, phone, city, admin_pass, license_key=license_key)
+            ok = self.db.save_setup(biz_name, owner_name, phone, city, admin_pass, license_key=license_key, address=address)
             if ok:
-                if license_key and license_key.startswith("AU-"):
+                base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
+                # ── Clear old state on new setup ─────────────────────────────
+                # Remove .revoked flag so the app doesn't stay locked
+                try:
+                    flag_path = os.path.join(base, "database", ".revoked")
+                    if os.path.exists(flag_path):
+                        os.remove(flag_path)
+                        LOG("[SETUP] Cleared old .revoked flag")
+                except Exception:
+                    pass
+                # Remove old .license_key cache
+                try:
+                    old_key_path = os.path.join(base, "database", ".license_key")
+                    if os.path.exists(old_key_path):
+                        os.remove(old_key_path)
+                        LOG("[SETUP] Removed old .license_key cache")
+                except Exception:
+                    pass
+                # ── Save new key ─────────────────────────────────────────────
+                if license_key and _is_valid_key_format(license_key):
                     try:
-                        base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
-                        key_path = os.path.join(base,"database",".license_key")
-                        open(key_path,"wb").write(encrypt_license_key(license_key))
-                        LOG("[SETUP] License key cached")
-                    except Exception as ke: ERR(f"[SETUP] Key cache error: {ke}")
+                        key_path = os.path.join(base, "database", ".license_key")
+                        open(key_path, "wb").write(encrypt_license_key(license_key))
+                        LOG(f"[SETUP] New license key cached: {license_key[:10]}...")
+                    except Exception as ke:
+                        ERR(f"[SETUP] Key cache error: {ke}")
+                    # Start SSE stream with the fresh key
+                    threading.Thread(target=self.start_sse_stream, daemon=True).start()
+                    # Start subscription sync
+                    try:
+                        self.sub.set_license_key(license_key)
+                        self.sub.set_window(self._window)
+                        self.sub.startup_check(license_key)
+                        self.sub.start_periodic_sync(30)
+                        LOG("[SETUP] Subscription sync started")
+                    except Exception as _sub_err:
+                        ERR(f"[SETUP] Subscription start error: {_sub_err}")
                 return {"status":"success"}
             return {"status":"error","message":"Failed to save setup data"}
         except Exception as e:
@@ -1380,7 +3208,8 @@ class AurumAPI:
     def get_settings(self) -> dict:
         """Return all business settings for the settings page."""
         try:
-            keys = ['business_name','owner_name','owner_phone','city','setup_date','license_key']
+            keys = ['business_name','owner_name','owner_phone','city','setup_date','license_key',
+                    'discount_percent','discount_threshold','address']
             result = {}
             for k in keys:
                 result[k] = self.db.get_config(k, '')
@@ -1392,7 +3221,8 @@ class AurumAPI:
     def update_settings(self, data: dict) -> dict:
         """Update business profile fields."""
         try:
-            allowed = ['business_name','owner_name','owner_phone','city']
+            allowed = ['business_name','owner_name','owner_phone','city','address',
+                       'discount_percent','discount_threshold']
             with self.db._get_connection() as conn:
                 for k in allowed:
                     if k in data:
@@ -1441,9 +3271,9 @@ class AurumAPI:
         try: return self.db.get_all_staff()
         except Exception as e: ERR(f"[STAFF] {e}"); return []
 
-    def add_staff(self, username, password):
+    def add_staff(self, username, password, permissions=None):
         try:
-            ok, msg = self.db.add_staff_user(username, password)
+            ok, msg = self.db.add_staff_user(username, password, permissions)
             return {"status":"success","message":msg} if ok else {"status":"error","message":msg}
         except Exception as e:
             return {"status":"error","message":f"Bridge Error: {str(e)}"}
@@ -1462,19 +3292,28 @@ class AurumAPI:
             ERR(f"[STAFF] delete_staff error: {e}")
             return {"status":"error","message":str(e)}
 
-    def update_staff_password(self, staff_id, new_password):
+    def update_staff_password(self, staff_id, new_password, permissions=None):
         try:
-            sid  = int(staff_id)
-            if not new_password or len(str(new_password).strip()) < 4:
+            sid = int(staff_id)
+            hashed = None
+            if new_password and len(str(new_password).strip()) >= 4:
+                hashed = hashlib.sha256(str(new_password).encode('utf-8')).hexdigest()
+            elif new_password and len(str(new_password).strip()) < 4:
                 return {"status":"error","message":"Password must be at least 4 characters."}
-            hashed = hashlib.sha256(str(new_password).encode('utf-8')).hexdigest()
             with self.db._get_connection() as conn:
-                conn.execute(
-                    "UPDATE admin_creds SET password=? WHERE id=?",
-                    (hashed, sid)
-                )
+                if hashed is not None:
+                    conn.execute(
+                        "UPDATE admin_creds SET password=? WHERE id=?",
+                        (hashed, sid)
+                    )
+                if permissions is not None:
+                    import json as _json
+                    conn.execute(
+                        "UPDATE admin_creds SET permissions=? WHERE id=?",
+                        (_json.dumps(permissions), sid)
+                    )
                 conn.commit()
-            LOG(f"[STAFF] Password updated for id={sid}")
+            LOG(f"[STAFF] Password/permissions updated for id={sid}")
             return {"status":"success"}
         except Exception as e:
             ERR(f"[STAFF] update_staff_password error: {e}")
@@ -1511,6 +3350,9 @@ class AurumAPI:
     def get_products(self):
         return self.db.get_all_products()
 
+    def get_pos_stock(self):
+        return {"status": "success", "stock": self.db.get_pos_stock()}
+
     def delete_master_entry(self, data_type, entry_id):
         return {"status":"success"} if self.db.delete_master_entry(data_type,entry_id) else {"status":"error"}
 
@@ -1525,6 +3367,102 @@ class AurumAPI:
 
     def get_client_list(self):
         return self.db.get_all_clients()
+
+    def delete_new_client(self, client_id):
+        try:
+            return {"status": "success"} if self.db.delete_client(client_id) else {
+                "status": "error", "message": "Customer was not found or could not be deleted."
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def update_new_client(self, client_data):
+        try:
+            client_id = int(client_data.get("id"))
+            ok = self.db.execute_query(
+                "UPDATE clients_master SET name=?, phone=?, metal_limit=?, cash_limit=? WHERE id=?",
+                (str(client_data.get("name") or "").strip(),
+                 str(client_data.get("phone") or "").strip(),
+                 float(client_data.get("metal_limit") or 0),
+                 float(client_data.get("cash_limit") or 0),
+                 client_id)
+            )
+            return {"status": "success"} if ok else {"status": "error", "message": "Customer update failed."}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_customer_purchases(self, customer_name, mobile=''):
+        """Return all bills issued to the selected customer."""
+        try:
+            return self.db.get_customer_purchases(customer_name, mobile)
+        except Exception as e:
+            ERR(f"[CUSTOMER PURCHASES] {e}")
+            return {"status": "error", "message": str(e)}
+
+    def _customer_statement_data(self, customer_name):
+        purchases = self.db.get_customer_purchases(customer_name)
+        ledger = self.db.get_client_statement(customer_name)
+        return purchases, ledger
+
+    def _open_customer_statement(self, customer_name, statement_type):
+        try:
+            from html import escape as _html_escape
+            purchases, ledger = self._customer_statement_data(customer_name)
+            shop = self.db.get_config("business_name", "Jewellers")
+            address = self.db.get_config("address", "")
+            phone = self.db.get_config("owner_phone", "")
+            city = self.db.get_config("city", "")
+            rows = purchases if statement_type == "purchase" else ledger
+            title = "Purchase Statement" if statement_type == "purchase" else "Account Statement"
+            safe_shop = _html_escape(str(shop or "Jewellers"))
+            safe_address = _html_escape(str(address or ""))
+            safe_phone = _html_escape(str(phone or ""))
+            safe_city = _html_escape(str(city or ""))
+            safe_customer = _html_escape(str(customer_name or ""))
+            body_rows = []
+            if statement_type == "purchase":
+                for row in rows:
+                    total = float(row.get("total_amount") or 0)
+                    body_rows.append(
+                        f"<tr><td>{_html_escape(str(row.get('date','')))}</td><td class='voucher'>{_html_escape(str(row.get('vch_id','')))}</td>"
+                        f"<td><span class='paid'>PAID</span></td><td class='num'>Rs. {float(row.get('gold_rate') or 0):,.2f}</td>"
+                        f"<td class='num'>Rs. {total:,.2f}</td><td class='num'>Rs. {total:,.2f}</td></tr>"
+                    )
+                headers = "<th>Date</th><th>Voucher</th><th>Status</th><th>Gold Rate</th><th>Total</th><th>Collected</th>"
+            else:
+                remaining_fine = 0.0
+                for row in rows:
+                    remaining_fine += float(row.get('metal_dr') or 0) - float(row.get('metal_cr') or 0)
+                    body_rows.append(
+                        f"<tr><td>{_html_escape(str(row.get('date','')))}</td><td class='voucher'>{_html_escape(str(row.get('vch_reference','')))}</td>"
+                        f"<td>{_html_escape(str(row.get('description','')))}</td><td class='num fine'>{float(row.get('metal_dr') or 0):,.3f} g</td>"
+                        f"<td class='num fine'>{float(row.get('metal_cr') or 0):,.3f} g</td><td class='num fine remaining'>{max(remaining_fine, 0.0):,.3f} g</td>"
+                        f"<td class='num'>Rs. {float(row.get('cash_dr') or 0):,.2f}</td><td class='num'>Rs. {float(row.get('cash_cr') or 0):,.2f}</td></tr>"
+                    )
+                headers = "<th>Date</th><th>Reference</th><th>Particulars</th><th>Fine Dr</th><th>Fine Cr / Jama</th><th>Remaining Fine</th><th>Cash Dr</th><th>Cash Cr</th>"
+            contact = " &nbsp; • &nbsp; ".join(v for v in (safe_phone, safe_city) if v)
+            html = f"""<!doctype html><html><head><meta charset='utf-8'><title>{title}</title>
+<style>
+@page{{size:A4;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#ebe7df;color:#20241f;font-family:Arial,sans-serif}}
+.sheet{{position:relative;max-width:900px;min-height:1120px;margin:28px auto;background:#fbf8f2;padding:0 54px 42px;box-shadow:0 8px 28px rgba(18,34,56,.14)}}.sheet:before{{content:"";display:block;height:7px;margin:0 -54px;background:linear-gradient(90deg,#122238 0 62%,#a9803c 62% 100%)}}
+.head{{display:flex;align-items:center;justify-content:space-between;padding:32px 0 22px;border-bottom:1px solid #e1dacb}}.identity{{display:flex;align-items:center;gap:14px}}.mark{{width:43px;height:43px;border-radius:8px;background:#122238;color:#d7b46a;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:18px;font-weight:bold}}h1{{margin:0;color:#122238;font:700 24px Georgia,serif;letter-spacing:-.3px}}.address{{margin-top:7px;color:#5b5f58;font-size:11px;line-height:1.55}}.brand{{display:flex;align-items:center;gap:9px;border-left:1px solid #d8cdb9;padding-left:18px}}.brand-name{{color:#122238;font:700 15px Georgia,serif;letter-spacing:.14em}}.brand-tag{{margin-top:4px;color:#a9803c;font-size:8px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}}.title-row{{display:flex;justify-content:space-between;align-items:end;padding:24px 0 16px;border-bottom:1.5px solid #122238}}h2{{margin:0;color:#122238;font:italic 22px Georgia,serif}}.doc-type{{color:#a9803c;font-size:10px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase}}.meta{{display:flex;justify-content:space-between;padding:15px 0 18px;color:#5b5f58;font-size:11px}}.meta b{{color:#20241f}}table{{width:100%;border-collapse:collapse;table-layout:fixed}}th{{height:34px;padding:0 8px 10px;background:transparent;border-bottom:1.5px solid #122238;color:#5b5f58;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}}td{{height:42px;padding:10px 8px;border-bottom:1px solid #e1dacb;color:#20241f;font-size:11px;white-space:nowrap}}.num{{text-align:right;font-variant-numeric:tabular-nums}}.fine{{text-align:right}}.remaining{{color:#122238;font-weight:700}}.voucher{{color:#122238;font-weight:700;letter-spacing:.03em}}.paid{{display:inline-block;padding:3px 7px;border:1px solid #b9a77f;border-radius:3px;color:#6f5425;font-size:9px;font-weight:bold;letter-spacing:.08em}}.total-row td{{border-top:1.5px solid #122238;border-bottom:0;color:#122238;font-weight:bold}}.foot{{margin-top:34px;padding-top:15px;border-top:1px solid #e1dacb;color:#5b5f58;font-size:10px;line-height:1.6;display:flex;justify-content:space-between}}.foot strong{{color:#122238;font-family:Georgia,serif;font-size:13px}}@media print{{body{{background:#fff}}.sheet{{min-height:0;margin:0;box-shadow:none}}}}
+</style></head><body><div class='sheet'><div class='head'><div class='identity'><div class='mark'>JD</div><div><h1>{safe_shop}</h1><div class='address'>{safe_address or 'Jewellers Address'}{('<br>'+contact) if contact else ''}</div></div></div><div class='brand'><div><div class='brand-name'>AURUMOS</div><div class='brand-tag'>Jewelry Management System</div></div></div></div>
+<div class='title-row'><h2>{title}</h2><div class='doc-type'>Customer statement</div></div><div class='meta'><div>Customer: <b>{safe_customer}</b></div><div>Generated: <b>{datetime.now().strftime('%d %b %Y, %H:%M')}</b></div></div>
+<table><colgroup>{('<col style="width:13%"><col style="width:13%"><col style="width:20%"><col style="width:11%"><col style="width:14%"><col style="width:14%"><col style="width:8%"><col style="width:7%">' if statement_type == 'credit' else '<col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:17%"><col style="width:20%"><col style="width:20%">')}</colgroup><thead><tr>{headers}</tr></thead><tbody>{''.join(body_rows) or "<tr><td colspan='8' style='text-align:center;color:#5b5f58'>No records found</td></tr>"}</tbody></table>
+<div class='foot'><div><strong>{safe_shop}</strong><br>{safe_address or 'Jewellers Address'}</div><div style='text-align:right'>Computer-generated statement<br>Powered by AURUMOS</div></div></div><script>window.onload=function(){{window.print();}}</script></body></html>"""
+            def open_window():
+                webview.create_window(title, html=html, js_api=self, width=1050, height=800, resizable=True)
+            threading.Thread(target=open_window, daemon=True).start()
+            return {"status": "success"}
+        except Exception as e:
+            ERR(f"[STATEMENT] {e}")
+            return {"status": "error", "message": str(e)}
+
+    def print_customer_purchases(self, customer_name):
+        return self._open_customer_statement(customer_name, "purchase")
+
+    def print_customer_credit(self, customer_name):
+        return self._open_customer_statement(customer_name, "credit")
 
     def update_client_limits(self, data):
         try:
@@ -1691,6 +3629,7 @@ class AurumAPI:
         return self.db.resolve_sync_conflict(conflict_id)
     def get_inventory_stats(self):                   return self.db.get_inventory_stats()
     def get_analytics_payload(self):                 return self.db.get_analytics_payload()
+    def get_items_by_bin(self, bin_id):            return self.db.get_items_by_bin(bin_id)
     def get_velocity_products(self):                 return self.db.get_velocity_products()
     def get_untagged_items(self):                    return self.db.get_untagged_items()
 
@@ -1768,30 +3707,51 @@ class AurumAPI:
 
     def get_live_invoice_print_payload(self, voucher_id):
         try:
+            LOG(f"[BILL PRINT] get_live_invoice_print_payload called with voucher_id={voucher_id!r}")
             sh_row=self.db.fetch_one("SELECT * FROM sales_history WHERE vch_id=?",(str(voucher_id).strip(),))
+            LOG(f"[BILL PRINT] sh_row={sh_row}")
             if not sh_row: return {"status":"error","message":f"Voucher {voucher_id} not found."}
             try: items_array=json.loads(sh_row.get('items') or '[]')
             except: items_array=[]
+            is_retail = (not ('UCHAK' in str(sh_row.get('status','')).upper())
+                         and any(isinstance(item, dict) and 'making' in item for item in items_array))
             bill={"vch_id":sh_row.get('vch_id','---'),"customer":sh_row.get('customer','Walking Customer'),
-                  "status":sh_row.get('status','PAID'),"is_credit":sh_row.get('status')=='CREDIT',
+                   "mobile":sh_row.get('mobile',''),"status":sh_row.get('status','PAID'),"is_credit":sh_row.get('status')=='CREDIT',
                   "is_uchak":'UCHAK' in str(sh_row.get('status','')).upper(),
-                  "totalLedgerFine":float(sh_row.get('ledger_fine') or 0.0),
-                  "remainingFine":float(sh_row.get('remaining_fine') or 0.0),
-                  "collectedFine":float(sh_row.get('collected_fine') or 0.0),
-                  "fine995":float(sh_row.get('fine_995') or 0.0),
-                  "fineDhal":float(sh_row.get('fine_dhal') or 0.0),
-                  "goldRate":float(sh_row.get('gold_rate') or 0.0),
-                  "totalAmount":float(sh_row.get('total_amount') or 0.0),
-                  "discountType":sh_row.get('discount_type','none'),
-                  "discountTouch":float(sh_row.get('discount_touch') or 0.0),
-                  "discountFine":float(sh_row.get('discount_fine') or 0.0),
-                  "discountAmount":float(sh_row.get('discount_amount') or 0.0),"items":items_array}
+                   "totalLedgerFine":float(sh_row.get('ledger_fine') or 0.0),
+                   "remainingFine":float(sh_row.get('remaining_fine') or 0.0),
+                   "collectedFine":float(sh_row.get('collected_fine') or 0.0),
+                   "fine995":float(sh_row.get('fine_995') or 0.0),
+                   "fineDhal":float(sh_row.get('fine_dhal') or 0.0),
+                   "goldRate":float(sh_row.get('gold_rate') or 0.0),
+                   "totalAmount":float(sh_row.get('total_amount') or 0.0),
+                   "discountType":sh_row.get('discount_type','none'),
+                   "discountTouch":float(sh_row.get('discount_touch') or 0.0),
+                   "discountFine":float(sh_row.get('discount_fine') or 0.0),
+                   "discountAmount":float(sh_row.get('discount_amount') or 0.0),
+                   "discount":float(sh_row.get('discount_amount') or 0.0),
+                   "discount_type":sh_row.get('discount_type','none'),
+                   "discount_value":0.0,
+                   "kind":'sale' if is_retail else 'bill',
+                   "items":items_array}
+            try:
+                bill["shop_name"]=self.db.get_config("business_name","AurumOS")
+                bill["shop_owner"]=self.db.get_config("owner_name","")
+                bill["shop_phone"]=self.db.get_config("owner_phone","")
+                bill["shop_city"]=self.db.get_config("city","")
+                bill["shop_address"]=self.db.get_config("address","")
+            except Exception: pass
             return {"status":"success","bill":bill}
         except Exception as e:
             ERR(f"[BILL PRINT] {e}")
             return {"status":"error","message":str(e)}
 
-    def trigger_print_window(self, voucher_id, copies=1):
+    def trigger_print_window(self, voucher_id, copies=1, data=None):
+        # `data` is accepted for compatibility with the billing UI, which passes
+        # the bill payload as a 3rd argument. bill_print.html fetches its own
+        # data via get_live_invoice_print_payload(), so `data` is unused here —
+        # but the parameter MUST exist or pywebview raises a TypeError ("critical
+        # error") when the UI calls this with 3 arguments.
         try:
             copies=int(copies) if copies else 1
             ui_dir=get_asset_path("ui")
@@ -1800,14 +3760,33 @@ class AurumAPI:
                 return {"status":"error","message":"bill_print.html not found"}
             with open(print_path,'r',encoding='utf-8') as f:
                 html_content=f.read()
-            inject=f"<script>window.__VCH_ID__='{voucher_id}';window.__COPIES__={copies};</script>"
+            inject = f"<script>window.__VCH_ID__='{voucher_id}';window.__COPIES__={copies};"
+            if data is not None:
+                printer_name = ''
+                preview_only = False
+                if isinstance(data, dict):
+                    printer_name = str(data.get('_printer') or '').strip()
+                    preview_only = bool(data.get('_previewOnly'))
+                try:
+                    payload = json.dumps(data, ensure_ascii=False)
+                except Exception:
+                    payload = 'null'
+                payload = payload.replace('</script>', '<\\/script>')
+                inject += f"window.__BILL_PAYLOAD__={payload};"
+                if printer_name:
+                    safe_printer = printer_name.replace("'", "\\'")
+                    inject += f"window.__PRINTER__='{safe_printer}';"
+                if preview_only:
+                    inject += "window.__PREVIEW_ONLY__=true;"
+            inject += '</script>'
             if '<!DOCTYPE html>' in html_content:
                 html_content=html_content.replace('<!DOCTYPE html>','<!DOCTYPE html>'+inject,1)
             else:
                 html_content=inject+html_content
             def open_window():
                 try:
-                    webview.create_window(f"Bill -- {voucher_id}",html=html_content,js_api=self,width=600,height=820,resizable=True)
+                    _wv = webview if webview is not None else __import__('webview')
+                    _wv.create_window(f"Bill -- {voucher_id}",html=html_content,js_api=self,width=850,height=1100,resizable=True)
                 except Exception as e:
                     ERR(f"[PRINT WIN] {e}")
             threading.Thread(target=open_window,daemon=True).start()
@@ -1815,20 +3794,189 @@ class AurumAPI:
         except Exception as e:
             return {"status":"error","message":str(e)}
 
+    def send_bill_whatsapp(self, voucher_id):
+        """Generate WhatsApp sharing link for a bill."""
+        try:
+            LOG(f"[WHATSAPP] send_bill_whatsapp called with voucher_id={voucher_id!r}")
+            bill_res = self.get_live_invoice_print_payload(voucher_id)
+            LOG(f"[WHATSAPP] get_live_invoice_print_payload returned: {bill_res}")
+            if bill_res.get('status') != 'success':
+                return {"status":"error","message":"Bill not found"}
+            bill = bill_res.get('bill', {})
+            customer_mobile = str(bill.get('mobile', '')).strip()
+            if not customer_mobile:
+                return {"status":"error","message":"Customer mobile number not available"}
+            owner_phone = self.db.get_config("owner_phone", "")
+            if not owner_phone:
+                return {"status":"error","message":"Owner phone number not set in settings"}
+            def fmt_phone(p):
+                p = re.sub(r'[^\d]', '', str(p).strip())
+                if p.startswith('91') and len(p) == 12:
+                    return '+' + p
+                elif p.startswith('+'):
+                    return p
+                elif len(p) == 10:
+                    return '+91' + p
+                elif len(p) == 12:
+                    return '+' + p
+                return p
+            dest_phone = fmt_phone(customer_mobile)
+            biz_name = self.db.get_config("business_name", "AurumOS")
+            vch_id = bill.get('vch_id', '---')
+            customer = bill.get('customer', 'Walking Customer')
+            total_amt = float(bill.get('totalAmount') or 0)
+            gold_rate = float(bill.get('goldRate') or 0)
+            status = bill.get('status', 'PAID')
+            bill_date = bill.get('date', '---')
+            discount_fine = float(bill.get('discountFine') or 0.0)
+            wa_text = (
+                "*" + biz_name + " - Invoice*" + "\n"
+                "*Voucher:* " + str(vch_id) + "\n"
+                "*Customer:* " + str(customer) + "\n"
+                "*Total:* Rs." + str(int(total_amt)) + "\n"
+                "*Rate:* Rs." + str(int(gold_rate)) + "/g" + "\n"
+            )
+            if discount_fine > 0:
+                wa_text += "*Discount:* " + str(discount_fine) + "g\n"
+            wa_text += (
+                "*Status:* " + str(status) + "\n"
+                "Bill generated on: " + str(bill_date)
+            )
+            encoded_text = urllib.parse.quote(wa_text)
+            wa_url = "https://wa.me/" + str(dest_phone) + "?text=" + str(encoded_text)
+            pdf_path = ""
+            try:
+                pdf_res = self.generate_bill_pdf(voucher_id)
+                pdf_path = pdf_res.get("pdf_path", "")
+            except Exception:
+                pass
+            return {
+                "status": "success",
+                "wa_url": wa_url,
+                "pdf_path": pdf_path,
+                "customer_mobile": dest_phone,
+                "sender_phone": fmt_phone(owner_phone),
+                "message": wa_text
+            }
+        except Exception as e:
+            ERR("[WHATSAPP] " + str(e))
+            return {"status":"error","message":str(e)}
+
+    def generate_bill_pdf(self, voucher_id):
+        """Generate a PDF of the bill from the bill print template."""
+        import subprocess, sys, os
+        bill_res = self.get_live_invoice_print_payload(voucher_id)
+        if bill_res.get('status') != 'success':
+            return {"status": "error", "message": "Bill not found"}
+        bill = bill_res.get('bill', {})
+        ui_dir = get_asset_path('ui')
+        template_path = os.path.join(ui_dir, 'bill_print.html')
+        if not os.path.exists(template_path):
+            return {"status": "error", "message": "bill_print.html not found"}
+
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+
+        try:
+            payload_json = json.dumps(bill, ensure_ascii=False)
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to encode bill payload: {e}"}
+
+        payload_json = payload_json.replace('</script>', '<\\/script>')
+        safe_vch_id = str(voucher_id).replace("'", "\\'")
+        inject = (
+            f"<script>window.__VCH_ID__='{safe_vch_id}';"
+            f"window.__COPIES__=1;window.__BILL_PAYLOAD__={payload_json};</script>"
+        )
+
+        try:
+            base_href = Path(ui_dir).resolve().as_uri()
+            if '<head>' in template_content.lower():
+                template_content = template_content.replace('<head>', '<head><base href="' + base_href + '">', 1)
+            else:
+                template_content = '<base href="' + base_href + '">' + template_content
+        except Exception:
+            pass
+
+        if '<!DOCTYPE html>' in template_content:
+            html_content = template_content.replace('<!DOCTYPE html>', '<!DOCTYPE html>' + inject, 1)
+        else:
+            html_content = inject + template_content
+
+        base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+        pdf_dir = os.path.join(base, 'exports')
+        os.makedirs(pdf_dir, exist_ok=True)
+        safe_id = str(voucher_id).replace('/', '-').replace('\\', '-').strip()
+        pdf_path = os.path.join(pdf_dir, f"Bill_{safe_id}.pdf")
+        html_tmp = os.path.join(pdf_dir, f"Bill_{safe_id}.html")
+
+        with open(html_tmp, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        LOG("[PDF] Bill HTML saved: " + html_tmp)
+
+        generated = False
+        try:
+            from weasyprint import HTML as WH
+            WH(filename=html_tmp).write_pdf(pdf_path)
+            generated = True
+            LOG("[PDF] Bill generated via weasyprint")
+        except ImportError:
+            pass
+        except Exception as ex:
+            LOG(f"[PDF] weasyprint generation failed: {ex}")
+
+        if not generated:
+            wk = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+            if os.path.exists(wk):
+                try:
+                    r = subprocess.run(
+                        [
+                            wk, '--enable-javascript', '--no-stop-slow-scripts',
+                            '--javascript-delay', '500', '--enable-local-file-access',
+                            html_tmp, pdf_path
+                        ],
+                        capture_output=True, timeout=60
+                    )
+                    if r.returncode == 0 and os.path.exists(pdf_path):
+                        generated = True
+                        LOG("[PDF] Bill generated via wkhtmltopdf")
+                    else:
+                        LOG(f"[PDF] wkhtmltopdf failed: {r.returncode} {r.stderr.decode(errors='replace')}" )
+                except Exception as ex:
+                    LOG(f"[PDF] wkhtmltopdf execution failed: {ex}")
+
+        if generated and os.path.exists(pdf_path):
+            try:
+                subprocess.Popen(['explorer', '/select,', pdf_path])
+            except Exception:
+                pass
+            return {"status": "success", "pdf_path": pdf_path}
+
+        return {
+            "status": "success",
+            "pdf_path": html_tmp,
+            "message": "Bill HTML saved. Install weasyprint or wkhtmltopdf to generate PDF."
+        }
+
     def get_bill_details(self, vch_id):
         try:
             res=self.db.fetch_one("SELECT * FROM sales_history WHERE UPPER(TRIM(vch_id))=?",(str(vch_id).strip().upper(),))
             if res:
                 try: items_list=json.loads(res.get('items','[]'))
                 except: items_list=[]
-                return {"status":"success","voucher":{
-                    "vch_id":res.get('vch_id'),"customer":res.get('customer'),"status":res.get('status'),
+            return {"status":"success","voucher":{
+                     "vch_id":res.get('vch_id'),"customer":res.get('customer'),"mobile":res.get('mobile',''),
+                     "status":res.get('status'),
                     "ledger_fine":float(res.get('ledger_fine') or 0.0),
                     "collected_fine":float(res.get('collected_fine') or 0.0),
                     "fine_995":float(res.get('fine_995') or 0.0),"fine_dhal":float(res.get('fine_dhal') or 0.0),
                     "remaining_fine":float(res.get('remaining_fine') or 0.0),
                     "gold_rate":float(res.get('gold_rate') or 0.0),
                     "total_amount":float(res.get('total_amount') or 0.0),
+                    "discount_type":res.get('discount_type','none'),
+                    "discount_touch":float(res.get('discount_touch') or 0.0),
+                    "discount_fine":float(res.get('discount_fine') or 0.0),
+                    "discount_amount":float(res.get('discount_amount') or 0.0),
                     "date":res.get('date'),"time_stamp":res.get('time_stamp')},"items":items_list}
             return {"status":"error","message":"Sales record not found."}
         except Exception as e:
@@ -1838,8 +3986,31 @@ class AurumAPI:
         try: return self.db.fetch_history()
         except: return []
 
+    def get_voucher_history_list(self, limit=1000):
+        try:
+            return {"status":"success","vouchers":self.db.get_voucher_history_list(limit)}
+        except Exception as e:
+            return {"status":"error","message":str(e),"vouchers":[]}
+
+    def get_touch_details(self, touch_val):
+        try:
+            d=self.db.get_touch_details(touch_val)
+            if d: return {"status":"success","wastage":d['wastage'],"value":d['value'],"name":d['name']}
+            return {"status":"not_found","message":f"Touch {touch_val} not configured."}
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def check_uchak_stock_available(self, items):
+        try:
+            short=self.db.check_uchak_stock_available(items)
+            if short: return {"status":"insufficient","items":short}
+            return {"status":"success","items":[]}
+        except Exception as e:
+            return {"status":"error","message":str(e),"items":[]}
+
     def generate_bill(self, bill_data):
         try:
+            LOG(f"[BILL] generate_bill called with vch_id={bill_data.get('vch_id')!r}")
             # Notify BASTION AI this is a legitimate write
             try: self.bastion.notify_write()
             except Exception: pass
@@ -1853,9 +4024,11 @@ class AurumAPI:
                     real_id = (self.get_next_uchak_vch_id() if is_uchak_check else self.get_sales_vch_id())
                     if real_id:
                         vch_id = str(real_id).strip()
+                        LOG(f"[BILL] staff vch_id override: {bill_data.get('vch_id')!r} -> {vch_id!r}")
                 except Exception as _ve:
                     LOG(f"[BILLING] staff vch_id override failed, using submitted value: {_ve}")
             customer=str(bill_data.get('customer','Walking Customer')).strip()
+            mobile=str(bill_data.get('mobile','')).strip()
             status=str(bill_data.get('status','CREDIT')).upper().strip()
             l_fine=float(bill_data.get('totalLedgerFine') or 0.0)
             coll=float(bill_data.get('collectedFine') or 0.0)
@@ -1872,9 +4045,18 @@ class AurumAPI:
             disc_amount=float(bill_data.get('discountAmount') or 0.0)
             resolved_status=('UCHAK_UNPAID' if (status=='CREDIT' and is_uchak) else
                              'UCHAK_PAID'   if (status=='PAID'   and is_uchak) else status)
-            self.db.record_sale(vch_id,customer,resolved_status,l_fine,coll,f995,dhal,rem,rate,clean_cash_amt,items_json,disc_type,disc_touch,disc_fine,disc_amount)
-            self.db.deduct_stock_after_sale(items_json)
+            if not self.db.record_sale(vch_id,customer,mobile,resolved_status,l_fine,coll,f995,dhal,rem,rate,clean_cash_amt,items_json,disc_type,disc_touch,disc_fine,disc_amount):
+                return {"status":"error","message":"Failed to record sale in database"}
+            if resolved_status != 'ESTIMATE':
+                try:
+                    self.db.deduct_stock_after_sale(items_json)
+                except Exception as _de:
+                    LOG(f"[BILL] Stock deduction failed (sale still recorded): {_de}")
             is_cash_settled=(status in ('PAID','CASH','UCHAK_PAID','UCHAK_MAINTAINED'))
+            if resolved_status == 'ESTIMATE':
+                self._audit(f"Estimate: {vch_id}",f"Customer: {customer} | Status: ESTIMATE","billing")
+                LOG(f"[BILL] generate_bill returning estimate vch_id={vch_id!r}")
+                return {"status":"success","vch_id":vch_id}
             if is_uchak:
                 if is_cash_settled: metal_debit=0.0;metal_credit=0.0;cash_debit=0.0;cash_credit=clean_cash_amt;ledger_desc="Uchak Cash Invoice Paid"
                 else: metal_debit=0.0;metal_credit=0.0;cash_debit=clean_cash_amt;cash_credit=0.0;ledger_desc="Uchak Credit Udhar"
@@ -1885,10 +4067,200 @@ class AurumAPI:
             self.post_to_ledger({"client_name":customer,"vch_id":vch_id,"gold_rate":rate,"desc":ledger_desc,
                                  "metal_dr":metal_debit,"metal_cr":metal_credit,"cash_dr":cash_debit,"cash_cr":cash_credit})
             self._audit(f"Bill: {vch_id}",f"Customer: {customer} | Status: {status}","billing")
-            return {"status":"success"}
+            self._notify_staff_bill(vch_id, customer, clean_cash_amt)
+            LOG(f"[BILL] generate_bill returning vch_id={vch_id!r}")
+            return {"status":"success","vch_id":vch_id}
         except Exception as e:
             ERR(f"[BILL] {e}")
             return {"status":"error","message":str(e)}
+
+    def generate_retail_bill(self, data):
+        """Handle POS retail bill — saves to DB and triggers print."""
+        try:
+            inv = data.get('invoice', data) if isinstance(data, dict) else {}
+            LOG(f"[RETAIL BILL] generate_retail_bill called with vch_id={inv.get('vch_id')!r}")
+            try: self.bastion.notify_write()
+            except Exception: pass
+            vch_id = str(inv.get('vch_id','R-0000000')).strip()
+            customer = str(inv.get('customer','Walk-in')).strip()
+            mobile = str(inv.get('phone','')).strip()
+            status = str(inv.get('status','PAID')).upper().strip()
+            items = inv.get('items',[])
+            stock_check = self.db.validate_retail_items(items)
+            if not stock_check.get("valid"):
+                return {"status": "error", "code": "INVENTORY_VALIDATION",
+                        "message": "\n".join(stock_check.get("errors") or ["Inventory validation failed."])}
+            items_json = json.dumps(items, ensure_ascii=False)
+            total_amount = float(inv.get('grand_total') or inv.get('sub_total') or 0)
+            disc_type = str(inv.get('discount_type') or 'none')
+            disc_value = float(inv.get('discount_value') or 0)
+            disc_amount = float(inv.get('discount') or 0)
+            gold_rate = float(inv.get('gold_rate') or 0)
+            if not gold_rate and items:
+                gold_rate = float(items[0].get('rate') or items[0].get('gold_rate') or 0)
+            retail_fine = 0.0
+            for item in items if isinstance(items, list) else []:
+                try:
+                    retail_fine += float(item.get('fine') if item.get('fine') not in (None, '') else (
+                        float(item.get('weight') or item.get('gr_wt') or 0) *
+                        float(item.get('touch') or 0) / 100
+                    ))
+                except (TypeError, ValueError):
+                    pass
+            l_fine = 0; coll = retail_fine if status in ('PAID', 'UCHAK_PAID') else 0; f995 = 0; dhal = 0; rem = 0
+            pay_mode = str(inv.get('payment_mode') or inv.get('pay_mode') or 'cash').strip().lower()
+            try:
+                og_value = float(inv.get('old_gold') or inv.get('oldGold') or 0)
+            except (TypeError, ValueError):
+                og_value = 0.0
+            try:
+                og_wt = float(inv.get('old_gold_weight') or inv.get('oldGoldWt') or inv.get('old_gold_wt') or 0)
+            except (TypeError, ValueError):
+                og_wt = 0.0
+            if not self.db.record_sale(vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt):
+                return {"status":"error","message":"Failed to record retail sale."}
+            if status != 'ESTIMATE':
+                if not self.db.deduct_stock_after_sale(items_json):
+                    return {"status":"error","message":"Sale was not completed because inventory could not be updated."}
+            self._audit(f"Retail Bill: {vch_id}", f"Customer: {customer} | Status: {status}", "billing")
+            self._notify_staff_bill(vch_id, customer, total_amount)
+            LOG(f"[RETAIL BILL] generate_retail_bill returning vch_id={vch_id!r}")
+            return {"status":"success","vch_id":vch_id}
+        except Exception as e:
+            ERR(f"[RETAIL BILL] {e}")
+            return {"status":"error","message":str(e)}
+
+    def get_retail_estimate(self, vch_id):
+        """Fetch a saved retail estimate by voucher ID for conversion to paid."""
+        try:
+            safe = str(vch_id).strip().upper()
+            res = self.db.fetch_one(
+                "SELECT * FROM sales_history WHERE UPPER(TRIM(vch_id))=? AND UPPER(TRIM(status))='ESTIMATE'",
+                (safe,)
+            )
+            if not res:
+                return {"status": "error", "message": f"No estimate found with ID: {safe}"}
+            try:
+                items_list = json.loads(res.get('items', '[]'))
+            except:
+                items_list = []
+            return {
+                "status": "success",
+                "voucher": {
+                    "vch_id": res.get('vch_id'),
+                    "customer": res.get('customer'),
+                    "mobile": res.get('mobile', ''),
+                    "status": res.get('status'),
+                    "total_amount": float(res.get('total_amount') or 0.0),
+                    "discount_type": res.get('discount_type', 'none'),
+                    "discount_amount": float(res.get('discount_amount') or 0.0),
+                    "date": res.get('date'),
+                    "time_stamp": res.get('time_stamp')
+                },
+                "items": items_list
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def convert_estimate_to_paid(self, data):
+        """Convert a saved estimate to PAID, deduct stock, and return for printing."""
+        try:
+            inv = data.get('invoice', data) if isinstance(data, dict) else {}
+            vch_id = str(inv.get('vch_id', '')).strip()
+            if not vch_id:
+                return {"status": "error", "message": "Missing voucher ID."}
+            try:
+                self.bastion.notify_write()
+            except Exception:
+                pass
+            customer = str(inv.get('customer', 'Walk-in')).strip()
+            mobile = str(inv.get('phone', '')).strip()
+            items = inv.get('items', [])
+            items_json = json.dumps(items, ensure_ascii=False)
+            total_amount = float(inv.get('grand_total') or inv.get('sub_total') or 0)
+            disc_type = str(inv.get('discount_type') or 'none')
+            disc_amount = float(inv.get('discount') or 0)
+            gold_rate = 0
+            try:
+                _rf = 0.0
+                for _it in items if isinstance(items, list) else []:
+                    if isinstance(_it, dict):
+                        if _it.get('fine') not in (None, ''):
+                            _rf += float(_it.get('fine') or 0)
+                        else:
+                            _rf += float(_it.get('weight') or _it.get('gr_wt') or 0) * float(_it.get('touch') or 0) / 100.0
+            except (TypeError, ValueError):
+                _rf = 0.0
+            l_fine = 0; coll = round(_rf, 3); f995 = 0; dhal = 0; rem = 0
+            if not self.db.record_sale(vch_id, customer, mobile, 'PAID', l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount):
+                return {"status": "error", "message": "Failed to update estimate to PAID."}
+            if not self.db.deduct_stock_after_sale(items_json):
+                return {"status": "error", "message": "Estimate was not completed because inventory could not be updated."}
+            self._audit(f"Estimate Converted: {vch_id}", f"Customer: {customer} | Status: PAID", "billing")
+            self._notify_staff_bill(vch_id, customer, total_amount)
+            LOG(f"[ESTIMATE] Converted {vch_id} to PAID")
+            return {"status": "success", "vch_id": vch_id}
+        except Exception as e:
+            ERR(f"[ESTIMATE CONVERT] {e}")
+            return {"status": "error", "message": str(e)}
+
+    def get_estimate_customers(self):
+        """Return distinct customers who have ESTIMATE-status bills."""
+        try:
+            rows = self.db.fetch_all(
+                "SELECT customer as name, vch_id, date, total_amount "
+                "FROM sales_history WHERE UPPER(TRIM(status))='ESTIMATE' "
+                "ORDER BY id DESC"
+            )
+            customers = []
+            seen = set()
+            for r in (rows or []):
+                name = (r.get('name') or '').strip()
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                customers.append({
+                    "name": name,
+                    "vch_id": r.get('vch_id', ''),
+                    "date": r.get('date', ''),
+                    "total_amount": float(r.get('total_amount') or 0)
+                })
+            return {"status": "success", "customers": customers}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "customers": []}
+
+    def get_customer_estimate(self, customer_name):
+        """Get the latest estimate for a specific customer."""
+        try:
+            safe = str(customer_name).strip()
+            res = self.db.fetch_one(
+                "SELECT * FROM sales_history WHERE UPPER(TRIM(customer))=UPPER(?) AND UPPER(TRIM(status))='ESTIMATE' "
+                "ORDER BY id DESC LIMIT 1",
+                (safe,)
+            )
+            if not res:
+                return {"status": "error", "message": f"No estimate found for {safe}"}
+            try:
+                items_list = json.loads(res.get('items', '[]'))
+            except:
+                items_list = []
+            return {
+                "status": "success",
+                "voucher": {
+                    "vch_id": res.get('vch_id'),
+                    "customer": res.get('customer'),
+                    "mobile": res.get('mobile', ''),
+                    "status": res.get('status'),
+                    "total_amount": float(res.get('total_amount') or 0.0),
+                    "discount_type": res.get('discount_type', 'none'),
+                    "discount_amount": float(res.get('discount_amount') or 0.0),
+                    "date": res.get('date'),
+                    "time_stamp": res.get('time_stamp')
+                },
+                "items": items_list
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     def delete_bill(self, vch_id):
         try:
@@ -1908,9 +4280,26 @@ class AurumAPI:
                     is_weight=(not tag_id or tag_id in ('','N/A') or tag_id.startswith('KATTI-%'))
                     is_uchak='amount' in item or 'price' in item
                     if is_weight and weight>0:
-                        row=cursor.execute(
-                            "SELECT id,gr_wt FROM stock_inventory WHERE TRIM(it_code)=? AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%') LIMIT 1",
-                            (it_code,)).fetchone()
+                        base_code=it_code.strip()
+                        if base_code.upper().startswith('KATTI-RESTORE-'):
+                            base_code=base_code[len('KATTI-RESTORE-'):]
+                        if base_code.upper().startswith('KATTI-'):
+                            base_code=base_code[6:]
+                        search_codes=[]
+                        if base_code:
+                            canonical_code=f"KATTI-{base_code}"
+                            search_codes.append(canonical_code)
+                            search_codes.append(base_code)
+                            search_codes.append(f"KATTI-RESTORE-{base_code}")
+                            if it_code and it_code.upper().startswith('KATTI-') and not it_code.upper().startswith('KATTI-RESTORE-'):
+                                search_codes.insert(0,it_code)
+                        row=None
+                        for code in search_codes:
+                            row=cursor.execute(
+                                "SELECT id,tag_id,gr_wt FROM stock_inventory WHERE TRIM(it_code)=? AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A' OR tag_id LIKE 'KATTI-%') LIMIT 1",
+                                (code,)).fetchone()
+                            if row:
+                                break
                         if row:
                             restored=round((row['gr_wt'] or 0)+weight,3)
                             cursor.execute("UPDATE stock_inventory SET gr_wt=?,nt_wt=? WHERE id=?",(restored,restored,row['id']))
@@ -2024,23 +4413,26 @@ class AurumAPI:
             if getattr(self, '_update_running', False):
                 threading.Timer(0.25, drain).start()
 
-        def download_all(changed, app_root):
-            total = len(changed)
-            LOG(f"[UPDATE] _download_all: {total} files, app_root={app_root}")
+        def download_all(ui_files, backend_files, app_root):
+            all_files = ui_files + backend_files
+            total = len(all_files)
+            staging = app_root / '_update_staging'
+            LOG(f"[UPDATE] _download_all: {len(ui_files)} UI + {len(backend_files)} backend, app_root={app_root}")
 
-            for i, entry in enumerate(changed, 1):
+            for i, entry in enumerate(all_files, 1):
                 rel  = entry.get('path', '').replace('\\', '/')
                 url  = entry.get('url', '')
                 size = entry.get('size', entry.get('size_bytes', 0))
+                is_backend = entry in backend_files
 
                 push_progress(
                     int(5 + (i - 1) / total * 85),
-                    f"[{i}/{total}] {rel}"
+                    f"[{i}/{total}] {'⚙️ ' if is_backend else ''}{rel}"
                 )
 
                 LOG(f"[UPDATE] Downloading [{i}/{total}] {rel} from {url[:60]}")
 
-                # Simple direct download — no wrapper, no retries complexity
+                # Simple direct download
                 try:
                     req = _ur.Request(
                         url,
@@ -2058,8 +4450,13 @@ class AurumAPI:
                     push_done(False, f"Download failed [{i}/{total}]: {err}")
                     return
 
-                # Write directly to app_root (no temp dir)
-                dst = app_root / rel
+                # UI files → write directly (live reload on next page load)
+                # Backend files → write to _update_staging/ (apply on restart)
+                if is_backend:
+                    dst = staging / rel
+                else:
+                    dst = app_root / rel
+
                 try:
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     dst.write_bytes(data)
@@ -2097,8 +4494,10 @@ class AurumAPI:
                 new_ver = CURRENT_VERSION
                 LOG(f"[UPDATE] Version save error: {e}")
 
-            push_progress(100, f"Done! {total} file(s) updated. Click Restart.")
-            push_done(True, f"Update ready. v{new_ver} installed. Click Restart.")
+            backend_count = len(backend_files)
+            restart_note = f" {backend_count} backend file(s) will apply on restart." if backend_count else ""
+            push_progress(100, f"Done! {total} file(s) updated.{restart_note}")
+            push_done(True, f"Update ready. v{new_ver} installed.{restart_note} Click Restart.")
             # Update badge immediately
             try:
                 if self._window:
@@ -2120,7 +4519,27 @@ class AurumAPI:
             LOG(f"[UPDATE] app_root: {app_root}")
             LOG(f"[UPDATE] app_root exists: {app_root.exists() if hasattr(app_root,'exists') else 'n/a'}")
 
-            changed = []
+            # ── File categorization ──────────────────────────────────────
+            # UI files: _internal/ui/* → download directly (live reload)
+            # Backend: core/*.py, database/*.py, network/*.py → stage, apply on restart
+            _UI_PREFIX = '_internal/ui/'
+            _UI_EXTS = {'.html', '.js', '.css', '.png', '.jpg', '.svg', '.json',
+                        '.woff', '.woff2', '.ttf', '.map'}
+            _BACKEND_PREFIXES = ('core/', 'database/', 'network/')
+            _BACKEND_EXTS = {'.py'}
+
+            def _categorize(rel):
+                """Return 'ui', 'backend', or None (skip)."""
+                ext = os.path.splitext(rel)[1].lower()
+                if rel.startswith(_UI_PREFIX) and ext in _UI_EXTS:
+                    return 'ui'
+                for pfx in _BACKEND_PREFIXES:
+                    if rel.startswith(pfx) and ext in _BACKEND_EXTS:
+                        return 'backend'
+                return None
+
+            ui_files = []
+            backend_files = []
             for entry in all_files:
                 rel         = entry.get('path', '').replace(chr(92), '/')
                 remote_hash = entry.get('sha256', '')
@@ -2131,32 +4550,41 @@ class AurumAPI:
                 if _is_protected(rel):
                     LOG(f"[UPDATE]   PROTECTED: {rel}")
                     continue
+                cat = _categorize(rel)
+                if cat is None:
+                    LOG(f"[UPDATE]   SKIPPED: {rel}")
+                    continue
                 local_hash = _sha256(app_root / rel)
                 if local_hash != remote_hash:
                     tag = 'NEW' if local_hash == '' else 'CHANGED'
+                    entry_data = {'path': rel, 'sha256': remote_hash, 'url': url, 'size': size}
                     LOG(f"[UPDATE]   [{tag}] {rel}  local={local_hash[:12] or 'MISSING'}  remote={remote_hash[:12]}")
-                    changed.append({'path': rel, 'sha256': remote_hash, 'url': url, 'size': size})
+                    if cat == 'ui':
+                        ui_files.append(entry_data)
+                    else:
+                        backend_files.append(entry_data)
                 else:
                     LOG(f"[UPDATE]   [OK]      {rel}")
 
-            LOG(f"[UPDATE] --- result: {len(changed)} of {len(all_files)} need update ---")
+            total_changed = len(ui_files) + len(backend_files)
+            LOG(f"[UPDATE] --- result: {len(ui_files)} UI + {len(backend_files)} backend = {total_changed} of {len(all_files)} need update ---")
 
-            if not changed:
+            if not ui_files and not backend_files:
                 push_done(False, "Already up to date.")
                 return {"status": "nothing_to_do"}
 
-            self._last_update_files = changed
+            self._last_update_files = ui_files + backend_files
             self._update_running    = True
-            LOG(f"[UPDATE] Starting download thread for {len(changed)} file(s)")
+            LOG(f"[UPDATE] Starting download thread for {total_changed} file(s)")
 
             threading.Thread(
                 target=download_all,
-                args=(changed, app_root),
+                args=(ui_files, backend_files, app_root),
                 daemon=True
             ).start()
 
             threading.Timer(0.25, drain).start()
-            return {"status": "started", "files": len(changed)}
+            return {"status": "started", "files": total_changed, "backend": len(backend_files)}
 
         except Exception as e:
             err = safe_str(str(e))
@@ -2164,6 +4592,120 @@ class AurumAPI:
             import traceback; traceback.print_exc()
             push_done(False, f"Error: {err}")
             return {"status": "error"}
+
+
+    # ── SILENT AUTO-UPDATE (push-to-update: zero clicks, zero installs) ──
+    # Runs in background at startup + every 4h. Downloads changed files
+    # quietly: UI applies instantly (live reload), backend .py files stage to
+    # _update_staging/ and auto-apply on next launch (see _apply_staged_updates
+    # at the top of this file). The user never clicks anything.
+    _auto_update_busy = False
+
+    def auto_update_silent(self):
+        """One silent check-and-download cycle. Safe to call repeatedly."""
+        if getattr(self, '_auto_update_busy', False):
+            return {"status": "busy"}
+        self._auto_update_busy = True
+        try:
+            from updater import check_for_update as _check, get_app_root, _is_protected, set_installed_version
+            import urllib.request as _ur
+        except Exception as e:
+            self._auto_update_busy = False
+            return {"status": "error", "message": str(e)}
+        try:
+            try:
+                info = _check(timeout=8)
+            except Exception:
+                info = None
+            if not info or not info.get('available'):
+                return {"status": "nothing_to_do"}
+            files = info.get('files', [])
+            app_root = get_app_root()
+            try:
+                from updater import sha256 as _sha256
+            except Exception:
+                _sha256 = lambda p: ''
+            ui_count = backend_count = 0
+            staging = app_root / '_update_staging'
+            for entry in files:
+                rel = str(entry.get('path', '')).replace('\\', '/')
+                url = entry.get('url', '')
+                want = entry.get('sha256', '')
+                if not rel or not url or _is_protected(rel):
+                    continue
+                ext = os.path.splitext(rel)[1].lower()
+                if rel.startswith('_internal/ui/') and ext in {'.html', '.js', '.css', '.png', '.jpg', '.svg', '.json', '.woff', '.woff2', '.ttf', '.map'}:
+                    kind = 'ui'
+                elif (rel.startswith('core/') or rel.startswith('database/') or rel.startswith('network/')) and ext == '.py':
+                    kind = 'backend'
+                else:
+                    continue
+                try:
+                    if _sha256(app_root / rel) == want and want:
+                        continue
+                except Exception:
+                    pass
+                try:
+                    req = _ur.Request(url, headers={'User-Agent': 'AurumOS/auto', 'Accept': '*/*'})
+                    with _ur.urlopen(req, timeout=30) as resp:
+                        data = resp.read()
+                except Exception as e:
+                    LOG(f"[AUTO-UPDATE] skip {rel}: {e}")
+                    continue
+                try:
+                    dst = (staging / rel) if kind == 'backend' else (app_root / rel)
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_bytes(data)
+                    if kind == 'backend':
+                        backend_count += 1
+                    else:
+                        ui_count += 1
+                except Exception as e:
+                    LOG(f"[AUTO-UPDATE] write failed {rel}: {e}")
+            new_ver = str(info.get('version', '') or '').strip()
+            import re as _re
+            if _re.match(r'^\d+\.\d+\.\d+$', new_ver):
+                try:
+                    set_installed_version(new_ver)
+                except Exception:
+                    pass
+            else:
+                new_ver = ''
+            total = ui_count + backend_count
+            if total == 0:
+                return {"status": "nothing_to_do"}
+            LOG(f"[AUTO-UPDATE] applied {ui_count} UI + staged {backend_count} backend (v{new_ver})")
+            try:
+                if self._window:
+                    self._window.evaluate_js(
+                        "window.dispatchEvent(new CustomEvent('aurum-auto-updated',"
+                        "{detail:{version:'" + new_ver + "',restart:" + ('true' if backend_count else 'false') + "}}))")
+            except Exception:
+                pass
+            return {"status": "success", "version": new_ver,
+                    "ui": ui_count, "backend": backend_count}
+        finally:
+            self._auto_update_busy = False
+
+    def auto_update_loop(self):
+        """Background loop: silent check at startup, then every 4 hours."""
+        import time as _t
+        try:
+            _t.sleep(45)  # let the app settle first
+            self.auto_update_silent()
+        except Exception as e:
+            LOG(f"[AUTO-UPDATE] {e}")
+        while not getattr(self, '_app_closing', False):
+            try:
+                for _ in range(4 * 3600):
+                    _t.sleep(1)
+                    if getattr(self, '_app_closing', False):
+                        break
+                if getattr(self, '_app_closing', False):
+                    break
+                self.auto_update_silent()
+            except Exception:
+                pass
 
 
     def reset_lockout(self) -> dict:
@@ -2187,6 +4729,39 @@ class AurumAPI:
             return {"status": "success", "message": "Lockout cleared. Account unlocked."}
         except Exception as e:
             LOG(f"[LOGIN] reset_lockout error: {e}")
+            return {"status": "error", "message": str(e)}
+
+
+    def admin_lockout_reset(self, license_key='') -> dict:
+        """
+        Owner reset — verify license key against server and clear lockout.
+        Called from the lock screen admin reset section.
+        """
+        import urllib.request, urllib.error, json as _j, uuid as _uuid
+        key = str(license_key or '').strip().upper()
+        if not key or not _is_valid_key_format(key):
+            return {"status": "error", "message": "Invalid license key format"}
+        try:
+            machine_id = str(_uuid.getnode())
+            url = self._get_license_check_url() + '/api/check'
+            payload = _j.dumps({'key': key, 'machine_id': machine_id}).encode()
+            req = urllib.request.Request(url, data=payload, headers={
+                'Content-Type': 'application/json',
+                'User-Agent': f'AurumOS/{CURRENT_VERSION}'
+            }, method='POST')
+            with self._safe_urlopen(req, timeout=10) as resp:
+                data = _j.loads(resp.read().decode())
+            if data.get('valid'):
+                LOG(f"[LOCK] Admin reset via license key ({key[:10]}...)")
+                return self.reset_lockout()
+            else:
+                reason = data.get('status', 'invalid')
+                LOG(f"[LOCK] Admin reset rejected: {reason}")
+                return {"status": "error", "message": f"License key is {reason}. Cannot reset."}
+        except urllib.error.URLError:
+            return {"status": "error", "message": "No internet. Connect and retry."}
+        except Exception as e:
+            LOG(f"[LOCK] admin_lockout_reset error: {e}")
             return {"status": "error", "message": str(e)}
 
 
@@ -2435,6 +5010,8 @@ class AurumAPI:
 
     def scale_disconnect(self):
         LOG("[SCALE_API] scale_disconnect called")
+        if getattr(self, '_session_role', '') == 'staff':
+            return {"status": "error", "message": "Staff users cannot disconnect the scale."}
         _scale.stop()
         # Clear saved port so it does not auto-reconnect next startup
         try:
@@ -2493,10 +5070,6 @@ class AurumAPI:
         LOG(f"[SCALE_API] scale_get_last: w={w} connected={connected}")
         return {"weight": w, "stable": True, "connected": connected} if w else {"weight": None, "stable": False, "connected": connected}
 
-    def scale_is_connected(self):
-        """Check if scale is currently running without reconnecting."""
-        return {"connected": _scale._running, "port": _scale._port, "baud": _scale._baud}
-
     def get_weight_stock_it_codes(self):    return self.db.get_weight_stock_it_codes()
     def get_touch_ledger_details(self, touch_value, mode='weight', from_date='', to_date=''):
         return self.db.get_touch_ledger_details(touch_value, mode, from_date, to_date)
@@ -2530,6 +5103,14 @@ class AurumAPI:
         Regular 12-char unlock key does NOT work here — different salt.
         Only the BASTION key from unlock_keygen.py (BASTION mode) works.
         """
+        # If key is 12 chars, also try regular unlock verification (for web dashboard keys)
+        entered = str(admin_key).strip().upper()
+        if len(entered) == 12:
+            regular_result = self.verify_unlock_key(admin_key, lock_code)
+            if regular_result.get('status') == 'success':
+                LOG("[BASTION] Suspension cleared via regular unlock key")
+                return regular_result
+        
         result = self.db.bastion_clear(admin_key, lock_code)
         if result.get('status') == 'success':
             LOG("[BASTION] Suspension cleared by admin")
@@ -2557,6 +5138,12 @@ class AurumAPI:
             except Exception: pass
             LOG("[LOCK] In-memory lock state cleared after unlock")
         return result
+
+    def verify_web_unlock_key(self, unlock_key, lock_code=None, is_bastion=False):
+        """Web dashboard unlock — delegates to verify_unlock_key (same logic)."""
+        if is_bastion:
+            return self.bastion_unlock(unlock_key, lock_code)
+        return self.verify_unlock_key(unlock_key, lock_code)
 
     def bastion_get_weekly_report(self):
         try:
@@ -2837,6 +5424,30 @@ class AurumAPI:
         except Exception as e:
             return {'status':'error','message':str(e)}
 
+    def provision_nexus_identity(self, cfg: dict):
+        """Setup screen: save this PC's network identity (mode/server_ip/is_server)
+        into config.json without clobbering other keys."""
+        import json as _j
+        try:
+            cfg = cfg or {}
+            base = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else __file__)
+            cfg_path = os.path.join(base, 'config.json')
+            data = {}
+            if os.path.exists(cfg_path):
+                try:
+                    data = _j.load(open(cfg_path, 'r')) or {}
+                except Exception:
+                    data = {}
+            data['mode']        = cfg.get('mode', data.get('mode', 'local'))
+            data['server_ip']   = cfg.get('server_ip', data.get('server_ip', ''))
+            data['server_port'] = cfg.get('server_port', data.get('server_port', 7272))
+            data['is_server']   = cfg.get('is_server', data.get('is_server', True))
+            _j.dump(data, open(cfg_path, 'w'), indent=2)
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[PROVISION] {e}")
+            return {'status': 'error', 'message': str(e)}
+
     def get_local_ip(self):
         import socket as _s
         try:
@@ -2986,6 +5597,10 @@ class AurumAPI:
         try:    return self.db.tag_audit_get_available_touches()
         except Exception as e: return {'status':'error','message':str(e),'touches':[]}
 
+    def tag_audit_delete_session(self, session_id):
+        try:    return self.db.tag_audit_delete_session(int(session_id))
+        except Exception as e: return {'status':'error','message':str(e)}
+
     # ── YEAR-END BALANCE TRANSFER API ──────────────────────────────
     def get_year_list(self):
         try:    return self.db.get_year_list()
@@ -3114,7 +5729,9 @@ class AurumAPI:
 
 
 def run_aur_os():
+    global webview
     LOG("[STARTUP] run_aur_os() called")
+    _ensure_webview()
     api      = AurumAPI()
     is_ready = api.db.is_setup_done()
     LOG(f"[STARTUP] is_setup_done={is_ready}")
@@ -3122,11 +5739,22 @@ def run_aur_os():
     if not is_ready:
         initial_file="setup.html"; startup_reason=None
     else:
-        LOG("[LICENSE] === PRE-LAUNCH REVOCATION CHECK ===")
-        revoke_status = api.check_license_revoked()
+        LOG("[LICENSE] === PRE-LAUNCH REVOCATION CHECK (local-only, fast) ===")
+        # Local-only: instant. The remote revocation check runs on the
+        # background thread after the window opens (_bg_check), so a slow/cold
+        # license server no longer delays the window by several seconds.
+        revoke_status = api.check_license_revoked(network=False)
         LOG(f"[LICENSE] Result: {revoke_status}")
+
+        # NOTE: Subscription state file check removed from startup.
+        # Stale .subscription_state.json with expired/revoked status was causing
+        # false expiry screens on every launch. The background check (_bg_check)
+        # and subscription.js startupCheck() handle subscription validation
+        # authoritatively via server calls.
+
         if revoke_status in ("revoked","invalid","not_found","expired"):
-            initial_file="revoked.html"; startup_reason=revoke_status
+            initial_file = "expiry.html" if revoke_status == "expired" else "revoked.html"
+            startup_reason=revoke_status
         else:
             initial_file="login.html"; startup_reason=None
             LOG(f"[LICENSE] Opening login (status={revoke_status})")
@@ -3136,7 +5764,8 @@ def run_aur_os():
     initial_url  = Path(initial_path).as_uri()
     LOG(f"[STARTUP] Loading: {initial_url}")
 
-    window = webview.create_window(
+    _wv = webview if webview is not None else __import__('webview')
+    window = _wv.create_window(
         "AurumOS Executive Dashboard", initial_url, js_api=api,
         width=1350, height=950, background_color='#ffffff'
     )
@@ -3145,6 +5774,22 @@ def run_aur_os():
     def _on_start(w):
         w.maximize()
         LOG("[STARTUP] Window started and maximized")
+
+        # ── Inject license key + machine_id into localStorage for direct-fetch fallback ──
+        try:
+            import uuid as _uuid2, json as _jj
+            _key = api._read_license_key()
+            _mid = str(_uuid2.getnode())
+            _inject = (
+                f"try{{"
+                f"localStorage.setItem('aurum_key',{_jj.dumps(_key)});"
+                f"localStorage.setItem('aurum_mid',{_jj.dumps(_mid)});"
+                f"}}catch(e){{}}"
+            )
+            w.evaluate_js(_inject)
+            LOG(f"[STARTUP] Injected license key into localStorage (key={_key[:10] if _key else 'N/A'}...)")
+        except Exception as _ki:
+            ERR(f"[STARTUP] Key injection error: {_ki}")
 
         # ── Auto-connect scale from saved config ──────────────────
         def _auto_connect_scale():
@@ -3177,6 +5822,13 @@ def run_aur_os():
 
         threading.Thread(target=_auto_connect_scale, daemon=True).start()
 
+        # ── Silent auto-update loop (push-to-update: zero clicks) ──
+        try:
+            threading.Thread(target=api.auto_update_loop, daemon=True).start()
+            LOG("[STARTUP] Silent auto-update loop started")
+        except Exception as _au:
+            ERR(f"[STARTUP] auto-update loop failed to start: {_au}")
+
         if initial_file=="revoked.html" and startup_reason:
             import time as _ti; _ti.sleep(1.2)
             js = (
@@ -3198,12 +5850,52 @@ def run_aur_os():
             import time as _t, json as _j
             _t.sleep(3)
 
+            _sse_started = [False]
+
             def run_revoke_check():
                 status = api.check_license_revoked()
                 if status in ('revoked','invalid','not_found','expired'):
                     LOG(f'[LICENSE] Background: Revoked! {status}')
                     _t.sleep(1)
                     api.fire_revoked_screen(status)
+                elif status == 'ok':
+                    # License valid — clear stale revoked state and navigate to login
+                    try:
+                        cur = (api._window and api._window.get_current_url()) or ''
+                        if 'revoked.html' in cur or 'expiry.html' in cur:
+                            LOG('[LICENSE] License valid — navigating to login')
+                            # Clear stale localStorage revoked state
+                            clear_js = (
+                                "try{"
+                                "localStorage.removeItem('aurum_revoke_reason');"
+                                "var s=JSON.parse(localStorage.getItem('aurum_sub_state')||'{}');"
+                                "if(s&&(s.status==='expired'||s.status==='revoked'||!s.valid)){"
+                                "  s.status='active';s.valid=true;s._ts=Date.now();"
+                                "  localStorage.setItem('aurum_sub_state',JSON.stringify(s));"
+                                "}"
+                                "}catch(e){}"
+                            )
+                            if api._window:
+                                api._window.evaluate_js(clear_js)
+                                api._window.evaluate_js("window.location.href='login.html'")
+                    except: pass
+                    if not _sse_started[0]:
+                        _sse_started[0] = True
+                        LOG('[LICENSE] Background: Valid — starting SSE stream')
+                        try:
+                            api.start_sse_stream()
+                        except Exception as _sse_err:
+                            ERR(f'[LICENSE] SSE start failed: {_sse_err}')
+                        # Start subscription periodic sync
+                        try:
+                            api.sub.set_license_key(api._read_license_key())
+                            api.sub.set_window(api._window)
+                            api.sub.startup_check()
+                            api.sub.start_periodic_sync(30)
+                            api.sub.start_reactivation_polling()
+                            LOG('[SUB] Periodic sync + reactivation polling started from bg_check')
+                        except Exception as _sub_err:
+                            ERR(f'[SUB] bg_check sync start failed: {_sub_err}')
             run_revoke_check()
 
             threading.Thread(
@@ -3288,7 +5980,45 @@ def run_aur_os():
         except Exception:
             pass
     window.events.closing += _on_closing
-    webview.start(_on_start, window, gui='edgechromium', debug=False)
+
+    # Persistent WebView2 profile — reuse the browser profile/cache across
+    # launches instead of building a throwaway temp profile every time. Creating
+    # a fresh WebView2 user-data folder on each start is a major cold-start cost
+    # (and caused the "Failed to delete user data folder" warnings on exit).
+    # private_mode=False + a fixed storage_path makes startup much faster after
+    # the first run.
+    try:
+        _wv_store = os.path.join(
+            os.environ.get('LOCALAPPDATA') or _get_db_base(), 'AurumOS', 'webview')
+        os.makedirs(_wv_store, exist_ok=True)
+    except Exception:
+        _wv_store = None
+
+    # Check if CLR failed to load (no .NET installed on this PC)
+    # The rthook in build.py sets AURUM_CLR_FAILED=1 when pythonnet.load() fails.
+    clr_failed = os.environ.get("AURUM_CLR_FAILED") == "1"
+    if clr_failed:
+        try:
+            import ctypes
+            MB_OK = 0x00000000
+            MB_ICONERROR = 0x00000010
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "AurumOS requires Microsoft .NET Desktop Runtime 8.0 or later.\n\n"
+                "Please install it from:\nhttps://dotnet.microsoft.com/download/dotnet/8.0\n\n"
+                "After installing, restart AurumOS.",
+                "AurumOS — Missing Component",
+                MB_OK | MB_ICONERROR
+            )
+        except Exception:
+            pass
+        sys.exit(1)
+
+    # CLR is available — now safely import pywebview and apply monkey-patch
+    _ensure_webview()
+
+    webview.start(_on_start, window, gui='edgechromium', debug=True,
+                  private_mode=False, storage_path=_wv_store)
 
 
 if __name__ == '__main__':

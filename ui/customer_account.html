@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Customers</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-ln:rgba(22,163,74,0.2);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-ln:rgba(220,38,38,0.18);
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux:0 4px 20px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+
+header{
+  height:58px;background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;position:relative;
+}
+header::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);
+}
+.h-brand{font-family:var(--serif);font-size:1.3rem;color:var(--ink);font-weight:400;letter-spacing:-0.3px;}
+.h-brand em{color:var(--gold3);font-style:italic;}
+.h-tools{display:flex;align-items:center;gap:14px;}
+.h-clock{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:5px;border:1px solid var(--rule);}
+
+.h-add{
+  height:34px;padding:0 16px;background:var(--ink);color:#fff;border:none;border-radius:6px;
+  font-family:var(--sans);font-size:0.75rem;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all 0.15s ease;
+}
+.h-add:hover{background:var(--gold3);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.15);}
+
+.content{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin;}
+
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;}
+.ph-title{font-family:var(--serif);font-size:1.6rem;font-weight:400;color:var(--ink);letter-spacing:-0.3px;}
+.ph-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+.ph-tiles{display:flex;gap:12px;}
+.ph-tile{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:12px 18px;min-width:130px;box-shadow:var(--sh-lux);border-top:3px solid var(--rule);}
+.ph-tile:nth-child(1){border-top-color:var(--blue);}
+.ph-tile:nth-child(2){border-top-color:var(--red);}
+.ph-tile:nth-child(3){border-top-color:var(--gold3);}
+.ph-tile-label{font-size:0.55rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;}
+.ph-tile-val{font-family:Arial, sans-serif;font-size:1.35rem;font-weight:700;color:var(--ink);margin-top:4px;line-height:1;}
+.ph-tile-val.red{color:var(--red);}
+
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh-lux);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#fff;}
+.card-title{font-size:0.88rem;font-weight:700;flex:1;}
+.card-actions{display:flex;gap:10px;align-items:center;}
+
+.h-search{position:relative;}
+.h-search input{
+  height:32px;width:240px;padding:0 12px 0 32px;border:1px solid var(--rule);border-radius:6px;
+  font-size:0.78rem;background:var(--cream2);color:var(--ink);transition:all 0.15s;
+}
+.h-search input:focus{outline:none;border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.05);}
+.h-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;}
+
+/* Custom Dropdown Control Fields Layout */
+.custom-dropdown{position:relative;display:inline-block;}
+.dropdown-trigger{
+  height:32px;min-width:140px;padding:0 28px 0 12px;border:1px solid var(--rule);border-radius:6px;
+  font-family:inherit;font-size:0.78rem;font-weight:600;background:var(--cream2);color:var(--ink);
+  cursor:pointer;display:inline-flex;align-items:center;transition:all 0.15s;position:relative;outline:none;
+}
+.dropdown-trigger:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.05);}
+.dropdown-trigger::after{
+  content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid var(--ink);
+  transition:transform 0.15s;pointer-events:none;
+}
+.custom-dropdown.open .dropdown-trigger::after{transform:translateY(-50%) rotate(180deg);}
+
+.dropdown-menu{
+  position:absolute;top:100%;left:0;margin-top:4px;background:var(--white);
+  border:1px solid var(--ink);border-radius:4px;padding:2px 0;min-width:100%;
+  list-style:none;display:none;z-index:100;box-shadow:0 6px 16px rgba(0,0,0,0.12);
+}
+.custom-dropdown.open .dropdown-menu{display:block;}
+.dropdown-item{
+  padding:8px 12px;font-size:0.78rem;color:var(--ink);cursor:pointer;transition:all 0.1s;
+  outline:none;display:flex;align-items:center;justify-content:space-between;
+}
+.dropdown-item:hover, .dropdown-item.focused{background:rgba(14,12,9,0.05);color:var(--ink);}
+.dropdown-item.selected{font-weight:700;color:var(--gold3);background:var(--gold-bg);}
+
+/* Form Action Element Pulse Feedbacks Animations */
+@keyframes triggerFlash {
+  0% { background-color: var(--gold3); color: #fff; transform: scale(0.97); }
+  100% { background-color: var(--white); color: var(--ink); }
+}
+@keyframes submitFlash {
+  0% { transform: scale(0.96); opacity: 0.85; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.item-pulse-active { animation: triggerFlash 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+.btn-pulse-active { animation: submitFlash 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+
+.btn{
+  height:32px;padding:0 14px;border-radius:6px;border:1px solid var(--rule);background:var(--white);
+  color:var(--ink3);font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;
+  align-items:center;gap:6px;transition:all 0.14s;white-space:nowrap;text-transform:uppercase;letter-spacing:0.3px;
+}
+.btn:hover{background:var(--gold-bg);border-color:var(--gold);color:var(--gold3);}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn-primary:hover{background:var(--ink2);color:#fff;border-color:var(--ink2);}
+.btn-danger{color:var(--red);background:rgba(185,28,28,0.04);border-color:rgba(185,28,28,0.18);}
+.btn-danger:hover{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+.btn-ic{width:32px;padding:0;justify-content:center;}
+.btn[disabled]{opacity:0.4;cursor:not-allowed;}
+
+.fb-count{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:4px 8px;border-radius:4px;}
+
+table{width:100%;border-collapse:collapse;}
+th{
+  background:var(--cream2);padding:10px 16px;text-align:left;font-size:0.58rem;font-weight:700;
+  color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:10;
+}
+td{padding:12px 16px;font-size:0.8rem;font-weight:500;border-bottom:1px solid var(--rule2);vertical-align:middle;}
+tbody tr{transition:background 0.1s;cursor:pointer;}
+tbody tr:hover td{background:rgba(37,99,235,0.015)!important;}
+.mono{font-family:var(--mono);font-size:0.74rem;color:var(--muted);}
+.num{text-align:right;}
+
+.t-name{font-size:0.82rem;font-weight:700;color:var(--ink);}
+.t-phone{font-size:0.7rem;color:var(--muted2);font-family:var(--mono);margin-top:2px;}
+
+.pill{
+  display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;
+  font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:1px solid transparent;
+}
+.pill.red{background:var(--red-bg);color:var(--red);}
+.pill.green{background:var(--green-bg);color:var(--green);}
+.pill.blue{background:var(--blue-bg);color:var(--blue);}
+.pill.cream{background:var(--cream2);color:var(--muted);border-color:var(--rule);}
+
+.table-empty{padding:60px 16px;text-align:center;color:var(--muted2);font-size:0.82rem;font-weight:500;}
+
+.row-act{
+  width:28px;height:28px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--white);cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--muted);transition:all 0.12s;
+}
+.row-act:hover{background:var(--gold-bg);border-color:var(--gold);color:var(--gold3);}
+.row-menu{
+  position:absolute;background:var(--ink);border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px;padding:6px;min-width:170px;display:none;z-index:99;
+  box-shadow:0 8px 24px rgba(0,0,0,0.25);
+}
+.row-menu.open{display:block;}
+.row-menu button{
+  width:100%;padding:8px 12px;background:none;border:none;color:rgba(255,255,255,0.85);
+  font:inherit;font-size:0.76rem;text-align:left;cursor:pointer;border-radius:5px;
+  display:flex;align-items:center;gap:10px;transition:background 0.12s;
+}
+.row-menu button:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.row-menu button.danger{color:#fca5a5;}
+.row-menu button.danger:hover{background:rgba(248,113,113,0.15);}
+
+.modal-bg{
+  position:fixed;inset:0;background:rgba(14,12,9,0.35);backdrop-filter:blur(6px);
+  z-index:9000;display:none;align-items:center;justify-content:center;
+  transition:all 0.2s ease;
+}
+.modal-bg.open{display:flex;}
+.modal{
+  background:var(--white);width:455px;max-width:94vw;max-height:90vh;
+  display:flex;flex-direction:column;border-radius:12px;box-shadow:0 12px 40px rgba(14,12,9,0.2);
+  border:1px solid var(--rule);overflow:hidden;
+}
+.modal-head{padding:20px 24px 14px;border-bottom:1px solid var(--rule);background:#fff;}
+.modal-title{font-family:var(--serif);font-size:1.25rem;font-weight:400;}
+.modal-sub{font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.4;}
+.modal-body{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+.modal-foot{padding:14px 24px;border-top:1px solid var(--rule);display:flex;justify-content:flex-end;gap:10px;background:var(--cream2);}
+
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:0.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.fg input{height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:6px;font-size:0.85rem;color:var(--ink);background:var(--cream2);transition:all 0.15s;}
+.fg input:focus{outline:none;border-color:var(--gold2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-err{font-size:0.74rem;color:var(--red);font-weight:600;display:none;}
+
+.itm-mod{background:var(--white);width:480px;max-width:94vw;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.15);border:1px solid var(--rule);overflow:hidden;}
+.itm-mod-head{padding:16px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;background:#fff;}
+.itm-mod-title{font-family:var(--serif);font-size:1.05rem;}
+.itm-mod-x{width:26px;height:26px;border:none;background:var(--cream2);border-radius:5px;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all 0.12s;}
+.itm-mod-x:hover{background:var(--ink);color:#fff;}
+.itm-mod-body{padding:20px;max-height:60vh;overflow-y:auto;}
+.itm-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule2);}
+.itm-row:last-child{border-bottom:none;}
+.itm-code{font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--ink);background:var(--cream2);border:1px solid var(--rule);border-radius:4px;padding:2px 6px;}
+.itm-name{flex:1;font-size:0.78rem;font-weight:600;}
+.itm-wt{font-family:var(--mono);font-size:0.74rem;color:var(--muted);text-align:right;}
+
+.itm-popover{display:none;position:absolute;z-index:999;padding:10px;min-width:190px;background:var(--ink);border:1px solid rgba(255,255,255,0.12);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.3);pointer-events:none;font-family:var(--mono);font-size:0.72rem;}
+.itm-popover .ih{color:#fff;font-family:var(--serif);font-size:0.85rem;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.15);}
+.itm-popover .ir{display:flex;justify-content:space-between;gap:14px;color:rgba(255,255,255,0.9);line-height:1.7;}
+.itm-popover .ir b{color:var(--gold2);font-weight:600;}
+
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:0.78rem;font-weight:600;padding:12px 22px;border-radius:6px;z-index:9999;opacity:0;pointer-events:none;transition:all 0.2s ease;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em></div>
+    <div class="h-tools">
+      <span class="h-clock" id="clock">-- : --</span>
+      <button class="h-add" onclick="openModal()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:2px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Customer
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div id="listView">
+      <div class="ph">
+        <div>
+          <div class="ph-title">Customers</div>
+          <div class="ph-sub" id="phSub">Loading customer accounts…</div>
+        </div>
+        <div class="ph-tiles">
+          <div class="ph-tile">
+            <div class="ph-tile-label">Total Customers</div>
+            <div class="ph-tile-val" id="tTotal">0</div>
+          </div>
+          <div class="ph-tile">
+            <div class="ph-tile-label">Active Credit</div>
+            <div class="ph-tile-val red" id="tCredit">0</div>
+          </div>
+          <div class="ph-tile">
+            <div class="ph-tile-label">Metal Due</div>
+            <div class="ph-tile-val" id="tMetal">0.000 g</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Account Registry</div>
+          <div class="card-actions">
+            <div class="h-search">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="search" type="text" placeholder="Search parameters..." oninput="applyFilter()">
+            </div>
+
+            <div class="custom-dropdown" id="statusDropdown">
+              <button class="dropdown-trigger" id="dropdownBtn" aria-haspopup="listbox" aria-expanded="false" data-next="search">All Accounts</button>
+              <ul class="dropdown-menu" id="dropdownMenu" role="listbox">
+                <li class="dropdown-item selected" data-value="all" role="option" tabindex="-1">All Accounts</li>
+                <li class="dropdown-item" data-value="credit" role="option" tabindex="-1">Has Credit</li>
+                <li class="dropdown-item" data-value="clean" role="option" tabindex="-1">No Credit</li>
+              </ul>
+            </div>
+
+            <span class="fb-count" id="rowCount"></span>
+            <button class="btn btn-ic" onclick="loadAll()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">#</th>
+              <th>Customer Name</th>
+              <th>Metal Due</th>
+              <th>Cash Due</th>
+              <th>Lifetime Purchase</th>
+              <th>Txns</th>
+              <th>Status</th>
+              <th class="num">Metal Limit</th>
+              <th class="num">Cash Limit</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="itm-popover" id="itmPop"></div>
+
+<div class="modal-bg" id="itmModBg" onclick="closeItemMod()">
+  <div class="itm-mod" onclick="event.stopPropagation()">
+    <div class="itm-mod-head"><div class="itm-mod-title" id="itmModTitle">Purchase Metrics</div><button class="itm-mod-x" onclick="closeItemMod()">&#10005;</button></div>
+    <div class="itm-mod-body" id="itmModBody"></div>
+  </div>
+</div>
+
+<div class="row-menu" id="rowMenu">
+  <button onclick="ACT.view()">&#128065; View Profile Details</button>
+  <button onclick="ACT.edit()">&#9998; Edit Account Parameters</button>
+  <button onclick="ACT.print('purchase')">&#128424; Print Purchase Statements</button>
+  <button onclick="ACT.print('credit')">&#128196; Print Credit Ledger</button>
+  <button onclick="ACT.export()">&#128229; Export CSV Sheet</button>
+  <button class="danger" onclick="ACT.del()">&#128465; Delete Customer Node</button>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">New Customer</div>
+      <div class="modal-sub" id="modalSub">Create a customer account so purchases and credit are tracked.</div>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label for="i_name">Customer Name</label>
+        <input id="i_name" type="text" placeholder="e.g. Ramesh Bhai" data-next="i_phone">
+      </div>
+      <div class="fg">
+        <label for="i_phone">Phone Number</label>
+        <input id="i_phone" type="text" placeholder="e.g. 98765 43210" data-next="i_metal">
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label for="i_metal">Metal Limit (g)</label>
+          <input id="i_metal" type="number" step="0.001" min="0" placeholder="0.000" data-next="i_cash">
+        </div>
+        <div class="fg">
+          <label for="i_cash">Cash Limit (Rs.)</label>
+          <input id="i_cash" type="number" step="0.01" min="0" placeholder="0.00" data-next="modalSave">
+        </div>
+      </div>
+      <input type="hidden" id="i_id" value="">
+      <div class="modal-err" id="modalErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modalSave" onclick="saveCustomer()">Save Customer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function api(){
+  if (window.pywebview && window.pywebview.api) window.__pyapi = window.pywebview.api;
+  return window.__pyapi || (window.pywebview && window.pywebview.api);
+}
+var allCustomers = [];
+var allMetalDue = {};
+var allCashDue = {};
+var filter = '';
+var currentStatusFilter = 'all';
+
+/* Clock */
+setInterval(function () {
+  var c = document.getElementById('clock');
+  if (c) c.textContent = new Date().toLocaleString('en-GB', { dateStyle: 'short', timeStyle:'medium' });
+}, 1000);
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---------- loadAll ---------- */
+async function loadAll(){
+  document.getElementById('tbody').innerHTML = '<tr><td colspan="10" class="table-empty"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 0;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--gold3);animation:spin 1s linear infinite;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span style="font-family:var(--mono);font-size:0.74rem;color:var(--muted2);">Synchronizing registry fields…</span></div></td></tr>';
+  document.getElementById('phSub').textContent = 'Loading…';
+  if (!api()) return;
+  try {
+    allCustomers = await api().get_client_list() || [];
+    await fetchBalances();
+  } catch(e){}
+  render();
+}
+
+async function fetchBalances(){
+  allMetalDue = {}; allCashDue = {};
+  if (!api()) return;
+  await Promise.all(allCustomers.map(function (c) {
+    return api().get_client_balances(c.name).then(function (b) {
+      allMetalDue[c.id] = parseFloat(b.metal || 0);
+      allCashDue[c.id] = parseFloat(b.cash || 0);
+    }).catch(function(){});
+  }));
+}
+
+function applyFilter(){ filter = (document.getElementById('search').value || '').toLowerCase().trim(); render(); }
+
+function statusOf(id){
+  return (allCashDue[id] > 0 || allMetalDue[id] > 0.0005) ? 'credit' : 'clean';
+}
+
+function renderData(){
+  var rows = allCustomers.filter(function (c){
+    if (filter && !(c.name||'').toLowerCase().includes(filter) && !(c.phone||'').includes(filter)) return false;
+    if (currentStatusFilter === 'credit' && statusOf(c.id) !== 'credit') return false;
+    if (currentStatusFilter === 'clean' && statusOf(c.id) !== 'clean') return false;
+    return true;
+  });
+  return rows;
+}
+
+function render(){
+  var rows = renderData();
+  var tbody = document.getElementById('tbody');
+  document.getElementById('rowCount').textContent = rows.length + ' of ' + allCustomers.length;
+
+  document.getElementById('tTotal').textContent = allCustomers.length;
+  var credCount = allCustomers.filter(function(c){ return statusOf(c.id)==='credit'; }).length;
+  var metalSum = allCustomers.reduce(function(s,c){ return s + (allMetalDue[c.id]||0); },0);
+  document.getElementById('tCredit').textContent = credCount;
+  document.getElementById('tMetal').textContent = metalSum.toFixed(3) + ' g';
+  document.getElementById('phSub').textContent = rows.length + ' customer' + (rows.length===1?'':'s') + ' shown';
+
+  if (!rows.length && !filter){
+    tbody.innerHTML = '<tr><td colspan="10" class="table-empty">No customers yet.<br><button onclick="openModal()" class="btn btn-primary" style="margin-top:10px">&#43; Add your first customer</button></td></tr>';
+    return;
+  }
+  if (!rows.length){
+    tbody.innerHTML = '<tr><td colspan="10" class="table-empty">No customers match "<b style="color:var(--ink);">'+esc(filter)+'</b>".</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(function (c) {
+    var m = allMetalDue[c.id] || 0;
+    var cash = allCashDue[c.id] || 0;
+    var pill = statusOf(c.id) === 'credit' ? '<span class="pill red">Credit</span>' : '<span class="pill green">Clean</span>';
+    var idx = allCustomers.indexOf(c);
+    return '<tr onclick="openDetail('+c.id+')">'
+      + '<td class="mono">' + (idx+1).toString().padStart(2,'0') + '</td>'
+      + '<td><div class="t-name">'+esc(c.name)+'</div><div class="t-phone">'+esc(c.phone||'—')+'</div></td>'
+      + '<td class="mono num-txt '+(m>0.0005?'txt-dr':'txt-cr')+'">'+m.toFixed(3)+' g</td>'
+      + '<td class="mono num-txt '+(cash>0.01?'txt-dr':'txt-cr')+'" style="text-align:right;">Rs. '+cash.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
+      + '<td class="mono num">—</td>'
+      + '<td class="mono num">—</td>'
+      + '<td>'+pill+'</td>'
+      + '<td class="mono num-txt" style="text-align:right;">'+parseFloat(c.metal_limit||0).toFixed(3)+' g</td>'
+      + '<td class="mono num-txt" style="text-align:right;">Rs. '+parseFloat(c.cash_limit||0).toLocaleString('en-IN')+'</td>'
+      + '<td><button class="row-act" onclick="event.stopPropagation();showMenu(event,'+c.id+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+/* ── NEW: STANDALONE ROUTE DISPATCH REDIRECT ── */
+function openDetail(id){
+  var c = allCustomers.find(function(x){ return parseInt(x.id,10) === parseInt(id,10); });
+  if (!c) return;
+  // Dispatches query strings safely over to the standalone page matrix
+  window.location.href = 'Customer_detail.html?id=' + c.id + '&name=' + encodeURIComponent(c.name || '');
+}
+
+/* ── CUSTOM DROPDOWN MECHANICS ── */
+var activeDropdownIdx = -1;
+function setupCustomDropdown() {
+  var dropdownWrap = document.getElementById('statusDropdown');
+  var triggerBtn = document.getElementById('dropdownBtn');
+  var dropItems = dropdownWrap.querySelectorAll('.dropdown-item');
+
+  triggerBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var isOpen = dropdownWrap.classList.toggle('open');
+    triggerBtn.setAttribute('aria-expanded', isOpen);
+    if (isOpen) {
+      activeDropdownIdx = Array.from(dropItems).findIndex(function(item) { return item.classList.contains('selected'); });
+      focusDropdownItem(activeDropdownIdx);
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!dropdownWrap.contains(e.target)) closeDropdownPanel();
+  });
+
+  dropdownWrap.addEventListener('keydown', function(e) {
+    var isOpen = dropdownWrap.classList.contains('open');
+
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dropdownWrap.classList.add('open');
+        triggerBtn.setAttribute('aria-expanded', 'true');
+        activeDropdownIdx = Array.from(dropItems).findIndex(function(item) { return item.classList.contains('selected'); });
+        focusDropdownItem(activeDropdownIdx);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeDropdownIdx = (activeDropdownIdx + 1) % dropItems.length;
+      focusDropdownItem(activeDropdownIdx);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeDropdownIdx = (activeDropdownIdx - 1 + dropItems.length) % dropItems.length;
+      focusDropdownItem(activeDropdownIdx);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (activeDropdownIdx >= 0 && activeDropdownIdx < dropItems.length) {
+        var chosenItem = dropItems[activeDropdownIdx];
+        chosenItem.classList.add('item-pulse-active');
+        setTimeout(function() {
+          chosenItem.classList.remove('item-pulse-active');
+          triggerDropdownSelection(chosenItem.getAttribute('data-value'), chosenItem.textContent);
+        }, 180);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDropdownPanel();
+      triggerBtn.focus();
+    }
+  });
+
+  dropItems.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      item.classList.add('item-pulse-active');
+      setTimeout(function() {
+        item.classList.remove('item-pulse-active');
+        triggerDropdownSelection(item.getAttribute('data-value'), item.textContent);
+      }, 180);
+    });
+  });
+
+  function focusDropdownItem(idx) {
+    dropItems.forEach(function(item, i) {
+      item.classList.toggle('focused', i === idx);
+    });
+  }
+
+  function triggerDropdownSelection(val, textString) {
+    currentStatusFilter = val;
+    triggerBtn.textContent = textString;
+    dropItems.forEach(function(item) {
+      item.classList.toggle('selected', item.getAttribute('data-value') === val);
+    });
+    closeDropdownPanel();
+    triggerBtn.focus();
+    applyFilter();
+  }
+
+  function closeDropdownPanel() {
+    dropdownWrap.classList.remove('open');
+    triggerBtn.setAttribute('aria-expanded', 'false');
+    activeDropdownIdx = -1;
+  }
+}
+
+/* ---------- context menu ---------- */
+var ACT = { id: null };
+function showMenu(e, id){
+  ACT.id = id;
+  var m = document.getElementById('rowMenu');
+  m.classList.add('open');
+  var r = e.currentTarget.getBoundingClientRect();
+  m.style.position = 'fixed';
+  m.style.top = (r.bottom+4)+'px';
+  m.style.left = Math.min(r.left, window.innerWidth-180)+'px';
+}
+document.addEventListener('click', function(e){
+  var m = document.getElementById('rowMenu');
+  if (m.classList.contains('open') && !e.target.closest('.row-menu') && !e.target.closest('.row-act')) m.classList.remove('open');
+});
+
+ACT.selected = function(){ return allCustomers.find(function(c){ return parseInt(c.id,10) === parseInt(ACT.id,10); }); };
+ACT.reload = function(){ ACT.id=null; document.getElementById('rowMenu').classList.remove('open'); loadAll(); };
+ACT.view = function(){
+  var c = ACT.selected(); if(!c) return;
+  openDetail(parseInt(c.id,10));
+  document.getElementById('rowMenu').classList.remove('open');
+};
+ACT.edit = function(){ openModal(ACT.selected()); document.getElementById('rowMenu').classList.remove('open'); };
+ACT.del = async function(){
+  var c = ACT.selected(); if(!c) return;
+  document.getElementById('rowMenu').classList.remove('open');
+  if (!await aurumConfirm('Delete "'+c.name+'"? Purchases and credit history are kept.', {title:'Delete Customer',confirmText:'Delete',type:'danger'})) return;
+  var bridge = api();
+  if (!bridge || typeof bridge.delete_new_client !== 'function') {
+    aurumAlert('Delete unavailable', 'Please restart AurumOS so the latest customer tools are loaded.', 'error');
+    return;
+  }
+  bridge.delete_new_client(parseInt(c.id,10)).then(function(r){
+    if (!r || r.status !== 'success'){ toast('Delete failed: '+((r&&r.message)||'error')); return; }
+    toast('Customer deleted'); loadAll();
+  }).catch(function(e){ aurumAlert('Delete failed', String(e && e.message || e), 'error'); });
+};
+ACT.print = function(type){ var c=ACT.selected(); if(!c) return; document.getElementById('rowMenu').classList.remove('open'); toast('Generating statement vectors…'); if(type==='credit') api().print_customer_credit(c.name); else api().print_customer_purchases(c.name); };
+ACT.export = function(){ var c=ACT.selected(); if(!c) return; document.getElementById('rowMenu').classList.remove('open'); exportCsv(c.name); };
+
+/* ---------- modal ---------- */
+function openModal(c){
+  c = c || null;
+  document.getElementById('modalTitle').textContent = c ? 'Edit Customer' : 'New Customer';
+  document.getElementById('modalSub').textContent = c ? ('Update details for '+(c.name||'')+'.') : 'Create a customer account so purchases and credit are tracked.';
+  document.getElementById('i_id').value = c ? c.id : '';
+  document.getElementById('i_name').value = c ? (c.name||'') : '';
+  document.getElementById('i_phone').value = c ? (c.phone||'') : '';
+  document.getElementById('i_metal').value = c ? parseFloat(c.metal_limit||0).toFixed(3) : '';
+  document.getElementById('i_cash').value = c ? parseFloat(c.cash_limit||0).toFixed(2) : '';
+  document.getElementById('modalErr').style.display = 'none';
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(function(){ document.getElementById('i_name').focus(); }, 50);
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
+
+async function saveCustomer(){
+  var id = document.getElementById('i_id').value;
+  var name = document.getElementById('i_name').value.trim();
+  var phone = document.getElementById('i_phone').value.trim();
+  var m = parseFloat(document.getElementById('i_metal').value)||0;
+  var c = parseFloat(document.getElementById('i_cash').value)||0;
+  var err = document.getElementById('modalErr');
+  if (!name){ err.textContent='Name is required.'; err.style.display='block'; return; }
+  if (m<0) m=0; if (c<0) c=0;
+
+  var saveBtn = document.getElementById('modalSave');
+  saveBtn.classList.add('btn-pulse-active');
+
+  var payload = { name:name, phone:phone, metal_limit:m, cash_limit:c };
+  if (id) payload.id = parseInt(id, 10);
+  try{
+    var fn = id ? 'update_new_client' : 'add_new_client';
+    var raw = await api()[fn](payload);
+    var r = (raw && typeof raw.then === 'function') ? await raw : raw;
+    setTimeout(function() { saveBtn.classList.remove('btn-pulse-active'); }, 150);
+    if (!r || r.status!=='success'){
+      err.textContent = (r && r.message) || 'Save operation failed.';
+      err.style.display='block';
+      return;
+    }
+    closeModal(); toast('Customer saved'); loadAll();
+  }catch(e){
+    saveBtn.classList.remove('btn-pulse-active');
+    err.textContent='Save failed: '+(e && e.message || e); err.style.display='block';
+  }
+}
+
+/* ---------- toast ---------- */
+var toastT;
+function toast(msg){
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+}
+
+/* ---------- CSV export ---------- */
+async function exportCsv(name){
+  var purchases = [];
+  try { purchases = await api().get_customer_purchases(name) || []; } catch(e){}
+  var head = ['Date','Voucher','Status','Gold Rate','Total','Collected','Balance'];
+  var lines = purchases.map(function(p){
+    var st = String(p.status||'').toUpperCase();
+    var tot = parseFloat(p.total_amount||0);
+    var cashCollected = (st === 'PAID' || st === 'UCHAK_PAID' || String(p.vch_id||'').toUpperCase().indexOf('R-') === 0) ? tot : 0;
+    var bal = tot - cashCollected;
+    return [p.date||'',p.vch_id||'',p.status||'',Math.round(parseFloat(p.gold_rate||0)),tot.toFixed(2),cashCollected.toFixed(2),bal.toFixed(2)].map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(',');
+  });
+  if (!lines.length){ toast('No purchases to export'); return; }
+  var csv = head.join(',') + '\r\n' + lines.join('\r\n');
+  var blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'purchases_'+name.replace(/[^a-z0-9_-]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ---------- bootstrap initialization pool ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+  initSidebar('customers');
+  setupCustomDropdown();
+  var c = document.getElementById('clock'); if (c) c.textContent = new Date().toLocaleString('en-GB', { dateStyle:'short', timeStyle:'medium' });
+
+  var pywebviewInitTimer = setInterval(function(){
+    if (window.pywebview && window.pywebview.api) {
+      clearInterval(pywebviewInitTimer);
+      loadAll();
+    }
+  }, 150);
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      document.getElementById('rowMenu').classList.remove('open');
+      closeModal();
+    }
+
+    if (e.key === 'Enter' && document.getElementById('modalBg').classList.contains('open')) {
+      var currentFocus = document.activeElement;
+      if (currentFocus && currentFocus.hasAttribute('data-next')) {
+        e.preventDefault();
+        var nextTargetId = currentFocus.getAttribute('data-next');
+        var nextEl = document.getElementById(nextTargetId);
+        if (nextEl) {
+          nextEl.focus();
+          if (typeof nextEl.select === 'function') nextEl.select();
+        }
+      } else if (currentFocus && currentFocus.id === 'i_cash') {
+        e.preventDefault();
+        saveCustomer();
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

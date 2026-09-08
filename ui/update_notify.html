@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <title>AurumOS Update</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -63,7 +64,7 @@ body{
 .version-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
 .v-pill{
     display:inline-flex;align-items:center;gap:5px;
-    font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:500;
+    font-family:Arial,sans-serif;font-size:0.72rem;font-weight:500;
     padding:4px 10px;border-radius:4px;
 }
 .v-current{background:rgba(14,12,9,0.06);color:#5c5a52;border:1px solid rgba(14,12,9,0.09);}
@@ -99,7 +100,7 @@ body{
 }
 .progress-msg{font-size:0.78rem;font-weight:500;color:#2a2620;}
 .progress-pct{
-    font-family:'DM Mono',monospace;font-size:0.72rem;
+    font-family:Arial,sans-serif;font-size:0.72rem;
     font-weight:500;color:#a87d1e;
 }
 .progress-track{
@@ -319,7 +320,7 @@ function startUpdate(){
 
     // Call Python to start download
     if(window.pywebview && window.pywebview.api){
-        window.pywebview.api.start_update(UPDATE_DATA.download_url);
+        window.pywebview.api.start_update_with_info(UPDATE_DATA);
     }
 }
 

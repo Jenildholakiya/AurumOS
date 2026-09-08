@@ -1,48 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <title>AurumOS | Sign In</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-    --cream:#faf8f3;--cream2:#f2efe7;
-    --ink:#0e0c09;--ink2:#2a2620;
-    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
-    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
-    --rule:rgba(14,12,9,0.09);
-    --red:#b91c1c;--red-bg:#fef2f2;
-    --green:#15803d;--muted:#7a7268;--muted2:#9e9890;
-    --serif:"DM Serif Display",Georgia,serif;
-    --mono:"DM Mono",monospace;
+    --offwhite:#f8fafb;--light:#f1f5f9;
+    --ink:#0f172a;--ink2:#1e293b;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --rule:#e2e8f0;
+    --red:#dc2626;--red-bg:#fef2f2;
+    --green:#16a34a;--muted:#64748b;--muted2:#94a3b8;
+    --mono:Arial,sans-serif;
 }
 body{
     font-family:"DM Sans",system-ui,sans-serif;
-    background:var(--cream);
+    background:var(--offwhite);
     min-height:100vh;
     display:flex;align-items:center;justify-content:center;
     padding:20px;overflow:hidden;
 }
 body::before{
     content:'';position:fixed;inset:0;pointer-events:none;
-    background:repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(168,125,30,0.025) 28px,rgba(168,125,30,0.025) 29px);
+    background:repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(37,99,235,0.018) 28px,rgba(37,99,235,0.018) 29px);
 }
-.particle{position:fixed;border-radius:50%;pointer-events:none;background:rgba(168,125,30,0.08);animation:float linear infinite;}
+.particle{position:fixed;border-radius:50%;pointer-events:none;background:rgba(37,99,235,0.06);animation:float linear infinite;}
 @keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:1;}90%{opacity:0.5;}100%{transform:translateY(-100px) rotate(720deg);opacity:0;}}
 
 /* Card */
 .card{width:380px;max-width:100%;background:#fff;border:1px solid var(--rule);border-radius:18px;overflow:hidden;box-shadow:0 12px 48px rgba(14,12,9,0.10);animation:ci .4s cubic-bezier(.34,1.56,.64,1) both;position:relative;z-index:1;}
 @keyframes ci{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
-.bar{height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold3),var(--gold2),var(--gold));background-size:300%;animation:gs 3s ease infinite;}
+.bar{height:3px;background:linear-gradient(90deg,var(--blue3),var(--blue),var(--blue2),var(--blue),var(--blue3));background-size:300%;animation:gs 3s ease infinite;}
 @keyframes gs{0%{background-position:0%}100%{background-position:300%}}
 
 /* Logo */
 .logo{padding:28px 32px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;}
-.lm{width:52px;height:52px;border-radius:14px;background:var(--ink);display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px rgba(14,12,9,0.2);}
-.lm span{font-family:var(--serif);font-size:1.05rem;color:var(--gold2);font-style:italic;}
-.ln{font-family:var(--serif);font-size:1.4rem;color:var(--ink);letter-spacing:-.3px;}
-.ln em{color:var(--gold3);}
+.lm{width:52px;height:52px;border-radius:14px;background:var(--blue);display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px rgba(37,99,235,0.25);}
+.lm span{font-family:"DM Sans",system-ui,sans-serif;font-size:0.95rem;font-weight:700;color:#fff;}
+.ln{font-family:"DM Sans",system-ui,sans-serif;font-size:1.4rem;font-weight:700;color:var(--ink);letter-spacing:-.4px;}
+.ln em{color:var(--blue);font-style:normal;font-weight:700;}
 .ls{font-size:.58rem;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:1.4px;margin-top:4px;}
 
 /* ── LAST LOGIN STRIP ── */
@@ -59,9 +59,9 @@ body::before{
 .last-login.visible{display:flex;}
 .ll-avatar{
     width:34px;height:34px;border-radius:8px;
-    background:var(--gold-bg);border:1px solid var(--gold-ln);
+    background:var(--blue-bg);border:1px solid var(--blue-ln);
     display:flex;align-items:center;justify-content:center;
-    font-family:var(--serif);font-size:0.95rem;color:var(--gold3);
+    font-size:0.82rem;font-weight:700;color:var(--blue);
     flex-shrink:0;
 }
 .ll-info{flex:1;min-width:0;}
@@ -93,10 +93,10 @@ body::before{
     outline: none;
     transition: all .14s;
 }
-.inp:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,.12);background:#fff;}
+.inp:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff;}
 .inp:disabled{opacity:.45;cursor:not-allowed;}
 .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;padding:4px;color:var(--muted2);transition:color 0.13s;font-size:0.9rem;}
-.eye-btn:hover{color:var(--gold3);}
+.eye-btn:hover{color:var(--blue);}
 .strength-bar{height:2px;background:var(--rule);border-radius:99px;margin-top:5px;overflow:hidden;display:none;}
 .strength-bar.visible{display:block;}
 .strength-fill{height:100%;width:0%;border-radius:99px;transition:width 0.3s,background 0.3s;}
@@ -118,39 +118,53 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .dots{display:flex;gap:6px;}
 .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--rule);background:#fff;transition:all .25s cubic-bezier(.34,1.56,.64,1);}
 .dot.used{background:var(--red);border-color:rgba(185,28,28,.3);box-shadow:0 0 0 3px rgba(185,28,28,.12);}
-.dot.warn{background:var(--gold2);border-color:var(--gold-ln);}
+.dot.warn{background:var(--blue2);border-color:var(--blue-ln);}
 
 /* Error */
 .em{display:none;background:var(--red-bg);border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:9px 12px;font-size:.73rem;font-weight:500;color:var(--red);margin-bottom:12px;}
 .em.on{display:block;}
 
 /* ── LOCKOUT PANEL ── */
-.lkp{background:#fff8f8;border:1.5px solid rgba(185,28,28,.18);border-radius:12px;padding:24px 20px;text-align:center;margin-bottom:12px;display:none;}
-.lki{font-size:2.4rem;margin-bottom:10px;}
-.lkt{font-family:var(--serif);font-size:1.1rem;color:var(--ink);margin-bottom:4px;}
-.lks{font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:16px;}
-.lk-code-wrap{background:#fff;border:1px solid rgba(185,28,28,.15);border-radius:8px;padding:14px;margin-bottom:14px;}
-.lk-code-label{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.lk-code{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--red);letter-spacing:6px;margin-bottom:6px;}
-.lk-code-hint{font-size:.65rem;color:var(--muted);line-height:1.5;}
-.lk-unlock-wrap{text-align:left;}
-.lk-inp{width:100%;height:40px;background:var(--cream);border:1px solid var(--rule);border-radius:7px;font-family:var(--mono);font-size:1rem;padding:0 12px;letter-spacing:3px;outline:none;text-align:center;box-sizing:border-box;margin-bottom:6px;}
-.lk-inp:focus{border-color:var(--gold);}
-.lk-err{font-size:.7rem;color:var(--red);min-height:16px;margin-bottom:6px;text-align:center;}
-.lk-btn{width:100%;height:38px;background:var(--gold);border:none;border-radius:7px;font-size:.8rem;font-weight:700;color:#fff;cursor:pointer;}
-.lk-btn:hover{background:var(--gold3);}
-/* Admin contact hint */
-.lk-admin{
-    display:inline-flex;align-items:center;gap:6px;
-    margin-top:14px;padding:7px 14px;
-    background:rgba(14,12,9,0.04);border:1px solid var(--rule);
-    border-radius:8px;
-    font-size:0.62rem;color:var(--muted);
+.lkp{
+    position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#fffaf9,#fdf2f2);
+    border:1px solid rgba(185,28,28,.12);
+    border-radius:14px;padding:24px 22px 20px;
+    text-align:center;margin-bottom:12px;display:none;
+    animation:lkp .35s cubic-bezier(.34,1.56,.64,1) both;
 }
+@keyframes lkp{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.lkp::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),#ef4444,var(--red));background-size:200%;animation:gs 3s ease infinite;}
+.lki{width:52px;height:52px;margin:0 auto 12px;border-radius:50%;background:rgba(185,28,28,.07);border:1px solid rgba(185,28,28,.12);display:flex;align-items:center;justify-content:center;font-size:1.5rem;}
+.lkt{font-family:"DM Sans",system-ui,sans-serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.lks{font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:18px;}
+
+.lk-code-label{font-size:.54rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:8px;}
+.lk-code-wrap{background:#fff;border:1px solid rgba(185,28,28,.1);border-radius:10px;padding:14px 14px 11px;margin-bottom:4px;}
+.lk-code-row{display:flex;align-items:center;justify-content:center;gap:10px;}
+.lk-code{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--red);letter-spacing:6px;padding-left:6px;}
+.lk-copy{flex-shrink:0;border:1px solid rgba(185,28,28,.2);background:#fff;color:var(--red);border-radius:7px;padding:5px 10px;font-size:.6rem;font-weight:600;cursor:pointer;transition:all .14s;font-family:"DM Sans",sans-serif;}
+.lk-copy:hover{background:rgba(185,28,28,.06);}
+.lk-copy.done{background:var(--green);border-color:var(--green);color:#fff;}
+.lk-code-hint{font-size:.62rem;color:var(--muted);line-height:1.5;margin-top:10px;}
+
+.lk-divider{height:1px;background:var(--rule);margin:16px 0 14px;}
+.lk-unlock-wrap{text-align:left;}
+.lk-inp{width:100%;height:42px;background:#fff;border:1.5px solid var(--rule);border-radius:9px;font-family:var(--mono);font-size:1rem;font-weight:600;color:var(--ink);padding:0 12px;letter-spacing:4px;text-align:center;box-sizing:border-box;margin-bottom:8px;outline:none;transition:all .14s;text-transform:uppercase;}
+.lk-inp:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.lk-inp::placeholder{color:var(--muted2);letter-spacing:3px;font-weight:400;font-size:.82rem;}
+.lk-hint{font-size:.6rem;color:var(--blue);opacity:.9;line-height:1.5;margin:0 0 10px;}
+.lk-err{font-size:.68rem;color:var(--red);min-height:16px;margin-bottom:8px;text-align:center;font-weight:500;}
+.lk-btn{width:100%;height:42px;background:var(--ink);border:none;border-radius:9px;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.lk-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+.lk-btn:active{transform:translateY(0);}
+.lk-btn:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none;}
+.lk-contact{font-size:.58rem;color:var(--muted2);margin-top:14px;letter-spacing:.2px;}
+.lk-contact strong{color:var(--muted);font-weight:600;}
 
 /* Button */
-.btn{width:100%;height:44px;background:var(--ink);color:#fff;border:none;border-radius:10px;font-family:"DM Sans",sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s;}
-.btn:hover:not(:disabled){background:var(--ink2);transform:translateY(-1px);}
+.btn{width:100%;height:44px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-family:"DM Sans",sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s;letter-spacing:0.2px;}
+.btn:hover:not(:disabled){background:var(--blue3);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.25);}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 
 /* Footer */
@@ -160,7 +174,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .sd.on{background:var(--green);animation:sp 2s ease infinite;}
 .sd.er{background:var(--red);}
 @keyframes sp{0%,100%{opacity:1}50%{opacity:.35}}
-.vr{font-family:var(--mono);font-size:.56rem;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 8px;border-radius:99px;}
+.vr{font-family:var(--mono);font-size:.56rem;color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-ln);padding:2px 8px;border-radius:99px;}
 
 /* Security badge */
 .sec-badge{text-align:center;padding:0 32px 16px;}
@@ -190,16 +204,16 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .tp-sub{font-size:0.7rem;color:#7a7268;line-height:1.6;margin-bottom:18px;}
 /* Password display box */
 .tp-pass-box{
-    background:#f2efe7;
-    border:1.5px solid rgba(168,125,30,0.25);
+    background:var(--light);
+    border:1.5px solid rgba(37,99,235,0.2);
     border-radius:10px;
     padding:14px 16px;
     margin-bottom:16px;
 }
-.tp-pass-label{font-size:0.52rem;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;color:#9e9890;margin-bottom:8px;}
+.tp-pass-label{font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);margin-bottom:8px;}
 .tp-pass-val{
     font-family:var(--mono);font-size:1.3rem;font-weight:500;
-    color:#0e0c09;letter-spacing:3px;
+    color:var(--ink);letter-spacing:3px;
     word-break:break-all;
 }
 .tp-note{font-size:0.58rem;color:#9e9890;margin-bottom:18px;line-height:1.5;}
@@ -214,6 +228,38 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 /* Shake */
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-5px)}60%{transform:translateX(5px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
 .shake{animation:shake .45s ease both;}
+
+/* ── 2FA (TWO-FACTOR) PANEL ── */
+.tfa{display:none;text-align:center;margin-bottom:6px;animation:tfaIn .42s cubic-bezier(.34,1.56,.64,1) both;}
+.tfa.on{display:block;}
+@keyframes tfaIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.tfa-shield{width:62px;height:62px;margin:2px auto 14px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(150deg,var(--blue-bg),rgba(59,130,246,.18));border:1px solid var(--blue-ln);box-shadow:0 6px 18px rgba(37,99,235,.14);}
+.tfa-shield svg{width:29px;height:29px;stroke:var(--blue);}
+.tfa-shield::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(59,130,246,.28);animation:tfaPulse 2.4s ease-out infinite;}
+@keyframes tfaPulse{0%{transform:scale(.88);opacity:.7}70%{transform:scale(1.28);opacity:0}100%{opacity:0}}
+.tfa-title{font-family:"DM Sans",system-ui,sans-serif;font-size:1.22rem;font-weight:700;color:var(--ink);margin-bottom:5px;letter-spacing:-.2px;}
+.tfa-sub{font-size:.71rem;color:var(--muted);line-height:1.55;margin-bottom:18px;padding:0 8px;}
+.tfa-sub b{color:var(--blue);font-weight:600;}
+.otp-row{display:flex;justify-content:center;gap:8px;margin-bottom:14px;}
+.otp-box{width:42px;height:52px;border:1.5px solid var(--rule);border-radius:10px;background:var(--offwhite);font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--ink);text-align:center;outline:none;transition:all .16s cubic-bezier(.34,1.56,.64,1);caret-color:var(--blue);padding:0;}
+.otp-box:focus{border-color:var(--blue2);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.14);transform:translateY(-2px);}
+.otp-box.filled{border-color:var(--blue-ln);background:#fff;color:var(--blue);}
+.otp-box.err{border-color:rgba(185,28,28,.4);background:var(--red-bg);color:var(--red);}
+/* backup code input */
+.tfa-backup{display:none;margin-bottom:14px;}
+.tfa-backup.on{display:block;}
+.tfa-bk-inp{width:100%;height:48px;background:var(--offwhite);border:1.5px solid var(--rule);border-radius:10px;font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--ink);text-align:center;letter-spacing:4px;text-transform:uppercase;outline:none;transition:all .14s;box-sizing:border-box;}
+.tfa-bk-inp:focus{border-color:var(--blue2);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.12);}
+.tfa-bk-inp::placeholder{color:var(--muted2);letter-spacing:3px;font-weight:400;font-size:.9rem;}
+.tfa-err{font-size:.72rem;color:var(--red);min-height:16px;margin-bottom:10px;font-weight:500;}
+.tfa-btn{width:100%;height:44px;background:var(--blue);border:none;border-radius:10px;font-size:.85rem;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:7px;}
+.tfa-btn:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.25);}
+.tfa-btn:active:not(:disabled){transform:translateY(0);}
+.tfa-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
+.tfa-links{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;}
+.tfa-link{background:none;border:none;font-family:"DM Sans",sans-serif;font-size:.66rem;color:var(--muted);cursor:pointer;padding:4px 2px;transition:color .13s,border-color .13s;border-bottom:1px dashed transparent;}
+.tfa-link:hover{color:var(--blue);border-bottom-color:var(--blue-ln);}
+.tfa-dot-sep{width:3px;height:3px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
 
 
 </style>
@@ -243,7 +289,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
 
         <!-- Password -->
-        <div id="pass-mode">
+        <div id="pass-mode" style="display:none">
             <label class="lbl">Password</label>
             <div class="pass-wrap">
                 <input type="password" id="inp" class="inp"
@@ -272,9 +318,71 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <div class="em" id="em"></div>
 
         <!-- Lockout panel — permanent until admin resets -->
-        <div class="lkp" id="lkp"><div class="lki">&#128274;</div><div class="lkt">Account Locked</div><div class="lks">Too many incorrect attempts. Access has been suspended.</div><div class="lk-code-wrap"><div class="lk-code-label">Your Lock Code</div><div style="display:flex;align-items:center;justify-content:center;gap:10px;"><div class="lk-code" id="lk-code-display">&#8212;</div><button onclick="copyLockCode()" style="background:transparent;border:1px solid rgba(185,28,28,.3);border-radius:5px;padding:3px 8px;font-size:.65rem;color:var(--red);cursor:pointer;" title="Copy lock code">Copy</button></div><div class="lk-code-hint">Share this code with your administrator to get an unlock key</div></div><div class="lk-unlock-wrap"><div class="lk-code-label">Enter Unlock Key (12 characters)</div><input class="lk-inp" id="lk-key-inp" type="text" maxlength="12" placeholder="XXXXXXXXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"><div class="lk-err" id="lk-err"></div><button class="lk-btn" onclick="tryUnlock()">Unlock</button></div></div>
+        <div class="lkp" id="lkp">
+          <div class="lki">&#128274;</div>
+          <div class="lkt">Account Locked</div>
+          <div class="lks">Too many incorrect attempts. Access is temporarily suspended.</div>
+          <div class="lk-code-wrap">
+            <div class="lk-code-label">Your Lock Code</div>
+            <div class="lk-code-row">
+              <div class="lk-code" id="lk-code-display">&#8212;</div>
+              <button class="lk-copy" id="lk-copy-btn" onclick="copyLockCode()" title="Copy lock code">Copy</button>
+            </div>
+            <div class="lk-code-hint">Share this code with your administrator to generate an unlock key.</div>
+          </div>
+          <div class="lk-divider"></div>
+          <div class="lk-unlock-wrap">
+            <div class="lk-code-label">Enter Unlock Key</div>
+            <input class="lk-inp" id="lk-key-inp" type="text" maxlength="12" placeholder="XXXXXXXXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" onkeydown="if(event.key==='Enter')verifyWebKey()">
+            <div class="lk-err" id="lk-err"></div>
+            <button class="lk-btn" id="lk-unlock-btn" onclick="verifyWebKey()">Unlock</button>
+          </div>
+          <div class="lk-contact">Need help? Contact <strong>+91 70411 26244</strong></div>
+        </div>
 
-        <button class="btn" id="btn" onclick="login()">
+        <!-- ── 2FA CODE ENTRY (owner two-factor) ── -->
+        <div class="tfa" id="tfa">
+            <div class="tfa-shield">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                </svg>
+            </div>
+            <div class="tfa-title">Two-Factor Verification</div>
+            <div class="tfa-sub" id="tfa-sub">Enter the 6-digit code from your authenticator app.</div>
+
+            <!-- OTP digit boxes -->
+            <div class="otp-row" id="otp-row">
+                <input class="otp-box" id="otp0" inputmode="numeric" maxlength="1" autocomplete="one-time-code">
+                <input class="otp-box" id="otp1" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="otp-box" id="otp2" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="otp-box" id="otp3" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="otp-box" id="otp4" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="otp-box" id="otp5" inputmode="numeric" maxlength="1" autocomplete="off">
+            </div>
+
+            <!-- backup code (hidden until toggled) -->
+            <div class="tfa-backup" id="tfa-backup">
+                <input class="tfa-bk-inp" id="tfa-bk-inp" maxlength="9" placeholder="XXXX-XXXX"
+                       autocomplete="off"
+                       oninput="onBackupInput(this)"
+                       onkeydown="if(event.key==='Enter')verify2fa()">
+            </div>
+
+            <div class="tfa-err" id="tfa-err"></div>
+
+            <button class="tfa-btn" id="tfa-btn" onclick="verify2fa()">
+                <span>&#128274;</span> Verify &amp; Sign In
+            </button>
+
+            <div class="tfa-links">
+                <button class="tfa-link" id="tfa-toggle" onclick="toggleBackup()">Use a backup code</button>
+                <div class="tfa-dot-sep"></div>
+                <button class="tfa-link" onclick="backToPassword()">Back to password</button>
+            </div>
+        </div>
+
+        <button class="btn" id="btn" onclick="login()" style="display:none">
             <span>→</span> Sign In
         </button>
     </div>
@@ -412,23 +520,38 @@ function onReady() {
         } catch(e2) {}
     }
 
-    // Lockout state — permanent, no timer
-    try {
-        var lk = window.pywebview.api.get_lockout_status();
-        if (lk && typeof lk.then === 'function') {
-            lk.then(function(s) {
-                try {
-                    if (!s) return;
-                    ATTEMPTS = parseInt(s.attempts) || 0;
-                    if (s.locked) {
-                        dots(MAX); showAR(); applyLock(s.lock_code || '');
-                    } else if (ATTEMPTS > 0) {
-                        dots(ATTEMPTS); showAR();
-                    }
-                } catch(e) {}
-            }).catch(function(){});
+    // Lockout state — when locked, show ONLY the lock screen (never login)
+    (function() {
+        var _resolved = false;
+        function _showLogin() {
+            var pm = document.getElementById('pass-mode');
+            var b  = document.getElementById('btn');
+            if (pm) pm.style.display = 'block';
+            if (b)  b.style.display  = 'block';
         }
-    } catch(e) {}
+        function _handle(s) {
+            _resolved = true;
+            if (!s) { _showLogin(); return; }
+            ATTEMPTS = parseInt(s.attempts) || 0;
+            if (s.locked) {
+                dots(MAX); showAR(); applyLock(s.lock_code || '');
+            } else if (ATTEMPTS > 0) {
+                dots(ATTEMPTS); showAR(); _showLogin();
+            } else {
+                _showLogin();
+            }
+        }
+        try {
+            var lk = window.pywebview.api.get_lockout_status();
+            if (lk && typeof lk.then === 'function') {
+                lk.then(_handle).catch(function() { _showLogin(); });
+            } else {
+                _handle(lk);
+            }
+        } catch(e) { _showLogin(); }
+        // Fail-safe: if the lock check never resolves, show login
+        setTimeout(function() { if (!_resolved) { _resolved = true; _showLogin(); } }, 2500);
+    })();
 }
 
 // ── LOGIN ──────────────────────────────────────────────────────────
@@ -489,6 +612,13 @@ function handleResult(res) {
         return;
     }
 
+    if (res.status === '2fa_required') {
+        var b2 = document.getElementById('btn');
+        if (b2) { b2.disabled = false; b2.innerHTML = '<span>→</span> Sign In'; }
+        show2faView(res.username);
+        return;
+    }
+
     if (res.status === 'success') {
         var btn = document.getElementById('btn');
         btn.innerHTML='<span>✓</span> Welcome!'; btn.style.background='#15803d';
@@ -502,21 +632,55 @@ function handleResult(res) {
         } catch(e) {}
 
         var role     = res.role     || 'admin';
-        // Admin picks year — staff goes straight to billing
         var landing  = (role === 'staff') ? 'billing.html' : 'year_select.html';
         var username = res.username || 'Admin';
         try {
             localStorage.setItem('aurum_user_role',   role);
             localStorage.setItem('aurum_active_user', username);
         } catch(e) {}
-        setTimeout(function(){
+
+        // Detect software type + business name from license key and persist to localStorage
+        // so every page load immediately knows retail vs wholesale AND shows biz name
+        function _redirect(swType){
+            var targetLanding = (role === 'staff')
+                ? (swType === 'retail' ? 'pos_billing.html' : 'billing.html')
+                : landing;
             try {
                 var base = window.location.href.replace(/[^\\/\\\\]*$/, '');
-                window.location.href = base + landing + '?role=' + role;
+                window.location.href = base + targetLanding + '?role=' + role + '&type=' + swType;
             } catch(e) {
-                try { window.pywebview.api.navigate(landing); } catch(e2) {}
+                try { window.pywebview.api.navigate(targetLanding); } catch(e2) {}
             }
-        }, 450);
+        }
+        function _saveAndRedirect(swType, bizName, sData){
+            localStorage.setItem('aurum_software_type', swType);
+            if(bizName) localStorage.setItem('aurum_biz_name', bizName);
+            if(bizName) localStorage.setItem('aurum_owner_name', bizName);
+            if(sData){
+                if(sData.owner_phone) localStorage.setItem('aurum_owner_phone', sData.owner_phone);
+                if(sData.city) localStorage.setItem('aurum_city', sData.city);
+            }
+            setTimeout(function(){_redirect(swType);}, 350);
+        }
+        try {
+            if(window.pywebview && window.pywebview.api && window.pywebview.api.get_settings){
+                window.pywebview.api.get_settings().then(function(s){
+                    var key=(s&&s.data&&s.data.license_key||'').trim().toUpperCase();
+                    var swType=key.startsWith('AR-')?'retail':'wholesale';
+                    var bizName=(s&&s.data&&s.data.business_name||'').trim();
+                    _saveAndRedirect(swType, bizName, s&&s.data);
+                }).catch(function(){
+                    var cached=localStorage.getItem('aurum_software_type')||'wholesale';
+                    _redirect(cached);
+                });
+            } else {
+                var cached=localStorage.getItem('aurum_software_type')||'wholesale';
+                _redirect(cached);
+            }
+        } catch(e) {
+            var cached=localStorage.getItem('aurum_software_type')||'wholesale';
+            _redirect(cached);
+        }
         return;
     }
 
@@ -548,59 +712,262 @@ function handleResult(res) {
 
 window.__loginResult = null;
 
+// ══════════════════════════════════════════════════════════════════
+// 2FA — Two-factor code entry (owner-only)
+// ══════════════════════════════════════════════════════════════════
+var TFA_MODE  = 'otp';   // 'otp' | 'backup'
+var _otpReady = false;
+
+function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+}
+
+function show2faView(username) {
+    var pm = document.getElementById('pass-mode');
+    var b  = document.getElementById('btn');
+    var ar = document.getElementById('ar');
+    if (pm) pm.style.display = 'none';
+    if (b)  b.style.display  = 'none';
+    if (ar) ar.style.display = 'none';
+    hideErr();
+
+    setupOtp();
+    setBackupMode(false);
+    clearOtp();
+    set2faErr('');
+
+    var sub = document.getElementById('tfa-sub');
+    if (sub) {
+        sub.innerHTML = username
+            ? ('Welcome back, <b>' + escapeHtml(username) + '</b>.<br>Enter the 6-digit code from your authenticator app.')
+            : 'Enter the 6-digit code from your authenticator app.';
+    }
+
+    var tfa = document.getElementById('tfa');
+    if (tfa) tfa.classList.add('on');
+    setTimeout(focusFirstOtp, 120);
+}
+
+function otpBoxes(){ return [0,1,2,3,4,5].map(function(i){ return document.getElementById('otp'+i); }); }
+function getOtpValue(){ return otpBoxes().map(function(b){ return b.value || ''; }).join(''); }
+function clearOtp(){ otpBoxes().forEach(function(b){ b.value=''; b.classList.remove('filled','err'); }); }
+function focusFirstOtp(){ var b=document.getElementById('otp0'); if(b) b.focus(); }
+function maybeAutoSubmit(){ if (TFA_MODE==='otp' && getOtpValue().length===6) verify2fa(); }
+
+function setupOtp() {
+    if (_otpReady) return;
+    _otpReady = true;
+    var boxes = otpBoxes();
+    boxes.forEach(function(box, i) {
+        box.addEventListener('input', function() {
+            box.value = (box.value || '').replace(/[^0-9]/g, '').slice(-1);
+            box.classList.toggle('filled', !!box.value);
+            box.classList.remove('err');
+            if (box.value && i < boxes.length - 1) boxes[i+1].focus();
+            maybeAutoSubmit();
+        });
+        box.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !box.value && i > 0) {
+                boxes[i-1].focus(); boxes[i-1].value = ''; boxes[i-1].classList.remove('filled');
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft' && i > 0) {
+                boxes[i-1].focus(); e.preventDefault();
+            } else if (e.key === 'ArrowRight' && i < boxes.length-1) {
+                boxes[i+1].focus(); e.preventDefault();
+            } else if (e.key === 'Enter') {
+                verify2fa();
+            }
+        });
+        box.addEventListener('paste', function(e) {
+            e.preventDefault();
+            var txt = ((e.clipboardData || window.clipboardData).getData('text') || '');
+            var digits = txt.replace(/[^0-9]/g, '').slice(0, boxes.length);
+            if (!digits) return;
+            for (var j = 0; j < boxes.length; j++) {
+                boxes[j].value = digits[j] || '';
+                boxes[j].classList.toggle('filled', !!boxes[j].value);
+                boxes[j].classList.remove('err');
+            }
+            boxes[Math.min(digits.length, boxes.length - 1)].focus();
+            maybeAutoSubmit();
+        });
+    });
+}
+
+function setBackupMode(on) {
+    TFA_MODE = on ? 'backup' : 'otp';
+    var row = document.getElementById('otp-row');
+    var bk  = document.getElementById('tfa-backup');
+    var tog = document.getElementById('tfa-toggle');
+    var sub = document.getElementById('tfa-sub');
+    if (on) {
+        if (row) row.style.display = 'none';
+        if (bk)  bk.classList.add('on');
+        if (tog) tog.innerText = 'Use authenticator app';
+        if (sub) sub.innerHTML = 'Enter one of your <b>backup codes</b> (format XXXX-XXXX).';
+        setTimeout(function(){ var i=document.getElementById('tfa-bk-inp'); if(i){ i.value=''; i.focus(); } }, 60);
+    } else {
+        if (row) row.style.display = 'flex';
+        if (bk)  bk.classList.remove('on');
+        if (tog) tog.innerText = 'Use a backup code';
+    }
+    set2faErr('');
+}
+function toggleBackup(){ setBackupMode(TFA_MODE !== 'backup'); }
+
+function onBackupInput(el) {
+    var v = (el.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (v.length > 4) v = v.slice(0,4) + '-' + v.slice(4,8);
+    el.value = v;
+}
+
+function backToPassword() {
+    var tfa = document.getElementById('tfa');
+    if (tfa) tfa.classList.remove('on');
+    var pm = document.getElementById('pass-mode');
+    var b  = document.getElementById('btn');
+    if (pm) pm.style.display = 'block';
+    if (b)  b.style.display  = 'block';
+    var inp = document.getElementById('inp');
+    if (inp) { inp.value=''; setTimeout(function(){ inp.focus(); }, 80); }
+    set2faErr('');
+}
+
+function set2faErr(m){ var e=document.getElementById('tfa-err'); if(e) e.innerText = m || ''; }
+
+function verify2fa() {
+    if (LOCKED) return;
+    if (!READY || !window.pywebview || !window.pywebview.api || !window.pywebview.api.verify_2fa) {
+        set2faErr('App not ready — please wait.'); return;
+    }
+    var code = (TFA_MODE === 'backup')
+        ? (document.getElementById('tfa-bk-inp').value || '')
+        : getOtpValue();
+    var clean = code.replace(/[^0-9A-Za-z]/g, '');
+    if (TFA_MODE === 'otp'    && clean.length < 6) { set2faErr('Enter all 6 digits.'); shake(); return; }
+    if (TFA_MODE === 'backup' && clean.length < 8) { set2faErr('Enter your full backup code.'); shake(); return; }
+
+    var btn = document.getElementById('tfa-btn');
+    btn.disabled = true; btn.innerHTML = '<span>⋯</span> Verifying…';
+    set2faErr('');
+
+    function _reset(){ btn.disabled=false; btn.innerHTML='<span>&#128274;</span> Verify &amp; Sign In'; }
+
+    try {
+        var p = window.pywebview.api.verify_2fa(code);
+        if (p && typeof p.then === 'function') {
+            p.then(function(res){ _reset(); handle2faResult(res); })
+             .catch(function(){ _reset(); set2faErr('App error — please try again.'); });
+        } else {
+            _reset(); handle2faResult(p);
+        }
+    } catch(e) {
+        _reset(); set2faErr('Call failed — please try again.');
+    }
+}
+
+function handle2faResult(res) {
+    if (!res) { set2faErr('No response — try again.'); return; }
+    // success / locked / bastion → hand off to the shared handler
+    if (res.status === 'success' || res.status === 'locked' || res.status === 'bastion_suspended') {
+        if (res.status === 'success') {
+            var btn = document.getElementById('tfa-btn');
+            if (btn) { btn.innerHTML = '<span>✓</span> Verified!'; btn.style.background = '#15803d'; }
+            if (res.backup_used) {
+                try { localStorage.setItem('aurum_backup_remaining', String(res.backup_remaining)); } catch(e){}
+            }
+        }
+        handleResult(res);
+        return;
+    }
+    // error — flash red, clear, refocus
+    set2faErr(res.message || 'Invalid code. Try again.');
+    shake();
+    if (TFA_MODE === 'otp') {
+        otpBoxes().forEach(function(b){ b.classList.add('err'); });
+        setTimeout(function(){ clearOtp(); focusFirstOtp(); }, 420);
+    } else {
+        var i = document.getElementById('tfa-bk-inp');
+        if (i) { i.value=''; i.focus(); }
+    }
+}
+
 // ── Lock — PERMANENT (no countdown, no auto-unlock) ───────────────
 
 function copyLockCode() {
     var el = document.getElementById('lk-code-display');
+    var btn = document.getElementById('lk-copy-btn');
     if (!el) return;
-    try {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(el.innerText);
-        } else {
+    var text = (el.innerText || '').replace(/\s+/g, '');
+
+    function flashCopied() {
+        if (!btn) return;
+        btn.innerText = 'Copied';
+        btn.classList.add('done');
+        clearTimeout(window.__copyT);
+        window.__copyT = setTimeout(function() {
+            btn.innerText = 'Copy';
+            btn.classList.remove('done');
+        }, 1500);
+    }
+    function fallbackCopy() {
+        try {
             var ta = document.createElement('textarea');
-            ta.value = el.innerText;
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
             document.body.appendChild(ta);
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
+        } catch (e2) {}
+    }
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(flashCopied, function() {
+                fallbackCopy(); flashCopied();
+            });
+        } else {
+            fallbackCopy(); flashCopied();
         }
-    } catch(e) {}
+    } catch (e) {
+        fallbackCopy(); flashCopied();
+    }
 }
 
-function tryUnlock() {
-    var key = (document.getElementById('lk-key-inp').value || '').trim().toUpperCase();
+function verifyWebKey() {
+    var btn = document.getElementById('lk-unlock-btn');
+    var keyInp = document.getElementById('lk-key-inp');
+    var key = (keyInp && keyInp.value || '').trim().toUpperCase();
+    var code = (document.getElementById('lk-code-display').innerText || '').trim().toUpperCase();
     var err = document.getElementById('lk-err');
-    if (key.length < 12) { err.innerText = 'Unlock key must be 12 characters'; return; }
-    if (!window.pywebview || !window.pywebview.api) { err.innerText = 'Not connected'; return; }
-    err.innerText = 'Verifying...';
-    window.pywebview.api.verify_unlock_key(key).then(function(r) {
+    if (key.length < 12) { if (err) err.innerText = 'Enter the full 12-character unlock key'; return; }
+    if (!window.pywebview || !window.pywebview.api) { if (err) err.innerText = 'Not connected'; return; }
+    if (err) err.innerText = 'Verifying with server…';
+    if (btn) { btn.disabled = true; btn.innerText = 'Verifying…'; }
+    window.pywebview.api.verify_web_unlock_key(key, code, false).then(function(r) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Unlock'; }
         if (r && r.status === 'success') {
-            // Full state reset
-            LOCKED   = false;
-            ATTEMPTS = 0;
-            // Hide lock screen
+            LOCKED = false; ATTEMPTS = 0;
             var lkp = document.getElementById('lkp');
             if (lkp) lkp.style.cssText = 'display:none!important;';
-            // Show login form
-            var pm  = document.getElementById('pass-mode');
-            var btn = document.getElementById('btn');
-            if (pm)  pm.style.display  = 'block';
-            if (btn) btn.style.display = 'block';
-            // Clear inputs
-            document.getElementById('lk-key-inp').value = '';
-            err.innerText = '';
-            // Reset attempt dots
-            dots(0);
-            // Focus password field
+            var pm = document.getElementById('pass-mode');
+            var b = document.getElementById('btn');
+            if (pm) pm.style.display = 'block';
+            if (b) b.style.display = 'block';
+            if (err) err.innerText = '';
             setTimeout(function() {
                 var pw = document.getElementById('pass-inp') || document.querySelector('.inp');
                 if (pw) pw.focus();
             }, 100);
         } else {
-            err.innerText = r && r.message ? r.message : 'Invalid unlock key';
+            if (err) err.innerText = (r && r.message) ? r.message : 'Unlock failed';
         }
     }).catch(function(e) {
-        err.innerText = 'Error: ' + String(e);
+        if (btn) { btn.disabled = false; btn.innerText = 'Unlock'; }
+        if (err) err.innerText = 'Could not reach the unlock server';
     });
 }
 
@@ -613,9 +980,11 @@ function applyLock(lockCode) {
         var em  = document.getElementById('em');
         var lkp = document.getElementById('lkp');
         var lcd = document.getElementById('lk-code-display');
+        var tfa = document.getElementById('tfa');
         if (pm)  pm.style.display  = 'none';
         if (btn) btn.style.display = 'none';
         if (ar)  ar.style.display  = 'none';
+        if (tfa) tfa.classList.remove('on');
         if (em)  em.classList.remove('on');
         if (lcd && lockCode) lcd.innerText = lockCode;
         if (lkp) lkp.style.cssText = 'display:block!important;';

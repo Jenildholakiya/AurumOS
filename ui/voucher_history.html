@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AurumOS | Voucher History</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --c:#f8fafb; --c2:#f1f5f9; --c3:#e2e8f0; --w:#ffffff;
+  --ink:#0e0c09; --ink2:#2c2a24; --ink3:#5c5a52; --mu:#64748b;
+  --g:#2563eb; --g2:#3b82f6; --g3:#1d4ed8;
+  --gb:rgba(37,99,235,.10); --gl:rgba(37,99,235,.30);
+  --gr:#16a34a; --grb:rgba(22,163,74,.10); --grl:rgba(22,163,74,.25);
+  --rd:#dc2626; --rdb:rgba(220,38,38,.09); --rdl:rgba(220,38,38,.22);
+  --am:#d97706; --amb:rgba(217,119,6,.10);  --aml:rgba(217,119,6,.25);
+  --bl:#2563eb; --blb:rgba(37,99,235,.10); --bll:rgba(37,99,235,.22);
+  --sans:"DM Sans",system-ui,sans-serif;
+  --mono:Arial,sans-serif;
+  --serif:"DM Serif Display",Georgia,serif;
+  --sh:0 1px 3px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+html,body{height:100%;background:var(--c);color:var(--ink);}
+body{display:flex;overflow:hidden;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+
+/* ── HEADER ── */
+.vh-top{height:56px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--r,var(--c3));display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;}
+.vh-top::after{content:"";position:absolute;}
+.vh-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink2);display:flex;align-items:center;gap:10px;}
+.vh-title .vd{width:9px;height:9px;border-radius:50%;background:var(--g);box-shadow:0 0 0 3px var(--gb);}
+.vh-actions{display:flex;gap:8px;align-items:center;}
+.vh-btn{height:32px;padding:0 14px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;border:1px solid var(--c3);background:var(--w);color:var(--ink3);transition:all .15s;box-shadow:var(--sh);}
+.vh-btn:hover{background:var(--c2);}
+.vh-btn.gold{background:var(--gg,linear-gradient(135deg,#8a6c0a,#c9a227));color:#fff;border:none;}
+.vh-pill{font-family:var(--mono);font-size:.62rem;background:var(--gb);color:var(--g3);border:1px solid var(--gl);border-radius:20px;padding:4px 11px;letter-spacing:1px;font-weight:600;}
+
+/* ── TOOLBAR / SUMMARY ── */
+.vh-bar{display:flex;align-items:center;gap:14px;padding:12px 22px;background:var(--w);border-bottom:1px solid var(--c3);flex-shrink:0;flex-wrap:wrap;}
+.vh-stat{display:flex;flex-direction:column;}
+.vh-stat b{font-family:var(--mono);font-size:1.05rem;color:var(--ink2);line-height:1;}
+.vh-stat span{font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:600;margin-top:3px;}
+.vh-search{flex:1;min-width:180px;height:36px;background:var(--c);border:1px solid var(--c3);border-radius:9px;padding:0 14px;font-size:.82rem;outline:none;color:var(--ink);}
+.vh-search:focus{border-color:var(--g);box-shadow:0 0 0 3px var(--gb);}
+
+/* ── TABLE ── */
+.vh-wrap{flex:1;overflow:auto;position:relative;background:var(--c);display:flex;flex-direction:column;}
+.vh-wrap::-webkit-scrollbar{width:9px;height:9px;}
+.vh-wrap::-webkit-scrollbar-thumb{background:var(--c3);border-radius:5px;}
+
+table#vh-table{border-collapse:collapse;table-layout:fixed;width:100%;min-height:100%;font-size:.78rem;display:flex;flex-direction:column;}
+thead, tbody, tfoot { display: block; width: 100%; }
+tbody { flex: 1; }
+
+thead tr, tbody tr, tfoot tr { display: flex; width: 100%; }
+
+thead th, tbody td, tfoot td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+thead th{position:relative;background:var(--c2);border-bottom:2px solid var(--c3);border-right:1px solid var(--c3);text-align:center;padding:8px 14px;font-size:.58rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--mu);font-weight:700;user-select:none;cursor:pointer;position:sticky;top:0;z-index:2;}
+thead th:hover{background:var(--c3);}
+thead th .th-lbl{display:block;overflow:hidden;text-overflow:ellipsis;}
+thead th.num .th-lbl{text-align:center;}
+thead th.sorted{background:var(--gb);color:var(--g3);}
+.sort-arw{font-size:.6rem;margin-left:4px;opacity:.5;}
+thead th.sorted .sort-arw{opacity:1;color:var(--g3);}
+
+.col-resizer{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:3;}
+.col-resizer:hover, .col-resizer.active{background:linear-gradient(var(--g),var(--g2));opacity:.6;}
+tbody td{padding:7px 14px;border-bottom:1px solid rgba(14,12,9,.05);border-right:1px solid rgba(14,12,9,.05);color:var(--ink3);vertical-align:middle;text-align:center;}
+tbody td.num{text-align:center;font-family:var(--mono);color:var(--ink2);}
+tbody tr{width: 100%;}
+tbody tr:hover{background:var(--c2);}
+tbody tr:nth-child(even){background:rgba(255,255,255,.4);}
+tbody tr:nth-child(even):hover{background:var(--c2);}
+/* DESKTOP: wide screens — let the last column eat the spare width
+   so the grid fills the viewport instead of leaving a right-hand gap.
+   On narrow widths the fixed column widths + horizontal scroll still apply. */
+@media (min-width: 1100px){
+  thead th:last-child, tbody td:last-child, tfoot td:last-child { flex: 1 1 0; min-width: 90px; }
+}
+.sdot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.sdot.green{background:var(--gr);box-shadow:0 0 0 3px var(--grb);}
+.sdot.amber{background:var(--am);box-shadow:0 0 0 3px var(--amb);}
+.sdot.red{background:var(--rd);box-shadow:0 0 0 3px var(--rdb);}
+.sdot.grey{background:#b0a99c;box-shadow:0 0 0 3px rgba(176,169,156,.2);}
+.tag-list{font-family:var(--mono);font-size:.7rem;color:var(--g3);}
+.touch-list{font-family:var(--mono);font-size:.7rem;color:var(--ink2);}
+.vch-no{font-family:var(--mono);font-weight:700;color:var(--ink2);}
+.bill-type{font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block;text-align:center;}
+.bt-paid{background:var(--grb);color:var(--gr);border:1px solid var(--grl);}
+.bt-credit{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
+.bt-uchak{background:var(--blb);color:var(--bl);border:1px solid var(--bll);}
+.bt-other{background:rgba(176,169,156,.15);color:var(--mu);border:1px solid rgba(176,169,156,.3);}
+tfoot { margin-top: auto; position: sticky; bottom: 0; z-index: 2; }
+tfoot td{padding:11px 14px 20px;background:var(--c2);border-top:2px solid var(--g);border-right:1px solid var(--c3);font-family:var(--mono);font-weight:700;color:var(--ink2);font-size:.76rem;}
+tfoot td.lbl{text-align:right;color:var(--mu);text-transform:uppercase;letter-spacing:1px;font-size:.6rem;font-family:var(--sans);justify-content: flex-end;}
+tfoot td.num{text-align:center;}
+tbody tr.vrow{cursor:default;}
+tbody tr.vrow.open{background:var(--gb)!important;}
+.exp-caret{display:inline-block;width:12px;color:var(--mu);font-size:.7rem;transition:transform .15s;}
+tr.vrow.open .exp-caret{transform:rotate(90deg);color:var(--g3);}
+tr.detail-row td{padding:0;border-right:none;background:var(--c);width: 100% !important;}
+.detail-box{padding:12px 22px 16px; width: 100%;}
+.detail-h{font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:700;margin-bottom:8px;}
+table.detail-tbl{border-collapse:collapse;width:100%;font-size:.72rem;background:var(--w);border:1px solid var(--c3);border-radius:8px;overflow:hidden;}
+table.detail-tbl th{background:var(--c2);text-align:left;padding:7px 10px;font-size:0.55rem;letter-spacing:1px;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--c3);}
+table.detail-tbl th.num,table.detail-tbl td.num{text-align:right;font-family:var(--mono);}
+table.detail-tbl td{padding:7px 10px;border-bottom:1px solid rgba(14,12,9,.05);color:var(--ink3);}
+table.detail-tbl tr:last-child td{border-bottom:none;}
+.detail-meta{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px;font-size:.72rem;color:var(--ink3);}
+.detail-meta b{color:var(--ink2);font-family:var(--mono);}
+.vh-empty{padding:60px;text-align:center;color:var(--mu);font-style:italic;font-size:.85rem;width: 100%;}
+.vh-loading{padding:60px;text-align:center;color:var(--mu);font-size:.85rem;}
+.toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9998;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;}
+.toast{font-size:.74rem;font-weight:600;padding:9px 19px;border-radius:10px;box-shadow:var(--sh);animation:tin .2s ease;}
+.toast-err{background:var(--rd);color:#fff;}
+.toast-ok{background:var(--gr);color:#fff;}
+@keyframes tin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── PAGINATION BAR ── */
+.vh-pager{display:none;align-items:center;justify-content:center;gap:16px;padding:10px 22px;background:var(--w);border-top:1px solid var(--c3);flex-shrink:0;}
+.vh-pg-btn{height:30px;padding:0 16px;border-radius:7px;border:1px solid var(--c3);background:var(--w);color:var(--ink3);font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .14s;}
+.vh-pg-btn:hover:not(:disabled){background:var(--c2);border-color:var(--g);color:var(--g3);}
+.vh-pg-btn:disabled{opacity:.4;cursor:not-allowed;}
+.vh-pg-info{font-size:.72rem;color:var(--mu);font-family:var(--mono);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+  <div class="vh-top">
+    <div class="vh-title"><span class="vd"></span>Voucher History</div>
+    <div class="vh-actions">
+      <span class="vh-pill" id="vh-count">0 vouchers</span>
+      <button class="vh-btn" onclick="exportCSV()">&#8595; Export CSV</button>
+      <button class="vh-btn" onclick="printVouchers()">&#128424; Print</button>
+      <button class="vh-btn" onclick="loadVouchers()">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <div class="vh-bar">
+    <div class="vh-stat"><b id="st-pcs">0</b><span>Pieces</span></div>
+    <div class="vh-stat"><b id="st-gross">0g</b><span>Gross Wt</span></div>
+    <div class="vh-stat"><b id="st-net">0g</b><span>Net Fine</span></div>
+    <div class="vh-stat"><b id="st-amt">0</b><span>Bill Amount</span></div>
+    <input class="vh-search" id="vh-search" type="text" placeholder="Search vch no, tag, customer, touch..." oninput="PAGE=1;render()">
+  </div>
+
+  <div class="vh-wrap" id="vh-wrap">
+    <table id="vh-table">
+      <colgroup id="vh-colgroup"></colgroup>
+      <thead id="vh-head"></thead>
+      <tbody id="vh-body"></tbody>
+      <tfoot id="vh-foot"></tfoot>
+    </table>
+    <div class="vh-loading" id="vh-state">Loading vouchers…</div>
+  </div>
+
+  <div class="vh-pager" id="vh-pager"></div>
+</main>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── COLUMN DEFINITION ───────────────────────────────────────────────
+var COLS = [
+  { key:'status',  label:'Status',        type:'dot',  w:96  },
+  { key:'touches', label:'Touch Group',   type:'text', w:150 },
+  { key:'fgl',     label:'FGL',           type:'num',  w:96  },
+  { key:'f995',    label:'995',           type:'num',  w:84  },
+  { key:'dhal',    label:'DHAL',          type:'num',  w:96  },
+  { key:'pcs',     label:'PCS',           type:'num',  w:70  },
+  { key:'tag_ids', label:'Tag ID',        type:'text', w:180 },
+  { key:'status',  label:'Bill Type',     type:'bill', w:120 },
+  { key:'vch_id',  label:'Vch No',        type:'text', w:150 },
+  { key:'date',    label:'Vch Date',      type:'text', w:120 },
+  { key:'gross_wt',label:'Total Gross Wt',type:'num',  w:130 },
+  { key:'net_fine',label:'Total Net Fine',type:'num',  w:130 },
+  { key:'discount_value', label:'Discount', type:'num',  w:110 }
+];
+var LS_KEY = 'vh_col_widths';
+var COL_W = loadWidths();
+
+var ALL = [];
+var RESIZING = false;
+var SUPPRESS_CLICK = false;
+var SORT = { key: null, dir: 1 };
+var OPEN = {};
+var PAGE = 1;
+var PAGE_SIZE = 50;
+
+// ── WIDTH PERSISTENCE ───────────────────────────────────────────────
+function loadWidths() {
+  try {
+    var s = localStorage.getItem(LS_KEY);
+    if (s) { var a = JSON.parse(s); if (a && a.length === COLS.length) return a; }
+  } catch (e) {}
+  return COLS.map(function(c){ return c.w; });
+}
+function saveWidths() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(COL_W)); } catch (e) {}
+}
+
+// ── TOAST ───────────────────────────────────────────────────────────
+function toast(msg, type) {
+  var wrap = document.getElementById('toast-wrap');
+  if (!wrap) return;
+  var el = document.createElement('div');
+  var t = type || 'ok';
+  if (t.indexOf('toast-') !== 0) t = 'toast-' + t;   // accept 'err'/'ok' or 'toast-err'/'toast-ok'
+  el.className = 'toast ' + t;
+  el.innerText = msg;
+  wrap.appendChild(el);
+  setTimeout(function() {
+    el.style.opacity = '0'; el.style.transition = 'opacity .3s';
+    setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }, 2500);
+}
+
+// ── STATUS HELPERS ──────────────────────────────────────────────────
+function statusClass(s) {
+  s = (s || '').toUpperCase();
+  if (s.indexOf('PAID') >= 0 || s === 'CASH') return 'green';
+  if (s.indexOf('CREDIT') >= 0 || s.indexOf('UNPAID') >= 0) return 'amber';
+  if (s.indexOf('UCHAK') >= 0) return 'amber';
+  return 'grey';
+}
+function billClass(s) {
+  s = (s || '').toUpperCase();
+  if (s.indexOf('PAID') >= 0 || s === 'CASH') return 'bt-paid';
+  if (s.indexOf('CREDIT') >= 0 || s.indexOf('UNPAID') >= 0) return 'bt-credit';
+  if (s.indexOf('UCHAK') >= 0) return 'bt-uchak';
+  return 'bt-other';
+}
+function fmt(v, dec) {
+  v = parseFloat(v || 0);
+  if (isNaN(v)) v = 0;
+  return v.toFixed(dec == null ? 3 : dec);
+}
+
+// ── LOAD ────────────────────────────────────────────────────────────
+function loadVouchers() {
+  var state = document.getElementById('vh-state');
+  if (state) { state.style.display = 'block'; state.className = 'vh-loading'; state.innerText = 'Loading vouchers…'; }
+  if (!window.pywebview || !window.pywebview.api) { setTimeout(loadVouchers, 300); return; }
+  if (typeof window.pywebview.api.get_voucher_history_list !== 'function') {
+    if (state) { state.className = 'vh-empty'; state.innerText = 'Voucher history API unavailable in this build.'; }
+    toast('Voucher history API unavailable', 'toast-err');
+    return;
+  }
+  window.pywebview.api.get_voucher_history_list(1000).then(function(r) {
+    if (state) state.style.display = 'none';
+    if (!r || r.status !== 'success') { toast('Failed to load: ' + (r && r.message || 'unknown'), 'toast-err'); return; }
+    ALL = r.vouchers || [];
+    render();
+  }).catch(function(e) { if (state) { state.style.display='block'; state.innerText='Error: ' + e; } });
+}
+
+// ── RENDER HEAD + RESIZERS ──────────────────────────────────────────
+function renderHead() {
+  var cg = document.getElementById('vh-colgroup');
+  var head = document.getElementById('vh-head');
+  if (!cg || !head) return;
+  cg.innerHTML = ''; head.innerHTML = '';
+  var tr = document.createElement('tr');
+  COLS.forEach(function(c, i) {
+    var col = document.createElement('col');
+    col.style.width = COL_W[i] + 'px';
+    cg.appendChild(col);
+    var th = document.createElement('th');
+    th.style.width = COL_W[i] + 'px';
+    var cls = [];
+    if (c.type === 'num') cls.push('num');
+    if (SORT.key === c.key) cls.push('sorted');
+    th.className = cls.join(' ');
+    var arw = (SORT.key === c.key) ? (SORT.dir === 1 ? ' ▲' : ' ▼') : '';
+    th.innerHTML = '<span class="th-lbl">' + c.label + '<span class="sort-arw">' + arw + '</span></span>';
+    th.addEventListener('click', function(e) {
+      if (SUPPRESS_CLICK) return;
+      if (e.target && e.target.classList && e.target.classList.contains('col-resizer')) return;
+      toggleSort(i);
+    });
+    var rz = document.createElement('div');
+    rz.className = 'col-resizer';
+    rz.addEventListener('mousedown', function(e) { startResize(e, i); });
+    th.appendChild(rz);
+    tr.appendChild(th);
+  });
+  head.appendChild(tr);
+}
+
+function toggleSort(i) {
+  var c = COLS[i];
+  if (SORT.key === c.key) SORT.dir = -SORT.dir;
+  else { SORT.key = c.key; SORT.dir = 1; }
+  renderHead();
+  PAGE = 1;
+  render();
+}
+
+function sortRows(rows) {
+  if (!SORT.key) return rows;
+  var dir = SORT.dir;
+  var key = SORT.key;
+  return rows.slice().sort(function(a, b) {
+    var va = a[key], vb = b[key];
+    if (Array.isArray(va)) va = (va || []).join(',');
+    if (Array.isArray(vb)) vb = (vb || []).join(',');
+    var na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb) && va !== '' && va != null && vb !== '' && vb != null) {
+      return (na - nb) * dir;
+    }
+    return String(va == null ? '' : va).localeCompare(String(vb == null ? '' : vb)) * dir;
+  });
+}
+
+function startResize(e, i) {
+  e.preventDefault();
+  RESIZING = true;
+  var startX = e.clientX;
+  var startW = COL_W[i];
+  var cols = document.getElementById('vh-colgroup').children;
+  var ths = document.querySelectorAll('#vh-head th');
+  e.target.classList.add('active');
+  function onMove(ev) {
+    var nw = Math.max(60, startW + (ev.clientX - startX));
+    COL_W[i] = nw;
+    if (cols[i]) cols[i].style.width = nw + 'px';
+    if (ths[i]) ths[i].style.width = nw + 'px';
+
+    // Also adjust matching body cells dynamically
+    var cellClass = '.col-idx-' + i;
+    var cells = document.querySelectorAll(cellClass);
+    cells.forEach(function(td) { td.style.width = nw + 'px'; });
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    RESIZING = false;
+    e.target.classList.remove('active');
+    SUPPRESS_CLICK = true;
+    setTimeout(function() { SUPPRESS_CLICK = false; }, 0);
+    saveWidths();
+    render();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ── RENDER BODY ─────────────────────────────────────────────────────
+function render() {
+  var q = ((document.getElementById('vh-search') || {}).value || '').toLowerCase().trim();
+  var body = document.getElementById('vh-body');
+  var foot = document.getElementById('vh-foot');
+  if (!body) return;
+
+  var rows = ALL.filter(function(v) {
+    if (!q) return true;
+    return (v.vch_id + ' ' + (v.tag_ids || []).join(' ') + ' ' + (v.customer || '') + ' ' +
+            (v.touches || []).join(' ') + ' ' + (v.status || '')).toLowerCase().indexOf(q) >= 0;
+  });
+
+  rows = sortRows(rows);
+
+  // ── PAGINATION ──
+  var totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (PAGE > totalPages) PAGE = totalPages;
+  if (PAGE < 1) PAGE = 1;
+  var pageRows = rows.slice((PAGE - 1) * PAGE_SIZE, PAGE * PAGE_SIZE);
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="' + COLS.length + '" style="width:100%;"><div class="vh-empty">No vouchers found</div></td></tr>';
+    renderFooter(rows);
+    updateSummary(rows);
+    renderPager(rows);
+    return;
+  }
+
+  var html = '';
+  for (var x = 0; x < pageRows.length; x++) {
+    var v = pageRows[x];
+    var vkey = v.id != null ? ('id' + v.id) : ('vc' + v.vch_id);
+    var isOpen = OPEN[vkey];
+    html += '<tr class="vrow' + (isOpen ? ' open' : '') + '" data-vkey="' + vkey + '">';
+    for (var i = 0; i < COLS.length; i++) {
+      var c = COLS[i];
+      var wStyle = ' style="width:' + COL_W[i] + 'px;"';
+      var cellClass = 'col-idx-' + i;
+
+      if (c.type === 'dot') {
+        html += '<td class="' + cellClass + '"' + wStyle + '><span class="sdot ' + statusClass(v.status) + '"></span></td>';
+      } else if (c.type === 'num') {
+        var dec = 0;
+        if (c.key === 'pcs') dec = 0;
+        else if (c.key === 'discount_value') dec = (v.discount_type === 'amount') ? 2 : 3;
+        else dec = 3;
+        html += '<td class="num ' + cellClass + '"' + wStyle + '>' + fmt(v[c.key], dec) + '</td>';
+      } else if (c.type === 'bill') {
+        html += '<td class="' + cellClass + '"' + wStyle + '><span class="bill-type ' + billClass(v.status) + '">' + (v.status || '—') + '</span></td>';
+      } else if (c.key === 'touches') {
+        html += '<td class="touch-list ' + cellClass + '"' + wStyle + '>' + (v.touches && v.touches.length ? v.touches.join(', ') : '—') + '</td>';
+      } else if (c.key === 'tag_ids') {
+        html += '<td class="tag-list ' + cellClass + '"' + wStyle + '>' + (v.tag_ids && v.tag_ids.length ? v.tag_ids.join(', ') : '—') + '</td>';
+      } else if (c.key === 'vch_id') {
+        html += '<td class="vch-no ' + cellClass + '"' + wStyle + '>' + (v.vch_id || '—') + '</td>';
+      } else {
+        html += '<td class="' + cellClass + '"' + wStyle + '>' + (v[c.key] != null ? v[c.key] : '—') + '</td>';
+      }
+    }
+    html += '</tr>';
+    if (isOpen) {
+      html += '<tr class="detail-row"><td colspan="' + COLS.length + '" style="width:100%;">' + detailHTML(v) + '</td></tr>';
+    }
+  }
+
+  // ── FIXED: INJECT EXTRA CONTENT HEIGHT SLACK ADJUSTER ROW (USES VALID JS COMMENT) ──
+  html += '<tr style="flex:1; pointer-events:none; border:none; background:transparent;"><td colspan="' + COLS.length + '" style="border:none; background:transparent; width:100%;"></td></tr>';
+
+  body.innerHTML = html;
+
+  // Row expand-on-click disabled per request (no dropdown opens when a voucher row is clicked)
+
+  renderFooter(rows);
+  updateSummary(rows);
+  renderPager(rows);
+}
+
+// ── FOOTER TOTALS (a total under every column, pinned to bottom) ──
+function renderFooter(rows) {
+  var foot = document.getElementById('vh-foot');
+  if (!foot) return;
+  if (!rows || !rows.length) {
+    foot.innerHTML = '';
+    foot.style.display = 'none';
+    return;
+  }
+  foot.style.display = '';
+  var sums = {}, counts = {};
+  COLS.forEach(function(c) {
+    if (c.type === 'num' || c.type === 'tag') sums[c.key] = 0;
+    else counts[c.key] = 0;
+  });
+  for (var k = 0; k < rows.length; k++) {
+    COLS.forEach(function(c) {
+      var val = rows[k][c.key];
+      if (c.type === 'num' || c.type === 'tag') {
+        sums[c.key] += parseFloat(rows[k][c.key] || 0);
+      } else {
+        var populated = false;
+        if (Array.isArray(val)) populated = val.length > 0;
+        else populated = (val != null && String(val).trim() !== '' && String(val).trim() !== '—');
+        if (populated) counts[c.key]++;
+      }
+    });
+  }
+  var fcells = COLS.map(function(c, i) {
+    var wStyle = ' style="width:' + COL_W[i] + 'px;"';
+    if (i === 0) return '<td class="lbl"' + wStyle + '>Totals (' + rows.length + ')</td>';
+    if (c.type === 'num' || c.type === 'tag') {
+      var dec = (c.key === 'pcs') ? 0 : 3;
+      return '<td class="num"' + wStyle + '>' + fmt(sums[c.key], dec) + '</td>';
+    }
+    return '<td class="num"' + wStyle + '>' + counts[c.key] + '</td>';
+  });
+  foot.innerHTML = '<tr>' + fcells.join('') + '</tr>';
+}
+
+function updateSummary(rows) {
+  document.getElementById('vh-count').innerText = (rows.length) + ' vouchers';
+  var pcs = 0, g = 0, n = 0, a = 0;
+  for (var i = 0; i < rows.length; i++) {
+    pcs += parseInt(rows[i].pcs || 0);
+    g   += parseFloat(rows[i].gross_wt || 0);
+    n   += parseFloat(rows[i].net_fine || 0);
+    a   += parseFloat(rows[i].total_amount || 0);
+  }
+  document.getElementById('st-pcs').innerText  = pcs;
+  document.getElementById('st-gross').innerText = fmt(g, 3) + 'g';
+  document.getElementById('st-net').innerText   = fmt(n, 3) + 'g';
+  document.getElementById('st-amt').innerText   = fmt(a, 2);
+}
+
+// ── PAGINATION CONTROLS ──
+function renderPager(rows) {
+  var pager = document.getElementById('vh-pager');
+  if (!pager) return;
+  var total = rows.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (PAGE > totalPages) PAGE = totalPages;
+  if (PAGE < 1) PAGE = 1;
+  if (totalPages <= 1) { pager.innerHTML = ''; pager.style.display = 'none'; return; }
+  pager.style.display = '';
+  var from = total === 0 ? 0 : ((PAGE - 1) * PAGE_SIZE + 1);
+  var to = Math.min(PAGE * PAGE_SIZE, total);
+  pager.innerHTML =
+      '<button class="vh-pg-btn" ' + (PAGE <= 1 ? 'disabled' : '') + ' onclick="gotoPage(' + (PAGE - 1) + ')">&#8592; Prev</button>'
+    + '<span class="vh-pg-info">Page ' + PAGE + ' / ' + totalPages + ' &nbsp;·&nbsp; ' + from + '–' + to + ' of ' + total + '</span>'
+    + '<button class="vh-pg-btn" ' + (PAGE >= totalPages ? 'disabled' : '') + ' onclick="gotoPage(' + (PAGE + 1) + ')">Next &#8594;</button>';
+}
+function gotoPage(p) {
+  PAGE = p;
+  render();
+}
+
+// ── DETAIL (expand a voucher to see its items) ─────────────────────
+function detailHTML(v) {
+  var items = v.items || [];
+  var meta = '<div class="detail-meta">'
+    + '<span>Vch: <b>' + (v.vch_id || '—') + '</b></span>'
+    + '<span>Customer: <b>' + (v.customer || '—') + '</b></span>'
+    + '<span>Date: <b>' + (v.date || '—') + '</b></span>'
+    + '<span>Bill: <b>' + (v.status || '—') + '</b></span>'
+    + '<span>Amount: <b>' + fmt(v.total_amount, 2) + '</b></span>'
+    + (v.discount_amount ? '<span>Discount: <b>' + fmt(v.discount_amount, 2) + '</b></span>' : '')
+    + '</div>';
+  if (!items.length) {
+    return '<div class="detail-box">' + meta + '<div class="vh-empty">No item lines stored for this voucher.</div></div>';
+  }
+  var dh = '<tr><th>Tag ID</th><th class="num">Touch</th><th>Item</th>'
+    + '<th class="num">PCS</th><th class="num">Gross Wt</th><th class="num">Net Wt</th>'
+    + '<th class="num">Net Fine</th></tr>';
+  var dr = '';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (!it || typeof it !== 'object') continue;
+    var nw = parseFloat(it.net_wt || it.nt_wt || 0) || 0;
+    var tv = parseFloat(it.touch || 0) || 0;
+    var nf = nw * tv / 1000.0;
+    dr += '<tr>'
+      + '<td>' + (it.tag_id || '—') + '</td>'
+      + '<td class="num">' + (it.touch || '—') + '</td>'
+      + '<td>' + (it.it_name || it.name || '—') + '</td>'
+      + '<td class="num">' + (parseInt(it.pcs || 0) || 1) + '</td>'
+      + '<td class="num">' + fmt(it.gross_wt || it.gr_wt || 0, 3) + '</td>'
+      + '<td class="num">' + fmt(nw, 3) + '</td>'
+      + '<td class="num">' + fmt(nf, 3) + '</td>'
+      + '</tr>';
+  }
+  return '<div class="detail-box">' + meta
+    + '<div class="detail-h">Item Lines (' + items.length + ')</div>'
+    + '<table class="detail-tbl"><thead>' + dh + '</thead><tbody>' + dr + '</tbody></table></div>';
+}
+
+// ── EXPORT CSV (current filtered view) ──────────────────────────────
+function currentRows() {
+  var q = ((document.getElementById('vh-search') || {}).value || '').toLowerCase().trim();
+  var rows = ALL.filter(function(v) {
+    if (!q) return true;
+    return (v.vch_id + ' ' + (v.tag_ids || []).join(' ') + ' ' + (v.customer || '') + ' ' +
+            (v.touches || []).join(' ') + ' ' + (v.status || '')).toLowerCase().indexOf(q) >= 0;
+  });
+  return sortRows(rows);
+}
+function exportCSV() {
+  var rows = currentRows();
+  if (!rows.length) { toast('Nothing to export', 'err'); return; }
+  var head = COLS.map(function(c){ return '"' + c.label + '"'; }).join(',');
+  var lines = [head];
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i];
+    var cells = COLS.map(function(c) {
+      var val;
+      if (c.key === 'touches') val = (v.touches || []).join('/');
+      else if (c.key === 'tag_ids') val = (v.tag_ids || []).join('/');
+      else if (c.type === 'bill') val = v.status || '';
+      else if (c.type === 'dot') val = v.status || '';
+      else val = (v[c.key] != null ? v[c.key] : '');
+      return '"' + String(val).replace(/"/g, '""') + '"';
+    });
+    lines.push(cells.join(','));
+  }
+  var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'voucher_history_' + (new Date().toISOString().slice(0,10)) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('Exported ' + rows.length + ' vouchers', 'ok');
+}
+
+// ── PRINT (current filtered view) ───────────────────────────────────
+function printVouchers() {
+  var rows = currentRows();
+  if (!rows.length) { toast('Nothing to print', 'err'); return; }
+  var head = COLS.map(function(c){ return '<th>' + c.label + '</th>'; }).join('');
+  var body = '';
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i];
+    body += '<tr>';
+    for (var j = 0; j < COLS.length; j++) {
+      var c = COLS[j];
+      var val;
+      if (c.type === 'dot') val = v.status || '';
+      else if (c.type === 'bill') val = v.status || '';
+      else if (c.key === 'touches') val = (v.touches || []).join(', ');
+      else if (c.key === 'tag_ids') val = (v.tag_ids || []).join(', ');
+      else val = (v[c.key] != null ? v[c.key] : '');
+      body += '<td' + (c.type === 'num' ? ' style="text-align:right;"' : '') + '>' + val + '</td>';
+    }
+    body += '</tr>';
+  }
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Voucher History</title>'
+    + '<style>@page{size:A4 landscape;margin:10mm;}'
+    + '*{box-sizing:border-box;font-family:Arial,sans-serif;color:#0e0c09;}'
+    + 'h2{font-family:Georgia,serif;margin:0 0 2mm;}'
+    + 'table{width:100%;border-collapse:collapse;font-size:8pt;}'
+    + 'th{background:#efe9dc;text-align:left;padding:5px 7px;border:1px solid #ccc;font-size:7pt;text-transform:uppercase;}'
+    + 'td{padding:5px 7px;border:1px solid #e2dac9;white-space:nowrap;}'
+    + 'td.r{text-align:right;}'
+    + 'tfoot td{font-weight:700;background:#efe9dc;border-top:2px solid #999;}</style></head><body>'
+    + '<h2>AurumOS — Voucher History</h2>'
+    + '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>'
+    + '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();},400);};</scr' + 'ipt>'
+    + '</body></html>';
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.open_print_window) {
+    window.pywebview.api.open_print_window(html).catch(function(){});
+  } else {
+    var w = window.open('', '_blank', 'width=1000,height=700');
+    if (!w) { toast('Pop-up blocked', 'err'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+}
+
+// ── INIT ────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  // Sidebar first: a backend failure inside loadVouchers() must not leave
+  // the page without navigation.
+  initSidebar('voucher_history');
+  renderHead();
+  loadVouchers();
+});
+</script>
+</body>
+</html>

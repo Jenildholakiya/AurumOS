@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Dashboard</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<script>
+(function(){
+    var s=document.createElement('script');s.src='chart.min.js';
+    s.onerror=function(){
+        var s2=document.createElement('script');
+        s2.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+})();
+</script>
+<style>
+:root{
+    --offwhite:#f8fafb;--light:#f1f5f9;--lighter:#f1f5f9;
+    --white:#ffffff;
+    --ink:#0f172a;--ink2:#1e293b;--ink3:#475569;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --rule:#e2e8f0;--rule2:rgba(15,23,42,0.04);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--teal:#0d9488;--red:#dc2626;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 3px rgba(15,23,42,0.04),0 1px 2px rgba(15,23,42,0.03);
+    --sh2:0 4px 16px rgba(15,23,42,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--offwhite);color:var(--ink);display:flex!important;height:100vh!important;overflow:hidden!important;}
+#sidebar-container{flex-shrink:0!important;}
+main{flex:1;min-width:0;overflow:hidden!important;display:flex!important;flex-direction:column!important;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--blue-ln) 50%,transparent 95%);}
+.h-brand{font-size:0.95rem;font-weight:700;color:var(--ink);}
+.h-brand em{color:var(--blue);font-style:normal;font-weight:700;}
+.h-mid{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;}
+.h-clock{font-family:var(--mono);font-size:0.65rem;color:var(--muted2);background:var(--light);padding:5px 12px;border-radius:4px;border:1px solid var(--rule);white-space:nowrap;}
+.h-right{display:flex;align-items:center;gap:10px;}
+.h-uname{font-size:0.73rem;font-weight:600;color:var(--ink);text-align:right;}
+.h-urole{font-size:0.57rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;}
+.h-avatar{width:32px;height:32px;border-radius:6px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(37,99,235,0.25);}
+.page{padding:22px 28px 28px;overflow-y:auto;height:calc(100vh - 58px);scrollbar-width:thin;scrollbar-color:var(--rule) transparent;}
+.page::-webkit-scrollbar{width:3px;}
+.page::-webkit-scrollbar-thumb{background:var(--rule);}
+
+/* ── LUXURY NETWORK STATUS PILL STYLE ── */
+.network-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--white);
+    border: 1px solid var(--rule);
+    user-select: none;
+    white-space: nowrap;
+}
+.net-pulse-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    position: relative;
+    transition: background-color 0.4s ease;
+}
+.network-status-pill.net-online {
+    color: var(--green);
+    border-color: rgba(21, 128, 61, 0.18);
+    background: rgba(21, 128, 61, 0.04);
+}
+.network-status-pill.net-online .net-pulse-dot {
+    background-color: var(--green);
+    box-shadow: 0 0 8px rgba(21, 128, 61, 0.6);
+}
+.network-status-pill.net-online .net-pulse-dot::after {
+    content: ''; position: absolute; inset: -3px; border-radius: 50%;
+    border: 1px solid rgba(21, 128, 61, 0.4);
+    animation: net-glow-ring 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.network-status-pill.net-syncing {
+    color: var(--blue);
+    border-color: var(--blue-ln);
+    background: var(--blue-bg);
+}
+.network-status-pill.net-syncing .net-pulse-dot {
+    background-color: var(--blue2);
+    animation: net-blink 1s ease infinite;
+}
+.network-status-pill.net-offline {
+    color: var(--red);
+    border-color: rgba(185, 28, 28, 0.22);
+    background: rgba(185, 28, 28, 0.04);
+    animation: net-shake 0.45s ease both;
+}
+.network-status-pill.net-offline .net-pulse-dot {
+    background-color: var(--red);
+    box-shadow: 0 0 8px rgba(185, 28, 28, 0.5);
+}
+
+@keyframes net-glow-ring { 0% { transform: scale(0.85); opacity: 1; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes net-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes net-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+
+/* ── UPDATE BANNER ── */
+#update-banner{display:none;position:relative;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid var(--blue-ln);background:linear-gradient(135deg,var(--ink) 0%,#1a2332 50%,var(--ink) 100%);animation:bannerIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;}
+#update-banner.visible{display:block;}
+@keyframes bannerIn{from{opacity:0;transform:translateY(-12px) scale(0.98)}to{opacity:1;transform:none}}
+#update-banner::before{content:'';position:absolute;top:0;left:-100%;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,var(--blue2) 40%,#60a5fa 50%,var(--blue2) 60%,transparent 100%);animation:shimmerLine 2.5s ease-in-out infinite;}
+@keyframes shimmerLine{0%{left:-100%}100%{left:100%}}
+.ub-inner{display:flex;align-items:center;gap:16px;padding:14px 18px;}
+.ub-icon{width:38px;height:38px;border-radius:99px;background:var(--blue-bg);border:1px solid var(--blue-ln);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.ub-text{flex:1;min-width:0;}
+.ub-title{font-size:0.95rem;font-weight:700;color:var(--white);margin-bottom:2px;}
+.ub-title em{color:var(--blue2);font-style:normal;font-weight:700;}
+.ub-sub{font-size:0.68rem;color:rgba(255,255,255,0.45);}
+.ub-changelog{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
+.ub-tag{font-size:0.6rem;padding:2px 8px;border-radius:4px;background:var(--blue-bg);border:1px solid var(--blue-ln);color:var(--blue2);}
+.ub-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ub-btn-update{display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-family:var(--sans);font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.ub-btn-update:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(37,99,235,0.45);}
+.ub-btn-update:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.ub-btn-close{width:28px;height:28px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);border-radius:6px;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;transition:all 0.13s;}
+.ub-btn-close:hover{background:rgba(185,28,28,0.2);color:#f87171;border-color:rgba(185,28,28,0.3);}
+#update-progress-wrap{display:none;padding:0 18px 14px;}
+#update-progress-wrap.visible{display:block;}
+.uprog-bar-bg{height:4px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:6px;}
+.uprog-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--blue2),#60a5fa);background-size:200% auto;animation:progressShimmer 1.5s linear infinite;transition:width 0.4s ease;width:0%;}
+@keyframes progressShimmer{0%{background-position:0% center}100%{background-position:200% center}}
+.uprog-status{font-size:0.62rem;color:rgba(255,255,255,0.4);font-family:var(--mono);}
+.ub-done{padding:10px 18px 14px;display:none;align-items:center;gap:10px;}
+.ub-done.visible{display:flex;}
+.ub-done-text{font-size:0.76rem;color:#4ade80;font-weight:600;}
+.ub-btn-restart{margin-left:auto;padding:7px 16px;background:#15803d;color:#fff;border:none;border-radius:6px;font-family:var(--sans);font-size:0.73rem;font-weight:700;cursor:pointer;}
+
+/* ── WELCOME ── */
+.welcome{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);position:relative;}
+.w-greeting{font-size:1.55rem;font-weight:700;color:var(--ink);line-height:1.15;}
+.w-greeting em{color:var(--blue);font-style:normal;font-weight:700;}
+.w-sub{font-size:0.7rem;color:var(--muted);margin-top:5px;}
+.live-badge{display:flex;align-items:center;gap:6px;background:rgba(21,128,61,0.07);border:1px solid rgba(21,128,61,0.18);padding:6px 14px;border-radius:6px;font-size:0.62rem;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+
+/* ── NOTIFICATIONS ── */
+.notif-wrap{position:relative;}
+.notif-bell{position:relative;width:34px;height:34px;border-radius:8px;background:var(--white);border:1px solid var(--rule);color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s;box-shadow:var(--sh);}
+.notif-bell:hover{border-color:var(--blue-ln);color:var(--blue);transform:translateY(-1px);box-shadow:var(--sh2);}
+.notif-bell.ring svg{animation:ring 0.6s ease;}
+@keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(7deg)}80%{transform:rotate(-5deg)}}
+.notif-count{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:0.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--offwhite);}
+.notif-drop{position:absolute;top:42px;right:0;width:320px;max-height:360px;overflow-y:auto;background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:0 12px 40px rgba(15,23,42,0.16);z-index:60;display:none;animation:notifIn 0.22s cubic-bezier(0.34,1.4,0.64,1);}
+.notif-drop.left{right:auto;left:0;}
+.notif-drop.open{display:block;}
+@keyframes notifIn{from{opacity:0;transform:translateY(-8px) scale(0.98);}to{opacity:1;transform:none;}}
+.notif-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink);position:sticky;top:0;background:var(--white);}
+.notif-clear{font-size:0.6rem;font-weight:600;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;}
+.notif-clear:hover{text-decoration:underline;}
+.notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule2);cursor:pointer;transition:background 0.13s;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:rgba(37,99,235,0.04);}
+.notif-item.unread{background:rgba(37,99,235,0.05);}
+.notif-ico{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.85rem;}
+.notif-ico.warn{background:#fffbeb;border:1px solid rgba(180,83,9,0.2);}
+.notif-ico.due{background:#fef2f2;border:1px solid rgba(185,28,28,0.18);}
+.notif-ico.info{background:var(--blue-bg);border:1px solid var(--blue-ln);}
+.notif-ico.ok{background:rgba(21,128,61,0.07);border:1px solid rgba(21,128,61,0.18);}
+.notif-txt{font-size:0.72rem;color:var(--ink);line-height:1.45;}
+.notif-txt b{font-weight:700;}
+.notif-time{font-size:0.6rem;color:var(--muted2);margin-top:3px;}
+.notif-empty{text-align:center;padding:24px;font-size:0.72rem;color:var(--muted2);}
+.notif-sec{padding:10px 16px 4px;font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted2);}
+.u-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px;}
+.u-dot.info{background:#2563eb;}.u-dot.warning{background:#b45309;}.u-dot.critical{background:#dc2626;}
+
+/* ── AUTO-DISMISS TOASTS (top-3 on load) ── */
+.toast-host{position:fixed;right:18px;top:70px;z-index:200;display:flex;flex-direction:column;gap:10px;max-width:340px;}
+.toast-pop{display:flex;gap:10px;align-items:flex-start;background:var(--white);border:1px solid var(--rule);border-left:3px solid var(--blue);border-radius:10px;padding:12px 14px;box-shadow:0 12px 32px rgba(15,23,42,0.18);cursor:pointer;animation:toastIn 0.3s cubic-bezier(0.34,1.4,0.64,1);}
+.toast-pop.out{opacity:0;transform:translateX(20px);transition:all 0.4s;}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:none;}}
+.toast-x{margin-left:auto;color:var(--muted2);cursor:pointer;font-size:1rem;line-height:1;padding-left:8px;}
+.toast-x:hover{color:var(--red);}
+
+/* ── KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh);transition:box-shadow 0.18s,transform 0.18s;}
+.kpi:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:8px 8px 0 0;}
+.kpi-gold::before{background:linear-gradient(90deg,var(--blue),var(--blue2));}
+.kpi-teal::before{background:linear-gradient(90deg,var(--teal),#2dd4bf);}
+.kpi-blue::before{background:linear-gradient(90deg,var(--blue),#60a5fa);}
+.kpi-green::before{background:linear-gradient(90deg,var(--green),#22c55e);}
+.kpi-ink::before{background:linear-gradient(90deg,var(--ink2),var(--ink3));}
+.kpi-lbl{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);margin-bottom:9px;}
+.kpi-val{font-size:1.5rem;font-weight:700;color:var(--ink);letter-spacing:-0.4px;line-height:1;}
+.kpi-val.gold{color:var(--blue);}
+.kpi-val.teal{color:var(--teal);}
+.kpi-val.green{color:var(--green);}
+.kpi-sub{font-size:0.6rem;color:var(--muted2);margin-top:5px;}
+
+/* ── SECTIONS ── */
+.sec{display:flex;align-items:center;gap:12px;margin:6px 0 14px;}
+.sec-text{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted2);white-space:nowrap;}
+.sec::before,.sec::after{content:'';flex:1;height:1px;background:var(--rule);}
+.sec::before{max-width:20px;}
+
+/* ── CHARTS ── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;}
+.panel-dark{background:var(--ink2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;justify-content:space-between;}
+.panel-light{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:20px 22px;box-shadow:0 2px 12px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:space-between;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;height:24px;}
+.panel-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.panel-dark .panel-title{color:rgba(255,255,255,0.45);}
+.panel-light .panel-title{color:var(--ink3);}
+.chart-wrap{position:relative;height:210px;width:100%;}
+.legend{display:flex;gap:12px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.58rem;font-weight:500;}
+.panel-dark .leg{color:rgba(255,255,255,0.4);}
+.panel-light .leg{color:var(--muted2);}
+.leg-sq{width:10px;height:3px;border-radius:99px;}
+
+/* ── BOTTOM ── */
+.bottom-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+.tbl-wrap{overflow:hidden;border-radius:10px;background:var(--white);border:1px solid var(--rule);box-shadow:var(--sh);}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--cream);}
+.tbl-title{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);}
+.empty-cell{text-align:center;padding:20px;font-size:0.75rem;color:var(--muted2);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);padding:12px 16px 8px;border-bottom:1px solid var(--rule);text-align:left;}
+th:not(:first-child){text-align:right;}
+td{padding:10px 16px;font-size:0.77rem;font-weight:500;color:var(--ink);border-bottom:1px solid var(--rule2);}
+tr:last-child td{border-bottom:none;}
+td:not(:first-child){text-align:right;}
+.b-danger{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fef2f2;color:var(--red);border:1px solid rgba(185,28,28,0.15);}
+.b-warn{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:600;background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.15);}
+.b-danger::before,.b-warn::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;}
+.audit-wrap{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+.audit-list{padding:4px 0;}
+.audit-item{display:flex;gap:10px;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--rule2);}
+.audit-item:last-child{border-bottom:none;}
+.audit-time{font-family:var(--mono);font-size:0.6rem;color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-ln);padding:2px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0;}
+.audit-msg{font-size:0.72rem;color:var(--muted);line-height:1.5;}
+.empty-cell{text-align:center;padding:20px;font-size:0.75rem;color:var(--muted2);}
+
+/* ── BASTION ── */
+.bastion-header-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:5px;background:var(--green-bg);border:1px solid var(--green-border);font-family:var(--mono);font-size:0.58rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);}
+.bhb-dot{width:5px;height:5px;border-radius:50%;background:#15803d;animation:bfb-blink 2.5s ease-in-out infinite;}
+@keyframes bfb-blink{0%,100%{opacity:1}50%{opacity:0.25}}
+
+/* ── PLAN BATCH ── */
+.plan-batch{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:5px;font-family:var(--mono);font-size:0.58rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;transition:all 0.3s ease;}
+.plan-batch-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.plan-batch-remaining{font-size:0.5rem;opacity:0.7;font-weight:500;letter-spacing:0;}
+.plan-batch.plan-lite{color:#b45309;border:1px solid rgba(180,83,9,0.2);background:rgba(180,83,9,0.06);}
+.plan-batch.plan-lite .plan-batch-dot{background:#b45309;}
+.plan-batch.plan-pro{color:#1d4ed8;border:1px solid rgba(29,78,216,0.2);background:rgba(29,78,216,0.06);}
+.plan-batch.plan-pro .plan-batch-dot{background:#1d4ed8;box-shadow:0 0 6px rgba(29,78,216,0.5);}
+.plan-batch.plan-enterprise{color:var(--blue3);border:1px solid rgba(29,78,216,0.25);background:rgba(29,78,216,0.08);}
+.plan-batch.plan-enterprise .plan-batch-dot{background:var(--blue3);box-shadow:0 0 6px rgba(29,78,216,0.5);animation:bfb-blink 2s ease-in-out infinite;}
+
+/* ── UPDATE BUTTON ── */
+.btn-update{
+    display:inline-flex;align-items:center;gap:6px;
+    height:30px;padding:0 14px;
+    border-radius:6px;border:1px solid var(--blue-ln);
+    background:var(--blue-bg);color:var(--blue);
+    font-size:0.62rem;font-weight:600;cursor:pointer;
+    font-family:var(--sans);transition:all 0.18s;white-space:nowrap;
+}
+.btn-update:hover{background:rgba(37,99,235,0.14);border-color:rgba(37,99,235,0.35);transform:translateY(-1px);}
+.btn-update.upd-ok{background:rgba(21,128,61,0.07);border-color:rgba(21,128,61,0.25);color:var(--green);}
+.btn-update.upd-ready{background:rgba(21,128,61,0.12);border-color:rgba(21,128,61,0.3);color:var(--green);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<script src="sse_stream.js"></script>
+<script src="urgent.js"></script>
+<div id="sidebar-container"></div>
+
+<main>
+<header>
+    <div class="h-brand">Aurum<em>OS</em></div>
+    <div class="h-mid">
+        <span class="bastion-header-badge"><span class="bhb-dot"></span>BASTION&#8482;</span>
+
+        <div id="plan-batch" class="plan-batch" style="display:none;">
+            <span class="plan-batch-dot"></span>
+            <span id="plan-batch-label">LITE</span>
+            <span id="plan-batch-remaining" class="plan-batch-remaining"></span>
+        </div>
+
+        <div class="network-status-pill net-online" id="runtime-net-pill">
+            <span class="net-pulse-dot"></span>
+            <span id="runtime-net-label">Host Core Connected</span>
+        </div>
+
+        <div class="h-clock" id="clock">&mdash;</div>
+        <button id="check-update-btn" class="btn-update" onclick="manualCheckUpdate()" title="Check for AurumOS updates">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span id="upd-btn-label">Check Update</span>
+        </button>
+    </div>
+    <div class="h-right">
+        <div>
+            <div class="h-uname" id="h-uname">Director</div>
+            <div class="h-urole">System Owner</div>
+        </div>
+        <div class="h-avatar" id="h-avatar">OS</div>
+    </div>
+</header>
+
+<div class="page">
+
+    <div id="update-banner">
+        <div class="ub-inner">
+            <div class="ub-icon">&#11088;</div>
+            <div class="ub-text">
+                <div class="ub-title">AurumOS <em id="ub-version">v1.0.1</em> is available</div>
+                <div class="ub-sub" id="ub-sub">A new version is ready.</div>
+                <div class="ub-changelog" id="ub-changelog"></div>
+            </div>
+            <div class="ub-actions">
+                <button class="ub-btn-update" id="ub-update-btn" onclick="startUpdate()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Update Now
+                </button>
+                <button class="ub-btn-close" onclick="dismissBanner()">&#10005;</button>
+            </div>
+        </div>
+        <div id="update-progress-wrap">
+            <div class="uprog-bar-bg"><div class="uprog-bar-fill" id="uprog-fill"></div></div>
+            <div class="uprog-status" id="uprog-status">Starting download...</div>
+        </div>
+        <div class="ub-done" id="ub-done">
+            <div class="ub-done-text" id="ub-done-msg">Update ready! Click Restart.</div>
+            <button class="ub-btn-restart" onclick="restartApp()">Restart Now</button>
+        </div>
+    </div>
+
+    <div class="welcome">
+        <div>
+            <div class="w-greeting" id="welcome-str">Good morning, <em id="welcome-name">Director</em></div>
+            <div class="w-sub">Your jewelry enterprise is synchronized and ready</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="notif-wrap">
+                <button class="notif-bell" id="notif-bell" title="Notifications" onclick="toggleNotif(event)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span class="notif-count" id="notif-count" style="display:none;">0</span>
+                </button>
+                <div class="notif-drop" id="notif-drop">
+                    <div class="notif-head"><span>Notifications</span><span class="notif-clear" onclick="clearNotif(event)">Mark all read</span></div>
+                    <div class="notif-sec">Urgent — AurumOS <span id="urgent-stream" style="float:right;text-transform:none;letter-spacing:0;"></span></div>
+                    <div id="urgent-list"><div class="notif-empty">Loading urgent messages…</div></div>
+                    <div style="padding:6px 16px 10px;"><span class="notif-clear" onclick="clearAllUrgent()">Clear all</span></div>
+                </div>
+            </div>
+            <div class="live-badge"><div class="live-dot"></div><span id="sync-status">Node Active</span></div>
+        </div>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi kpi-gold"><div class="kpi-lbl">Today's Sales</div><div class="kpi-val gold" id="k-sales">Rs. 0.00</div><div class="kpi-sub" id="k-sales-sub">0 bills</div></div>
+        <div class="kpi kpi-teal"><div class="kpi-lbl">Gold Rate (Live)</div><div class="kpi-val teal" id="k-goldg">—</div><div class="kpi-sub" id="k-gold10">from latest billing &middot; /g</div></div>
+        <div class="kpi kpi-blue"><div class="kpi-lbl">Cash in Hand (Today)</div><div class="kpi-val" id="k-cash">Rs. 0.00</div><div class="kpi-sub" id="k-cash-sub">Cash 0 &middot; UPI 0 &middot; Card 0</div></div>
+        <div class="kpi kpi-green"><div class="kpi-lbl">Outstanding Dues</div><div class="kpi-val" style="color:var(--red);" id="k-dues">Rs. 0.00</div><div class="kpi-sub" id="k-dues-sub">customer credit</div></div>
+        <div class="kpi kpi-ink"><div class="kpi-lbl">Stock Value (approx)</div><div class="kpi-val" style="font-size:1.2rem;" id="k-stockval">Rs. 0</div><div class="kpi-sub" id="k-stockval-sub">— g fine at live rate</div></div>
+    </div>
+
+    <div class="sec"><span class="sec-text">Sales Trend &amp; Category Split</span></div>
+    <div class="chart-row">
+        <div class="panel-dark">
+            <div class="panel-head">
+                <span class="panel-title">Sales Trend — 7 Days</span>
+                <div class="legend">
+                    <div class="leg"><div class="leg-sq" style="background:var(--blue);"></div>Revenue</div>
+                    <div class="leg"><div class="leg-sq" style="background:#15803d;"></div>Fine (g)</div>
+                </div>
+            </div>
+            <div class="chart-wrap"><canvas id="revChart"></canvas></div>
+        </div>
+        <div class="panel-light">
+            <div class="panel-head">
+                <span class="panel-title">Category-wise Sales — 30 Days</span>
+                <div class="legend"><div class="leg"><div class="leg-sq" style="background:var(--blue2);"></div>By touch</div></div>
+            </div>
+            <div class="chart-wrap"><canvas id="catChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="sec"><span class="sec-text">Exchange, Stock &amp; Customers</span></div>
+    <div class="bottom-row" style="grid-template-columns:1fr 1fr 1.3fr;">
+        <div class="tbl-wrap">
+            <div class="tbl-head"><span class="tbl-title">Old Gold Exchange — Today</span></div>
+            <div style="padding:16px 18px;">
+                <div style="font-size:1.3rem;font-weight:700;" id="og-wt">0.000 g</div>
+                <div style="font-size:0.65rem;color:var(--muted2);margin:2px 0 8px;">weight received</div>
+                <div style="font-size:1.05rem;font-weight:700;color:var(--teal);" id="og-val">Rs. 0.00</div>
+                <div style="font-size:0.65rem;color:var(--muted2);margin-top:2px;">value received</div>
+            </div>
+            <div class="tbl-head" style="border-top:1px solid var(--rule);"><span class="tbl-title">Low Stock Alerts</span></div>
+            <table>
+                <thead><tr><th>Item</th><th>Pcs</th><th>Wt</th></tr></thead>
+                <tbody id="low-body"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="tbl-wrap">
+            <div class="tbl-head"><span class="tbl-title">Top Customers</span></div>
+            <table>
+                <thead><tr><th>Customer</th><th>Bills</th><th>Total</th></tr></thead>
+                <tbody id="top-body"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="tbl-wrap">
+            <div class="tbl-head"><span class="tbl-title">Recent Bills — tap to open</span></div>
+            <table>
+                <thead><tr><th>Bill</th><th>Customer</th><th>Amount</th></tr></thead>
+                <tbody id="recent-body"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<script>
+'use strict';
+
+// ── CLOCK ────────────────────────────────────────────────────────
+function tick(){
+    var n=new Date();
+    document.getElementById('clock').innerText=n.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
+}
+tick(); setInterval(tick,1000);
+
+// ── CHARTS ───────────────────────────────────────────────────────
+var revChart=null, catChart=null;
+
+function shortRs(v){v=parseFloat(v||0);if(v>=10000000)return 'Rs.'+(v/10000000).toFixed(2)+' Cr';if(v>=100000)return 'Rs.'+(v/100000).toFixed(2)+' L';if(v>=1000)return 'Rs.'+(v/1000).toFixed(1)+'K';return 'Rs.'+Math.round(v);}
+
+function buildRevChart(labels,revenue,fine){
+    if(typeof Chart==='undefined'){setTimeout(function(){buildRevChart(labels,revenue,fine);},200);return;}
+    var ctx=document.getElementById('revChart').getContext('2d');
+    if(revChart)revChart.destroy();
+    var g=ctx.createLinearGradient(0,0,0,190);
+    g.addColorStop(0,'rgba(37,99,235,0.25)');
+    g.addColorStop(0.5,'rgba(37,99,235,0.08)');
+    g.addColorStop(1,'rgba(248,250,251,0)');
+    var g2=ctx.createLinearGradient(0,0,0,190);
+    g2.addColorStop(0,'rgba(16,163,74,0.18)');
+    g2.addColorStop(0.5,'rgba(16,163,74,0.05)');
+    g2.addColorStop(1,'rgba(248,250,251,0)');
+    revChart=new Chart(ctx,{
+        type:'line',
+        data:{labels:labels,datasets:[
+            {label:'Revenue',data:revenue,borderColor:'#2563eb',backgroundColor:g,borderWidth:2.5,tension:0.4,fill:true,yAxisID:'y',
+             pointRadius:revenue.map(function(v){return parseFloat(v||0)?5:2;}),pointBackgroundColor:'#ffffff',pointBorderColor:'#2563eb',pointBorderWidth:2,pointHoverRadius:7},
+            {label:'Fine (g)',data:fine,borderColor:'#16a34a',backgroundColor:g2,borderWidth:2,borderDash:[4,3],tension:0.4,fill:true,yAxisID:'y1',
+             pointRadius:fine.map(function(v){return parseFloat(v||0)?4:2;}),pointBackgroundColor:'#16a34a',pointBorderColor:'#ffffff',pointBorderWidth:2,pointHoverRadius:6}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+            plugins:{
+                legend:{display:false},
+                tooltip:{backgroundColor:'#ffffff',borderColor:'rgba(37,99,235,0.18)',borderWidth:1.5,padding:14,cornerRadius:10,titleColor:'#0f172a',bodyColor:'#64748b',
+                    callbacks:{label:function(c){if(c.datasetIndex===0)return ' Rs. '+parseFloat(c.raw||0).toLocaleString('en-IN',{minimumFractionDigits:2});return ' '+parseFloat(c.raw||0).toFixed(3)+' g';}}}
+            },
+            scales:{
+                y:{position:'left',beginAtZero:true,grid:{color:'rgba(15,23,42,0.04)'},border:{display:false},
+                   ticks:{color:'#94a3b8',font:{size:10},maxTicksLimit:5,callback:function(v){if(v>=100000)return 'Rs.'+(v/100000).toFixed(1)+'L';if(v>=1000)return 'Rs.'+(v/1000).toFixed(0)+'K';return 'Rs.'+v;}}},
+                y1:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},
+                   ticks:{color:'rgba(22,163,74,0.7)',font:{size:10},maxTicksLimit:5,callback:function(v){return v.toFixed(1)+'g';}}},
+                x:{grid:{color:'rgba(15,23,42,0.04)'},border:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}
+            }
+        }
+    });
+}
+
+function buildCatChart(labels,values){
+    if(typeof Chart==='undefined'){setTimeout(function(){buildCatChart(labels,values);},200);return;}
+    var ctx=document.getElementById('catChart').getContext('2d');
+    if(catChart)catChart.destroy();
+    var noData=!labels||!labels.length||!values||values.every(function(v){return parseFloat(v||0)===0;});
+    var pal=['#2563eb','#16a34a','#b45309','#0d9488','#64748b'];
+    catChart=new Chart(ctx,{
+        type:'doughnut',
+        data:{labels:noData?['No sales yet']:labels,datasets:[{data:noData?[1]:values,
+            backgroundColor:noData?['#e2e8f0']:labels.map(function(_,i){return pal[i%pal.length];}),
+            borderColor:'#ffffff',borderWidth:3,hoverOffset:6}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+            plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10},color:'#475569',padding:10}},
+                tooltip:{backgroundColor:'#1e293b',padding:12,cornerRadius:9,
+                    callbacks:{label:function(c){return ' '+c.label+': Rs.'+parseFloat(c.raw||0).toLocaleString('en-IN',{maximumFractionDigits:0});}}}}}
+    });
+}
+
+// Init charts empty
+(function(){var _t=0;function _i(){_t++;if(typeof Chart!=='undefined'){buildRevChart(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]);buildCatChart([],[]);}else if(_t<100){setTimeout(_i,100);}} _i();})();
+
+// ── UPDATE BANNER ─────────────────────────────────────────────────
+var _updateUrl='';
+var _lastUpdateInfo=null;  // full manifest stored for startUpdate()
+
+function showUpdateBanner(info){
+    _lastUpdateInfo=info;  // store full data (includes files array)
+    _updateUrl=info.download_url||'';
+    document.getElementById('ub-version').innerText='v'+info.version;
+    document.getElementById('ub-sub').innerText='Released '+(info.release_date||'');
+    var cl=document.getElementById('ub-changelog');cl.innerHTML='';
+    (info.changelog||[]).slice(0,4).forEach(function(item){
+        var t=document.createElement('span');t.className='ub-tag';t.innerText=item;cl.appendChild(t);
+    });
+    document.getElementById('update-banner').classList.add('visible');
+}
+
+function dismissBanner(){
+    var b=document.getElementById('update-banner');
+    b.style.transition='opacity 0.3s,transform 0.3s';
+    b.style.opacity='0';b.style.transform='translateY(-8px)';
+    setTimeout(function(){b.classList.remove('visible');b.style='';},300);
+}
+
+function startUpdate(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    var fill=document.getElementById('uprog-fill'),status=document.getElementById('uprog-status');
+    var wrap=document.getElementById('update-progress-wrap'),done=document.getElementById('ub-done');
+    var btn=document.getElementById('ub-update-btn');
+    if(wrap)wrap.classList.add('visible');if(done)done.classList.remove('visible');
+    if(btn)btn.disabled=true;if(fill)fill.style.width='5%';if(status)status.innerText='Preparing...';
+
+    // Use stored data from banner (has files array with hashes/urls).
+    // Fall back to check_for_update() only if banner data is missing.
+    function _doDownload(info){
+        if(!info||!info.available||!info.files||!info.files.length){
+            if(status)status.innerText='No update data. Try again.';return;
+        }
+        window.pywebview.api.start_update_with_info(info).then(function(res){
+            if(res&&res.status==='started'){if(fill)fill.style.width='10%';if(status)status.innerText='Downloading...';}
+            else if(res&&res.status==='nothing_to_do'){if(status)status.innerText='Already up to date.';}
+            else{if(status)status.innerText='Error: '+(res&&res.message||'unknown');}
+        }).catch(function(e){if(status)status.innerText='Error: '+e;});
+    }
+
+    if(_lastUpdateInfo&&_lastUpdateInfo.files){
+        _doDownload(_lastUpdateInfo);
+    } else {
+        window.pywebview.api.check_for_update().then(function(info){
+            if(!info||!info.available){if(status)status.innerText='No update available.';return;}
+            _doDownload(info);
+        }).catch(function(e){if(status)status.innerText='Check failed: '+e;});
+    }
+}
+
+// ── SILENT AUTO-UPDATE: tiny toast, zero clicks, zero disruption ──
+window.addEventListener('aurum-auto-updated', function(e) {
+    var v=(e.detail&&e.detail.version)||'';
+    var host=document.getElementById('toast-host');
+    if(!host){host=document.createElement('div');host.id='toast-host';host.className='toast-host';document.body.appendChild(host);}
+    var t=document.createElement('div');t.className='toast-pop';
+    var d=document.createElement('div');d.className='notif-txt';
+    d.textContent='AurumOS updated to v'+v+' ✓' + ((e.detail&&e.detail.restart)?' Backend applies on next start.':'');
+    t.appendChild(d);host.appendChild(t);
+    setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},400);},6000);
+});
+
+// ── CRITICAL FIX: REPLACED BROKEN POLLING WITH THE UNIFIED EVENT LISTENER LOOP ──
+window.addEventListener('aurum-update-done', function(e) {    var fill = document.getElementById('uprog-fill');
+    var status = document.getElementById('uprog-status');
+    var wrap = document.getElementById('update-progress-wrap');
+    var done = document.getElementById('ub-done');
+
+    if (e.detail && e.detail.success) {
+        if (fill) fill.style.width = '100%';
+        if (wrap) wrap.classList.remove('visible');
+        if (done) done.classList.add('visible');
+        if (status) status.innerText = e.detail.message || 'Update completed successfully.';
+    } else {
+        if (fill) fill.style.background = '#dc2626';
+        if (status) status.innerText = 'Failed: ' + (e.detail && e.detail.message || 'Erase engine error.');
+    }
+});
+
+function restartApp(){if(window.pywebview&&window.pywebview.api)window.pywebview.api.restart_app();}
+window.__showUpdate=function(data){if(data&&data.available)showUpdateBanner(data);};
+window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.detail.available)showUpdateBanner(e.detail);});
+
+// ── MANUAL UPDATE CHECK ───────────────────────────────────────────
+function manualCheckUpdate(){
+    var btn=document.getElementById('check-update-btn');
+    var lbl=document.getElementById('upd-btn-label');
+    if(lbl) lbl.innerText='Checking…';
+    btn.disabled=true;
+
+    // Use Python API (reads GitHub release assets, always current)
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.check_for_update){
+        window.pywebview.api.check_for_update().then(function(info){
+            btn.disabled=false;
+            if(info&&info.available){
+                btn.classList.add('upd-ready');
+                if(lbl) lbl.innerText='v'+info.version+' Ready!';
+                showUpdateBanner(info);
+            } else {
+                btn.classList.add('upd-ok');
+                if(lbl) lbl.innerText='✓ Latest';
+                setTimeout(function(){btn.className='btn-update';if(lbl)lbl.innerText='Check Update';},3000);
+            }
+        }).catch(function(){
+            btn.disabled=false;
+            if(lbl) lbl.innerText='No Internet';
+            setTimeout(function(){if(lbl)lbl.innerText='Check Update';},2000);
+        });
+    } else {
+        btn.disabled=false;
+        if(lbl) lbl.innerText='Check Update';
+    }
+}
+
+
+// ── PHASE 3 AUTOMATED TELEMETRY HEARTBEAT MONITOR LOOP ───────────
+function launchNetworkHeartbeatMonitor() {
+    if (!window.pywebview || !window.pywebview.api) return;
+
+    var pill = document.getElementById('runtime-net-pill');
+    var label = document.getElementById('runtime-net-label');
+    if (!pill || !label) return;
+
+    window.pywebview.api.get_network_config().then(function(cfg) {
+        if (!cfg || cfg.mode !== 'network') {
+            pill.className = "network-status-pill net-online";
+            label.innerText = "Host Core Storage";
+            return;
+        }
+
+        UX_checkHeartbeat();
+        setInterval(UX_checkHeartbeat, 10000);
+    }).catch(function(){});
+}
+
+function UX_checkHeartbeat() {
+    var pill = document.getElementById('runtime-net-pill');
+    var label = document.getElementById('runtime-net-label');
+    if (!pill || !label) return;
+
+    window.pywebview.api.bridge_ping().then(function(res) {
+        if (res && res.status === 'ok' && res.reachable) {
+            pill.className = "network-status-pill net-online";
+            label.innerText = "Host Core Connected";
+        } else {
+            pill.className = "network-status-pill net-syncing";
+            label.innerText = "Reconnecting Core...";
+        }
+    }).catch(function() {
+        pill.className = "network-status-pill net-offline";
+        label.innerText = "Host Connection Offline";
+    });
+}
+
+// ── DASHBOARD DATA ────────────────────────────────────────────────
+function loadDashboard(){
+    if(!window.pywebview||!window.pywebview.api||typeof window.pywebview.api.get_dynamic_greeting!=='function'){
+        setTimeout(loadDashboard,200);return;
+    }
+    if(typeof Chart==='undefined'){setTimeout(loadDashboard,100);return;}
+    var api=window.pywebview.api;
+
+    api.get_dynamic_greeting().then(function(g){
+        if(!g) return;
+        var nm  = g.owner_title   || 'Director';
+        var biz = g.business_name || '';
+        document.getElementById('h-uname').innerText = nm;
+        var ini = nm.split(' ').filter(function(w){return w;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+        document.getElementById('h-avatar').innerText = ini||'OS';
+        var displayName = biz || nm;
+        document.getElementById('welcome-str').innerHTML = (g.greeting_prefix||'Hello')+', <em id="welcome-name">'+displayName+'</em>';
+    }).catch(function(){});
+
+    api.get_live_command_metrics().then(function(s){
+    if(!s) return;
+        var R=(s.retail||{});
+        // ── Row 1: retail KPIs ──
+        document.getElementById('k-sales').innerHTML='Rs. '+parseFloat(R.today_amount||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-sales-sub').innerText=(R.today_bills||0)+' bill'+((R.today_bills||0)===1?'':'s')+' today';
+        var rt=(R.rates||{});
+        _dashRate10=parseFloat(rt.gold_10g||0)||0;
+        paintGoldRate();
+        var ps=(R.pay_split||{cash:0,upi:0,card:0});
+        var cashTot=parseFloat(ps.cash||0)+parseFloat(ps.upi||0)+parseFloat(ps.card||0);
+        document.getElementById('k-cash').innerHTML='Rs. '+cashTot.toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-cash-sub').innerText='Cash '+shortRs(ps.cash)+' · UPI '+shortRs(ps.upi)+' · Card '+shortRs(ps.card);
+        document.getElementById('k-dues').innerHTML='Rs. '+parseFloat(s.dues_total||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-dues-sub').innerText='total customer credit';
+        document.getElementById('k-stockval').innerText=shortRs(R.stock_value||0);
+        document.getElementById('k-stockval-sub').innerText=parseFloat(R.stock_fine_wt||0).toFixed(3)+' g fine at live rate';
+        // ── Sales trend + category ──
+        if(s.chart) buildRevChart(s.chart.labels||[],s.chart.revenue||[],s.chart.fine||[]);
+        if(R.category_split) buildCatChart(R.category_split.labels||[],R.category_split.values||[]);
+        // Fallback for builds whose backend has no retail block yet:
+        // compute everything client-side from voucher history.
+        if(!s.retail && window.pywebview && window.pywebview.api
+           && typeof window.pywebview.api.get_voucher_history_list==='function'){
+            retailFallback(s);
+        }
+        // ── Old gold ──
+        var og=(R.old_gold||{wt:0,value:0});
+        document.getElementById('og-wt').innerText=parseFloat(og.wt||0).toFixed(3)+' g';
+        document.getElementById('og-val').innerText='Rs. '+parseFloat(og.value||0).toLocaleString('en-IN',{minimumFractionDigits:2});
+        // ── Low stock ──
+        var lb=document.getElementById('low-body');
+        if(R.low_stock&&R.low_stock.length){
+            lb.innerHTML=R.low_stock.map(function(it){
+                return '<tr><td style="font-weight:600;">'+escHtml(it.code||'')+(it.name?' <span style="color:var(--muted2);font-weight:400;">'+escHtml(it.name)+'</span>':'')+'</td>'
+                    +'<td style="text-align:right;color:var(--red);font-weight:700;">'+it.pcs+'</td>'
+                    +'<td style="text-align:right;">'+parseFloat(it.wt||0).toFixed(2)+'g</td></tr>';
+            }).join('');
+        } else {
+            lb.innerHTML='<tr><td colspan="3" class="empty-cell">Stock levels OK.</td></tr>';
+        }
+        // ── Top customers ──
+        var tb=document.getElementById('top-body');
+        if(R.top_customers&&R.top_customers.length){
+            tb.innerHTML=R.top_customers.map(function(c){
+                return '<tr><td style="font-weight:600;">'+escHtml(c.name||'')+'</td>'
+                    +'<td style="text-align:right;">'+c.bills+'</td>'
+                    +'<td style="text-align:right;">Rs.'+parseFloat(c.total||0).toLocaleString('en-IN',{maximumFractionDigits:0})+'</td></tr>';
+            }).join('');
+        } else {
+            tb.innerHTML='<tr><td colspan="3" class="empty-cell">No sales yet.</td></tr>';
+        }
+        // ── Recent bills (clickable) ──
+        var rb=document.getElementById('recent-body');
+        if(R.recent_bills&&R.recent_bills.length){
+            rb.innerHTML=R.recent_bills.map(function(b){
+                return '<tr onclick="window.location.href=\'voucher_history.html\'" style="cursor:pointer;" title="Open voucher history">'
+                    +'<td style="font-weight:600;color:var(--blue);">'+escHtml(b.vch_id||'')+'</td>'
+                    +'<td>'+escHtml(b.customer||'')+'</td>'
+                    +'<td style="text-align:right;">Rs.'+parseFloat(b.total||0).toLocaleString('en-IN',{maximumFractionDigits:0})+'</td></tr>';
+            }).join('');
+        } else {
+            rb.innerHTML='<tr><td colspan="3" class="empty-cell">No bills yet.</td></tr>';
+        }
+        document.getElementById('sync-status').innerText='Node: '+((s&&s.sync_node)||'Active');
+        buildNotifs({rateG:parseFloat((R.rates||{}).gold_g||0),bills:R.today_bills||0,
+            billsAmt:R.today_amount||0,dues:parseFloat(s.dues_total||0),
+            lows:R.low_stock||[],update:document.getElementById('update-banner').classList.contains('visible')});
+    }).catch(function(e){console.error('Dashboard error:',e);});
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────
+var _notifs=[], _inbox=[], _combined=[], _toasted=false;
+function buildNotifs(d){
+    _notifs=[];
+    if(d.rateG>0) _notifs.push({cls:'info',ico:'&#128178;',html:'<b>Gold rate live:</b> Rs.'+Math.round(d.rateG).toLocaleString('en-IN')+' /g from latest billing.',page:''});
+    if(d.bills>0) _notifs.push({cls:'ok',ico:'&#129534;',html:'<b>'+d.bills+' bill'+(d.bills===1?'':'s')+'</b> billed today · Rs.'+Math.round(d.billsAmt||0).toLocaleString('en-IN')+'.',page:'voucher_history.html'});
+    if(d.dues>0) _notifs.push({cls:'due',ico:'&#9888;',html:'<b>Outstanding dues Rs.'+Math.round(d.dues).toLocaleString('en-IN')+'</b> — follow up with customers.',page:'customer_account.html'});
+    if(d.lows&&d.lows.length) _notifs.push({cls:'warn',ico:'&#128276;',html:'<b>'+d.lows.length+' item'+(d.lows.length===1?'':'s')+' running low:</b> '+d.lows.slice(0,3).map(function(x){return escHtml(x.code||'');}).join(', ')+(d.lows.length>3?'…':''),page:'inventory.html'});
+    if(d.update) _notifs.push({cls:'info',ico:'&#11088;',html:'<b>New AurumOS update available.</b> Tap Update Now above.',page:''});
+    loadInbox();
+}
+function notifIcon(t){
+    t=String(t||'').toLowerCase();
+    if(t==='bill') return {cls:'ok',ico:'&#129534;'};
+    if(t==='admin'||t==='announcement') return {cls:'info',ico:'&#128227;'};
+    if(t==='due'||t==='alert') return {cls:'due',ico:'&#9888;'};
+    if(t==='warn'||t==='stock') return {cls:'warn',ico:'&#128276;'};
+    return {cls:'info',ico:'&#128178;'};
+}
+function loadInbox(){
+    if(!window.pywebview||!window.pywebview.api||typeof window.pywebview.api.get_notifications!=='function'){
+        renderNotifs();return;
+    }
+    window.pywebview.api.get_notifications(20).then(function(res){
+        _inbox=((res&&res.notifications)||[]).map(function(n){
+            var ic=notifIcon(n.type);
+            return {id:n.id,inbox:true,cls:ic.cls,ico:ic.ico,read:!!n.read,
+                html:'<b>'+escHtml(n.title||'Notice')+'</b> — '+escHtml(n.body||''),
+                page:n.page||'',time:String(n.ts||'').slice(0,16)};
+        });
+        renderNotifs();
+    }).catch(function(){renderNotifs();});
+}
+function toastTop3(){
+    if(_toasted) return;
+    _toasted=true;
+    var top=[];
+    _combined.forEach(function(n,i){if(!n.read&&top.length<3)top.push(i);});
+    showToasts(top);
+}
+function renderNotifs(){
+    _combined=_inbox.concat(_notifs);
+    var l=document.getElementById('notif-list');
+    if(!l){mergeBadge();return;} // shop section retired — badge is urgent-only
+    var all=_combined;
+    var unread=all.filter(function(n){return !n.read;}).length;
+    l.innerHTML=all.length?all.map(function(n,i){
+        return '<div class="notif-item'+(n.read?'':' unread')+'" onclick="goCombined('+i+')">'
+            +'<div class="notif-ico '+n.cls+'">'+n.ico+'</div>'
+            +'<div><div class="notif-txt">'+n.html+'</div><div class="notif-time">'+escHtml(n.time||'Today')+(n.page?' · tap to open':'')+'</div></div></div>';
+    }).join(''):'<div class="notif-empty">No new notifications.</div>';
+    if(typeof mergeBadge==='function')mergeBadge();
+    if(unread){var b=document.getElementById('notif-bell');b.classList.remove('ring');void b.offsetWidth;b.classList.add('ring');}
+}
+function goCombined(i){
+    var n=_combined[i];
+    if(!n) return;
+    if(n.inbox){goInbox(n.id,n.page);return;}
+    n.read=true;
+    var idx=_notifs.indexOf(n);if(idx>=0)_notifs[idx].read=true;
+    renderNotifs();
+    document.getElementById('notif-drop').classList.remove('open');
+    if(n.page) window.location.href=n.page;
+}
+function goInbox(id,page){
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.mark_notification_read){
+        window.pywebview.api.mark_notification_read(id).catch(function(){});
+    }
+    var n=null;_inbox.forEach(function(x){if(x.id===id)x.read=true;});
+    renderNotifs();
+    document.getElementById('notif-drop').classList.remove('open');
+    if(page) window.location.href=page;
+}
+function showToasts(idxs){
+    var host=document.getElementById('toast-host');
+    if(!host){
+        host=document.createElement('div');host.id='toast-host';host.className='toast-host';
+        document.body.appendChild(host);
+    }
+    idxs.forEach(function(i,k){
+        var n=_combined[i];
+        if(!n) return;
+        var t=document.createElement('div');
+        t.className='toast-pop';
+        t.innerHTML='<div class="notif-ico '+n.cls+'">'+n.ico+'</div>'
+            +'<div><div class="notif-txt">'+n.html+'</div><div class="notif-time">tap to open</div></div>'
+            +'<span class="toast-x">&times;</span>';
+        t.querySelector('.toast-x').onclick=function(ev){ev.stopPropagation();t.remove();};
+        t.onclick=function(){goCombined(i);t.remove();};
+        host.appendChild(t);
+        setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},400);},6000+k*800);
+    });
+}
+function toggleNotif(e){e.stopPropagation();document.getElementById('notif-drop').classList.toggle('open');renderUrgentInbox();}
+function readNotif(i){goCombined(i);}
+function clearNotif(e){
+    e.stopPropagation();
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.mark_all_notifications_read){
+        window.pywebview.api.mark_all_notifications_read().catch(function(){});
+    }
+    if(window.__urgentInbox&&window.__urgentInbox.ackAll){
+        try{var p=window.__urgentInbox.ackAll();if(p&&p.then)p.then(function(){renderUrgentInbox();}).catch(function(){});}catch(err){}
+    }
+    _inbox.forEach(function(n){n.read=true;});_notifs.forEach(function(n){n.read=true;});renderNotifs();
+}
+
+// ── URGENT INBOX (admin → this terminal) ──────────────────────────
+var _urgentCache=[];
+var _urgentFetched=false;
+function urgentPriDot(p){p=String(p||'info').toLowerCase();if(p!=='info'&&p!=='warning'&&p!=='critical')p='info';return '<span class="u-dot '+p+'"></span>';}
+function urgentFmtTime(s){
+    try{var d=new Date(s);if(isNaN(d.getTime()))return '';return d.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});}catch(e){return '';}
+}
+function renderUrgentInbox(){
+    var host=document.getElementById('urgent-list');
+    if(!host) return;
+    try{
+        var stEl=document.getElementById('urgent-stream');
+        if(stEl){
+            var st=(window.__aurumUrgentStream&&window.__aurumUrgentStream())||{connected:false,key:'—'};
+            stEl.innerHTML='';
+            var dot=document.createElement('span');
+            dot.style.cssText='display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;background:'+(st.connected?'#16a34a':'#dc2626')+';';
+            stEl.appendChild(dot);
+            var tx=document.createElement('span');
+            tx.style.cssText='cursor:pointer;color:'+(st.connected?'#16a34a':'#b45309')+';';
+            var label=(st.connected?'Live':'Offline — check now')+' · '+st.key;
+            try{
+                if(st.lastEventAt){
+                    var dd=new Date(st.lastEventAt);
+                    label+=' · ev '+dd.toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+                }
+            }catch(e2){}
+            tx.textContent=label;
+            tx.onclick=function(ev){ev.stopPropagation();checkUrgentNow();};
+            stEl.appendChild(tx);
+        }
+    }catch(e){}
+    function draw(msgs){
+        _urgentCache=msgs||[];
+        _urgentFetched=true;
+        if(!_urgentCache.length){host.innerHTML='<div class="notif-empty">No urgent messages.</div>';mergeBadge();return;}
+        host.innerHTML=_urgentCache.map(function(m){
+            var rd=m.read? '':' unread';
+            return '<div class="notif-item'+rd+'" data-uid="'+escHtml(m.id)+'">'
+                +'<div class="notif-ico '+(m.priority==='critical'?'due':m.priority==='warning'?'warn':'info')+'">'+urgentPriDot(m.priority)+'</div>'
+                +'<div style="flex:1;min-width:0;"><div class="notif-txt"></div><div class="notif-time">'+escHtml(urgentFmtTime(m.sent_at))+'</div></div>'
+                +'<span class="toast-x" data-del="'+escHtml(m.id)+'" title="Delete">&times;</span></div>';
+        }).join('');
+        Array.prototype.forEach.call(host.querySelectorAll('.notif-item'),function(row){
+            var uid=row.getAttribute('data-uid');
+            var m=null;_urgentCache.forEach(function(x){if(String(x.id)===String(uid))m=x;});
+            var txt=row.querySelector('.notif-txt');
+            if(txt&&m){txt.textContent=String(m.title||'Notice')+(m.body?(' — '+m.body):'');}
+            row.onclick=function(){openUrgent(uid);};
+        });
+        Array.prototype.forEach.call(host.querySelectorAll('[data-del]'),function(x){
+            x.onclick=function(ev){ev.stopPropagation();deleteUrgent(x.getAttribute('data-del'));};
+        });
+        mergeBadge();
+    }
+    if(window.__urgentInbox&&window.__urgentInbox.list){
+        try{
+            var p=window.__urgentInbox.list();
+            if(p&&p.then){p.then(function(res){draw((res&&res.messages)||[]);}).catch(function(){draw(_urgentCache);});}
+            else draw(_urgentCache);
+        }catch(e){draw(_urgentCache);}
+    } else draw(_urgentCache);
+}
+function openUrgent(uid){
+    var m=null;_urgentCache.forEach(function(x){if(String(x.id)===String(uid))m=x;});
+    if(m&&String(m.priority||'').toLowerCase()==='critical'&&!m.read){
+        // NEVER auto-mark critical as read — re-open the modal for Acknowledge.
+        if(window.__aurumUrgentShowModal) window.__aurumUrgentShowModal({id:m.id,title:m.title,body:m.body,priority:'critical',sent_at:m.sent_at});
+        return;
+    }
+    if(window.__urgentInbox&&window.__urgentInbox.ack){
+        try{var p=window.__urgentInbox.ack(uid);if(p&&p.then)p.then(function(){renderUrgentInbox();}).catch(function(){});}catch(e){}
+    }
+    if(m)m.read=true;
+    renderUrgentInbox();
+}
+function mergeBadge(){
+    var c=document.getElementById('notif-count');
+    if(!c) return;
+    var urg=0;(_urgentCache||[]).forEach(function(m){if(!m.read)urg++;});
+    c.style.display=urg?'flex':'none';c.innerText=urg>9?'9+':urg;
+    if(urg){var b=document.getElementById('notif-bell');if(b){b.classList.remove('ring');void b.offsetWidth;b.classList.add('ring');}}
+}
+window.__urgentInboxRefresh=function(){renderUrgentInbox();};
+
+// Delete one message everywhere (local + backend). Live server messages
+// reappear on next catch-up only if the server still lists them.
+function deleteUrgent(uid){
+    if(window.__urgentInbox&&window.__urgentInbox.del){
+        try{var p=window.__urgentInbox.del(uid);if(p&&p.then)p.then(function(){renderUrgentInbox();}).catch(function(){});}catch(e){}
+    }
+    _urgentCache=_urgentCache.filter(function(x){return String(x.id)!==String(uid);});
+    renderUrgentInbox();
+}
+// Clear ALL urgent messages with tombstones: nothing deleted ever returns.
+// Only genuinely new server messages will appear afterwards.
+function clearAllUrgent(){
+    var ids=[];
+    (_urgentCache||[]).forEach(function(m){ids.push(m.id);});
+    ids.forEach(function(id){
+        if(window.__urgentInbox&&window.__urgentInbox.del){try{window.__urgentInbox.del(id);}catch(e){}}
+    });
+    _urgentCache=[];
+    renderUrgentInbox();
+}
+// Manual catch-up (works even before the backend store exists).
+function checkUrgentNow(){
+    if(window.__aurumUrgentCheck){
+        try{
+            var p=window.__aurumUrgentCheck();
+            if(p&&p.then)p.then(function(r){
+                renderUrgentInbox();
+                toastUrgentCheck(r && r.status, r);
+            }).catch(function(){toastUrgentCheck('offline');});
+            return;
+        }catch(e){}
+    }    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.urgent_fetch_missed){
+        try{window.pywebview.api.urgent_fetch_missed().then(function(){renderUrgentInbox();}).catch(function(){});}catch(e){}
+    }
+}
+function toastUrgentCheck(st, r){
+    var host=document.getElementById('toast-host');
+    if(!host){host=document.createElement('div');host.id='toast-host';host.className='toast-host';document.body.appendChild(host);}
+    var t=document.createElement('div');t.className='toast-pop';
+    var d=document.createElement('div');d.className='notif-txt';
+    var msg='No new messages from AurumOS.';
+    try{
+        var have=0;(_urgentCache||[]).forEach(function(m){have++;});
+        if(r&&r.status==='success'){
+            msg='Server: '+r.total+' found, '+r.added+' new, '+have+' in inbox.';
+            if((r.added||0)===0&&(r.total||0)>0){
+                msg+=' Why: '+(r.firstWhy||'unknown')
+                    +' · key …'+String((r.key||'').slice(-4));
+            }
+        } else if(have>0) msg='Already up to date — '+have+' message'+(have===1?'':'s')+' in the inbox.';
+    }catch(e2){}
+    if(st==='no-key') msg='No license key found on this terminal.';
+    else if(st==='offline') msg='No internet — will retry automatically.';
+    else if(st==='cors') msg='Server reachable but browser is blocked from reading it. Live alerts still arrive; full history needs the app update.';
+    else if(typeof st==='string'&&st.indexOf('http-')===0){
+        var code=st.slice(5);
+        msg=code==='404'?'Messages feature is not on the server yet — ask admin to deploy it. Live alerts still arrive.':'Server error '+code+' — will retry automatically.';
+    }
+    d.textContent=msg;
+    t.appendChild(d);host.appendChild(t);
+    setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},400);},5000);
+}
+// Self-test: full pipeline (receive → toast + inbox) without the server.
+var _testN=0;
+function sendTestAlert(){
+    _testN++;
+    var kinds=[
+        {priority:'info',title:'Test info '+_testN,body:'Counter closes at 9pm today.'},
+        {priority:'warning',title:'Test warning '+_testN,body:'Gold rate revised upward.'},
+        {priority:'critical',title:'Test critical '+_testN,body:'Keep terminal online tonight.'}
+    ];
+    var k=kinds[(_testN-1)%3];
+    document.getElementById('notif-drop').classList.remove('open');
+    if(window.__aurumUrgentReceive){
+        window.__aurumUrgentReceive({id:'selftest-'+Date.now(),title:k.title,body:k.body,priority:k.priority,sent_at:new Date().toISOString(),source:'selftest'});
+    }
+}
+document.addEventListener('click',function(e){
+    var w=document.querySelector('.notif-wrap');
+    if(w&&!w.contains(e.target)) document.getElementById('notif-drop').classList.remove('open');
+});
+
+// ── LIVE GOLD RATE: billing pages publish the moment the rate is typed;
+// dashboard prefers that over the last saved bill, and repaints often.
+var _dashRate10=0;
+function paintGoldRate(){
+    var live=null;
+    try{live=(window.AurumOS&&window.AurumOS.getLiveRate())||null;}catch(e){}
+    var g10=(live&&live.v>0)?live.v:_dashRate10;
+    var isLive=!!(live&&live.v>0);
+    var gE=document.getElementById('k-goldg'),tE=document.getElementById('k-gold10');
+    if(!gE||!tE) return;
+    gE.innerText=g10?('Rs.'+Math.round(g10/10).toLocaleString('en-IN')+' /g'):'—';
+    tE.innerText=g10?('Rs.'+Math.round(g10).toLocaleString('en-IN')+' /10g · '+(isLive?'live from billing':'from latest billing')):'from latest billing';
+}
+setInterval(paintGoldRate,10000);
+setInterval(function(){try{loadDashboard();}catch(e){}},60000);
+
+function escHtml(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── FALLBACK: builds without the backend retail block compute the same
+// cards client-side from voucher history (same rules: billing rate → gold
+// card; today excludes ESTIMATE/CREDIT). Newer backends ignore this.
+function retailFallback(s){
+    var api=window.pywebview.api;
+    api.get_voucher_history_list(1000).then(function(res){
+        var vs=(res&&(res.vouchers||res))||[];
+        if(!Array.isArray(vs)) vs=[];
+        var n=new Date();
+        var tstr=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+        function live(v){var st=String(v.status||'').toUpperCase().trim();return st!=='ESTIMATE'&&st!=='CREDIT';}
+        var tAmt=0,tN=0,ogW=0,ogV=0,rate=0;
+        var bands={},tops={};
+        vs.forEach(function(v){
+            var gr=parseFloat(v.gold_rate||0);
+            if(!rate&&gr>0) rate=gr; // list is newest-first: first rate wins
+            if(!live(v)) return;
+            var amt=parseFloat(v.total_amount||0);
+            if(String(v.date||'').slice(0,10)===tstr){tAmt+=amt;tN++;}
+            var f99=parseFloat(v.f995||0)+parseFloat(v.dhal||0);
+            ogW+=f99; ogV+=f99*gr/10.0;
+            var cn=String(v.customer||'Walk-in');
+            tops[cn]=tops[cn]||{name:cn,bills:0,total:0};
+            tops[cn].bills++; tops[cn].total+=amt;
+            // Scale item amounts to the billed total (discount-adjusted).
+            var vItems=Array.isArray(v.items)?v.items:[];
+            var vSum=vItems.reduce(function(s2,it){return s2+parseFloat((it&&it.amount)||0);},0);
+            var vFactor=vSum>0?amt/vSum:0;
+            vItems.forEach(function(it){
+                var t=parseFloat((it&&it.touch)||0),a=parseFloat((it&&it.amount)||0)*vFactor;
+                var b=t>=99?'24K':t>=91?'22K':t>=74?'18K':t>0?'Other gold':'Silver/Others';
+                bands[b]=(bands[b]||0)+a;
+            });
+        });
+        document.getElementById('k-sales').innerHTML='Rs. '+tAmt.toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-sales-sub').innerText=tN+' bill'+(tN===1?'':'s')+' today';
+        _dashRate10=rate||_dashRate10;
+        paintGoldRate();
+        document.getElementById('k-cash').innerHTML='Rs. '+tAmt.toLocaleString('en-IN',{minimumFractionDigits:2});
+        document.getElementById('k-cash-sub').innerText='Cash '+shortRs(tAmt)+' · UPI 0 · Card 0';
+        var dues=(s.risk_monitor||[]).reduce(function(a,c){return a+parseFloat(c.outstanding||0);},0);
+        document.getElementById('k-dues').innerHTML='Rs. '+dues.toLocaleString('en-IN',{minimumFractionDigits:2});
+        var sv=parseFloat((s&&s.metallic_weight)||0)*rate/10.0;
+        document.getElementById('k-stockval').innerText=shortRs(sv);
+        document.getElementById('k-stockval-sub').innerText='approx at live rate';
+        document.getElementById('og-wt').innerText=ogW.toFixed(3)+' g';
+        document.getElementById('og-val').innerText='Rs. '+ogV.toLocaleString('en-IN',{minimumFractionDigits:2});
+        var order=['24K','22K','18K','Other gold','Silver/Others'];
+        buildCatChart(order.filter(function(b){return bands[b]>0;}),order.filter(function(b){return bands[b]>0;}).map(function(b){return Math.round(bands[b]*100)/100;}));
+        var tl=Object.keys(tops).map(function(k){return tops[k];}).sort(function(a,b){return b.total-a.total;}).slice(0,5);
+        document.getElementById('top-body').innerHTML=tl.length?tl.map(function(c){
+            return '<tr><td style="font-weight:600;">'+escHtml(c.name)+'</td><td style="text-align:right;">'+c.bills+'</td>'
+                +'<td style="text-align:right;">Rs.'+Math.round(c.total).toLocaleString('en-IN')+'</td></tr>';
+        }).join(''):'<tr><td colspan="3" class="empty-cell">No sales yet.</td></tr>';
+        var rb=vs.filter(live).slice(0,8);
+        document.getElementById('recent-body').innerHTML=rb.length?rb.map(function(b){
+            return '<tr onclick="window.location.href=\'voucher_history.html\'" style="cursor:pointer;" title="Open voucher history">'
+                +'<td style="font-weight:600;color:var(--blue);">'+escHtml(b.vch_id||'')+'</td><td>'+escHtml(b.customer||'')
+                +'</td><td style="text-align:right;">Rs.'+Math.round(parseFloat(b.total_amount||0)).toLocaleString('en-IN')+'</td></tr>';
+        }).join(''):'<tr><td colspan="3" class="empty-cell">No bills yet.</td></tr>';
+        document.getElementById('low-body').innerHTML='<tr><td colspan="3" class="empty-cell">Live alerts after app update.</td></tr>';
+        buildNotifs({rateG:rate/10,bills:tN,billsAmt:tAmt,dues:dues,lows:[],
+            update:document.getElementById('update-banner').classList.contains('visible')});
+    }).catch(function(e){console.error('retailFallback:',e);});
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+initSidebar('dashboard');
+setTimeout(function(){try{renderUrgentInbox();}catch(e){}},1200);
+
+// ── PLAN BATCH ────────────────────────────────────────────────────
+function _updatePlanBatch() {
+    var batch = document.getElementById('plan-batch');
+    var label = document.getElementById('plan-batch-label');
+    var remaining = document.getElementById('plan-batch-remaining');
+    if (!batch || !label) return;
+
+    var plan = 'lite';
+    var remainingDays = 0;
+    var status = 'unknown';
+
+    if (window.__aurumSubState) {
+        var st = window.__aurumSubState();
+        plan = st.effective_plan || st.plan || 'lite';
+        remainingDays = (st.subscription && st.subscription.remaining_days) || 0;
+        status = st.status || 'unknown';
+    } else if (window.AurumOS && window.AurumOS.getPlan) {
+        plan = window.AurumOS.getPlan();
+    }
+
+    batch.className = 'plan-batch plan-' + plan;
+    label.innerText = plan.toUpperCase();
+
+    if (remainingDays > 0) {
+        remaining.innerText = remainingDays + 'd left';
+        remaining.style.display = '';
+    } else {
+        remaining.style.display = 'none';
+    }
+
+    if (status === 'grace') {
+        label.innerText = plan.toUpperCase() + ' (GRACE)';
+    } else if (status === 'expired' || status === 'revoked') {
+        label.innerText = 'EXPIRED';
+        batch.className = 'plan-batch plan-lite';
+    }
+
+    batch.style.display = 'inline-flex';
+}
+
+window.addEventListener('subscription:features_updated', _updatePlanBatch);
+window.addEventListener('apiready', function() { setTimeout(_updatePlanBatch, 500); });
+setTimeout(_updatePlanBatch, 1000);
+setTimeout(_updatePlanBatch, 2000);
+setTimeout(_updatePlanBatch, 4000);
+setTimeout(_updatePlanBatch, 8000);
+
+(function(){
+    var _a=0;
+
+    function _try(){
+        _a++;
+        var bridgeOk=window.pywebview&&window.pywebview.api&&
+                     typeof window.pywebview.api.get_live_command_metrics==='function';
+        var chartOk=typeof Chart!=='undefined';
+        if(bridgeOk&&chartOk){
+            loadDashboard();
+            launchNetworkHeartbeatMonitor();
+        }
+        else if(_a<300){ setTimeout(_try,50); }
+    }
+    _try();
+})();
+</script>
+</body>

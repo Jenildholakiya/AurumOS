@@ -32,6 +32,7 @@ var ScaleWidget = (function() {
     var _callbacks   = [];
     var _miniTargets = {};    // { containerId: fieldId }
     var _inited      = false;
+    var _isStaff     = false;
 
     // ── CSS (injected once) ───────────────────────────────────────
     var CSS = [
@@ -40,7 +41,7 @@ var ScaleWidget = (function() {
         'border-radius:6px;border:1px solid var(--r,rgba(14,12,9,.08));',
         'background:transparent;cursor:pointer;font-size:.68rem;font-weight:600;',
         'color:var(--ink3,#5c5a52);transition:all .15s;font-family:var(--sans,"DM Sans",sans-serif);}',
-        '.sw-btn:hover{background:var(--c2,#f2efe7);}',
+        '.sw-btn:hover{background:var(--c2,#f1f5f9);}',
         '.sw-btn.connected{border-color:rgba(21,128,61,.3);background:rgba(21,128,61,.07);color:#15803d;}',
         '.sw-btn.connecting{opacity:.7;pointer-events:none;}',
         '.sw-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s;}',
@@ -52,21 +53,24 @@ var ScaleWidget = (function() {
         '.sw-overlay{display:none;position:fixed;inset:0;background:rgba(14,12,9,.5);',
         'z-index:9990;align-items:center;justify-content:center;}',
         '.sw-overlay.open{display:flex;}',
-        '.sw-popup{background:#fff;border-radius:14px;width:460px;max-width:96vw;',
-        'box-shadow:0 12px 48px rgba(14,12,9,.2);overflow:hidden;font-family:var(--sans,"DM Sans",sans-serif);}',
+        '.sw-popup{background:#fff;border-radius:16px;width:640px;max-width:97vw;',
+        'box-shadow:0 16px 60px rgba(14,12,9,.22);overflow:hidden;font-family:var(--sans,"DM Sans",sans-serif);',
+        'border:2px solid rgba(14,12,9,.08);transition:border-color .3s,box-shadow .3s;}',
+        /* GREEN when the scale is connected */
+        '.sw-popup.sw-connected{border-color:#15803d;box-shadow:0 0 0 4px rgba(21,128,61,.12),0 16px 60px rgba(14,12,9,.22);}',
 
         /* Popup header */
         '.sw-ph{display:flex;align-items:center;justify-content:space-between;',
-        'padding:16px 20px;border-bottom:1px solid rgba(14,12,9,.08);background:#faf8f3;}',
+        'padding:16px 20px;border-bottom:1px solid rgba(14,12,9,.08);background:#f8fafb;}',
         '.sw-ph-l{display:flex;align-items:center;gap:10px;}',
-        '.sw-logo{width:32px;height:32px;background:#0e0c09;border-radius:7px;display:flex;',
-        'align-items:center;justify-content:center;font-size:.8rem;}',
-        '.sw-ph-title{font-family:var(--serif,"DM Serif Display",Georgia,serif);font-size:1rem;color:#2c2a24;}',
+        '.sw-logo{width:32px;height:32px;background:#2563eb;border-radius:7px;display:flex;',
+        'align-items:center;justify-content:center;font-size:.8rem;color:#fff;}',
+        '.sw-ph-title{font-family:var(--serif,"DM Serif Display",Georgia,serif);font-size:1rem;color:#0e0c09;}',
         '.sw-ph-sub{font-size:.68rem;color:#7a7268;margin-top:2px;}',
         '.sw-close{width:28px;height:28px;border-radius:6px;border:1px solid rgba(14,12,9,.08);',
         'background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;',
         'color:#7a7268;font-size:.82rem;transition:all .13s;}',
-        '.sw-close:hover{background:#fef2f2;color:#b91c1c;}',
+        '.sw-close:hover{background:rgba(220,38,38,.08);color:#dc2626;}',
 
         /* Status ring */
         '.sw-status{padding:18px 20px;border-bottom:1px solid rgba(14,12,9,.08);',
@@ -74,58 +78,60 @@ var ScaleWidget = (function() {
         '.sw-ring{width:48px;height:48px;border-radius:50%;border:3px solid #e5e5e5;',
         'display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .3s;}',
         '.sw-ring.ok{border-color:#15803d;background:rgba(21,128,61,.07);}',
-        '.sw-ring.err{border-color:#b91c1c;background:rgba(185,28,28,.07);}',
-        '.sw-ring.busy{border-color:#b45309;background:rgba(180,83,9,.07);',
+        '.sw-ring.err{border-color:#dc2626;background:rgba(220,38,38,.07);}',
+        '.sw-ring.busy{border-color:#d97706;background:rgba(217,119,6,.07);',
         'animation:sw-spin .8s linear infinite;}',
         '@keyframes sw-spin{to{transform:rotate(360deg)}}',
-        '.sw-st-title{font-size:.82rem;font-weight:700;color:#2c2a24;}',
+        '.sw-st-title{font-size:.82rem;font-weight:700;color:#0e0c09;}',
         '.sw-st-sub{font-size:.7rem;color:#7a7268;margin-top:3px;}',
 
         /* Live weight display */
-        '.sw-wt-disp{margin:0 20px 16px;background:#faf8f3;border:1px solid rgba(14,12,9,.08);',
-        'border-radius:10px;padding:14px 18px;display:flex;align-items:center;',
-        'justify-content:space-between;}',
-        '.sw-wt-val{font-family:var(--mono,"DM Mono",monospace);font-size:2rem;',
-        'font-weight:800;color:#0e0c09;letter-spacing:-1px;transition:color .3s;}',
+        '.sw-wt-disp{margin:0 24px 20px;background:#f8fafb;border:2px solid rgba(14,12,9,.1);',
+        'border-radius:12px;padding:22px 26px;display:flex;align-items:center;',
+        'justify-content:space-between;transition:border-color .3s,background .3s;}',
+        /* GREEN weight panel once connected & stable */
+        '.sw-wt-disp.sw-live{background:rgba(21,128,61,.06);border-color:rgba(21,128,61,.35);}',
+        '.sw-wt-val{font-family:var(--mono,"DM Mono",monospace);font-size:4rem;',
+        'font-weight:800;color:#0e0c09;letter-spacing:-2px;line-height:1;transition:color .3s;}',
         '.sw-wt-val.stable{color:#15803d;}',
-        '.sw-wt-unit{font-size:.76rem;color:#7a7268;margin-left:4px;}',
-        '.sw-wt-badge{font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:20px;',
+        '.sw-wt-unit{font-size:1.1rem;color:#7a7268;margin-left:6px;font-weight:700;}',
+        '.sw-wt-badge{font-size:.72rem;font-weight:700;padding:5px 13px;border-radius:20px;',
         'background:#f0f0f0;color:#aaa;border:1px solid #e5e5e5;}',
-        '.sw-wt-badge.stable{background:rgba(21,128,61,.07);color:#15803d;',
-        'border-color:rgba(21,128,61,.22);}',
+        '.sw-wt-badge.stable{background:rgba(21,128,61,.1);color:#15803d;',
+        'border-color:rgba(21,128,61,.3);}',
 
         /* Port selector */
         '.sw-cfg{padding:0 20px 16px;display:flex;flex-direction:column;gap:10px;}',
         '.sw-row{display:flex;gap:8px;align-items:center;}',
         '.sw-lbl{font-size:.6rem;font-weight:600;text-transform:uppercase;',
         'letter-spacing:1px;color:#7a7268;margin-bottom:5px;}',
-        '.sw-sel,.sw-inp{height:36px;background:#faf8f3;border:1px solid rgba(14,12,9,.08);',
+        '.sw-sel,.sw-inp{height:36px;background:#f8fafb;border:1px solid rgba(14,12,9,.08);',
         'border-radius:7px;font-size:.8rem;padding:0 11px;color:#0e0c09;outline:none;',
         'font-family:var(--mono,"DM Mono",monospace);}',
         '.sw-sel{cursor:pointer;}',
         '.sw-port-sel{flex:1;}',
         '.sw-baud-sel{width:120px;}',
         '.sw-scan-btn{height:36px;padding:0 13px;border:1px solid rgba(14,12,9,.08);',
-        'border-radius:7px;background:#faf8f3;font-size:.72rem;cursor:pointer;white-space:nowrap;',
+        'border-radius:7px;background:#f8fafb;font-size:.72rem;cursor:pointer;white-space:nowrap;',
         'transition:background .15s;}',
-        '.sw-scan-btn:hover{background:#f2efe7;}',
+        '.sw-scan-btn:hover{background:#f1f5f9;}',
 
         /* Connect button */
-        '.sw-conn-btn{width:100%;height:40px;border:none;border-radius:9px;font-size:.82rem;',
+        '.sw-conn-btn{width:100%;height:48px;border:none;border-radius:9px;font-size:.9rem;',
         'font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;',
         'justify-content:center;gap:8px;margin:0 20px 16px;width:calc(100% - 40px);}',
-        '.sw-conn-btn.connect{background:#0e0c09;color:#fff;}',
-        '.sw-conn-btn.connect:hover{background:#a87d1e;}',
-        '.sw-conn-btn.disconnect{background:rgba(185,28,28,.07);color:#b91c1c;',
-        'border:1px solid rgba(185,28,28,.2);}',
-        '.sw-conn-btn.disconnect:hover{background:#b91c1c;color:#fff;}',
+        '.sw-conn-btn.connect{background:#2563eb;color:#fff;}',
+        '.sw-conn-btn.connect:hover{background:#1d4ed8;box-shadow:0 4px 12px rgba(37,99,235,.3);}',
+        '.sw-conn-btn.disconnect{background:rgba(220,38,38,.06);color:#dc2626;',
+        'border:1px solid rgba(220,38,38,.2);}',
+        '.sw-conn-btn.disconnect:hover{background:#dc2626;color:#fff;}',
         '.sw-conn-btn:disabled{opacity:.5;pointer-events:none;}',
 
         /* Mini widget (for modals) */
         '.sw-mini{display:inline-flex;align-items:center;gap:8px;',
-        'background:#faf8f3;border:1px solid rgba(14,12,9,.08);border-radius:8px;',
+        'background:#f8fafb;border:1px solid rgba(14,12,9,.08);border-radius:8px;',
         'padding:7px 12px;cursor:pointer;transition:all .18s;}',
-        '.sw-mini:hover{border-color:rgba(168,125,30,.22);background:rgba(168,125,30,.06);}',
+        '.sw-mini:hover{border-color:rgba(37,99,235,.22);background:rgba(37,99,235,.05);}',
         '.sw-mini.has-weight{border-color:rgba(21,128,61,.25);background:rgba(21,128,61,.06);}',
         '.sw-mini-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0;}',
         '.sw-mini.connected .sw-mini-dot{background:#15803d;animation:sw-pulse 2s infinite;}',
@@ -151,7 +157,7 @@ var ScaleWidget = (function() {
         div.className = 'sw-overlay';
         div.id        = 'sw-popup';
         div.innerHTML =
-            '<div class="sw-popup">'
+            '<div class="sw-popup" id="sw-popup-inner">'
             // Header
             + '<div class="sw-ph">'
             + '<div class="sw-ph-l">'
@@ -211,6 +217,8 @@ var ScaleWidget = (function() {
         var sub   = document.getElementById('sw-st-sub');
         var btn   = document.getElementById('sw-conn-btn');
         var phsub = document.getElementById('sw-ph-sub');
+        var popup = document.getElementById('sw-popup-inner');
+        var wtDisp = document.querySelector('.sw-wt-disp');
 
         if (!ring) return;
 
@@ -219,15 +227,33 @@ var ScaleWidget = (function() {
             ico.innerHTML   = '&#10003;';
             title.innerText = 'Connected — ' + _port;
             sub.innerText   = 'Scale is live. Baud: ' + _baud + '. Stays connected across pages.';
-            if (btn) { btn.className = 'sw-conn-btn disconnect'; btn.innerHTML = '&#9632; Disconnect'; }
+            if (btn) {
+                if (_isStaff) {
+                    btn.style.display = 'none'; // Hide disconnect button for staff
+                } else {
+                    btn.style.display = '';
+                    btn.className = 'sw-conn-btn disconnect';
+                    btn.innerHTML = '&#9632; Disconnect';
+                }
+            }
             if (phsub) phsub.innerText = 'Live \u2014 ' + _port + ' @ ' + _baud;
+            // GREEN connected state
+            if (popup) popup.classList.add('sw-connected');
+            if (wtDisp) wtDisp.classList.add('sw-live');
         } else {
             ring.className  = 'sw-ring';
             ico.innerHTML   = '&#9675;';
             title.innerText = 'Not Connected';
             sub.innerText   = 'Select a COM port and click Connect';
-            if (btn) { btn.className = 'sw-conn-btn connect'; btn.innerHTML = '&#9654; Connect Scale'; }
+            if (btn) {
+                btn.style.display = '';
+                btn.className = 'sw-conn-btn connect';
+                btn.innerHTML = '&#9654; Connect Scale';
+            }
             if (phsub) phsub.innerText = 'Connect once \u2014 stays connected permanently';
+            // Clear GREEN connected state
+            if (popup) popup.classList.remove('sw-connected');
+            if (wtDisp) wtDisp.classList.remove('sw-live');
         }
 
         // Update topbar button
@@ -333,6 +359,14 @@ function _updateWeight(wt, stable) {
             _updateStatus();
             return;
         }
+        // Transient reconnect (cable/power blip) — keep the UI "connected" and
+        // just show we're re-establishing. Do NOT flip to "Disconnected", which
+        // would make a momentary dropout look like the scale fell off entirely.
+        if (data.status === 'reconnecting') {
+            var sub = document.getElementById('sw-st-sub');
+            if (sub) sub.innerText = 'Reconnecting to ' + (data.port || _port) + '…';
+            return;
+        }
         var wt     = parseFloat(data.weight) || 0;
         var stable = data.stable === true || data.stable === 'true';
         _connected = true;
@@ -355,6 +389,7 @@ function _updateWeight(wt, stable) {
             _inited = true;
             _injectCSS();
             _buildPopup();
+            _self._checkUserRole();
 
             // Check if scale already connected (from auto-connect on startup)
             if (window.pywebview && window.pywebview.api) {
@@ -371,6 +406,16 @@ function _updateWeight(wt, stable) {
                     _self._scanPorts();
                 });
             }
+        },
+
+        _checkUserRole: function() {
+            if (!window.pywebview || !window.pywebview.api) return;
+            window.pywebview.api.get_session().then(function(r) {
+                if (r && r.role === 'staff') {
+                    _isStaff = true;
+                }
+                _updateStatus();
+            }).catch(function() {});
         },
 
         _scanPorts: function() {
@@ -404,6 +449,11 @@ function _updateWeight(wt, stable) {
 
         _toggleConnect: function() {
             if (_connected) {
+                if (_isStaff) {
+                    var sub = document.getElementById('sw-st-sub');
+                    if (sub) sub.innerText = 'Staff users cannot disconnect the scale.';
+                    return;
+                }
                 _self.disconnect();
             } else {
                 _self.connect();
@@ -456,6 +506,11 @@ function _updateWeight(wt, stable) {
         },
 
         disconnect: function() {
+            if (_isStaff) {
+                var sub = document.getElementById('sw-st-sub');
+                if (sub) sub.innerText = 'Staff users cannot disconnect the scale.';
+                return;
+            }
             if (!window.pywebview || !window.pywebview.api) return;
             window.pywebview.api.scale_disconnect().then(function() {
                 _connected  = false;

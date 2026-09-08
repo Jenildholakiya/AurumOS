@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Katti Terminal</title>
+<link rel="stylesheet" href="fonts.css">
+<script src="scale_widget.js"></script>
+<style>
+:root{
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+    --serif:"DM Serif Display",Georgia,serif;
+    --mono:Arial,sans-serif;
+    --sans:"DM Sans",system-ui,sans-serif;
+    --sh:0 1px 3px rgba(0,0,0,0.04);
+    --sh2:0 8px 28px rgba(0,0,0,0.10);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-variant-numeric:tabular-nums;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HEADER */
+header{height:72px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;z-index:50;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-left{display:flex;align-items:center;gap:20px;}
+.h-right{display:flex;align-items:center;gap:10px;}
+.btn-back{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:6px;border:1px solid var(--rule);background:var(--cream);font-size:0.72rem;color:var(--muted);cursor:pointer;transition:all 0.13s;font-family:var(--sans);}
+.btn-back:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.page-title{font-family:var(--serif);font-size:1.05rem;color:var(--ink);}
+.page-title em{color:var(--gold3);font-style:italic;}
+.meta-group{display:flex;flex-direction:column;gap:3px;}
+.meta-group label{font-size:0.5rem;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--gold3);}
+.meta-input{height:30px;padding:0 10px;background:var(--cream2);border:1px solid var(--rule);border-radius:5px;font-family:var(--mono);font-size:0.8rem;color:var(--ink);outline:none;transition:all 0.13s;text-align:center;min-width:72px;}
+.meta-input:focus{border-color:var(--gold2);background:var(--white);}
+.meta-input.wide{min-width:240px;text-align:left;}
+.meta-date{font-family:var(--mono);font-size:0.8rem;color:var(--muted);padding:6px 0;}
+.hdr-div{width:1px;height:28px;background:var(--rule);}
+.hdr-scale-wrap{position:absolute;left:50%;transform:translateX(-50%);top:0;bottom:0;display:flex;align-items:center;z-index:10;}
+.hdr-scale{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 36px;border-radius:10px;background:linear-gradient(180deg,var(--cream),var(--white));border:1.5px solid var(--rule);cursor:pointer;transition:all 0.18s;box-shadow:0 2px 8px rgba(14,12,9,0.04);}
+.hdr-scale:hover{border-color:var(--gold-ln);background:linear-gradient(180deg,var(--gold-bg),var(--white));box-shadow:0 4px 16px rgba(37,99,235,0.1);transform:scale(1.02);}
+.hdr-sc-status{display:flex;align-items:center;gap:5px;}
+.hdr-sc-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);flex-shrink:0;transition:background 0.3s;}
+.hdr-sc-lbl{font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted2);transition:color 0.3s;}
+.hdr-sc-num{display:flex;align-items:baseline;gap:6px;}
+.hdr-sc-wt{font-family:var(--mono);font-size:4.2rem;color:var(--muted2);letter-spacing:-2px;line-height:1;transition:color 0.3s;min-width:120px;text-align:center;}
+.hdr-sc-g{font-family:var(--mono);font-size:1.6rem;color:var(--muted2);font-weight:600;transition:color 0.3s;}
+
+/* HISTORY BANNER */
+.history-banner{display:none;background:rgba(180,83,9,0.07);color:#92400e;padding:8px 24px;font-size:0.7rem;border-bottom:1px solid rgba(180,83,9,0.15);text-align:center;flex-shrink:0;}
+.history-banner.visible{display:block;}
+
+/* ENTRY STRIP */
+.entry-strip{background:var(--white);border-bottom:1px solid var(--rule);padding:0 24px;height:70px;display:flex;align-items:center;gap:0;flex-shrink:0;box-shadow:var(--sh);}
+.entry-strip.locked{opacity:0.4;pointer-events:none;}
+.entry-group{display:flex;align-items:center;gap:10px;padding:0 18px;height:100%;}
+.entry-group:not(:last-child){border-right:1px solid var(--rule2);}
+.entry-group:first-child{padding-left:0;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:0.52rem;font-weight:500;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);white-space:nowrap;}
+.fld input{height:36px;padding:0 10px;background:var(--cream);border:1px solid var(--rule);border-radius:7px;font-family:var(--mono);font-size:0.82rem;color:var(--ink);outline:none;transition:border-color 0.13s,box-shadow 0.13s,background 0.13s;width:100%;}
+.fld input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(201,162,39,0.08);background:var(--white);}
+.fld input.touch-inp{font-size:1rem;color:var(--gold3);background:var(--gold-bg);border-color:var(--gold-ln);width:76px;}
+.fld input.weight-inp{width:120px;font-size:0.95rem;}
+.fld input.note-inp{width:190px;}
+.fld input.pkt-inp{width:66px;text-align:center;}
+.fld input.box-inp{width:76px;text-align:center;}
+.btn-add{height:36px;padding:0 18px;background:var(--ink);color:var(--white);border:none;border-radius:7px;font-family:var(--sans);font-size:0.75rem;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-add:hover{background:var(--gold3);}
+
+/* MAIN TABLE AREA */
+.table-area{flex:1;overflow:auto;padding:18px 24px;}
+.data-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+table{width:100%;border-collapse:collapse;}
+thead{position:sticky;top:0;z-index:5;}
+th{background:var(--cream2);padding:9px 14px;text-align:left;font-size:0.52rem;font-weight:500;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);border-bottom:1px solid var(--rule);white-space:nowrap;}
+td{padding:9px 14px;font-size:0.8rem;color:var(--ink);border-bottom:1px solid var(--rule2);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--gold-bg);}
+.td-touch{font-family:var(--mono);color:var(--gold3);font-size:0.88rem;}
+.td-wt{font-family:var(--mono);color:var(--green);}
+.td-box{font-family:var(--mono);color:var(--muted);font-size:0.75rem;}
+.td-num{color:var(--muted);text-align:center;}
+.td-sr{color:var(--muted2);font-size:0.72rem;text-align:center;}
+.td-edit{font-family:var(--mono);font-size:0.78rem;height:28px;padding:0 8px;border:1px solid var(--gold-ln);border-radius:5px;background:var(--gold-bg);color:var(--gold3);outline:none;width:100%;}
+.action-btn{border:none;background:none;cursor:pointer;padding:3px 6px;border-radius:4px;transition:all 0.12s;font-size:0.78rem;}
+.del-btn{color:var(--muted2);}.del-btn:hover{color:var(--red);background:var(--red-bg);}
+.edit-btn{color:var(--muted2);}.edit-btn:hover{color:var(--gold3);background:var(--gold-bg);}
+.save-btn{color:var(--green);background:var(--green-bg);border:1px solid rgba(21,128,61,0.2);}.save-btn:hover{background:var(--green);color:#fff;}
+.cancel-btn{color:var(--muted);}.cancel-btn:hover{color:var(--red);background:var(--red-bg);}
+
+/* FOOTER */
+footer{height:68px;background:var(--white);border-top:1px solid var(--rule);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.stats{display:flex;gap:36px;}
+.stat{display:flex;flex-direction:column;gap:2px;}
+.stat-lbl{font-size:0.52rem;font-weight:500;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);}
+.stat-val{font-family:var(--mono);font-size:1.2rem;color:var(--ink);}
+.stat-val.green{color:var(--green);}
+.footer-btns{display:flex;gap:10px;align-items:center;}
+.btn-toggle-hist{height:32px;padding:0 14px;border:1px solid var(--rule);background:var(--cream2);color:var(--ink3);border-radius:6px;font-family:var(--sans);font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.btn-toggle-hist:hover{border-color:var(--gold-ln);color:var(--gold3);}
+.btn-new-vch{display:none;height:34px;padding:0 16px;background:var(--gold-bg);color:var(--gold3);border:1px solid var(--gold-ln);border-radius:7px;font-family:var(--sans);font-size:0.74rem;cursor:pointer;}
+.btn-new-vch.visible{display:flex;align-items:center;}
+.btn-new-vch:hover{background:var(--gold3);color:var(--white);}
+.btn-del-vch{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 14px;background:var(--red-bg);color:var(--red);border:1px solid rgba(185,28,28,0.2);border-radius:7px;font-family:var(--sans);font-size:0.72rem;cursor:pointer;}
+.btn-del-vch:hover{background:var(--red);color:#fff;}
+.btn-commit{height:36px;padding:0 26px;background:var(--ink);color:var(--white);border:none;border-radius:7px;font-family:var(--sans);font-size:0.78rem;cursor:pointer;transition:all 0.15s;}
+.btn-commit:hover:not(:disabled){background:var(--green);}
+.btn-commit:disabled{background:var(--muted2);cursor:not-allowed;}
+
+/* MODAL */
+.modal-wrap{position:fixed;inset:0;background:rgba(14,12,9,0.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;}
+.modal-wrap.open{display:flex;}
+.modal-box{background:var(--white);border-radius:14px;padding:32px 28px 24px;width:380px;max-width:94vw;text-align:center;box-shadow:var(--sh2);animation:popIn 0.22s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes popIn{from{transform:scale(0.9) translateY(12px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.modal-icon{font-size:2rem;margin-bottom:14px;}
+.modal-title{font-family:var(--serif);font-size:1.1rem;color:var(--ink);margin-bottom:8px;}
+.modal-msg{font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:20px;white-space:pre-line;}
+.modal-btns{display:flex;gap:10px;}
+.mbtn{flex:1;height:40px;border:none;border-radius:8px;font-family:var(--sans);font-size:0.78rem;cursor:pointer;transition:all 0.13s;}
+.mbtn-primary{background:var(--ink);color:#fff;}.mbtn-primary:hover{background:var(--gold3);}
+.mbtn-danger{background:var(--red);color:#fff;}.mbtn-danger:hover{background:#991b1b;}
+.mbtn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}.mbtn-ghost:hover{background:var(--cream3);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--cream3);border-radius:99px;}
+</style>
+</head>
+<body>
+
+<!-- SCALE BRIDGE -->
+<script>
+ScaleWidget.init();
+ScaleWidget.renderMini('sw-mini-katti', 'in-weight');
+
+'use strict';
+var _scW=null, _scStable=false, _scConnected=false;
+
+function JSLOG(m){try{console.log('[KT] '+m);}catch(e){} try{if(window.pywebview&&window.pywebview.api&&window.pywebview.api.js_log)window.pywebview.api.js_log(m);}catch(e){}}
+
+window.__onScale = function(d) {
+    if (!d) return;
+
+    // --- FIX: Zero-Threshold Logic ---
+    var rawWeight = parseFloat(d.weight || 0);
+    // If reading is between 0.001g and 0.015g, force it to 0.000g
+    if (rawWeight > 0 && rawWeight < 0.015) {
+        rawWeight = 0;
+    }
+    // ---------------------------------
+
+    if (d.error) {
+        _scConnected = false;
+        _scSetStatus('ERROR', '#b91c1c');
+        return;
+    }
+
+    _scW = rawWeight.toFixed(3);
+    _scStable = !!d.stable;
+
+    var w = _scW;
+    var col = d.stable ? '#15803d' : '#d97706';
+
+    var wEl = document.getElementById('hdr-sc-wt'),
+        dEl = document.getElementById('hdr-sc-dot'),
+        lEl = document.getElementById('hdr-sc-lbl'),
+        gEl = document.getElementById('hdr-sc-g'),
+        pEl = document.getElementById('sc-popup-wt');
+
+    if (wEl) { wEl.innerText = w; wEl.style.color = col; }
+    if (dEl) dEl.style.background = d.stable ? '#16a34a' : '#d97706';
+    if (lEl) { lEl.innerText = d.stable ? 'STABLE' : 'READING'; lEl.style.color = col; }
+    if (gEl) gEl.style.color = col;
+    if (pEl) pEl.innerText = w;
+};
+
+window.__onScaleConnected=function(){_scConnected=true;_scSetStatus('AUTO','#15803d');};
+function _scSetStatus(lbl,color){var dEl=document.getElementById('hdr-sc-dot'),lEl=document.getElementById('hdr-sc-lbl');if(dEl)dEl.style.background=color;if(lEl){lEl.innerText=lbl;lEl.style.color=color;}}
+
+function openScalePopup(){
+    ScaleWidget.openPopup();
+    scLoadPorts();
+}
+function closeScalePopup(){
+    ScaleWidget.closePopup();
+}
+function scLoadPorts(){
+    var sel=document.getElementById('sc-port');if(!sel)return;sel.innerHTML='<option value="">Scanning...</option>';
+    if(!window.pywebview||!window.pywebview.api){sel.innerHTML='<option value="">Bridge not ready</option>';return;}
+    var cfgFn=window.pywebview.api.scale_get_saved_config;
+    var prom=cfgFn?cfgFn():Promise.resolve({port:'',baud:1200});
+    prom.then(function(cfg){
+        var sp=(cfg&&cfg.port)||'',sb=(cfg&&cfg.baud)||1200;
+        try{if(!sp)sp=localStorage.getItem('aurum_scale_port')||'';}catch(e){}
+        var baudEl=document.getElementById('sc-baud');if(baudEl)baudEl.value=sb;
+        return window.pywebview.api.scale_get_ports().then(function(ports){
+            sel.innerHTML='';ports=ports||[];
+            if(!ports.length){sel.innerHTML='<option value="">No ports found</option>';return;}
+            ports.forEach(function(p){var o=document.createElement('option');o.value=p.port;o.text=p.port+(p.desc?' - '+p.desc.substring(0,22):'');if(p.port===sp)o.selected=true;sel.appendChild(o);});
+            if(!sel.value&&ports.length)sel.value=ports[0].port;
+        });
+    }).catch(function(e){JSLOG('scLoadPorts error: '+e);});
+}
+function scConnect(){
+    var port=(document.getElementById('sc-port')||{}).value||'';
+    var baud=parseInt((document.getElementById('sc-baud')||{}).value)||1200;
+    var msgEl=document.getElementById('sc-popup-msg'),connBtn=document.getElementById('sc-popup-connect-btn');
+    function setMsg(m,c){if(msgEl){msgEl.innerText=m;msgEl.style.color=c||'rgba(255,255,255,0.4)';}}
+    if(!port){setMsg('Select a port first','#f87171');return;}
+    if(connBtn){connBtn.innerText='Connecting...';connBtn.disabled=true;}
+    setMsg('Connecting to '+port+'...');
+    if(!window.pywebview||!window.pywebview.api){setMsg('Bridge not ready','#f87171');if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}return;}
+    window.pywebview.api.scale_connect(port,baud).then(function(r){
+        if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}
+        if(r&&r.status==='success'){
+            _scConnected=true;
+            try{localStorage.setItem('aurum_scale_port',port);localStorage.setItem('aurum_scale_baud',String(baud));}catch(e){}
+            if(connBtn)connBtn.style.display='none';
+            var disc=document.getElementById('sc-popup-disconnect-btn');if(disc)disc.style.display='block';
+            setMsg('\u2713 Connected to '+port,'#4ade80');_scSetStatus('ONLINE','#15803d');
+        }else{setMsg('\u2715 '+((r&&r.message)||'Failed'),'#f87171');}
+    }).catch(function(e){if(connBtn){connBtn.disabled=false;connBtn.innerText='Connect Scale';}setMsg('\u2715 '+e,'#f87171');});
+}
+function scDisconnect(){
+    _scConnected=false;_scW=null;
+    if(window.pywebview&&window.pywebview.api)window.pywebview.api.scale_disconnect().catch(function(){});
+    _scSetStatus('OFFLINE','#9e9890');
+    var wEl=document.getElementById('hdr-sc-wt');if(wEl){wEl.innerText='--.---';wEl.style.color='var(--muted2)';}
+    var gEl=document.getElementById('hdr-sc-g');if(gEl)gEl.style.color='var(--muted2)';
+    var connBtn=document.getElementById('sc-popup-connect-btn'),discBtn=document.getElementById('sc-popup-disconnect-btn');
+    if(connBtn){connBtn.style.display='block';connBtn.innerText='Connect Scale';}
+    if(discBtn)discBtn.style.display='none';
+    var msgEl=document.getElementById('sc-popup-msg');if(msgEl){msgEl.innerText='Disconnected';msgEl.style.color='rgba(255,255,255,0.35)';}
+}
+(function tryAutoConnect(n){
+    if(window.pywebview&&window.pywebview.api){
+        var cfgFn=window.pywebview.api.scale_get_saved_config;if(!cfgFn)return;
+        cfgFn().then(function(cfg){
+            var port=(cfg&&cfg.port)||'',baud=(cfg&&cfg.baud)||1200;
+            if(!port){try{port=localStorage.getItem('aurum_scale_port')||'';}catch(e){}}
+            if(!port)return;
+            window.pywebview.api.scale_connect(port,baud).then(function(r){if(r&&r.status==='success'){_scConnected=true;_scSetStatus('AUTO','#15803d');JSLOG('Auto-connected: '+port);}}).catch(function(){});
+        }).catch(function(){});
+    }else if(n>0){setTimeout(function(){tryAutoConnect(n-1);},300);}
+})(30);
+</script>
+
+<!-- MODAL -->
+<div class="modal-wrap" id="modal-wrap">
+    <div class="modal-box">
+        <div class="modal-icon"  id="modal-icon"></div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-msg"   id="modal-msg"></div>
+        <div class="modal-btns"  id="modal-btns"></div>
+    </div>
+</div>
+
+<!-- SCALE POPUP -->
+
+
+<header>
+    <div class="h-left">
+        <button class="btn-back" onclick="window.location.href='inventory.html'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            Inventory
+        </button>
+        <div class="hdr-div"></div>
+        <div class="meta-group">
+            <label>Voucher</label>
+            <input type="text" id="vch-id" class="meta-input"
+                   onkeydown="if(event.key==='Enter'){lookUpVoucher(this.value);event.preventDefault();}">
+        </div>
+        <div class="meta-group">
+            <label>Date</label>
+            <div class="meta-date" id="current-date">-</div>
+        </div>
+        <div class="meta-group">
+            <label>Session Note</label>
+            <input type="text" id="vch-note" class="meta-input wide" placeholder="Batch details, lot info...">
+        </div>
+    </div>
+    <div class="hdr-scale-wrap">
+        <div class="hdr-scale" onclick="ScaleWidget.openPopup()">
+            <div class="hdr-sc-status">
+                <span class="hdr-sc-dot" id="hdr-sc-dot"></span>
+                <span class="hdr-sc-lbl" id="hdr-sc-lbl">offline</span>
+            </div>
+            <div class="hdr-sc-num">
+                <span class="hdr-sc-wt" id="hdr-sc-wt">--.---</span>
+                <span class="hdr-sc-g"  id="hdr-sc-g">g</span>
+            </div>
+        </div>
+    </div>
+    <div class="h-right">
+        <div class="page-title">Katti <em>Terminal</em></div>
+    </div>
+</header>
+
+<div class="history-banner" id="history-banner">
+    Viewing historical record — you can edit and save changes or delete this voucher.
+</div>
+
+<div class="entry-strip" id="entry-strip">
+    <div class="entry-group">
+        <div class="fld">
+            <label>Touch % *</label>
+            <input type="number" id="in-touch" class="touch-inp nav-input" placeholder="68" step="0.1"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('in-note').focus();}">
+        </div>
+    </div>
+    <div class="entry-group">
+        <div class="fld">
+            <label>Description</label>
+            <input type="text" id="in-note" class="note-inp nav-input" placeholder="Optional">
+        </div>
+        <div class="fld">
+            <label>Weight (g) *</label>
+            <input type="number" id="in-weight" class="weight-inp nav-input" step="0.001" placeholder="0.000"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();var _w=window._scW||_scW;if(_w!==null&&_w!==undefined&&parseFloat(_w)>0){this.value=parseFloat(_w).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}">
+
+<div id="sw-mini-katti" style="margin-top:6px;"></div></div>
+        <div class="fld">
+            <label>Packets</label>
+            <input type="number" id="in-packets" class="pkt-inp nav-input" placeholder="1">
+        </div>
+    </div>
+    <div class="entry-group">
+        <div class="fld">
+            <label>Box No.</label>
+            <input type="text" id="in-box" class="box-inp nav-input" value="B-001"
+                   onfocus="this.select();" onmouseup="return false;"
+                   oninput="boxFormatLive(this);" onblur="boxNormalize(this);">
+        </div>
+        <button class="btn-add" onclick="commitEntry()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+        </button>
+    </div>
+</div>
+
+<!-- MAIN TABLE -->
+    <div class="table-area">
+        <div class="data-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:44px;">#</th>
+                        <th style="width:76px;">Touch</th>
+                        <th>Description</th>
+                        <th style="width:96px;">Weight</th>
+                        <th style="width:66px;">Pkts</th>
+                        <th style="width:76px;">Box</th>
+                        <th style="width:88px;text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="terminal-body">
+                    <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">No entries yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<footer>
+    <div class="stats">
+        <div class="stat"><span class="stat-lbl">Packets</span><span class="stat-val" id="stat-packets">0</span></div>
+        <div class="stat"><span class="stat-lbl">Total Weight</span><span class="stat-val green" id="stat-weight">0.000 g</span></div>
+    </div>
+    <div class="footer-btns">
+
+        <button class="btn-new-vch" id="btn-new" onclick="initializeVoucher()">+ New Voucher</button>
+        <button class="btn-del-vch" id="btn-del" onclick="deleteVoucher()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            Delete Voucher
+        </button>
+        <button class="btn-commit" id="btn-final" onclick="saveVoucherToDB()">Commit Voucher</button>
+    </div>
+</footer>
+
+<script>
+'use strict';
+ScaleWidget.init();
+var kattiLedger            = [];
+var currentBoxIdx          = 1;
+var isViewingHistoryMode   = false;
+var latestNextVoucherIdRaw = '0001';
+var editingIdx             = -1;
+
+function h(s){ return String(s||'').replace(/&/g,'&'+'amp;').replace(/</g,'&'+'lt;').replace(/>/g,'&'+'gt;'); }
+
+// ── HISTORY SIDEBAR ────────────────────────────────────────────
+
+
+
+
+
+// ── VOUCHER LOOKUP & INIT ──────────────────────────────────────
+function initializeVoucher() {
+    isSaving = false; // Reset lock
+    if (!window.pywebview || !window.pywebview.api) {
+        setTimeout(initializeVoucher, 150);
+        return;
+    }
+    window.pywebview.api.get_katti_vch_id().then(function(nextId) {
+        latestNextVoucherIdRaw = String(nextId).padStart(4, '0');
+        document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+        resetTerminalState();
+        setHistoryMode(false);
+        document.getElementById('in-touch').focus();
+    });
+}
+
+function resetTerminalState(){
+    kattiLedger=[]; currentBoxIdx=1; editingIdx=-1;
+    document.getElementById('vch-note').value='';
+    document.getElementById('in-box').value='B-001';
+    renderTerminal();
+}
+
+function lookUpVoucher(val){
+    if(!val) return;
+    var typed = String(val).trim().padStart(4,'0');
+    if(typed === latestNextVoucherIdRaw){
+        document.getElementById('vch-id').value = latestNextVoucherIdRaw;
+        resetTerminalState(); setHistoryMode(false); return;
+    }
+    if(!window.pywebview||!window.pywebview.api) return;
+    window.pywebview.api.get_voucher_history(typed).then(function(response){
+        if(response&&response.status==='success'&&response.voucher){
+            kattiLedger=(response.items||[]).map(function(i){
+                return{name:i.it_name||i.name||'',touch:parseFloat(i.touch||0),weight:parseFloat(i.nt_wt||i.weight||0).toFixed(3),packets:parseInt(i.pcs||i.packets||0),box:i.huid||i.box||'B-001'};
+            });
+            document.getElementById('vch-note').value=(response.voucher||{}).note||'';
+            document.getElementById('vch-id').value=typed;
+            renderTerminal(); setHistoryMode(true);
+            }else{
+            triggerPopup('warn','Not Found','Voucher "'+typed+'" does not exist.');
+            document.getElementById('vch-id').value=latestNextVoucherIdRaw;
+            resetTerminalState(); setHistoryMode(false);
+        }
+    }).catch(function(){});
+}
+
+function setHistoryMode(on){
+    isViewingHistoryMode=on;
+    // In history mode — entry strip ALLOWED (can add to existing voucher)
+    document.getElementById('entry-strip').classList.remove('locked');
+    document.getElementById('history-banner').classList.toggle('visible',on);
+    var btnFin=document.getElementById('btn-final');
+    var btnNew=document.getElementById('btn-new');
+    var btnDel=document.getElementById('btn-del');
+    btnFin.disabled=false;
+    btnFin.innerText=on?'Save Changes':'Commit Voucher';
+    btnNew.classList.toggle('visible',on);
+}
+
+// Add this at the very top of your <script> tag
+var isSaving = false;
+
+function saveVoucherToDB() {
+    // 1. Permanent Guard: If already saving, stop everything.
+    if (window.isSaving) {
+        console.warn("Save already in progress, blocking duplicate.");
+        return;
+    }
+
+    if (kattiLedger.length === 0) {
+        triggerPopup('warn', 'Empty Batch', 'Add at least one entry.');
+        return;
+    }
+
+    var vchId = document.getElementById('vch-id').value.trim();
+    var note = document.getElementById('vch-note').value; // You were missing this variable
+    var btn = document.getElementById('btn-final');
+
+    // Calculate totals from ledger
+    var totalW = 0, totalP = 0;
+    for (var i = 0; i < kattiLedger.length; i++) {
+        totalW += parseFloat(kattiLedger[i].weight);
+        totalP += parseInt(kattiLedger[i].packets);
+    }
+
+    // 2. Lock state
+    window.isSaving = true;
+    btn.disabled = true;
+    btn.innerText = 'Synchronizing...';
+
+    var items = kattiLedger.map(function(item) {
+        return {
+            it_code: 'KATTI-' + parseFloat(item.touch),
+            name: item.name,
+            weight: parseFloat(item.weight) || 0,
+            packets: parseInt(item.packets) || 0,
+            touch: parseFloat(item.touch) || 0,
+            box: item.box || 'B-001'
+        };
+    });
+
+    // 3. API Call
+    window.pywebview.api.save_katti_voucher(vchId, totalW, totalP, note, items)
+        .then(function(res) {
+            if (res.status === 'success') {
+                // SUCCESS: Show success message
+                triggerPopup('success', 'Saved ✓', 'Voucher ' + vchId + ' committed.');
+
+                // Override modal button to reset terminal immediately
+                var okBtn = document.getElementById('modal-btns').querySelector('.mbtn-primary');
+                if (okBtn) {
+                    okBtn.onclick = function() {
+                        closePopup();
+                        initializeVoucher(); // Reset the screen
+                    };
+                }
+            } else {
+                triggerPopup('danger', 'Save Failed', res.message || 'Unknown error.');
+            }
+        })
+        .catch(function(e) {
+            triggerPopup('danger', 'Error', String(e));
+        })
+        .finally(function() {
+            // 4. Unlock state
+            window.isSaving = false;
+            btn.disabled = false;
+            btn.innerText = isViewingHistoryMode ? 'Save Changes' : 'Commit Voucher';
+        });
+}
+
+function deleteVoucher(){
+    var vchId=document.getElementById('vch-id').value.trim();
+    triggerPopup('danger','Delete Voucher?','This will permanently delete VCH-'+vchId+' and remove all its stock entries.\n\nThis cannot be undone.',function(){
+        if(!window.pywebview||!window.pywebview.api) return;
+        window.pywebview.api.delete_katti_voucher(vchId).then(function(res){
+             triggerPopup('success','Deleted','VCH-'+vchId+' removed.');
+             initializeVoucher();
+        }).catch(function(e){ triggerPopup('danger','Error',String(e)); });
+    });
+}
+
+// ── ENTRY MANAGEMENT ──────────────────────────────────────────
+function commitEntry() {
+    var touch = parseFloat(document.getElementById('in-touch').value);
+    var rawWeight = parseFloat(document.getElementById('in-weight').value);
+    var name = document.getElementById('in-note').value.trim();
+
+    // --- FIX: Zero-Threshold Logic ---
+    // If the entered weight is noise (greater than 0 but less than 0.015), force it to 0
+    var weight = (rawWeight > 0 && rawWeight < 0.015) ? 0 : rawWeight;
+    // ---------------------------------
+
+    if (isNaN(touch) || touch <= 0) {
+        triggerPopup('warn', 'Touch Required', 'Enter touch % first.');
+        document.getElementById('in-touch').focus();
+        return;
+    }
+
+    // Use the 'weight' variable (which has been sanitized) for validation and storage
+    if (isNaN(weight) || weight <= 0) {
+        triggerPopup('warn', 'Weight Required', 'Enter a valid weight.');
+        document.getElementById('in-weight').focus();
+        return;
+    }
+
+    kattiLedger.push({
+        name: name || ('Katti ' + touch + '%'),
+        touch: touch,
+        weight: weight.toFixed(3), // Stores the sanitized weight
+        packets: parseInt(document.getElementById('in-packets').value) || 0,
+        box: document.getElementById('in-box').value.trim() || 'B-001'
+    });
+
+    renderTerminal();
+
+    if (kattiLedger.length % 4 === 0) {
+        currentBoxIdx++;
+        document.getElementById('in-box').value = 'B-' + String(currentBoxIdx).padStart(3, '0');
+    }
+
+    // Clear inputs
+    document.getElementById('in-touch').value = '';
+    document.getElementById('in-note').value = '';
+    document.getElementById('in-weight').value = '';
+    document.getElementById('in-packets').value = '';
+    document.getElementById('in-touch').focus();
+}
+
+function startEdit(idx){editingIdx=idx;renderTerminal();setTimeout(function(){var el=document.getElementById('edit-touch-'+idx);if(el){el.focus();el.select();}},50);}
+
+function saveEdit(idx){
+    var tEl=document.getElementById('edit-touch-'+idx),wEl=document.getElementById('edit-weight-'+idx);
+    var nEl=document.getElementById('edit-name-'+idx),pEl=document.getElementById('edit-pkt-'+idx),bEl=document.getElementById('edit-box-'+idx);
+    if(!tEl||!wEl) return;
+    var touch=parseFloat(tEl.value),weight=parseFloat(wEl.value);
+    if(isNaN(touch)||touch<=0||isNaN(weight)||weight<=0){tEl.style.borderColor='var(--red)';setTimeout(function(){tEl.style.borderColor='';},800);return;}
+    kattiLedger[idx]={touch:touch,weight:weight.toFixed(3),name:nEl?nEl.value.trim()||('Katti '+touch+'%'):kattiLedger[idx].name,packets:pEl?parseInt(pEl.value)||0:kattiLedger[idx].packets,box:bEl?bEl.value.trim()||'B-001':kattiLedger[idx].box};
+    editingIdx=-1; renderTerminal();
+}
+
+function cancelEdit(){editingIdx=-1;renderTerminal();}
+
+function removeRow(idx){
+    kattiLedger.splice(idx,1);
+    if(editingIdx===idx) editingIdx=-1;
+    else if(editingIdx>idx) editingIdx--;
+    renderTerminal();
+}
+
+function renderTerminal(){
+    var tbody=document.getElementById('terminal-body');if(!tbody) return;
+    if(!kattiLedger.length){
+        tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted2);font-size:0.78rem;">No entries yet.</td></tr>';
+        updateStats(); return;
+    }
+    var rows=[];
+    for(var ri=kattiLedger.length-1;ri>=0;ri--){
+        var item=kattiLedger[ri],sr=ri+1;
+        if(ri===editingIdx){
+            rows.push('<tr style="background:var(--gold-bg);">'
+                +'<td class="td-sr">'+sr+'</td>'
+                +'<td><input id="edit-touch-'+ri+'" class="td-edit" type="number" value="'+item.touch+'" step="0.1" style="width:64px;"></td>'
+                +'<td><input id="edit-name-'+ri+'" class="td-edit" type="text" value="'+h(item.name)+'" style="width:100%;"></td>'
+                +'<td><input id="edit-weight-'+ri+'" class="td-edit" type="number" value="'+item.weight+'" step="0.001" style="width:84px;"></td>'
+                +'<td><input id="edit-pkt-'+ri+'" class="td-edit" type="number" value="'+item.packets+'" style="width:52px;text-align:center;"></td>'
+                +'<td><input id="edit-box-'+ri+'" class="td-edit" type="text" value="'+h(item.box)+'" style="width:66px;text-align:center;"></td>'
+                +'<td style="text-align:center;"><button class="action-btn save-btn" onclick="saveEdit('+ri+')">&#10003;</button> <button class="action-btn cancel-btn" onclick="cancelEdit()">&#10005;</button></td></tr>');
+        }else{
+            rows.push('<tr>'
+                +'<td class="td-sr">'+sr+'</td>'
+                +'<td class="td-touch">'+item.touch+'%</td>'
+                +'<td style="color:var(--ink3);">'+h(item.name)+'</td>'
+                +'<td class="td-wt">'+item.weight+' g</td>'
+                +'<td class="td-num">'+item.packets+'</td>'
+                +'<td class="td-box">'+h(item.box)+'</td>'
+                +'<td style="text-align:center;"><button class="action-btn edit-btn" onclick="startEdit('+ri+')">&#9998;</button> <button class="action-btn del-btn" onclick="removeRow('+ri+')">&#10005;</button></td></tr>');
+        }
+    }
+    tbody.innerHTML=rows.join('');
+    updateStats();
+}
+
+function updateStats(){
+    var totalW=0,totalP=0;
+    for(var i=0;i<kattiLedger.length;i++){totalW+=parseFloat(kattiLedger[i].weight||0);totalP+=parseInt(kattiLedger[i].packets||0);}
+    document.getElementById('stat-weight').innerText=totalW.toFixed(3)+' g';
+    document.getElementById('stat-packets').innerText=totalP;
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
+function triggerPopup(type,title,text,onConfirm){
+    var icons={success:'\u2713',warn:'!',danger:'&#128683;'};
+    document.getElementById('modal-icon').innerHTML=icons[type]||'!';
+    document.getElementById('modal-title').innerText=title;
+    document.getElementById('modal-msg').innerText=text;
+    var btns=document.getElementById('modal-btns');
+    btns.innerHTML='';
+    if(onConfirm){
+        var y=document.createElement('button');y.className='mbtn mbtn-danger';y.innerText='Yes, Delete';
+        y.onclick=function(){closePopup();onConfirm();};
+        var n=document.createElement('button');n.className='mbtn mbtn-ghost';n.innerText='Cancel';
+        n.onclick=closePopup;
+        btns.appendChild(y);btns.appendChild(n);
+    }else{
+        var ok=document.createElement('button');ok.className='mbtn mbtn-primary';ok.innerText='OK';
+        ok.onclick=closePopup;
+        btns.appendChild(ok);
+    }
+    document.getElementById('modal-wrap').classList.add('open');
+}
+function closePopup(){document.getElementById('modal-wrap').classList.remove('open');}
+
+// ── BOX NO. AUTO-FORMAT ────────────────────────────────────────
+// Type any number -> auto-prefixes "B-" and pads to 3 digits (e.g. 2 -> B-002,
+// 25 -> B-025). Only the last 3 digits entered are kept. Field selects on focus
+// so typing replaces the current box number instantly.
+function boxFormatLive(el){
+    var d = (el.value || '').replace(/\D/g, '');   // keep digits only
+    if (d === '') { el.value = 'B-'; return; }      // allow clearing mid-edit
+    d = d.slice(-3);                                // keep the last 3 digits typed
+    el.value = 'B-' + d.padStart(3, '0');
+    try { el.setSelectionRange(el.value.length, el.value.length); } catch(_e) {}
+}
+function boxNormalize(el){
+    var d = (el.value || '').replace(/\D/g, '');
+    var n = parseInt(d, 10);
+    if (!n || n < 1) n = 1;
+    el.value = 'B-' + String(n).padStart(3, '0');
+}
+
+// ── KEYBOARD ───────────────────────────────────────────────────
+document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){if(editingIdx>=0)cancelEdit();else if(document.getElementById('modal-wrap').classList.contains('open'))closePopup();return;}
+    var el=document.activeElement;if(!el) return;
+    if(e.key==='Enter'&&el.classList.contains('td-edit')&&editingIdx>=0){e.preventDefault();saveEdit(editingIdx);return;}
+    if(e.key!=='Enter'||!el.classList.contains('nav-input')) return;
+    var inputs=Array.from(document.querySelectorAll('.nav-input'));
+    var idx=inputs.indexOf(el);
+    if(el.id==='in-box'){e.preventDefault();commitEntry();}
+    else if(idx<inputs.length-1){e.preventDefault();inputs[idx+1].focus();}
+});
+
+// ── INIT ───────────────────────────────────────────────────────
+window.onload=function(){
+    document.getElementById('current-date').innerText=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    function waitAndInit(n){
+        if(window.pywebview&&window.pywebview.api){
+            initializeVoucher();
+        }else if(n>0){
+            setTimeout(function(){waitAndInit(n-1);},200);
+        }else{
+            initializeVoucher();
+        }
+    }
+    waitAndInit(30);
+};
+</script>
+</body>
+</html>

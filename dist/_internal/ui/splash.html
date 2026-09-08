@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --cream:#faf8f3;--cream2:#f2efe7;
+    --ink:#0e0c09;--ink2:#2a2620;
+    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
+    --gold-bg:rgba(168,125,30,0.08);--gold-ln:rgba(168,125,30,0.22);
+    --muted:#7a7268;--muted2:#9e9890;
+    --serif:"DM Serif Display",Georgia,serif;
+    --sans:"DM Sans",system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{
+    font-family:var(--sans);
+    background:var(--cream);
+    color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    -webkit-user-select:none;user-select:none;
+    cursor:default;
+}
+/* subtle diagonal paper texture — matches login */
+.texture{
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(168,125,30,0.025) 28px,rgba(168,125,30,0.025) 29px);
+}
+/* soft radial glow behind the mark */
+.aura{
+    position:fixed;top:42%;left:50%;width:640px;height:640px;
+    transform:translate(-50%,-50%);pointer-events:none;z-index:0;
+    background:radial-gradient(circle,rgba(201,162,39,0.10) 0%,rgba(201,162,39,0.04) 34%,transparent 66%);
+    animation:auraPulse 4.2s ease-in-out infinite;
+}
+@keyframes auraPulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.94);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
+
+.particle{position:fixed;border-radius:50%;pointer-events:none;background:rgba(168,125,30,0.10);animation:float linear infinite;z-index:0;}
+@keyframes float{0%{transform:translateY(0) translateX(0);opacity:0;}10%{opacity:.7;}90%{opacity:.7;}100%{transform:translateY(-110vh) translateX(24px);opacity:0;}}
+
+/* ── STAGE ── */
+.stage{
+    position:relative;z-index:2;display:flex;flex-direction:column;
+    align-items:center;text-align:center;
+    animation:stageIn .7s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes stageIn{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+
+/* logo mark + rotating gold ring */
+.mark-wrap{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center;margin-bottom:26px;}
+.ring{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,transparent 0deg,transparent 210deg,var(--gold2) 300deg,var(--gold) 340deg,transparent 360deg);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));
+    animation:spin 1.15s linear infinite;
+}
+.ring.slow{
+    inset:9px;
+    background:conic-gradient(from 180deg,transparent 0deg,transparent 240deg,var(--gold3) 320deg,var(--gold2) 355deg,transparent 360deg);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
+    animation:spinR 1.9s linear infinite;opacity:.7;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes spinR{to{transform:rotate(-360deg);}}
+
+.lm{
+    position:relative;width:86px;height:86px;border-radius:22px;
+    background:linear-gradient(155deg,var(--ink2),var(--ink));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 30px rgba(14,12,9,0.28),inset 0 1px 0 rgba(255,255,255,0.05);
+    overflow:hidden;
+    animation:markFloat 3.4s ease-in-out infinite;
+}
+@keyframes markFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+.lm span{font-family:var(--serif);font-style:italic;font-size:2.5rem;color:var(--gold2);line-height:1;text-shadow:0 2px 10px rgba(201,162,39,0.35);}
+/* sweeping shine across the mark */
+.lm::after{
+    content:"";position:absolute;top:-60%;left:-120%;width:60%;height:220%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,0.28),transparent);
+    transform:rotate(18deg);animation:shine 2.6s ease-in-out infinite;
+}
+@keyframes shine{0%{left:-120%;}55%,100%{left:160%;}}
+
+/* wordmark */
+.word{font-family:var(--serif);font-size:2.15rem;letter-spacing:-.4px;color:var(--ink);line-height:1;}
+.word em{color:var(--gold3);font-style:normal;}
+.tag{
+    margin-top:9px;font-size:.6rem;font-weight:600;color:var(--muted2);
+    text-transform:uppercase;letter-spacing:2.6px;
+}
+
+/* progress */
+.pbar{
+    position:relative;width:230px;height:3px;margin-top:34px;
+    background:var(--cream2);border-radius:99px;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(168,125,30,0.10);
+}
+.pfill{
+    position:absolute;left:0;top:0;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,var(--gold3),var(--gold2),var(--gold));
+    background-size:200% 100%;
+    transition:width .5s cubic-bezier(.4,0,.2,1);
+    animation:barShimmer 1.6s linear infinite;
+}
+@keyframes barShimmer{to{background-position:200% 0;}}
+
+.status{
+    margin-top:15px;height:14px;font-family:var(--mono);font-size:.64rem;
+    letter-spacing:.4px;color:var(--muted);
+}
+.status .txt{display:inline-block;animation:statusIn .4s ease both;}
+@keyframes statusIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+
+/* footer */
+.foot{
+    position:fixed;bottom:26px;left:0;right:0;z-index:2;text-align:center;
+    font-family:var(--mono);font-size:.56rem;letter-spacing:1px;
+    color:var(--muted2);text-transform:uppercase;
+}
+.foot b{color:var(--gold3);font-weight:500;}
+
+/* exit fade */
+body.leaving .stage{animation:stageOut .42s ease forwards;}
+body.leaving .aura,body.leaving .foot,body.leaving .particle{opacity:0;transition:opacity .4s ease;}
+@keyframes stageOut{to{opacity:0;transform:translateY(-8px) scale(.985);}}
+
+@media (prefers-reduced-motion: reduce){
+    .ring,.ring.slow,.lm,.lm::after,.aura,.pfill,.particle{animation:none;}
+    .pfill{transition:width .3s linear;}
+}
+</style>
+</head>
+<body>
+    <div class="texture"></div>
+    <div class="aura"></div>
+
+    <div class="stage">
+        <div class="mark-wrap">
+            <div class="ring"></div>
+            <div class="ring slow"></div>
+            <div class="lm"><span>A</span></div>
+        </div>
+        <div class="word">Aurum<em>OS</em></div>
+        <div class="tag">Jewellery Management Suite</div>
+
+        <div class="pbar"><div class="pfill" id="pfill"></div></div>
+        <div class="status"><span class="txt" id="status">Initializing secure workspace</span></div>
+    </div>
+
+    <div class="foot">Secured by <b>BASTION&nbsp;AI</b> &nbsp;·&nbsp; Preparing your terminal</div>
+
+<script>
+'use strict';
+(function(){
+    // ── floating gold particles (brand-consistent with login) ──
+    try{
+        for(var i=0;i<14;i++){
+            var p=document.createElement('div');
+            p.className='particle';
+            var s=(Math.random()*5+3).toFixed(1);
+            p.style.width=s+'px';p.style.height=s+'px';
+            p.style.left=(Math.random()*100)+'vw';
+            p.style.bottom='-10px';
+            p.style.animationDuration=(Math.random()*8+9).toFixed(1)+'s';
+            p.style.animationDelay=(Math.random()*6).toFixed(1)+'s';
+            document.body.appendChild(p);
+        }
+    }catch(e){}
+
+    // ── resolve the next page safely (only same-folder .html allowed) ──
+    // The destination is injected by Python via window.__AURUM_NEXT__ AFTER
+    // load. We do NOT use a ?query or #fragment in the URL, because file://
+    // URLs on Windows/WebView2 reject them and show a "not found" page.
+    function resolveNext(){
+        var n='';
+        try{ n=String(window.__AURUM_NEXT__||'').trim(); }catch(e){}
+        // legacy fallback: accept a #next=... hash if ever present
+        if(!n){
+            try{
+                var raw=(window.location.hash||'').replace(/^#/,'');
+                var params=new URLSearchParams(raw);
+                n=(params.get('next')||raw||'').trim();
+            }catch(e){}
+        }
+        // keep filename only — block any path traversal / external target
+        n=n.replace(/^.*[\\/]/,'');
+        if(/^[a-zA-Z0-9_\-]+\.html$/.test(n)) return n;
+        return 'login.html';
+    }
+
+    // Build an ABSOLUTE file URL for the target so redirection never depends
+    // on relative resolution.
+    function targetUrl(next){
+        try{
+            var base=window.location.href.split('#')[0].split('?')[0];
+            var dir=base.substring(0, base.lastIndexOf('/')+1);
+            return dir+next;
+        }catch(e){ return next; }
+    }
+
+    // Python calls this once it has injected __AURUM_NEXT__ (harmless if the
+    // page already resolved a default).
+    window.__aurumSplashReady=function(){ /* target now available */ };
+
+    // ── choreographed progress + status copy ──
+    var steps=[
+        {p:18, t:'Initializing secure workspace'},
+        {p:44, t:'Authenticating administrator'},
+        {p:68, t:'Loading vault & ledgers'},
+        {p:88, t:'Preparing your terminal'},
+        {p:100,t:'Ready'}
+    ];
+    var fill=document.getElementById('pfill');
+    var stat=document.getElementById('status');
+    var idx=0;
+    var STEP_MS=340;          // time between milestones
+    var MIN_MS=1400;          // minimum splash on-screen time
+    var start=Date.now();
+
+    function advance(){
+        if(idx>=steps.length){ finish(); return; }
+        var s=steps[idx++];
+        fill.style.width=s.p+'%';
+        stat.style.animation='none';
+        // force reflow so the status re-animates
+        void stat.offsetWidth;
+        stat.textContent=s.t;
+        stat.style.animation='';
+        if(idx<steps.length){
+            setTimeout(advance, STEP_MS);
+        }else{
+            setTimeout(finish, STEP_MS);
+        }
+    }
+
+    function go(){
+        // resolve at execution time — the Python-injected target is set by now
+        var next=resolveNext();
+        window.location.replace(targetUrl(next));
+    }
+
+    function finish(){
+        var elapsed=Date.now()-start;
+        var wait=Math.max(0, MIN_MS-elapsed);
+        setTimeout(function(){
+            document.body.classList.add('leaving');
+            setTimeout(go, 420);
+        }, wait);
+    }
+
+    // kick off shortly after paint
+    setTimeout(advance, 260);
+
+    // hard safety net: never get stuck on the splash
+    setTimeout(function(){
+        try{ if(!document.body.classList.contains('leaving')) go(); }catch(e){}
+    }, 7000);
+})();
+</script>
+</body>
+</html>

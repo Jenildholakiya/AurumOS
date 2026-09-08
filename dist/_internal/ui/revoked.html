@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | License Revoked</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#64748b;--muted2:#94a3b8;
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.18);
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);--green-border:rgba(22,163,74,0.18);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--cream);display:flex;align-items:center;justify-content:center;height:100vh;}
+
+/* ── CONTAINER ── */
+.container{
+    width:680px;max-width:94vw;
+    animation:lift 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes lift{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:none;}}
+
+/* ── HEADER CARD ── */
+.header-card{
+    background:linear-gradient(140deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);
+    border-radius:16px 16px 0 0;padding:36px 40px 30px;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+}
+.header-card::before{
+    content:'';position:absolute;inset:0;
+    background:
+        radial-gradient(circle at 20% 80%,rgba(37,99,235,0.1) 0%,transparent 50%),
+        radial-gradient(circle at 80% 20%,rgba(220,38,38,0.06) 0%,transparent 50%);
+    pointer-events:none;
+}
+.header-card::after{
+    content:'';position:absolute;width:200px;height:200px;bottom:-60px;left:-40px;
+    border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.08),transparent 70%);
+    animation:drift 10s ease-in-out infinite;pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,-20px);}}
+
+/* brand strip */
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;z-index:2;}
+.brand-logo{
+    width:36px;height:36px;border-radius:9px;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);
+    display:flex;align-items:center;justify-content:center;
+}
+.brand-logo span{font-size:0.75rem;font-weight:700;color:var(--gold2);font-style:italic;}
+.brand-name{font-size:0.88rem;font-weight:600;color:#fff;}
+.brand-name em{color:var(--gold2);font-style:normal;}
+
+/* icon */
+.icon-area{position:relative;width:100px;height:100px;margin-bottom:22px;z-index:2;}
+.icon-pulse{
+    position:absolute;inset:-8px;border-radius:50%;
+    border:1.5px solid rgba(220,38,38,0.15);
+    animation:pulse 3s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.2);opacity:0;}}
+.icon-pulse:nth-child(2){animation-delay:1s;}
+.icon-circle{
+    position:absolute;inset:0;border-radius:50%;
+    background:rgba(220,38,38,0.1);border:1.5px solid rgba(220,38,38,0.2);
+    display:flex;align-items:center;justify-content:center;
+}
+.icon-circle svg{width:38px;height:38px;stroke:var(--red);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+/* status badge */
+.status-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 14px;border-radius:99px;
+    background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.2);
+    margin-bottom:16px;z-index:2;
+    animation:badgeGlow 3s ease-in-out infinite;
+}
+@keyframes badgeGlow{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.12);}50%{box-shadow:0 0 0 8px rgba(220,38,38,0);}}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.8s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.status-text{font-size:0.54rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);}
+
+/* title */
+.header-title{font-family:var(--serif);font-size:1.8rem;font-weight:400;color:#fff;margin-bottom:8px;z-index:2;letter-spacing:-0.5px;}
+.header-sub{font-size:0.78rem;color:rgba(255,255,255,0.4);line-height:1.6;max-width:420px;z-index:2;}
+
+/* ── BODY CARD ── */
+.body-card{
+    background:var(--white);border:1px solid var(--rule);border-top:none;
+    border-radius:0 0 16px 16px;padding:28px 32px 24px;
+    box-shadow:0 8px 32px rgba(14,12,9,0.08);
+}
+
+/* info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.info-cell{
+    background:var(--cream);border:1px solid var(--rule2);border-radius:8px;
+    padding:12px 14px;text-align:center;transition:all 0.15s;
+}
+.info-cell:hover{border-color:var(--gold-ln);background:var(--gold-bg);transform:translateY(-1px);}
+.info-cell-label{font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px;}
+.info-cell-val{font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--ink);}
+.info-cell-val.red{color:var(--red);}
+
+/* reason box */
+.reason-box{
+    background:var(--red-bg);border:1px solid var(--red-border);
+    border-radius:10px;padding:14px 18px;margin-bottom:18px;
+    animation:slideIn 0.4s ease 0.2s both;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.reason-label{font-size:0.48rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--red);margin-bottom:5px;}
+.reason-text{font-size:0.72rem;color:var(--ink2);line-height:1.6;}
+
+/* check result */
+.check-result{
+    display:none;padding:10px 14px;border-radius:8px;font-size:0.72rem;
+    font-weight:500;margin-bottom:14px;align-items:center;gap:8px;
+    animation:slideIn 0.25s ease;
+}
+.check-result.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.check-result.fail{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.check-result.show{display:flex;}
+
+/* divider */
+.divider{height:1px;background:var(--rule);margin:0 0 16px;}
+
+/* contact row */
+.contact-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.chip{
+    display:flex;align-items:center;gap:5px;padding:6px 13px;
+    background:var(--cream);border:1px solid var(--rule);border-radius:7px;
+    font-size:0.62rem;color:var(--muted);cursor:pointer;transition:all 0.15s;
+}
+.chip:hover{border-color:var(--gold2);background:var(--gold-bg);transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,0.06);}
+.chip-icon{font-size:0.78rem;}
+.chip-val{font-family:var(--mono);font-size:0.58rem;color:var(--ink2);}
+
+/* buttons */
+.btn-row{display:flex;gap:8px;}
+.btn{
+    height:40px;border-radius:8px;font-family:var(--sans);
+    font-size:0.72rem;font-weight:600;cursor:pointer;
+    transition:all 0.18s;border:none;display:flex;align-items:center;
+    justify-content:center;gap:7px;
+}
+.btn-ghost{
+    flex:0 0 auto;padding:0 18px;background:var(--white);
+    color:var(--muted);border:1px solid var(--rule);
+}
+.btn-ghost:hover{border-color:var(--muted2);color:var(--ink);transform:translateY(-1px);}
+.btn-contact{
+    flex:1;background:var(--ink);color:#fff;
+    box-shadow:0 2px 8px rgba(14,12,9,0.12);
+}
+.btn-contact:hover{background:var(--ink2);box-shadow:0 6px 20px rgba(14,12,9,0.15);transform:translateY(-1px);}
+.btn-check{
+    flex:1;background:var(--gold3);color:#fff;
+    box-shadow:0 2px 8px rgba(37,99,235,0.2);
+}
+.btn-check:hover{background:var(--gold);box-shadow:0 6px 20px rgba(37,99,235,0.3);transform:translateY(-1px);}
+.btn-check:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-check .spinner{
+    display:none;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);
+    border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;
+}
+.btn-check.loading .spinner{display:inline-block;}
+.btn-check.loading .btn-label{display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* footer */
+.footer-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-top:16px;padding-top:12px;border-top:1px solid var(--rule);
+}
+.footer-l{font-size:0.5rem;color:var(--muted2);display:flex;align-items:center;gap:5px;}
+.footer-l .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+.footer-r{font-family:var(--mono);font-size:0.46rem;color:var(--muted2);letter-spacing:0.5px;}
+
+@media(max-width:600px){
+    .container{width:100vw;max-width:100vw;}
+    .header-card{padding:28px 20px 22px;border-radius:12px 12px 0 0;}
+    .header-title{font-size:1.3rem;}
+    .header-sub{font-size:0.68rem;}
+    .body-card{padding:20px 18px 18px;border-radius:0 0 12px 12px;}
+    .info-grid{grid-template-columns:1fr;}
+    .btn-row{flex-direction:column;}
+    .contact-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <div class="header-card">
+        <div class="brand">
+            <div class="brand-logo"><span>A</span></div>
+            <div class="brand-name">Aurum<em>OS</em></div>
+        </div>
+
+        <div class="icon-area">
+            <div class="icon-pulse"></div>
+            <div class="icon-pulse"></div>
+            <div class="icon-circle">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+        </div>
+
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span class="status-text">License Revoked</span>
+        </div>
+
+        <div class="header-title">Access Suspended</div>
+        <div class="header-sub">Your software license has been deactivated by the administrator. This is not a subscription expiry — access has been intentionally suspended.</div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body-card">
+        <!-- info grid -->
+        <div class="info-grid">
+            <div class="info-cell">
+                <div class="info-cell-label">Business</div>
+                <div class="info-cell-val" id="p-biz">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Plan</div>
+                <div class="info-cell-val" id="p-plan">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Status</div>
+                <div class="info-cell-val red">REVOKED</div>
+            </div>
+        </div>
+
+        <!-- reason -->
+        <div class="reason-box">
+            <div class="reason-label">Why am I seeing this?</div>
+            <div class="reason-text">Your license was revoked by the administrator. This may be due to policy violation, non-payment, or a request from your organization. Contact your software owner or AurumOS support for more information.</div>
+        </div>
+
+        <!-- check result -->
+        <div class="check-result" id="check-result"></div>
+
+        <div class="divider"></div>
+
+        <!-- contact -->
+        <div class="contact-row">
+            <div class="chip" onclick="callPhone()" title="Call now">
+                <span class="chip-icon">&#128222;</span>
+                <span class="chip-val">+91 70411 26244</span>
+            </div>
+            <div class="chip" onclick="openEmail('AurumOS License Revoked','Hi, my AurumOS license has been revoked. Please help me resolve this.')" title="Send email">
+                <span class="chip-icon">&#128140;</span>
+                <span class="chip-val">support@aurumos.in</span>
+            </div>
+            <div class="chip" onclick="openWebsite()" title="Visit website">
+                <span class="chip-icon">&#127760;</span>
+                <span class="chip-val">aurumos.in</span>
+            </div>
+        </div>
+
+        <!-- buttons -->
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="quitApp()">Quit</button>
+            <button class="btn btn-contact" onclick="contactOwner()">Contact Support</button>
+            <button class="btn btn-check" id="btn-check" onclick="checkLicense()">
+                <span class="spinner"></span>
+                <span class="btn-label">Check License</span>
+            </button>
+        </div>
+
+        <!-- footer -->
+        <div class="footer-bar">
+            <div class="footer-l"><span class="dot"></span>BASTION Security</div>
+            <div class="footer-r" id="footer-id">ERR-LICENSE-REVOKED</div>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+function getBusinessName(){
+    var state=null;
+    try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+    return state?(state.business||'AurumOS'):'AurumOS';
+}
+
+(function(){
+    var biz=getBusinessName();
+    document.getElementById('p-biz').innerText=biz;
+    var state=null;
+    try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+    if(state){
+        document.getElementById('p-plan').innerText=(state.plan||'lite').toUpperCase();
+    }
+    document.getElementById('footer-id').innerText='ERR-LICENSE-REVOKED | '+new Date().toLocaleDateString('en-GB');
+})();
+
+function checkLicense(){
+    var btn=document.getElementById('btn-check');
+    var result=document.getElementById('check-result');
+    btn.classList.add('loading');
+    btn.disabled=true;
+    result.className='check-result';
+
+    var api = window.pywebview && window.pywebview.api;
+
+    if(!api || Object.keys(api).length === 0){
+        checkLicenseDone(false,'Bridge not ready. Waiting...');
+        var tries = 0;
+        var poll = setInterval(function(){
+            api = window.pywebview && window.pywebview.api;
+            if(api && Object.keys(api).length > 0){
+                clearInterval(poll);
+                doCheck(api);
+            } else if(++tries > 50){
+                clearInterval(poll);
+                checkLicenseDone(false,'Unable to connect. Please restart the app.');
+            }
+        }, 200);
+        return;
+    }
+    doCheck(api);
+}
+
+function doCheck(api){
+    var method = null;
+    if(typeof api.check_license === 'function') method = 'check_license';
+    else if(typeof api.reactivate_check === 'function') method = 'reactivate_check';
+    else {
+        directFetchCheck();
+        return;
+    }
+
+    var result = api[method]();
+    if(result && typeof result.then === 'function'){
+        result.then(function(res){
+            handleCheckResult(res, method);
+        }).catch(function(e){
+            directFetchCheck();
+        });
+    } else {
+        handleCheckResult(result, method);
+    }
+}
+
+function directFetchCheck(){
+    var key = window.__aurum_key || localStorage.getItem('aurum_key') || '';
+    var machineId = window.__aurum_mid || localStorage.getItem('aurum_mid') || '';
+    if(!key){
+        checkLicenseDone(false,'License key not found locally. Please restart the app.');
+        return;
+    }
+    checkLicenseDone(false,'Checking directly with server...');
+    fetch('https://aurum-os-admin.vercel.app/api/check',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({key:key,machine_id:machineId})
+    }).then(function(r){return r.json();}).then(function(data){
+        if(data && data.valid){
+            checkLicenseDone(false,'Checking subscription status...');
+            var api = window.pywebview && window.pywebview.api;
+            if(api && typeof api.reactivate_check === 'function'){
+                api.reactivate_check().then(function(status){
+                    if(status === 'ok'){
+                        checkLicenseDone(true, 'License is active! Refreshing...');
+                        setTimeout(function(){ window.location.href='login.html'; }, 1500);
+                    } else if(status === 'expired'){
+                        checkLicenseDone(false, 'Subscription expired. Please renew your plan.');
+                    } else {
+                        checkLicenseDone(false, 'License is still ' + status + '. Please contact support.');
+                    }
+                }).catch(function(){
+                    checkLicenseDone(false, 'Unable to verify. Please restart the app.');
+                });
+            } else {
+                checkLicenseDone(true,'License is active! Refreshing...');
+                setTimeout(function(){ window.location.href='login.html'; },1000);
+            }
+        } else {
+            var reason = (data && data.status) || 'revoked';
+            checkLicenseDone(false,'License is '+reason+'. Please contact support.');
+        }
+    }).catch(function(e){
+        checkLicenseDone(false,'Unable to reach license server: '+String(e));
+    });
+}
+
+function handleCheckResult(res, method){
+    if(method === 'check_license'){
+        if(res && res.status==='success' && res.license_valid!==false){
+            checkLicenseDone(true, res.message || 'License is active! Refreshing...');
+            setTimeout(function(){
+                try{
+                    if(typeof window.pywebview.api.reload === 'function') window.pywebview.api.reload();
+                    else window.location.href='login.html';
+                }catch(e){ window.location.href='login.html'; }
+            }, 1500);
+        } else {
+            checkLicenseDone(false, (res && res.message) || 'License is still revoked. Please contact support.');
+        }
+    } else {
+        if(res === 'ok'){
+            checkLicenseDone(true, 'License is active! Refreshing...');
+            setTimeout(function(){ window.location.href='login.html'; }, 1500);
+        } else if(res === 'expired'){
+            checkLicenseDone(false, 'License has expired. Please renew to continue.');
+        } else if(res === 'offline'){
+            checkLicenseDone(false, 'Cannot reach license server. Check your internet connection.');
+        } else if(res === 'error'){
+            directFetchCheck();
+        } else {
+            checkLicenseDone(false, 'License is still ' + (res || 'revoked') + '. Please contact support.');
+        }
+    }
+}
+
+function checkLicenseDone(ok,msg){
+    var btn=document.getElementById('btn-check');
+    var result=document.getElementById('check-result');
+    btn.classList.remove('loading');
+    btn.disabled=false;
+    result.className='check-result show '+(ok?'ok':'fail');
+    result.innerHTML=(ok?'&#10003; ':'&#10007; ')+msg;
+}
+
+function openWhatsApp(msg){
+    var url='https://wa.me/917041126244?text='+encodeURIComponent(msg);
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url)window.pywebview.api.open_url(url);
+    else window.open(url,'_blank');
+}
+function openEmail(s,b){window.open('mailto:support@aurumos.in?subject='+encodeURIComponent(s)+'&body='+encodeURIComponent(b),'_blank');}
+function openWebsite(){
+    var u='https://aurumos.in';
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.open_url)window.pywebview.api.open_url(u);
+    else window.open(u,'_blank');
+}
+function callPhone(){window.open('tel:+917041126244','_blank');}
+function contactOwner(){
+    var biz=getBusinessName();
+    openWhatsApp('Hi, my AurumOS license has been revoked.\n\nBusiness: '+biz+'\nPlease help me reactivate my license.');
+}
+function quitApp(){
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.quit_app)window.pywebview.api.quit_app();
+    else window.close();
+}
+</script>
+</body>
+</html>

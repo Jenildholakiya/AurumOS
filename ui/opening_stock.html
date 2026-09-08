@@ -1,35 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <title>AurumOS | Opening Stock</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
 :root{
-  --c:#faf8f3;--c2:#f2efe7;--c3:#e8e3d8;
+  --c:#f8fafb;--c2:#f1f5f9;--c3:#e2e8f0;
   --w:#ffffff;
   --ink:#0e0c09;--ink2:#2c2a24;--ink3:#5c5a52;
-  --g:#a87d1e;--g2:#c9a227;--g3:#8a6c0a;
-  --gb:rgba(168,125,30,.08);--gl:rgba(168,125,30,.22);
-  --r:rgba(14,12,9,.08);--mu:#7a7268;
-  --gr:#15803d;--grb:rgba(21,128,61,.07);--grl:rgba(21,128,61,.22);
-  --rd:#b91c1c;--rdb:rgba(185,28,28,.07);--rdl:rgba(185,28,28,.20);
-  --am:#b45309;--amb:rgba(180,83,9,.07);--aml:rgba(180,83,9,.22);
-  --bl:#1d4ed8;--blb:rgba(29,78,216,.07);--bll:rgba(29,78,216,.22);
+  --g:#2563eb;--g2:#3b82f6;--g3:#1d4ed8;
+  --gb:rgba(37,99,235,.08);--gl:rgba(37,99,235,.22);
+  --r:rgba(14,12,9,.08);--mu:#64748b;
+  --gr:#16a34a;--grb:rgba(22,163,74,.07);--grl:rgba(22,163,74,.22);
+  --rd:#dc2626;--rdb:rgba(220,38,38,.07);--rdl:rgba(220,38,38,.20);
+  --am:#d97706;--amb:rgba(217,119,6,.07);--aml:rgba(217,119,6,.22);
+  --bl:#2563eb;--blb:rgba(37,99,235,.07);--bll:rgba(37,99,235,.22);
   --serif:"DM Serif Display",Georgia,serif;
-  --mono:"DM Mono",monospace;
+  --mono:Arial,sans-serif;
   --sans:"DM Sans",system-ui,sans-serif;
-  --sh:0 1px 3px rgba(14,12,9,.07);
+  --sh:0 1px 3px rgba(0,0,0,.04);
 }
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);font-variant-numeric:tabular-nums;}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
 input[type=number]{-moz-appearance:textfield;}
 html,body{height:100%;background:var(--c);color:var(--ink);}
-body{display:flex;flex-direction:column;overflow:hidden;}
+body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
 /* TOPBAR */
-.tb{height:52px;background:var(--w);border-bottom:1px solid var(--r);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
-.tb::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gl) 50%,transparent 95%);}
+header{height:56px;background:var(--w);border-bottom:1px solid var(--r);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gl) 50%,transparent 95%);}
 .tb-l{display:flex;align-items:center;gap:12px;}
 .logo{width:28px;height:28px;background:var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;}
 .logo svg{width:16px;height:16px;fill:var(--g2);}
@@ -89,8 +90,8 @@ body{display:flex;flex-direction:column;overflow:hidden;}
   font-family:var(--mono);font-size:.82rem;color:var(--ink);outline:none;
   transition:border-color .15s,box-shadow .15s,background .15s;
 }
-.fg input:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(201,162,39,.1);background:var(--w);}
-.fg input.uc-inp:focus{border-color:var(--am);box-shadow:0 0 0 3px rgba(180,83,9,.1);}
+.fg input:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(37,99,235,.08);background:var(--w);}
+.fg input.uc-inp:focus{border-color:var(--am);box-shadow:0 0 0 3px rgba(217,119,6,.08);}
 .fg input[readonly]{background:var(--c2);color:var(--g3);cursor:default;}
 
 .btn-save{
@@ -149,7 +150,7 @@ tr:hover td{background:var(--gb);}
 .mfg{display:flex;flex-direction:column;gap:4px;}
 .mfg label{font-size:.58rem;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--mu);}
 .mfg input{height:36px;padding:0 10px;background:var(--c);border:1px solid var(--r);border-radius:6px;font-family:var(--mono);font-size:.8rem;color:var(--ink);outline:none;transition:border-color .13s;}
-.mfg input:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(201,162,39,.1);}
+.mfg input:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(37,99,235,.08);}
 .mfg input[readonly]{background:var(--c2);color:var(--g3);}
 .m-btns{display:flex;gap:8px;justify-content:flex-end;}
 .btn-mc{padding:9px 16px;border:1px solid var(--r);border-radius:6px;background:var(--w);font-size:.74rem;color:var(--mu);cursor:pointer;}
@@ -174,14 +175,13 @@ tr:hover td{background:var(--gb);}
 .t-err{background:var(--rd);color:#fff;}
 
 /* Error highlight */
-.err-inp{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(185,28,28,.1)!important;}
+.err-inp{border-color:var(--rd)!important;box-shadow:0 0 0 3px rgba(220,38,38,.1)!important;}
 </style>
 </head>
 <body>
-<script src="sidebar.js"></script>
 
 <!-- TOPBAR -->
-<div class="tb">
+<header>
   <div class="tb-l">
     <div class="logo"><svg viewBox="0 0 20 20"><polygon points="10,2 18,7 18,13 10,18 2,13 2,7"/></svg></div>
     <div class="app-name">Aurum<em>OS</em></div>
@@ -197,7 +197,7 @@ tr:hover td{background:var(--gb);}
     </div>
     <a href="inventory.html" class="back-btn">&#8592; Inventory</a>
   </div>
-</div>
+</header>
 
 <div class="content">
 

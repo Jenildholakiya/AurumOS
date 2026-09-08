@@ -132,19 +132,23 @@
         <div style="font-size:0.7rem; letter-spacing:1.5px; text-transform:uppercase; color:#a89878; margin-bottom:6px;">
             Lock code
         </div>
-        <div id="bastion-lock-code" style="
-            font-size:1.3rem;
-            font-weight:700;
-            font-family:'DM Mono',monospace;
-            color:#a87d1e;
-            letter-spacing:2px;
-            margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <div id="bastion-lock-code" style="
+              font-size:1.3rem;
+              font-weight:700;
+              font-family:'DM Mono',monospace;
+              color:#a87d1e;
+              letter-spacing:2px;"></div>
+          <button id="bastion-copy-btn" onclick="bastionCopyLockCode()" title="Copy Lock Code"
+            style="background:#fff; border:1px solid #e8dcc0; border-radius:6px; padding:4px 10px; font-size:0.65rem; color:#a87d1e; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.14s;">
+            Copy
+          </button>
         </div>
 
         <div style="font-size:0.7rem; letter-spacing:1.5px; text-transform:uppercase; color:#a89878; margin-bottom:8px;">
             Enter admin unlock key
         </div>
-        <input id="bastion-unlock-input" type="text" placeholder="16-character key" style="
+        <input id="bastion-unlock-input" type="text" maxlength="16" placeholder="12-char unlock key or 16-char BASTION key" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" style="
             width:100%;
             padding:12px 14px;
             border:1.5px solid #e8dcc0;
@@ -154,9 +158,15 @@
             letter-spacing:2px;
             color:#1f1a12;
             background:#fdfcf8;
-            margin-bottom:12px;
+            margin-bottom:8px;
             outline:none;
-            transition:border-color 0.2s ease, box-shadow 0.2s ease;">
+            transition:border-color 0.2s ease, box-shadow 0.2s ease;"
+            onfocus="this.style.borderColor='#a87d1e'; this.style.boxShadow='0 0 0 3px rgba(168,125,30,0.12)';"
+            onblur="this.style.borderColor='#e8dcc0'; this.style.boxShadow='none';">
+
+        <div style="font-size:0.68rem; color:#a89878; line-height:1.5; margin-bottom:12px;">
+            Get this key from the web dashboard using your Lock Code above, then paste it here.
+        </div>
 
         <button id="bastion-unlock-btn" style="
             width:100%;
@@ -170,7 +180,7 @@
             letter-spacing:0.5px;
             cursor:pointer;
             transition:background 0.2s ease, transform 0.1s ease;">
-            Submit Admin Key
+            Unlock
         </button>
 
         <div id="bastion-unlock-msg" style="
@@ -187,6 +197,48 @@
 </div>`;
   document.body.appendChild(div);
 })();
+
+// ── Copy Lock Code ────────────────────────────────────────────────
+function bastionCopyLockCode() {
+    var el = document.getElementById('bastion-lock-code');
+    var btn = document.getElementById('bastion-copy-btn');
+    if (!el) return;
+    var txt = (el.innerText || '').replace(/\s+/g, '');
+
+    function flashCopied() {
+        if (!btn) return;
+        btn.innerText = 'Copied';
+        if (btn.style) {
+            btn.style.background = '#16a34a';
+            btn.style.borderColor = '#16a34a';
+            btn.style.color = '#fff';
+        }
+        clearTimeout(window.__bCopyT);
+        window.__bCopyT = setTimeout(function() {
+            btn.innerText = 'Copy';
+            if (btn.style) {
+                btn.style.background = '#fff';
+                btn.style.borderColor = '#e8dcc0';
+                btn.style.color = '#a87d1e';
+            }
+        }, 1500);
+    }
+    function fallbackCopy() {
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+        } catch (e2) {}
+    }
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(flashCopied, function() {
+                fallbackCopy(); flashCopied();
+            });
+        } else { fallbackCopy(); flashCopied(); }
+    } catch (e) { fallbackCopy(); flashCopied(); }
+}
 
 // ── Show BASTION screen ───────────────────────────────────────────
 function bastionShow(record) {
@@ -230,9 +282,17 @@ function bastionShow(record) {
     }
 
     el.style.display = 'flex';
+
+    // Hide the underlying login form so only the suspension screen shows
+    try {
+        var _pm = document.getElementById('pass-mode');
+        var _b = document.getElementById('btn');
+        if (_pm) _pm.style.display = 'none';
+        if (_b) _b.style.display = 'none';
+    } catch (e) {}
 }
 
-// ── Submit admin unlock key ───────────────────────────────────────
+// ── Submit admin unlock key (verified against the web dashboard) ──
 function bastionSubmitUnlock() {
     var key = (document.getElementById('bastion-unlock-input').value || '').trim().toUpperCase();
     var lc  = (document.getElementById('bastion-lock-code').innerText || '').trim();
@@ -241,8 +301,8 @@ function bastionSubmitUnlock() {
     msg.style.color = '#dc2626';
     msg.innerText = '';
 
-    if (!key || key.length !== 16) {
-        msg.innerText = 'BASTION key must be 16 characters';
+    if (!key || (key.length !== 16 && key.length !== 12)) {
+        msg.innerText = 'Key must be 12 or 16 characters';
         return;
     }
 
@@ -252,21 +312,21 @@ function bastionSubmitUnlock() {
     }
 
     msg.style.color = '#c9a227';
-    msg.innerText   = 'Verifying...';
+    msg.innerText   = 'Verifying with server…';
 
-    window.pywebview.api.bastion_unlock(key, lc).then(function(r) {
+    window.pywebview.api.verify_web_unlock_key(key, lc, true).then(function(r) {
         if (r && r.status === 'success') {
             msg.style.color = '#16a34a';
-            msg.innerText   = 'Restored. Reloading...';
+            msg.innerText   = 'Restored. Reloading…';
             setTimeout(function() { window.location.reload(); }, 1000);
         } else {
             msg.style.color = '#dc2626';
-            msg.innerText   = 'Invalid key. Contact AurumOS Admin.';
+            msg.innerText   = (r && r.message) ? r.message : 'Key was not accepted by the server';
             document.getElementById('bastion-unlock-input').value = '';
         }
     }).catch(function(e) {
         msg.style.color = '#dc2626';
-        msg.innerText   = 'Error: ' + String(e);
+        msg.innerText   = 'Could not reach the unlock server';
     });
 }
 

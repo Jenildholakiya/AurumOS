@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --offwhite:#f8fafb;--light:#f1f5f9;--white:#ffffff;
+    --ink:#0f172a;--ink2:#1e293b;--ink3:#475569;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --rule:#e2e8f0;--rule2:rgba(15,23,42,0.04);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-ln:rgba(22,163,74,0.18);
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-ln:rgba(220,38,38,0.18);
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 3px rgba(15,23,42,0.04),0 1px 2px rgba(15,23,42,0.03);
+    --sh2:0 4px 16px rgba(15,23,42,0.07);
+}
+body{font-family:var(--sans);background:var(--offwhite);color:var(--ink);display:flex!important;height:100vh!important;overflow:hidden!important;}
+
+/* ── SIDEBAR SLOT ── */
+#sidebar-slot{width:260px;flex-shrink:0;background:linear-gradient(180deg,#0f172a 0%,#1a2744 100%);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+#sidebar-slot::before{content:'';position:absolute;top:-40%;left:-30%;width:160%;height:160%;background:radial-gradient(ellipse at 30% 20%,rgba(37,99,235,0.12) 0%,transparent 60%);pointer-events:none;}
+.sb-logo{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,rgba(37,99,235,0.2),rgba(37,99,235,0.05));border:1px solid rgba(37,99,235,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:14px;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.35s ease;}
+#sidebar-slot:hover .sb-logo{transform:scale(1.08) rotate(-2deg);box-shadow:0 8px 24px rgba(37,99,235,0.3);}
+.sb-logo span{font-size:1.2rem;font-weight:700;color:var(--blue2);font-style:italic;}
+.sb-brand{font-size:0.85rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:-0.3px;}
+.sb-brand em{color:var(--blue2);font-style:normal;}
+.sb-tag{font-size:0.55rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;}
+
+/* ── MAIN CONTENT ── */
+main{flex:1;min-width:0;display:flex!important;flex-direction:column!important;overflow:hidden!important;}
+
+/* ── HEADER ── */
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--blue-ln) 50%,transparent 95%);}
+.h-brand{font-size:0.95rem;font-weight:700;color:var(--ink);transition:color 0.2s;}
+.h-brand em{color:var(--blue);font-style:normal;font-weight:700;}
+.h-mid{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;}
+.h-tag{font-size:0.58rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted2);background:var(--light);padding:5px 14px;border-radius:5px;border:1px solid var(--rule);transition:all 0.25s ease;}
+.h-tag:hover{background:var(--blue-bg);border-color:var(--blue-ln);color:var(--blue);}
+.h-right{display:flex;align-items:center;gap:10px;}
+
+/* ── PAGE ── */
+.page{padding:28px 32px;overflow-y:auto;flex:1;display:flex;align-items:flex-start;justify-content:center;scroll-behavior:smooth;}
+.page::-webkit-scrollbar{width:5px;}
+.page::-webkit-scrollbar-track{background:transparent;}
+.page::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+.page::-webkit-scrollbar-thumb:hover{background:var(--muted2);}
+.page-inner{width:560px;max-width:100%;animation:pageIn 0.5s cubic-bezier(0.22,1,0.36,1) both;}
+@keyframes pageIn{from{opacity:0;transform:translateY(16px) scale(0.985)}to{opacity:1;transform:none}}
+
+/* ── WELCOME ── */
+.welcome{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--rule);position:relative;}
+.welcome::after{content:'';position:absolute;bottom:-1px;left:0;width:80px;height:2px;background:linear-gradient(90deg,var(--blue),transparent);border-radius:99px;}
+.w-left h1{font-size:1.4rem;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.w-left h1 em{color:var(--blue);font-style:normal;}
+.w-left p{font-size:0.72rem;color:var(--muted);}
+.step-badge{display:flex;align-items:center;gap:6px;background:var(--blue-bg);border:1px solid var(--blue-ln);padding:5px 14px;border-radius:5px;font-size:0.6rem;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:0.8px;transition:all 0.25s ease;}
+.step-badge:hover{background:rgba(37,99,235,0.1);transform:translateY(-1px);}
+
+/* ── STEP TRACK ── */
+.step-track{display:flex;align-items:center;margin-bottom:22px;gap:0;}
+.step-item{display:flex;align-items:center;gap:8px;flex:1;cursor:default;}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;border:2px solid var(--rule);background:var(--white);color:var(--muted2);flex-shrink:0;transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.step-label{font-size:0.68rem;font-weight:600;color:var(--muted2);transition:all 0.3s;white-space:nowrap;}
+.step-item.active .step-num{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,0.15),0 2px 8px rgba(37,99,235,0.25);animation:stepPulse 2s ease-in-out infinite;}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 4px rgba(37,99,235,0.15),0 2px 8px rgba(37,99,235,0.25)}50%{box-shadow:0 0 0 6px rgba(37,99,235,0.08),0 2px 12px rgba(37,99,235,0.2)}}
+.step-item.active .step-label{color:var(--blue);font-weight:700;}
+.step-item.done .step-num{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 2px 6px rgba(22,163,74,0.25);}
+.step-item.done .step-label{color:var(--green);}
+.step-line{flex:1;height:2px;background:var(--rule);margin:0 10px;border-radius:99px;transition:background 0.5s ease,box-shadow 0.5s ease;}
+.step-item.done + .step-line{background:var(--green);box-shadow:0 0 4px rgba(22,163,74,0.2);}
+
+/* ── PANELS ── */
+.step-panel{display:none;animation:panelIn 0.4s cubic-bezier(0.22,1,0.36,1) both;}
+.step-panel.active{display:block;}
+@keyframes panelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+.panel-head{margin-bottom:20px;}
+.panel-title{font-size:1.2rem;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.panel-title em{color:var(--blue);font-style:normal;}
+.panel-sub{font-size:0.72rem;color:var(--muted);line-height:1.55;}
+
+/* ── FORM FIELDS ── */
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:5px;transition:color 0.2s;}
+.fg label .req{color:var(--red);}
+.fg label .badge{display:inline-flex;align-items:center;gap:3px;font-size:0.5rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;margin-left:6px;vertical-align:middle;}
+.badge-auto{background:var(--green-bg);color:var(--green);border:1px solid var(--green-ln);}
+.fg input,.fg select{
+    width:100%;height:42px;padding:0 14px;
+    background:var(--white);border:1.5px solid var(--rule);
+    border-radius:8px;font-size:0.82rem;
+    color:var(--ink);outline:none;
+    transition:border-color 0.25s cubic-bezier(0.4,0,0.2,1),box-shadow 0.25s cubic-bezier(0.4,0,0.2,1),background 0.25s ease,transform 0.2s ease;
+}
+.fg input:hover,.fg select:hover{border-color:var(--muted2);}
+.fg input:focus,.fg select:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(37,99,235,0.12),0 2px 8px rgba(37,99,235,0.08);background:var(--white);transform:translateY(-1px);}
+.fg input:focus + .pw-strength{transform:translateY(0);}
+.fg input.err{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg);animation:inputShake 0.4s ease;}
+.fg input.ok{border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg);}
+.fg input.auto-filled{border-color:var(--green);background:var(--green-bg);color:var(--ink);}
+.fg input[readonly].auto-filled{cursor:default;}
+@keyframes inputShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+/* ── PROVISION CARDS ── */
+.provision-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.provision-card{background:var(--white);border:1.5px solid var(--rule);border-radius:10px;padding:18px;cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);position:relative;overflow:hidden;}
+.provision-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,transparent);transition:background 0.3s ease;opacity:0;}
+.provision-card:hover{border-color:var(--blue2);background:linear-gradient(135deg,var(--blue-bg),rgba(59,130,246,0.03));transform:translateY(-3px);box-shadow:0 8px 24px rgba(37,99,235,0.1),0 2px 6px rgba(15,23,42,0.04);}
+.provision-card:hover::before{background:linear-gradient(90deg,var(--blue2),var(--blue));opacity:1;}
+.provision-card:active{transform:translateY(-1px) scale(0.99);box-shadow:0 4px 12px rgba(37,99,235,0.08);}
+.provision-card.selected{border-color:var(--blue);background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(37,99,235,0.03));box-shadow:0 0 0 3px rgba(37,99,235,0.1),0 4px 16px rgba(37,99,235,0.12);}
+.provision-card.selected::before{background:linear-gradient(90deg,var(--blue),var(--blue2));opacity:1;}
+.provision-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.provision-title{font-size:0.82rem;font-weight:700;color:var(--ink);transition:color 0.2s;}
+.provision-card:hover .provision-title{color:var(--blue);}
+.provision-card.selected .provision-title{color:var(--blue);}
+.provision-desc{font-size:0.66rem;color:var(--muted);line-height:1.5;transition:color 0.2s;}
+.provision-card:hover .provision-desc{color:var(--ink3);}
+.provision-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted2);display:flex;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);flex-shrink:0;}
+.provision-card:hover .provision-radio{border-color:var(--blue2);transform:scale(1.1);}
+.provision-card.selected .provision-radio{border-color:var(--blue);background:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,0.15);}
+.provision-card.selected .provision-radio::after{content:'';width:5px;height:5px;background:#fff;border-radius:50%;animation:radioPop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes radioPop{from{transform:scale(0)}to{transform:scale(1)}}
+
+/* ── KEY INPUT ── */
+.key-wrap{position:relative;}
+.key-wrap input{font-family:var(--mono);font-size:0.85rem;letter-spacing:1.5px;text-transform:uppercase;padding-right:44px;}
+.key-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%) scale(1);width:22px;height:22px;border-radius:50%;border:1px solid var(--rule);background:var(--white);display:none;align-items:center;justify-content:center;cursor:pointer;font-size:0.7rem;color:var(--muted2);transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);}
+.key-clear:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-ln);transform:translateY(-50%) scale(1.15) rotate(90deg);}
+.key-clear.show{display:flex;}
+
+/* ── STATUS BOX ── */
+.status-box{border-radius:8px;padding:12px 14px;margin-bottom:14px;display:none;animation:statusIn 0.35s cubic-bezier(0.22,1,0.36,1) both;}
+@keyframes statusIn{from{opacity:0;transform:translateY(6px) scale(0.98)}to{opacity:1;transform:none}}
+.status-box.show{display:flex;gap:10px;align-items:flex-start;}
+.status-box.success{background:var(--green-bg);border:1px solid var(--green-ln);color:var(--green);}
+.status-box.error{background:var(--red-bg);border:1px solid var(--red-ln);color:var(--red);}
+.status-box.checking{background:var(--blue-bg);border:1px solid var(--blue-ln);color:var(--blue);}
+.status-box.info{background:var(--blue-bg);border:1px solid var(--blue-ln);color:var(--blue);}
+.sb-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px;}
+.sb-title{font-weight:700;font-size:0.78rem;margin-bottom:2px;}
+.sb-sub{font-size:0.7rem;opacity:0.85;line-height:1.45;}
+
+/* ── FETCH BANNER ── */
+.fetch-banner{
+    background:linear-gradient(135deg,#0f172a 0%,#1a2744 100%);border-radius:10px;padding:18px 20px;margin-bottom:18px;
+    border:1px solid rgba(37,99,235,0.2);display:none;animation:panelIn 0.4s cubic-bezier(0.22,1,0.36,1);position:relative;overflow:hidden;
+}
+.fetch-banner::before{content:'';position:absolute;top:-50%;right:-20%;width:60%;height:200%;background:radial-gradient(ellipse,rgba(37,99,235,0.1) 0%,transparent 70%);pointer-events:none;}
+.fetch-banner.show{display:block;}
+.fb-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.fb-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;flex-shrink:0;animation:blink 1.8s ease infinite;box-shadow:0 0 8px rgba(74,222,128,0.5);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.fb-label{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:rgba(37,99,235,0.7);}
+.fb-biz{font-size:1rem;color:#fff;margin-left:17px;font-weight:700;}
+.fb-meta{display:flex;gap:12px;margin-left:17px;margin-top:4px;}
+.fb-meta-item{display:flex;align-items:center;gap:5px;font-size:0.63rem;color:rgba(255,255,255,0.4);}
+.fb-meta-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.25);}
+
+/* ── GRID LAYOUTS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--rule) 20%,var(--rule) 80%,transparent);margin:16px 0;}
+
+/* ── BUTTONS ── */
+.btn{height:42px;padding:0 20px;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.25s cubic-bezier(0.22,1,0.36,1);border:none;outline:none;font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:7px;position:relative;overflow:hidden;}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,transparent 50%);pointer-events:none;opacity:0;transition:opacity 0.25s;}
+.btn-outline{background:var(--white);border:1.5px solid var(--rule);color:var(--muted);}
+.btn-outline:hover{background:var(--light);color:var(--ink);border-color:var(--muted2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,23,42,0.06);}
+.btn-outline:hover::after{opacity:1;}
+.btn-outline:active{transform:translateY(0);box-shadow:none;}
+.btn-primary{background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,0.25);}
+.btn-primary:hover:not(:disabled){background:linear-gradient(135deg,var(--blue3) 0%,var(--blue) 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,0.35),0 2px 6px rgba(37,99,235,0.2);}
+.btn-primary:hover:not(:disabled)::after{opacity:1;}
+.btn-primary:active:not(:disabled){transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,0.25);}
+.btn-primary:disabled{background:var(--muted2);cursor:not-allowed;opacity:0.6;transform:none;box-shadow:none;}
+.btn-blue{background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,0.25);}
+.btn-blue:hover:not(:disabled){background:linear-gradient(135deg,var(--blue3) 0%,var(--blue) 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,0.4),0 2px 6px rgba(37,99,235,0.2);}
+.btn-blue:hover:not(:disabled)::after{opacity:1;}
+.btn-blue:active:not(:disabled){transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,0.25);}
+.btn-blue:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-row{display:flex;gap:10px;margin-top:8px;}
+.btn-row .btn{flex:1;}
+
+/* ── PW STRENGTH ── */
+.pw-strength{margin-top:5px;display:flex;gap:3px;transition:transform 0.2s ease;}
+.pw-bar{height:3px;flex:1;border-radius:99px;background:var(--rule);transition:background 0.3s ease,transform 0.3s ease,box-shadow 0.3s ease;}
+.pw-label{font-size:0.62rem;color:var(--muted2);margin-top:4px;transition:color 0.2s;}
+
+/* ── AGREEMENT ── */
+.agree-box{background:var(--light);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;margin-bottom:16px;transition:border-color 0.2s,background 0.2s;}
+.agree-box:hover{border-color:var(--blue-ln);background:rgba(37,99,235,0.03);}
+.agree-box label{display:flex;align-items:flex-start;gap:9px;cursor:pointer;}
+.agree-check{width:15px;height:15px;margin-top:2px;cursor:pointer;accent-color:var(--blue);flex-shrink:0;}
+.agree-text{font-size:0.66rem;color:var(--ink3);line-height:1.5;}
+.agree-text a{color:var(--blue);text-decoration:none;font-weight:700;transition:color 0.2s;text-decoration-color:transparent;text-underline-offset:2px;}
+.agree-text a:hover{color:var(--blue3);text-decoration:underline;}
+
+/* ── PLAN INFO ROW ── */
+.plan-row{background:var(--light);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;transition:border-color 0.2s,box-shadow 0.2s;}
+.plan-row:hover{border-color:var(--blue-ln);box-shadow:0 2px 8px rgba(37,99,235,0.06);}
+.plan-row-label{font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);margin-bottom:2px;}
+.plan-row-val{font-size:0.8rem;font-weight:600;color:var(--ink);}
+.plan-row-val.mono{font-family:var(--mono);font-size:0.72rem;color:var(--blue);}
+
+/* ── SUCCESS ── */
+.success-state{display:none;padding:40px 32px 32px;text-align:center;}
+.success-state.show{display:block;animation:panelIn 0.5s cubic-bezier(0.22,1,0.36,1) both;}
+.success-icon{width:64px;height:64px;border-radius:50%;background:var(--green-bg);border:2px solid var(--green-ln);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.6rem;animation:successPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;}
+@keyframes successPop{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.success-title{font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.success-sub{font-size:0.76rem;color:var(--muted);margin-bottom:20px;line-height:1.55;}
+.biz-pill{display:inline-flex;align-items:center;gap:8px;background:var(--blue-bg);border:1px solid var(--blue-ln);color:var(--blue);padding:7px 18px;border-radius:99px;font-size:0.75rem;font-weight:700;margin-bottom:22px;transition:transform 0.2s;}
+.biz-pill:hover{transform:translateY(-1px);}
+.plan-pill{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid var(--green-ln);color:var(--green);padding:5px 14px;border-radius:99px;font-size:0.65rem;font-weight:700;margin-left:8px;transition:transform 0.2s;}
+.plan-pill:hover{transform:translateY(-1px);}
+
+/* ── FOOTER ── */
+.footer-badge{text-align:center;padding:16px 0 0;border-top:1px solid var(--rule);margin-top:20px;}
+.bastion-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 16px;border-radius:99px;background:var(--light);border:1px solid var(--rule);font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2);user-select:none;transition:all 0.25s ease;}
+.bastion-badge:hover{background:var(--green-bg);border-color:var(--green-ln);color:var(--green);transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,163,74,0.1);}
+.bastion-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:bfb 2.5s ease-in-out infinite;flex-shrink:0;box-shadow:0 0 6px rgba(22,163,74,0.4);}
+@keyframes bfb{0%,100%{opacity:1}50%{opacity:0.25}}
+
+/* ── SHAKE ── */
+@keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+.shake{animation:shake 0.4s cubic-bezier(0.36,0.07,0.19,0.97) both;}
+
+/* ── SPINNER ── */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+    #sidebar-slot{display:none;}
+    .page{padding:20px;}
+    .page-inner{width:100%;}
+    .provision-grid{grid-template-columns:1fr;}
+    .grid-2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR SLOT (matches dashboard) -->
+<div id="sidebar-slot">
+    <div class="sb-logo"><span>Au</span></div>
+    <div class="sb-brand">Aurum<em>OS</em></div>
+    <div class="sb-tag">Setup Wizard</div>
+</div>
+
+<main>
+<header>
+    <div class="h-brand">Aurum<em>OS</em></div>
+    <div class="h-mid">
+        <span class="h-tag">BASTION™ Secured Setup</span>
+    </div>
+    <div class="h-right">
+        <div class="step-badge" id="step-counter">Step 1 of 3</div>
+    </div>
+</header>
+
+<div class="page">
+<div class="page-inner">
+
+    <!-- WELCOME BAR -->
+    <div class="welcome">
+        <div class="w-left">
+            <h1>Welcome to <em>AurumOS</em></h1>
+            <p>Complete the steps below to activate and configure your system.</p>
+        </div>
+    </div>
+
+    <!-- STEP TRACK -->
+    <div class="step-track">
+        <div class="step-item active" id="si-1">
+            <div class="step-num" id="sn-1">1</div>
+            <div class="step-label">License</div>
+        </div>
+        <div class="step-line" id="sl-1"></div>
+        <div class="step-item" id="si-2">
+            <div class="step-num" id="sn-2">2</div>
+            <div class="step-label">Topology</div>
+        </div>
+        <div class="step-line" id="sl-2"></div>
+        <div class="step-item" id="si-3">
+            <div class="step-num" id="sn-3">3</div>
+            <div class="step-label">Admin</div>
+        </div>
+    </div>
+
+    <!-- ══ STEP 1 — LICENSE ══ -->
+    <div class="step-panel active" id="panel-1">
+        <div class="panel-head">
+            <div class="panel-title">Activate <em>License</em></div>
+            <div class="panel-sub">Enter the key provided after purchase. BASTION™ verifies every installation against our secure server.</div>
+        </div>
+
+        <div class="fg key-wrap">
+            <label>License Key <span class="req">*</span></label>
+            <input type="text" id="inp-key" placeholder="AU-XXXX-XXXX-XXXX-XXXX"
+                   maxlength="22" autocomplete="off" autocapitalize="characters"
+                   oninput="onKeyInput()" onpaste="setTimeout(onKeyInput,10)"
+                   onkeydown="if(event.key==='Enter'&&!document.getElementById('btn-verify').disabled)verifyKey()">
+            <div class="key-clear" id="key-clear" onclick="clearKey()">&#10005;</div>
+        </div>
+
+        <div class="status-box" id="key-status">
+            <div class="sb-icon" id="sb-icon"></div>
+            <div>
+                <div class="sb-title" id="sb-title"></div>
+                <div class="sb-sub" id="sb-sub"></div>
+            </div>
+        </div>
+
+        <div class="agree-box">
+            <label>
+                <input type="checkbox" id="chk-agree" class="agree-check" onchange="updateVerifyBtn()">
+                <span class="agree-text">
+                    I have read and agree to the
+                    <a href="#" onclick="window.pywebview&&window.pywebview.api&&window.pywebview.api.navigate('agreement.html');return false;">AurumOS License Agreement</a>.
+                </span>
+            </label>
+        </div>
+
+        <button class="btn btn-blue" id="btn-verify" onclick="verifyKey()" disabled style="width:100%;">
+            &#128273; Verify License Key
+        </button>
+
+        <div class="divider"></div>
+        <p style="font-size:0.63rem;color:var(--muted2);text-align:center;line-height:1.5;">
+            Don't have a key? Contact your AurumOS provider to get one.
+        </p>
+    </div>
+
+    <!-- ══ STEP 2 — PROVISION ══ -->
+    <div class="step-panel" id="panel-2">
+        <div class="panel-head">
+            <div class="panel-title">System <em>Topology Setup</em></div>
+            <div class="panel-sub">Select the network identity for this computer node within your retail showroom configuration.</div>
+        </div>
+
+        <div class="provision-grid">
+            <div class="provision-card selected" id="prov-master" onclick="mutateProvisionMode('local')">
+                <div class="provision-head">
+                    <span class="provision-title">Host Core</span>
+                    <div class="provision-radio"></div>
+                </div>
+                <p class="provision-desc">Acts as the central authority. Hosts the primary SQLite database and broadcasts live network telemetry updates.</p>
+            </div>
+            <div class="provision-card" id="prov-satellite" onclick="mutateProvisionMode('network')">
+                <div class="provision-head">
+                    <span class="provision-title">Client Node</span>
+                    <div class="provision-radio"></div>
+                </div>
+                <p class="provision-desc">Intercepts direct database queries. Reads and records live metrics directly off your shop's Host Core IP.</p>
+            </div>
+        </div>
+
+        <div class="fg" id="network-ip-group" style="display: none; animation: panelIn 0.3s ease;">
+            <label>Host Core Network Address (IP) <span class="req">*</span></label>
+            <input type="text" id="inp-server-ip" placeholder="e.g. 192.168.1.15" onkeydown="if(event.key==='Enter')goToStep3()">
+        </div>
+
+        <div id="local-details-container">
+            <div class="fetch-banner" id="fetch-banner">
+                <div class="fb-head">
+                    <div class="fb-dot"></div>
+                    <div class="fb-label">Details Fetched from Server</div>
+                </div>
+                <div class="fb-biz" id="fb-biz-name">—</div>
+                <div class="fb-meta">
+                    <div class="fb-meta-item"><div class="fb-meta-dot"></div><span id="fb-plan">—</span></div>
+                    <div class="fb-meta-item"><div class="fb-meta-dot"></div><span id="fb-owner">—</span></div>
+                </div>
+            </div>
+
+            <div class="status-box" id="fetch-status"></div>
+
+            <div class="fg">
+                <label>
+                    Business / Shop Name <span class="req">*</span>
+                    <span class="badge badge-auto" id="badge-biz" style="display:none;">&#10003; Auto-filled</span>
+                </label>
+                <input type="text" id="inp-biz" placeholder="e.g. Dholakiya Jewellers"
+                       onkeydown="if(event.key==='Enter')document.getElementById('inp-owner').focus()">
+            </div>
+
+            <div class="fg">
+                <label>
+                    Owner Name <span class="req">*</span>
+                    <span class="badge badge-auto" id="badge-owner" style="display:none;">&#10003; Auto-filled</span>
+                </label>
+                <input type="text" id="inp-owner" placeholder="e.g. Jenil Dholakiya"
+                       onkeydown="if(event.key==='Enter')document.getElementById('inp-phone').focus()">
+            </div>
+
+            <div class="grid-2">
+                <div class="fg">
+                    <label>City</label>
+                    <input type="text" id="inp-city" placeholder="Rajkot"
+                           onkeydown="if(event.key==='Enter')document.getElementById('inp-phone').focus()">
+                </div>
+                <div class="fg">
+                    <label>Phone</label>
+                    <input type="text" id="inp-phone" placeholder="9876543210"
+                           onkeydown="if(event.key==='Enter')goToStep3()">
+                </div>
+            </div>
+            <div class="fg">
+                <label>Jewellers Address</label>
+                <input type="text" id="inp-address" placeholder="Shop address"
+                       onkeydown="if(event.key==='Enter')goToStep3()">
+            </div>
+        </div>
+
+        <div class="plan-row">
+            <div>
+                <div class="plan-row-label">Detected Plan</div>
+                <div class="plan-row-val" id="plan-display">Standard Plan</div>
+            </div>
+            <div style="text-align:right;">
+                <div class="plan-row-label">License Key</div>
+                <div class="plan-row-val mono" id="key-display-mini">—</div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(1)">&#8592; Back</button>
+            <button class="btn btn-primary" onclick="goToStep3()">Next &#8594;</button>
+        </div>
+    </div>
+
+    <!-- ══ STEP 3 — ADMIN ══ -->
+    <div class="step-panel" id="panel-3">
+        <div class="panel-head">
+            <div class="panel-title" id="admin-panel-heading">Admin <em>Account</em></div>
+            <div class="panel-sub" id="admin-panel-subheading">Create the owner login password. This is used to access AurumOS on this PC.</div>
+        </div>
+
+        <div id="admin-password-block">
+            <div class="fg">
+                <label>Password <span class="req">*</span></label>
+                <input type="password" id="inp-pw" placeholder="Minimum 6 characters"
+                       autocomplete="new-password"
+                       oninput="checkPwStrength()"
+                       onkeydown="if(event.key==='Enter')document.getElementById('inp-pw2').focus()">
+                <div class="pw-strength">
+                    <div class="pw-bar" id="pw-b1"></div>
+                    <div class="pw-bar" id="pw-b2"></div>
+                    <div class="pw-bar" id="pw-b3"></div>
+                    <div class="pw-bar" id="pw-b4"></div>
+                </div>
+                <div class="pw-label" id="pw-label"></div>
+            </div>
+
+            <div class="fg">
+                <label>Confirm Password <span class="req">*</span></label>
+                <input type="password" id="inp-pw2" placeholder="Re-enter password"
+                       autocomplete="new-password"
+                       onkeydown="if(event.key==='Enter')finishSetup()">
+            </div>
+        </div>
+
+        <div style="background:var(--light);border:1px solid var(--rule);border-radius:7px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);margin-bottom:10px;">Setup Summary</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div>
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Topology Node Role</div>
+                    <div style="font-size:0.78rem;font-weight:600;color:var(--blue);" id="sum-topology">Host Core</div>
+                </div>
+                <div id="sum-block-address" style="display:none;">
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Target Host IP</div>
+                    <div style="font-size:0.78rem;font-weight:600;color:var(--ink);" id="sum-ip">127.0.0.1</div>
+                </div>
+                <div class="local-sum-field">
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Business</div>
+                    <div style="font-size:0.78rem;font-weight:600;color:var(--ink);" id="sum-biz">—</div>
+                </div>
+                <div class="local-sum-field">
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Owner</div>
+                    <div style="font-size:0.78rem;font-weight:600;color:var(--ink);" id="sum-owner">—</div>
+                </div>
+                <div class="local-sum-field">
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">City</div>
+                    <div style="font-size:0.78rem;color:var(--ink3);" id="sum-city">—</div>
+                </div>
+                <div>
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Plan Level</div>
+                    <div style="font-size:0.78rem;color:var(--ink3);" id="sum-plan">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToStep(2)">&#8592; Back</button>
+            <button class="btn btn-blue" id="btn-finish" onclick="finishSetup()" style="flex:2;">
+                <span>&#10003;</span> Complete Setup
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ SUCCESS ══ -->
+    <div class="success-state" id="success-state">
+        <div class="success-icon">&#10003;</div>
+        <div class="success-title" id="success-headline">AurumOS is Ready!</div>
+        <div class="success-sub" id="success-subline">Your setup is complete. Redirecting to the login screen in a moment...</div>
+        <div style="margin-bottom:22px;">
+            <div class="biz-pill">
+                <span>&#127978;</span>
+                <span id="success-biz-name">Your Business</span>
+            </div>
+            <div class="plan-pill" id="success-plan-pill">Standard</div>
+        </div>
+        <button class="btn btn-primary" onclick="goLogin()" style="max-width:200px;margin:0 auto;display:flex;">
+            Go to Login &#8594;
+        </button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer-badge">
+        <span class="bastion-badge">
+            <span class="bastion-dot"></span>
+            &#128737;&nbsp; Protected by BASTION&#8482;
+        </span>
+    </div>
+
+</div>
+</div>
+</main>
+
+<script>
+'use strict';
+
+var verifiedKey   = '';
+var verifiedBiz   = '';
+var verifiedOwner = '';
+var currentStep   = 1;
+var _fetchedData  = {};
+var selectedProvisionMode = 'local';
+
+function mutateProvisionMode(mode) {
+    selectedProvisionMode = mode;
+    var masterCard = document.getElementById('prov-master');
+    var satelliteCard = document.getElementById('prov-satellite');
+    var ipGroup = document.getElementById('network-ip-group');
+    var detailsContainer = document.getElementById('local-details-container');
+
+    if (mode === 'local') {
+        masterCard.classList.add('selected');
+        satelliteCard.classList.remove('selected');
+        ipGroup.style.display = 'none';
+        detailsContainer.style.display = 'block';
+    } else {
+        satelliteCard.classList.add('selected');
+        masterCard.classList.remove('selected');
+        ipGroup.style.display = 'block';
+        detailsContainer.style.display = 'none';
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.fetch_live_network_nodes) {
+            window.pywebview.api.fetch_live_network_nodes().then(function(res) {
+                if (res && res.status === 'success' && res.nodes && res.nodes.length > 0) {
+                    var pendingNodes = res.nodes.filter(function(n) { return n.status === 'pending'; });
+                    if (pendingNodes.length > 0) {
+                        document.getElementById('inp-server-ip').value = pendingNodes[0].id;
+                    }
+                }
+            }).catch(function(){});
+        }
+    }
+}
+
+function onKeyInput() {
+    var inp = document.getElementById('inp-key');
+    var cursorPos = inp.selectionStart;
+    var origLen   = inp.value.length;
+    var raw = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!raw) { inp.value = ''; document.getElementById('key-clear').classList.remove('show'); updateVerifyBtn(); return; }
+    var prefix  = (raw.length >= 2 && (raw.startsWith('AU') || raw.startsWith('AR'))) ? raw.substring(0,2) : 'AU';
+    var content = (raw.length >= 2 && (raw.startsWith('AU') || raw.startsWith('AR'))) ? raw.substring(2) : raw;
+    var formatted = prefix;
+    for (var i = 0; i < 4; i++) {
+        var seg = content.substring(i*4, i*4+4);
+        if (seg) formatted += '-' + seg;
+    }
+    inp.value = formatted;
+    var newCursor = Math.min(cursorPos + (formatted.length - origLen), formatted.length);
+    try { inp.setSelectionRange(newCursor, newCursor); } catch(e) {}
+    document.getElementById('key-clear').classList.toggle('show', formatted.length > 0);
+    updateVerifyBtn();
+    if (verifiedKey && formatted !== verifiedKey) {
+        verifiedKey = ''; hideStatus('key-status');
+        inp.classList.remove('ok','err');
+    }
+}
+
+function updateVerifyBtn() {
+    var key     = document.getElementById('inp-key').value.trim();
+    var checked = document.getElementById('chk-agree').checked;
+    var valid   = /^(AU|AR)-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
+    document.getElementById('btn-verify').disabled = !(valid && checked);
+}
+
+function clearKey() {
+    var inp = document.getElementById('inp-key');
+    inp.value = ''; inp.classList.remove('ok','err');
+    document.getElementById('key-clear').classList.remove('show');
+    document.getElementById('btn-verify').disabled = true;
+    hideStatus('key-status'); verifiedKey = '';
+}
+
+async function verifyKey() {
+    var key = document.getElementById('inp-key').value.trim().toUpperCase();
+    if (!key) return;
+    showStatus('key-status','checking','&#8987;','Verifying with BASTION™ server...','Connecting to AurumOS license server. Please wait.');
+    var btn = document.getElementById('btn-verify');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin"></div> Verifying...';
+    if (!window.pywebview || !window.pywebview.api) {
+        showStatus('key-status','error','&#10060;','Bridge Not Ready','Please wait for the application to load fully, then try again.');
+        resetVerifyBtn(); return;
+    }
+    var res = null;
+    try { res = await window.pywebview.api.verify_key(key); }
+    catch(e) { res = {status:'error', message:'Connection error: '+e}; }
+    resetVerifyBtn();
+    var inp = document.getElementById('inp-key');
+    if (res && res.status === 'success') {
+        verifiedKey   = key;
+        var d = (res.details || {});
+        verifiedBiz   = res.business || d.business_name || '';
+        verifiedOwner = res.owner    || d.owner_name    || '';
+        inp.classList.remove('err'); inp.classList.add('ok');
+        var plan = d.plan || (key.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+        var sub  = (res.offline ? 'Offline mode — previously validated' : 'License is valid and active') + (verifiedBiz ? ' · ' + verifiedBiz : '');
+        showStatus('key-status','success','&#9989;','License Verified · ' + plan, sub);
+        _fetchedData = {
+            biz: verifiedBiz, owner: verifiedOwner, plan: plan, key: key,
+            city:  d.city  || '', phone: d.phone || '',
+            email: d.email || '', gstin: d.gstin || ''
+        };
+        setTimeout(function(){ goToStep(2); }, 1100);
+    } else {
+        inp.classList.remove('ok'); inp.classList.add('err');
+        shakeCard();
+        var msg = (res && res.message) || 'This key could not be verified. Check and try again.';
+        var isRevoked = res && (res.status === 'locked' || (msg.toLowerCase().indexOf('revok') > -1));
+        showStatus('key-status','error','&#128683;', isRevoked ? 'License Revoked' : 'Invalid License Key', msg);
+    }
+}
+
+function resetVerifyBtn() {
+    var btn = document.getElementById('btn-verify');
+    btn.innerHTML = '&#128273; Verify License Key';
+    updateVerifyBtn();
+}
+
+async function fetchBusinessDetailsFromServer() {
+    if (selectedProvisionMode === 'network') return;
+    showStatus('fetch-status','checking','&#8943;','Fetching details from server...','Looking up your business profile using the license key.');
+    var gotData = false;
+    if (_fetchedData.biz) { setAutoFilled('inp-biz', _fetchedData.biz, 'badge-biz'); gotData = true; }
+    if (_fetchedData.owner) { setAutoFilled('inp-owner', _fetchedData.owner, 'badge-owner'); gotData = true; }
+    if (_fetchedData.city) { setAutoFilled('inp-city', _fetchedData.city); gotData = true; }
+    if (_fetchedData.phone) { setAutoFilled('inp-phone', _fetchedData.phone); gotData = true; }
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_license_details) {
+        try {
+            var detail = await window.pywebview.api.get_license_details(verifiedKey);
+            if (detail && detail.status === 'success') {
+                if (detail.business_name) { setAutoFilled('inp-biz',   detail.business_name, 'badge-biz');   gotData = true; }
+                if (detail.owner_name)    { setAutoFilled('inp-owner', detail.owner_name,    'badge-owner'); gotData = true; }
+                if (detail.city)          { document.getElementById('inp-city').value  = detail.city; }
+                if (detail.phone)         { document.getElementById('inp-phone').value = detail.phone; }
+                if (detail.email)         { _fetchedData.email = detail.email; }
+                if (detail.gstin)         { _fetchedData.gstin = detail.gstin; }
+                _fetchedData = Object.assign(_fetchedData, detail);
+                _fetchedData.plan = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+            }
+        } catch(e) { console.log('[FETCH] extra detail skipped:', e); }
+    }
+    if (!document.getElementById('inp-city').value && !_fetchedData.city) {
+        document.getElementById('inp-city').value = '';
+    }
+    var biz = document.getElementById('inp-biz').value || '—';
+    document.getElementById('fb-biz-name').innerText = biz;
+    document.getElementById('fb-plan').innerText = _fetchedData.plan || 'Standard Plan';
+    document.getElementById('fb-owner').innerText = document.getElementById('inp-owner').value || '—';
+    var k = verifiedKey || '—';
+    document.getElementById('key-display-mini').innerText = k.length > 14 ? k.substring(0,14)+'...' : k;
+    var plan = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+    document.getElementById('plan-display').innerText = plan;
+    if (gotData) {
+        document.getElementById('fetch-banner').classList.add('show');
+        hideStatus('fetch-status');
+    } else {
+        hideStatus('fetch-status');
+        showStatus('fetch-status','info','&#8505;','Fill manually','Server did not return pre-filled data. Please fill in your business details below.');
+    }
+}
+
+function setAutoFilled(id, value, badgeId) {
+    var el = document.getElementById(id);
+    if (!el || !value) return;
+    el.value = value;
+    el.classList.add('auto-filled');
+    var badge = document.getElementById(badgeId);
+    if (badge) badge.style.display = 'inline-flex';
+    setTimeout(function(){ el.classList.remove('auto-filled'); }, 2000);
+}
+
+function goToStep(n) {
+    if (n === 2 && !verifiedKey) {
+        showStatus('key-status','error','&#128273;','License Required','Please verify your license key first.');
+        shakeCard(); return;
+    }
+    currentStep = n;
+    document.getElementById('step-counter').innerText = 'Step ' + n + ' of 3';
+    [1,2,3].forEach(function(i) {
+        var si  = document.getElementById('si-'+i);
+        var sn  = document.getElementById('sn-'+i);
+        var sl  = document.getElementById('sl-'+i);
+        var pan = document.getElementById('panel-'+i);
+        si.className  = 'step-item';
+        sn.innerText  = i;
+        pan.classList.remove('active');
+        if (i < n)  { si.classList.add('done');   sn.innerHTML = '&#10003;'; }
+        if (i === n){ si.classList.add('active');  pan.classList.add('active'); }
+        if (sl && i < n) sl.style.background = 'var(--green)';
+        if (sl && i >= n) sl.style.background = 'var(--rule)';
+    });
+    if (n === 2) { setTimeout(fetchBusinessDetailsFromServer, 200); }
+    if (n === 3) {
+        var sumTopology = document.getElementById('sum-topology');
+        var sumBlockIp  = document.getElementById('sum-block-address');
+        var localFields = document.querySelectorAll('.local-sum-field');
+        var heading     = document.getElementById('admin-panel-heading');
+        var subheading  = document.getElementById('admin-panel-subheading');
+        var pwBlock     = document.getElementById('admin-password-block');
+        if (selectedProvisionMode === 'local') {
+            sumTopology.innerText = "Host Core";
+            sumBlockIp.style.display = 'none';
+            localFields.forEach(function(f) { f.style.display = 'block'; });
+            heading.innerHTML = "Admin <em>Account</em>";
+            subheading.innerText = "Create the owner login password. This is used to access AurumOS on this PC.";
+            pwBlock.style.display = 'block';
+            document.getElementById('sum-biz').innerText   = document.getElementById('inp-biz').value   || '—';
+            document.getElementById('sum-owner').innerText = document.getElementById('inp-owner').value || '—';
+            document.getElementById('sum-city').innerText  = document.getElementById('inp-city').value  || '—';
+        } else {
+            sumTopology.innerText = "Client Node";
+            sumBlockIp.style.display = 'block';
+            document.getElementById('sum-ip').innerText = document.getElementById('inp-server-ip').value || '127.0.0.1';
+            localFields.forEach(function(f) { f.style.display = 'none'; });
+            heading.innerHTML = "Provision <em>Terminal Node</em>";
+            subheading.innerText = "Confirm your network settings below to bond this machine into your showroom database.";
+            pwBlock.style.display = 'none';
+        }
+        document.getElementById('sum-plan').innerText = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+    }
+    setTimeout(function() {
+        var focus = {2: (selectedProvisionMode === 'local' ? 'inp-biz' : 'inp-server-ip'), 3:'inp-pw'};
+        if (focus[n]) { var el = document.getElementById(focus[n]); if(el && !el.classList.contains('auto-filled')) el.focus(); }
+    }, 200);
+}
+
+function goToStep3() {
+    if (selectedProvisionMode === 'local') {
+        var biz   = document.getElementById('inp-biz').value.trim();
+        var owner = document.getElementById('inp-owner').value.trim();
+        if (!biz)   { markErr('inp-biz');   shakeCard(); return; }
+        if (!owner) { markErr('inp-owner'); shakeCard(); return; }
+    } else {
+        var ipVal = document.getElementById('inp-server-ip').value.trim();
+        if (!ipVal) { markErr('inp-server-ip'); shakeCard(); return; }
+    }
+    goToStep(3);
+}
+
+function goLogin() {
+    if (window.pywebview && window.pywebview.api) window.pywebview.api.navigate('login.html');
+    else window.location.href = 'login.html';
+}
+
+function markErr(id) {
+    var el = document.getElementById(id); if(!el) return;
+    el.classList.add('err');
+    setTimeout(function(){ el.classList.remove('err'); }, 1400);
+}
+
+function checkPwStrength() {
+    var pw = document.getElementById('inp-pw').value;
+    var s  = 0;
+    if (pw.length >= 6) s++;
+    if (pw.length >= 10) s++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) s++;
+    if (/[^a-zA-Z0-9]/.test(pw)) s++;
+    var cols = ['','#ef4444','#f59e0b','#3b82f6','#16a34a'];
+    var lbls = ['','Weak','Fair','Good','Strong'];
+    for (var i=1;i<=4;i++) document.getElementById('pw-b'+i).style.background = i<=s ? cols[s] : 'var(--rule)';
+    var lbl = document.getElementById('pw-label');
+    lbl.innerText = pw.length > 0 ? lbls[s]+' password' : '';
+    lbl.style.color = cols[s] || 'var(--muted2)';
+}
+
+async function finishSetup() {
+    var btn = document.getElementById('btn-finish');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin"></div> Setting up...';
+    if (!window.pywebview || !window.pywebview.api) {
+        btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard(); return;
+    }
+    var res = null;
+    if (selectedProvisionMode === 'network') {
+        var ipAddress = document.getElementById('inp-server-ip').value.trim();
+        try {
+            res = await window.pywebview.api.provision_nexus_identity({
+                mode: "network", server_ip: ipAddress, is_server: false
+            });
+        } catch(netErr) { res = {status: 'error', message: String(netErr)}; }
+        if (res && res.status === 'success') {
+            document.getElementById('success-headline').innerText = "Terminal Provisioned!";
+            document.getElementById('success-subline').innerText = "Handshake complete. Bonding terminal to Host Core network topology loop.";
+            document.getElementById('success-biz-name').innerText = "Client Node Active";
+            document.getElementById('success-plan-pill').innerText = "Linked Network";
+            [1,2,3].forEach(function(i){
+                document.getElementById('panel-'+i).classList.remove('active');
+                document.getElementById('si-'+i).className = 'step-item done';
+                document.getElementById('sn-'+i).innerHTML = '&#10003;';
+            });
+            document.getElementById('success-state').classList.add('show');
+            setTimeout(goLogin, 3500);
+            return;
+        }
+    } else {
+        var pw  = document.getElementById('inp-pw').value;
+        var pw2 = document.getElementById('inp-pw2').value;
+        if (pw.length < 6) {
+            document.getElementById('pw-label').innerText = 'Minimum 6 characters required';
+            document.getElementById('pw-label').style.color = 'var(--red)';
+            markErr('inp-pw'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard(); return;
+        }
+        if (pw !== pw2) {
+            markErr('inp-pw2'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard();
+            document.getElementById('inp-pw2').placeholder = 'Passwords do not match!';
+            setTimeout(function(){ document.getElementById('inp-pw2').placeholder = 'Re-enter password'; }, 1500);
+            return;
+        }
+        var biz   = document.getElementById('inp-biz').value.trim();
+        var owner = document.getElementById('inp-owner').value.trim();
+        var city  = document.getElementById('inp-city').value.trim();
+        var phone = document.getElementById('inp-phone').value.trim();
+        try {
+            res = await window.pywebview.api.save_setup({
+                businessName: biz, ownerName: owner,
+                adminPass: pw, licenseKey: verifiedKey,
+                city: city, phone: phone,
+                address: document.getElementById('inp-address').value.trim()
+            });
+            if (res && res.status === 'success') {
+                await window.pywebview.api.provision_nexus_identity({ mode: "local", server_ip: "", is_server: true });
+            }
+        } catch(e) { res = {status:'error', message:String(e)}; }
+        if (res && res.status === 'success') {
+            try { localStorage.setItem('aurum_owner_name', owner); } catch(e) {}
+            try { localStorage.setItem('aurum_biz_name', biz); } catch(e) {}
+            try { localStorage.setItem('aurum_owner_phone', phone); } catch(e) {}
+            try { localStorage.setItem('aurum_city', city); } catch(e) {}
+            try { localStorage.setItem('aurum_address', document.getElementById('inp-address').value.trim()); } catch(e) {}
+            var plan = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+            document.getElementById('success-biz-name').innerText = biz;
+            document.getElementById('success-plan-pill').innerText = plan;
+            [1,2,3].forEach(function(i){
+                document.getElementById('panel-'+i).classList.remove('active');
+                document.getElementById('si-'+i).className = 'step-item done';
+                document.getElementById('sn-'+i).innerHTML = '&#10003;';
+            });
+            document.getElementById('success-state').classList.add('show');
+            launchConfetti();
+            setTimeout(goLogin, 4000);
+            return;
+        }
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+    shakeCard();
+    alert('Setup failed: ' + ((res && res.message) || 'Unknown error mapping topology parameters.'));
+}
+
+function showStatus(id, type, icon, title, sub) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'status-box show ' + type;
+    var ic = el.querySelector('.sb-icon'); if(ic) ic.innerHTML = icon;
+    var ti = el.querySelector('.sb-title'); if(ti) ti.innerText = title;
+    var su = el.querySelector('.sb-sub'); if(su) su.innerText = sub;
+    if (!ic) {
+        el.innerHTML = '<div class="sb-icon">'+icon+'</div><div><div class="sb-title">'+title+'</div><div class="sb-sub">'+sub+'</div></div>';
+    }
+}
+function hideStatus(id) {
+    var el = document.getElementById(id); if(el) el.className = 'status-box';
+}
+
+function launchConfetti() {
+    var colors = ['#2563eb','#3b82f6','#60a5fa','#16a34a','#4ade80','#ffffff','#94a3b8','#1d4ed8'];
+    var W = window.innerWidth, H = window.innerHeight;
+    var cannons = [{x:0,y:H*.6,vxRange:[4,10],vyRange:[-14,-6]},{x:W,y:H*.6,vxRange:[-10,-4],vyRange:[-14,-6]}];
+    cannons.forEach(function(c){
+        for(var i=0;i<40;i++){
+            (function(i,c){setTimeout(function(){
+                var el=document.createElement('div');
+                var sz=Math.random()*7+4, t=Math.floor(Math.random()*3);
+                var w=t===2?sz*.35:sz, h=t===2?sz*2.2:sz, br=t===0?'50%':t===2?'1px':'3px';
+                el.style.cssText='position:fixed;pointer-events:none;z-index:99999;width:'+w+'px;height:'+h+'px;background:'+colors[Math.floor(Math.random()*colors.length)]+';border-radius:'+br+';left:'+c.x+'px;top:'+c.y+'px;opacity:0.92;will-change:transform,opacity;';
+                document.body.appendChild(el);
+                var vx=c.vxRange[0]+Math.random()*(c.vxRange[1]-c.vxRange[0]),vy=c.vyRange[0]+Math.random()*(c.vyRange[1]-c.vyRange[0]);
+                var g=0.18+Math.random()*.12,dr=0.992,rot=Math.random()*360,rv=(Math.random()-.5)*9,px=c.x,py=c.y,lf=0,mx=110+Math.floor(Math.random()*60),fs=mx*.55;
+                function tick(){lf++;vy+=g;vx*=dr;vy*=dr;px+=vx;py+=vy;rot+=rv;rv*=.98;
+                    var op=lf>fs?0.92*(1-(lf-fs)/(mx-fs)):0.92;
+                    el.style.transform='translate('+(px-c.x)+'px,'+(py-c.y)+'px) rotate('+rot+'deg)';
+                    el.style.opacity=Math.max(0,op).toFixed(3);
+                    if(lf<mx&&py<H+30&&op>.005)requestAnimationFrame(tick);
+                    else if(el.parentNode)el.parentNode.removeChild(el);}
+                requestAnimationFrame(tick);
+            },i*22);})(i,c);}});
+}
+
+function shakeCard() {
+    var c=document.querySelector('.page-inner');
+    c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
+    setTimeout(function(){c.classList.remove('shake');},500);
+}
+
+window.onload = function() {
+    document.getElementById('inp-key').focus();
+};
+</script>
+</body>
+</html>

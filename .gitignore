@@ -6,6 +6,8 @@ logs/
 
 # PyInstaller build output
 build/
+database/aurum_local.db
+db_path.txt
 machine.lock
 
 # Temp/preview files
@@ -18,6 +20,14 @@ ui/temp/
 .revoked
 .lockout_state
 aurum_config.json
+.unlock_nonce
+
+# Code-signing material (NEVER commit — contains your cert + password)
+sign_config.json
+*.pfx
+*.p12
+*.pvk
+*.spc
 
 # Python cache
 __pycache__/
@@ -39,3 +49,4 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+.aider*

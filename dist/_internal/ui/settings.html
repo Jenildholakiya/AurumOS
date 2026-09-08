@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<title>AurumOS | Settings</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0f172a;--ink2:#1e293b;--ink3:#64748b;
+  --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+  --blue-ln:rgba(37,99,235,0.18);--blue-bg:rgba(37,99,235,0.06);
+  --rule:rgba(15,23,42,0.08);--rule2:rgba(15,23,42,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+  --sh:0 1px 3px rgba(15,23,42,0.04),0 4px 16px rgba(15,23,42,0.06);
+  --sh-hover:0 8px 28px rgba(37,99,235,0.12),0 2px 8px rgba(15,23,42,0.04);
+  --sans:"DM Sans",system-ui,sans-serif;
+  --mono:Arial,sans-serif;
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;}
+.wrap{display:flex;height:100vh;overflow:hidden;width:100vw;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;width:100%;}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+header{
+  height:58px;flex-shrink:0;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:16px;
+  padding:0 36px;
+  position:relative;
+}
+
+.h-back{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;
+  border:1px solid var(--rule);background:var(--cream);font-size:0.75rem;color:var(--muted);
+  cursor:pointer;font-family:inherit;transition:all 0.15s;text-decoration:none;font-weight:500;}
+.h-back:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.h-div{width:1px;height:24px;background:var(--rule);}
+.h-title{font-family:var(--sans);font-size:1.05rem;color:var(--ink);letter-spacing:-0.3px;font-weight:700;}
+.h-title em{color:var(--blue);font-style:normal;font-weight:700;}
+.h-eyebrow{font-size:0.52rem;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;color:var(--muted2);margin-bottom:1px;}
+.h-spacer{flex:1;}
+.h-owner-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:99px;
+  background:var(--blue-bg);border:1px solid var(--blue-ln);font-size:0.65rem;font-weight:600;color:var(--blue3);}
+.h-owner-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.14);}
+
+.scroll{flex:1;overflow-y:auto;padding:34px 44px 64px;scroll-behavior:smooth;}
+.scroll::-webkit-scrollbar{width:11px;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(37,99,235,0.18);border-radius:99px;border:3px solid var(--cream);}
+.scroll::-webkit-scrollbar-thumb:hover{background:rgba(37,99,235,0.35);}
+
+.layout{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  gap:28px;
+  max-width:1400px;
+  margin:0 auto;
+}
+
+.left-deck{
+  display:flex;flex-direction:column;gap:20px;
+  position:sticky;top:0;height:fit-content;
+}
+
+.profile-card{
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:var(--sh);
+  transition:box-shadow .2s;
+}
+.profile-card:hover{box-shadow:var(--sh-hover);}
+
+.profile-banner{
+  height:98px;
+  background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 55%,#3b82f6 100%);
+  position:relative;overflow:hidden;
+}
+.profile-banner::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(-45deg,transparent,transparent 13px,rgba(255,255,255,0.04) 13px,rgba(255,255,255,0.04) 14px);
+}
+.profile-banner-bar{position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--blue),var(--blue2),#93c5fd,var(--blue2),var(--blue));}
+.profile-chip{position:absolute;top:13px;right:14px;z-index:2;display:inline-flex;align-items:center;gap:5px;
+  padding:4px 11px;border-radius:99px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);
+  color:#fff;font-size:0.53rem;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;backdrop-filter:blur(4px);}
+.profile-av-wrap{padding:0 20px;margin-top:-36px;position:relative;z-index:1;}
+.profile-av{
+  width:66px;height:66px;border-radius:17px;
+  background:linear-gradient(150deg,var(--blue),var(--blue3));
+  border:3px solid var(--white);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--sans);font-size:1.55rem;color:#fff;
+  font-weight:700;box-shadow:0 10px 24px rgba(37,99,235,0.3);
+}
+.profile-info{padding:12px 20px 20px;}
+.profile-name{font-family:var(--sans);font-size:1.22rem;color:var(--ink);margin-bottom:3px;font-weight:700;}
+.profile-role{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--blue3);}
+.profile-divider{height:1px;background:var(--rule);margin:14px 0;}
+.profile-detail{display:flex;flex-direction:column;gap:12px;padding:0 20px 20px;}
+.pd-row{display:flex;align-items:center;gap:10px;}
+.pd-icon{width:30px;height:30px;border-radius:99px;background:var(--blue-bg);border:1px solid var(--blue-ln);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue3);}
+.pd-info{display:flex;flex-direction:column;gap:1px;}
+.pd-label{font-size:0.52rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);}
+.pd-value{font-size:0.8rem;color:var(--ink);font-weight:500;}
+.pd-value.mono{font-family:var(--mono);font-size:0.75rem;color:var(--ink3);}
+.license-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;
+  background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:99px;
+  font-family:var(--mono);font-size:0.68rem;color:var(--blue3);box-shadow:inset 0 0 0 1px rgba(37,99,235,0.08);}
+
+.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sys-row{padding:12px 14px;border-radius:12px;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,var(--cream),#fff);border:1px solid var(--rule);}
+.sys-row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--blue),var(--blue3));opacity:0.5;}
+.sys-lbl{font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);}
+.sys-val{font-family:var(--mono);font-size:0.8rem;color:var(--ink);}
+.sys-val.green{color:var(--green);}
+.sys-val.muted{color:var(--muted);font-size:0.72rem;}
+
+.right-col{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;}
+.full-width-card{grid-column:1 / -1;}
+
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;grid-column:1 / -1;}
+.sec-dot{width:7px;height:7px;border-radius:50%;background:var(--blue-bg);border:2px solid var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.sec-ttl{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.7px;color:var(--blue3);}
+
+.card{
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:var(--sh);
+  transition:transform .2s cubic-bezier(.34,1.4,.64,1),box-shadow .2s;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.card:hover{transform:translateY(-2px);box-shadow:var(--sh-hover);}
+.card-hdr{padding:17px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule2);background:rgba(248,250,251,0.5);}
+.card-hdr-left{display:flex;align-items:center;gap:11px;}
+.card-icon{width:36px;height:36px;border-radius:10px;color:var(--blue3);
+  background:linear-gradient(150deg,var(--blue-bg),rgba(37,99,235,0.17));border:1px solid var(--blue-ln);
+  box-shadow:0 3px 10px rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.card-title{font-size:0.92rem;font-weight:600;color:var(--ink);}
+.card-sub{font-size:0.63rem;color:var(--muted2);margin-top:1px;}
+.card-body{padding:22px;flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld.full{grid-column:1/-1;}
+.fld label{font-size:0.54rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
+.inp-wrap{position:relative;}
+.inp{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:10px;
+  font-size:0.86rem;font-family:inherit;color:var(--ink);background:var(--cream);
+  outline:none;transition:border-color .14s,box-shadow .14s,background .14s;}
+.inp:focus{border-color:var(--blue2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.13);}
+.inp.pw-inp{padding-right:42px;}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  border:none;background:none;cursor:pointer;color:var(--muted2);font-size:0.85rem;
+  padding:2px;transition:color 0.13s;line-height:1;}
+.eye:hover{color:var(--blue3);}
+
+.strength{height:3px;background:var(--rule);border-radius:99px;overflow:hidden;margin-top:5px;display:none;}
+.strength.vis{display:block;}
+.sf{height:100%;width:0;border-radius:99px;transition:width .3s,background .3s;}
+
+.alert{
+  font-size:0.72rem;
+  padding:9px 13px;
+  border-radius:8px;
+  display:none;
+  align-items:center;
+  gap:8px;
+  line-height:1.5;
+  margin-top:10px;
+  opacity:1;
+  transition:opacity 0.3s ease;
+}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,0.15);display:flex;}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);display:flex;}
+
+.btn-row{display:flex;gap:10px;margin-top:18px;}
+.btn{height:44px;padding:0 22px;border:none;border-radius:11px;font-family:inherit;font-size:0.8rem;font-weight:600;letter-spacing:0.2px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .16s cubic-bezier(.34,1.4,.64,1);}
+.btn-primary{background:linear-gradient(180deg,var(--blue2),var(--blue3));color:#fff;box-shadow:0 4px 14px rgba(37,99,235,0.22);}
+.btn-primary:hover:not(:disabled){background:linear-gradient(180deg,var(--blue),#1e40af);box-shadow:0 6px 18px rgba(37,99,235,0.35);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+.btn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);border-radius:11px;}
+.btn-ghost:hover{background:var(--cream3);}
+
+.tfa-status{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.tfa-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:99px;font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;flex-shrink:0;}
+.tfa-badge.off{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
+.tfa-badge.on{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
+.tfa-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.tfa-desc{font-size:0.72rem;color:var(--muted);line-height:1.5;flex:1;min-width:180px;}
+.tfa-enroll{display:none;margin-top:8px;border-top:1px solid var(--rule2);padding-top:18px;}
+.tfa-enroll.on{display:block;animation:fadeUp .3s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tfa-steps{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;}
+.tfa-qr-box{width:172px;flex-shrink:0;text-align:center;}
+.tfa-qr{width:172px;height:172px;border:1px solid var(--rule);border-radius:14px;background:#fff;padding:8px;box-shadow:0 6px 20px rgba(15,23,42,0.1);display:flex;align-items:center;justify-content:center;}
+.tfa-qr img{width:100%;height:100%;display:block;image-rendering:pixelated;}
+.tfa-qr-hint{font-size:0.55rem;color:var(--muted2);margin-top:8px;text-transform:uppercase;letter-spacing:0.8px;}
+.tfa-guide{flex:1;min-width:230px;}
+.tfa-step{display:flex;gap:10px;margin-bottom:13px;}
+.tfa-step-n{width:20px;height:20px;border-radius:50%;background:var(--blue-bg);border:1px solid var(--blue-ln);color:var(--blue3);font-size:0.6rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);margin-top:1px;}
+.tfa-step-t{font-size:0.74rem;color:var(--ink2);line-height:1.55;}
+.tfa-step-t b{color:var(--ink);font-weight:600;}
+.tfa-secret{margin-top:7px;background:var(--cream);border:1px dashed var(--blue-ln);border-radius:8px;padding:8px 11px;font-family:var(--mono);font-size:0.74rem;color:var(--blue3);word-break:break-all;letter-spacing:1px;}
+.tfa-code-inp{width:100%;height:46px;margin-top:8px;border:1.5px solid var(--rule);border-radius:99px;background:var(--cream);font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--ink);text-align:center;letter-spacing:8px;padding-left:8px;outline:none;transition:all .14s;}
+.tfa-code-inp:focus{border-color:var(--blue2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.tfa-code-inp::placeholder{color:var(--muted2);letter-spacing:6px;font-weight:400;}
+.tfa-disable{display:none;margin-top:14px;border-top:1px solid var(--rule2);padding-top:16px;}
+.tfa-disable.on{display:block;animation:fadeUp .3s ease both;}
+
+.ov{position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;}
+.ov.open{display:flex;}
+.ov-box{background:#fff;border-radius:16px;width:430px;max-width:94vw;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,0.25);animation:ovin .28s cubic-bezier(.34,1.56,.64,1);}
+@keyframes ovin{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+.ov-bar{height:3px;background:linear-gradient(90deg,var(--blue),var(--blue2),var(--blue3));}
+.ov-body{padding:26px 24px 22px;}
+.ov-ico{width:52px;height:52px;margin:0 auto 12px;border-radius:50%;background:var(--blue-bg);border:1px solid var(--blue-ln);display:flex;align-items:center;justify-content:center;color:var(--blue3);}
+.ov-title{font-family:var(--sans);font-size:1.18rem;color:var(--ink);margin-bottom:5px;text-align:center;font-weight:700;}
+.ov-sub{font-size:0.72rem;color:var(--muted);line-height:1.55;text-align:center;margin-bottom:18px;}
+.bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.bk-code{font-family:var(--mono);font-size:0.95rem;font-weight:600;color:var(--ink2);background:var(--cream);border:1px solid var(--rule);border-radius:8px;padding:10px;text-align:center;letter-spacing:1px;}
+.bk-warn{font-size:0.66rem;color:var(--red);background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:9px 12px;line-height:1.5;margin-bottom:16px;}
+.ov-actions{display:flex;gap:10px;}
+.ov-actions .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;}
+
+body{
+  background:
+    radial-gradient(1200px 520px at 80% -12%, rgba(37,99,235,0.07), transparent 60%),
+    radial-gradient(900px 520px at -10% 112%, rgba(37,99,235,0.04), transparent 55%),
+    var(--cream);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<main>
+
+<header>
+  <a class="h-back" onclick="history.back()" href="#">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Back
+  </a>
+  <div class="h-div"></div>
+  <div>
+    <div class="h-eyebrow">AurumOS Console</div>
+    <div class="h-title">Settings <em>& Preferences</em></div>
+  </div>
+  <div class="h-spacer"></div>
+  <div class="h-owner-chip"><span class="dot"></span><span id="h-owner-chip-name">Owner</span></div>
+</header>
+
+<div class="scroll">
+<div class="layout">
+
+  <!-- LEFT DECK: Profile card & System Info -->
+  <div class="left-deck">
+    <div class="profile-card">
+      <div class="profile-banner">
+        <div class="profile-chip">&#9670; Owner</div>
+        <div class="profile-banner-bar"></div>
+      </div>
+      <div class="profile-av-wrap">
+        <div class="profile-av" id="p-av">A</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name" id="p-name">Loading…</div>
+        <div class="profile-role">Business Owner</div>
+      </div>
+      <div class="profile-divider"></div>
+      <div class="profile-detail">
+        <div class="pd-row">
+          <div class="pd-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="pd-info">
+            <div class="pd-label">Business</div>
+            <div class="pd-value" id="p-biz">—</div>
+          </div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.15 6.15l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div class="pd-info">
+            <div class="pd-label">Phone</div>
+            <div class="pd-value mono" id="p-phone">—</div>
+          </div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="pd-info">
+            <div class="pd-label">City</div>
+            <div class="pd-value" id="p-city">—</div>
+          </div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="pd-info">
+            <div class="pd-label">Setup Date</div>
+            <div class="pd-value mono" id="p-date">—</div>
+          </div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div class="pd-info">
+            <div class="pd-label">License</div>
+            <div id="p-lic"><div class="pd-value" style="color:var(--muted2);">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Info Summary -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div>
+            <div class="card-title">System Information</div>
+            <div class="card-sub">AurumOS installation details</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="sys-grid">
+          <div class="sys-row">
+            <div class="sys-lbl">Version</div>
+            <div class="sys-val" id="sys-ver">—</div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-lbl">License Status</div>
+            <div class="sys-val green">● Active</div>
+          </div>
+          <div class="sys-row" style="grid-column:1/-1;">
+            <div class="sys-lbl">Machine ID</div>
+            <div class="sys-val muted" id="sys-mid">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT MAIN WORKSPACE GRID -->
+  <div class="right-col">
+
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Core Business & Calculation Rules</div></div>
+
+    <!-- Edit Profile Card -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Business Profile</div>
+            <div class="card-sub">Update store and owner information</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld">
+            <label>Business Name</label>
+            <input class="inp" id="e-biz" type="text" placeholder="Neelkanth Jewellers">
+          </div>
+          <div class="fld">
+            <label>Owner Name</label>
+            <input class="inp" id="e-owner" type="text" placeholder="Neelkanthbhai Shah">
+          </div>
+          <div class="fld">
+            <label>Phone</label>
+            <input class="inp" id="e-phone" type="text" placeholder="+91 98765 43210">
+          </div>
+          <div class="fld">
+            <label>City</label>
+            <input class="inp" id="e-city" type="text" placeholder="Rajkot">
+          </div>
+          <div class="fld full">
+            <label>Jewellers Address</label>
+            <input class="inp" id="e-address" type="text" placeholder="Shop address">
+          </div>
+        </div>
+        <div class="alert" id="edit-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="save-btn" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fine Gold Threshold & Discount Rules Card -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Fine Gold Threshold & Discount</div>
+            <div class="card-sub">Automatically apply discount when bill fine gold crosses limit</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld">
+            <label>Fine Gold Limit (g)</label>
+            <div class="inp-wrap">
+              <input class="inp" id="e-fine-limit" type="number" step="0.001" min="0" placeholder="10.100">
+            </div>
+          </div>
+          <div class="fld">
+            <label>Discount Rate (%)</label>
+            <div class="inp-wrap">
+              <input class="inp" id="e-fine-discount-pct" type="number" step="0.01" min="0" placeholder="1">
+            </div>
+          </div>
+        </div>
+        <div style="font-size:0.68rem;color:var(--muted2);margin-top:12px;line-height:1.5;">
+          If a customer's total bill fine gold is above <b>Fine Gold Limit</b> (e.g. <code>10.100</code> g), the system automatically applies <b>Discount Rate</b> (e.g. <code>1%</code> = <code>0.01</code>) to the bill.
+        </div>
+        <div class="alert" id="bill-rule-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="save-bill-rule-btn" onclick="saveBillingRules()">Save Billing Rules</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Security & Account Protection</div></div>
+
+    <!-- Change Password -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Change Password</div>
+            <div class="card-sub">Update admin login password</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld full">
+            <label>Current Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="cur-pw" type="password" placeholder="Enter current password">
+              <button class="eye" onclick="toggleEye('cur-pw',this)" tabindex="-1">&#128065;</button>
+            </div>
+          </div>
+          <div class="fld">
+            <label>New Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="new-pw" type="password" placeholder="Min 4 characters" oninput="strength(this.value)">
+              <button class="eye" onclick="toggleEye('new-pw',this)" tabindex="-1">&#128065;</button>
+            </div>
+            <div class="strength" id="sw"><div class="sf" id="sf"></div></div>
+          </div>
+          <div class="fld">
+            <label>Confirm Password</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="conf-pw" type="password" placeholder="Re-enter new password">
+              <button class="eye" onclick="toggleEye('conf-pw',this)" tabindex="-1">&#128065;</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert" id="pw-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="pw-btn" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-Factor Authentication -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Two-Factor Authentication</div>
+            <div class="card-sub">Add phone verification step to owner login</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="tfa-status">
+          <span class="tfa-badge off" id="tfa-badge"><span class="dot"></span><span id="tfa-badge-txt">Disabled</span></span>
+          <span class="tfa-desc" id="tfa-desc">Protect the owner account with a code from your phone.</span>
+        </div>
+
+        <div class="alert" id="tfa-alert"></div>
+
+        <div class="btn-row" id="tfa-actions">
+          <button class="btn btn-primary" id="tfa-enable-btn" onclick="tfaBeginEnroll()">Enable 2FA</button>
+          <button class="btn btn-ghost" id="tfa-disable-btn" style="display:none;color:var(--red);border-color:rgba(220,38,38,0.2);" onclick="tfaShowDisable()">Disable 2FA</button>
+        </div>
+
+        <!-- Enrollment flow -->
+        <div class="tfa-enroll" id="tfa-enroll">
+          <div class="tfa-steps">
+            <div class="tfa-qr-box">
+              <div class="tfa-qr"><img id="tfa-qr-img" alt="Scan this QR code"></div>
+              <div class="tfa-qr-hint">Scan with your app</div>
+            </div>
+            <div class="tfa-guide">
+              <div class="tfa-step"><div class="tfa-step-n">1</div><div class="tfa-step-t">Install <b>Google Authenticator</b>, Authy, or Microsoft Authenticator on your phone.</div></div>
+              <div class="tfa-step"><div class="tfa-step-n">2</div><div class="tfa-step-t">Scan the QR code — or enter this key manually:<div class="tfa-secret" id="tfa-secret">—</div></div></div>
+              <div class="tfa-step"><div class="tfa-step-n">3</div><div class="tfa-step-t">Enter the 6-digit code it shows:
+                <input class="tfa-code-inp" id="tfa-code" inputmode="numeric" maxlength="6" placeholder="000000" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')tfaConfirm()">
+              </div></div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="tfa-confirm-btn" onclick="tfaConfirm()">Verify & Activate</button>
+                <button class="btn btn-ghost" onclick="tfaCancelEnroll()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Disable (password confirm) -->
+        <div class="tfa-disable" id="tfa-disable">
+          <div class="fld full">
+            <label>Confirm your password to disable 2FA</label>
+            <div class="inp-wrap">
+              <input class="inp pw-inp" id="tfa-dis-pw" type="password" placeholder="Account password" onkeydown="if(event.key==='Enter')tfaConfirmDisable()">
+              <button class="eye" onclick="toggleEye('tfa-dis-pw',this)" tabindex="-1">&#128065;</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" style="background:var(--red);" id="tfa-dis-confirm" onclick="tfaConfirmDisable()">Disable 2FA</button>
+            <button class="btn btn-ghost" onclick="tfaHideDisable()">Keep 2FA On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Monitoring & Audit Logs</div></div>
+
+    <!-- Staff Activity Alerts -->
+    <div class="card full-width-card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Staff Activity & Audit Alerts</div>
+            <div class="card-sub">BASTION security engine emails you when staff perform sensitive operations</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld full">
+            <label>Owner Alert Email</label>
+            <input class="inp" id="al-email" type="email" placeholder="owner@example.com">
+          </div>
+          <div class="fld">
+            <label>Alert Threshold Severity</label>
+            <select class="inp" id="al-sev">
+              <option value="MEDIUM">Medium and above</option>
+              <option value="HIGH">High and above</option>
+              <option value="CRITICAL">Critical only</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Quiet Hours (optional)</label>
+            <input class="inp" id="al-quiet" type="text" placeholder="e.g. 22-7">
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:9px;margin-top:14px;font-size:0.76rem;color:var(--ink2);cursor:pointer;">
+          <input type="checkbox" id="al-enabled" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;">
+          Monitor staff activity and send automatic security alerts
+        </label>
+        <div class="alert" id="al-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="al-save" onclick="saveAlerts()">Save Security Settings</button>
+          <button class="btn btn-ghost" id="al-test" onclick="testAlert()">Send Test Email</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /right-col -->
+</div><!-- /layout -->
+</div><!-- /scroll -->
+</main>
+</div>
+
+<!-- BACKUP CODES OVERLAY -->
+<div class="ov" id="bk-ov">
+  <div class="ov-box">
+    <div class="ov-bar"></div>
+    <div class="ov-body">
+      <div class="ov-ico">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <div class="ov-title">Save Your Backup Codes</div>
+      <div class="ov-sub">Use one of these if you ever lose your phone. Each code works only once.</div>
+      <div class="bk-grid" id="bk-grid"></div>
+      <div class="bk-warn">These codes are shown only once and cannot be recovered. Print or save them now.</div>
+      <div class="ov-actions">
+        <button class="btn btn-ghost" id="bk-copy" onclick="bkCopy()">Copy</button>
+        <button class="btn btn-ghost" onclick="bkDownload()">Download</button>
+        <button class="btn btn-primary" onclick="bkDone()">I've saved them</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+var DATA = {};
+var _alertTimers = {};
+
+(function boot(n){
+    try {
+        if (typeof _getRole === 'function' && _getRole() === 'staff') {
+            var _sp = [];
+            try { _sp = JSON.parse(localStorage.getItem('aurum_staff_pages') || '[]'); } catch(e){}
+            var _dest = _sp.length ? _sp[0] : 'billing.html';
+            location.replace(_dest);
+            return;
+        }
+    } catch(e){}
+    if (window.pywebview && window.pywebview.api) { loadAll(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+})(60);
+
+function loadAll() {
+    var api = window.pywebview.api;
+    api.get_settings && api.get_settings().then(function(r) {
+        if (r && r.status === 'success') { DATA = r.data||{}; render(); }
+    }).catch(function(){});
+
+    api.get_current_version && api.get_current_version().then(function(v){
+        if (v) el('sys-ver').innerText = 'v' + v;
+    }).catch(function(){});
+
+    api.get_machine_id && api.get_machine_id().then(function(m){
+        if (m) el('sys-mid').innerText = m;
+    }).catch(function(){});
+
+    tfaLoadStatus();
+    loadAlertSettings();
+}
+
+function loadAlertSettings() {
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.get_alert_settings !== 'function') return;
+    api.get_alert_settings().then(function(s){
+        if (!s) return;
+        if (el('al-email'))   el('al-email').value   = s.owner_alert_email || '';
+        if (el('al-sev'))     el('al-sev').value     = (s.alert_min_severity || 'MEDIUM');
+        if (el('al-quiet'))   el('al-quiet').value   = s.quiet_hours || '';
+        if (el('al-enabled')) el('al-enabled').checked =
+            String(s.conduct_watch_enabled == null ? '1' : s.conduct_watch_enabled) === '1';
+    }).catch(function(){});
+}
+
+function saveAlerts() {
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.save_alert_settings !== 'function') {
+        setAlert('al-alert','This build doesn\'t include alerts yet. Restart the updated app.','err'); return;
+    }
+    var payload = {
+        owner_alert_email:     el('al-email').value.trim(),
+        alert_min_severity:    el('al-sev').value,
+        quiet_hours:           el('al-quiet').value.trim(),
+        conduct_watch_enabled: el('al-enabled').checked ? '1' : '0'
+    };
+    setBtn('al-save','Saving…',true);
+    api.save_alert_settings(payload).then(function(r){
+        setBtn('al-save','Save Security Settings',false);
+        if (r && r.status === 'success') setAlert('al-alert','Alert settings saved.','ok');
+        else setAlert('al-alert',(r&&r.message)||'Could not save.','err');
+    }).catch(function(e){ setBtn('al-save','Save Security Settings',false); setAlert('al-alert','Error: '+e,'err'); });
+}
+
+function testAlert() {
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.send_test_alert_email !== 'function') {
+        setAlert('al-alert','This build doesn\'t include alerts yet. Restart the updated app.','err'); return;
+    }
+    var email = el('al-email').value.trim();
+    if (email.indexOf('@') < 0) { setAlert('al-alert','Enter your alert email first.','err'); return; }
+    setBtn('al-test','Sending…',true);
+    api.send_test_alert_email(email).then(function(r){
+        setBtn('al-test','Send Test Email',false);
+        if (r && (r.status === 'success' || r.status === 'queued')) setAlert('al-alert', r.message || 'Test sent.','ok');
+        else setAlert('al-alert',(r&&r.message)||'Could not send test.','err');
+    }).catch(function(e){ setBtn('al-test','Send Test Email',false); setAlert('al-alert','Error: '+e,'err'); });
+}
+
+function render() {
+    var biz   = DATA.business_name || '—';
+    var owner = DATA.owner_name    || '—';
+    var phone = DATA.owner_phone   || '—';
+    var city  = DATA.city          || '—';
+    var date  = DATA.setup_date    || '—';
+    var lic   = DATA.license_key   || '';
+
+    el('p-av').innerText = biz.charAt(0).toUpperCase();
+    el('p-name').innerText  = owner;
+    var _hc = el('h-owner-chip-name'); if (_hc) _hc.innerText = owner;
+    el('p-biz').innerText   = biz;
+    el('p-phone').innerText = phone;
+    el('p-city').innerText  = city;
+    el('p-date').innerText  = date;
+    el('p-lic').innerHTML   = lic
+        ? '<div class="license-pill">&#9679; ' + h(lic) + '</div>'
+        : '<div class="pd-value" style="color:var(--muted2);">Not set</div>';
+
+    el('e-biz').value   = DATA.business_name || '';
+    el('e-owner').value = DATA.owner_name    || '';
+    el('e-phone').value = DATA.owner_phone   || '';
+    el('e-city').value  = DATA.city          || '';
+    el('e-address').value = DATA.address     || '';
+
+    var fineLimit = DATA.fine_limit || DATA.discount_threshold || localStorage.getItem('aurum_fine_limit') || localStorage.getItem('aurum_fine_threshold') || localStorage.getItem('aurum_discount_threshold') || '10.100';
+    var fineDisc  = DATA.fine_discount_pct || DATA.discount_percent || localStorage.getItem('aurum_fine_discount_pct') || localStorage.getItem('aurum_custom_percent') || localStorage.getItem('aurum_discount_percent') || '1';
+
+    if (el('e-fine-limit')) el('e-fine-limit').value = fineLimit;
+    if (el('e-fine-discount-pct')) el('e-fine-discount-pct').value = fineDisc;
+}
+
+function saveProfile() {
+    var d = {
+        business_name: el('e-biz').value.trim(),
+        owner_name:    el('e-owner').value.trim(),
+        owner_phone:   el('e-phone').value.trim(),
+        city:          el('e-city').value.trim(),
+        address:       el('e-address').value.trim(),
+    };
+    if (!d.business_name || !d.owner_name) {
+        setAlert('edit-alert','Business name and owner name are required.','err'); return;
+    }
+    setBtn('save-btn','Saving…',true);
+    window.pywebview.api.update_settings(d).then(function(r) {
+        if (r && r.status === 'success') {
+            Object.assign(DATA, d); render();
+            try {
+                localStorage.setItem('aurum_biz_name', d.business_name);
+                localStorage.setItem('aurum_owner_name', d.owner_name);
+                localStorage.setItem('aurum_owner_phone', d.owner_phone);
+                localStorage.setItem('aurum_city', d.city);
+                localStorage.setItem('aurum_address', d.address);
+            } catch(e){}
+            setAlert('edit-alert','Saved successfully!','ok');
+        } else {
+            setAlert('edit-alert',(r&&r.message)||'Failed to save.','err');
+        }
+        setBtn('save-btn','Save Profile',false);
+    }).catch(function(e){ setAlert('edit-alert','Error: '+e,'err'); setBtn('save-btn','Save Profile',false); });
+}
+
+function saveBillingRules() {
+    var rawLimit = el('e-fine-limit').value.trim();
+    var rawDisc  = el('e-fine-discount-pct').value.trim();
+
+    var valLimit = parseFloat(rawLimit);
+    var valDisc  = parseFloat(rawDisc);
+
+    if (isNaN(valLimit) || valLimit < 0) {
+        setAlert('bill-rule-alert', 'Please enter a valid Fine Gold Limit (e.g. 10.100).', 'err');
+        return;
+    }
+    if (isNaN(valDisc) || valDisc < 0) {
+        setAlert('bill-rule-alert', 'Please enter a valid Discount Rate (e.g. 1 for 1%).', 'err');
+        return;
+    }
+
+    setBtn('save-bill-rule-btn', 'Saving…', true);
+
+    localStorage.setItem('aurum_fine_limit', String(valLimit));
+    localStorage.setItem('aurum_fine_threshold', String(valLimit));
+    localStorage.setItem('aurum_fine_discount_pct', String(valDisc));
+    localStorage.setItem('aurum_custom_percent', String(valDisc));
+    localStorage.setItem('aurum_formula_pct', String(valDisc));
+    localStorage.setItem('aurum_discount_threshold', String(valLimit));
+    localStorage.setItem('aurum_discount_percent', String(valDisc));
+
+    var payload = Object.assign({}, DATA, {
+        fine_limit: String(valLimit),
+        fine_threshold: String(valLimit),
+        fine_discount_pct: String(valDisc),
+        discount_threshold: String(valLimit),
+        discount_percent: String(valDisc)
+    });
+
+    if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.update_settings === 'function') {
+        window.pywebview.api.update_settings(payload).then(function(r) {
+            setBtn('save-bill-rule-btn', 'Save Billing Rules', false);
+            if (r && r.status === 'success') {
+                DATA.fine_limit = String(valLimit);
+                DATA.fine_discount_pct = String(valDisc);
+                setAlert('bill-rule-alert', 'Rules saved! Fine gold > ' + valLimit + ' g gets ' + valDisc + '% discount.', 'ok');
+            } else {
+                setAlert('bill-rule-alert', 'Saved locally. Backend response: ' + ((r&&r.message) || 'Updated'), 'ok');
+            }
+        }).catch(function(e) {
+            setBtn('save-bill-rule-btn', 'Save Billing Rules', false);
+            setAlert('bill-rule-alert', 'Saved rules locally!', 'ok');
+        });
+    } else {
+        setBtn('save-bill-rule-btn', 'Save Billing Rules', false);
+        setAlert('bill-rule-alert', 'Rules saved locally! Fine gold > ' + valLimit + ' g gets ' + valDisc + '% discount.', 'ok');
+    }
+}
+
+function changePassword() {
+    var cur  = el('cur-pw').value;
+    var np   = el('new-pw').value;
+    var conf = el('conf-pw').value;
+    if (!cur)          { setAlert('pw-alert','Enter your current password.','err'); return; }
+    if (np.length < 4) { setAlert('pw-alert','New password must be at least 4 characters.','err'); return; }
+    if (np !== conf)   { setAlert('pw-alert','Passwords do not match.','err'); return; }
+    setBtn('pw-btn','Updating…',true);
+    window.pywebview.api.change_owner_password(cur, np).then(function(r) {
+        if (r && r.status === 'success') {
+            setAlert('pw-alert','Password updated!','ok');
+            el('cur-pw').value = ''; el('new-pw').value = ''; el('conf-pw').value = '';
+            el('sw').classList.remove('vis');
+        } else {
+            setAlert('pw-alert',(r&&r.message)||'Failed.','err');
+        }
+        setBtn('pw-btn','Update Password',false);
+    }).catch(function(e){ setAlert('pw-alert','Error: '+e,'err'); setBtn('pw-btn','Update Password',false); });
+}
+
+function strength(v) {
+    var sw = el('sw'), fill = el('sf');
+    if (!v) { sw.classList.remove('vis'); return; }
+    sw.classList.add('vis');
+    var s = [v.length>=4,v.length>=8,/[A-Z]/.test(v),/[0-9]/.test(v),/[^A-Za-z0-9]/.test(v)].filter(Boolean).length;
+    fill.style.width = s*20+'%';
+    fill.style.background = s<=1?'#ef4444':s<=3?'#f59e0b':'#16a34a';
+}
+
+var _bkCodes = [];
+
+function _tfaApi(method) {
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api[method] !== 'function') {
+        setAlert('tfa-alert','This app build doesn\'t include 2FA yet. Please close and reopen the updated app, then try again.','err');
+        return null;
+    }
+    return api;
+}
+
+function _tfaCall(promise, ms, onResult, onFail) {
+    var done = false;
+    var t = setTimeout(function(){
+        if (done) return; done = true;
+        onFail('Timed out — please restart the app and try again.');
+    }, ms || 10000);
+    promise.then(function(r){
+        if (done) return; done = true; clearTimeout(t); onResult(r);
+    }).catch(function(e){
+        if (done) return; done = true; clearTimeout(t); onFail('Error: ' + e);
+    });
+}
+
+function tfaLoadStatus() {
+    try {
+        if (localStorage.getItem('aurum_2fa_enabled') === '1') tfaRender(true);
+    } catch(e) {}
+    var tries = 0;
+    (function poll(){
+        var api = window.pywebview && window.pywebview.api;
+        if (api && typeof api.totp_status === 'function') {
+            api.totp_status().then(function(s){
+                tfaRender(!!(s && s.enabled));
+            }).catch(function(){});
+            return;
+        }
+        if (tries++ < 40) setTimeout(poll, 150);
+    })();
+}
+
+function tfaRender(enabled) {
+    var badge = el('tfa-badge'), txt = el('tfa-badge-txt'), desc = el('tfa-desc');
+    var enb = el('tfa-enable-btn'), dsb = el('tfa-disable-btn');
+    if (enabled) {
+        badge.className = 'tfa-badge on'; txt.innerText = 'Enabled';
+        desc.innerText = 'Your owner account is protected with two-factor authentication.';
+        enb.style.display = 'none'; dsb.style.display = 'inline-flex';
+    } else {
+        badge.className = 'tfa-badge off'; txt.innerText = 'Disabled';
+        desc.innerText = 'Protect the owner account with a code from your phone.';
+        enb.style.display = 'inline-flex'; dsb.style.display = 'none';
+    }
+    el('tfa-enroll').classList.remove('on');
+    el('tfa-disable').classList.remove('on');
+    try { localStorage.setItem('aurum_2fa_enabled', enabled ? '1' : '0'); } catch(e) {}
+}
+
+function tfaBeginEnroll() {
+    var api = _tfaApi('totp_begin_enroll');
+    if (!api) return;
+    setBtn('tfa-enable-btn','Preparing…',true);
+    setAlert('tfa-alert','','');
+    _tfaCall(api.totp_begin_enroll(), 10000, function(r){
+        setBtn('tfa-enable-btn','Enable 2FA',false);
+        if (!r || r.status !== 'success') { setAlert('tfa-alert',(r&&r.message)||'Could not start setup.','err'); return; }
+        if (r.qr) el('tfa-qr-img').src = r.qr;
+        el('tfa-secret').innerText = r.secret || '—';
+        el('tfa-code').value = '';
+        el('tfa-enroll').classList.add('on');
+        el('tfa-enable-btn').style.display = 'none';
+        setTimeout(function(){ el('tfa-code').focus(); }, 150);
+    }, function(msg){
+        setBtn('tfa-enable-btn','Enable 2FA',false);
+        setAlert('tfa-alert',msg,'err');
+    });
+}
+
+function tfaCancelEnroll() {
+    el('tfa-enroll').classList.remove('on');
+    el('tfa-enable-btn').style.display = 'inline-flex';
+    setAlert('tfa-alert','','');
+}
+
+function tfaConfirm() {
+    var code = el('tfa-code').value.trim();
+    if (code.length < 6) { setAlert('tfa-alert','Enter the 6-digit code from your app.','err'); return; }
+    var api = _tfaApi('totp_confirm_enroll');
+    if (!api) return;
+    setBtn('tfa-confirm-btn','Verifying…',true);
+    _tfaCall(api.totp_confirm_enroll(code), 10000, function(r){
+        setBtn('tfa-confirm-btn','Verify & Activate',false);
+        if (!r || r.status !== 'success') {
+            setAlert('tfa-alert',(r&&r.message)||'Incorrect code.','err');
+            el('tfa-code').value = ''; el('tfa-code').focus(); return;
+        }
+        _bkCodes = r.backup_codes || [];
+        showBackupCodes(_bkCodes);
+    }, function(msg){
+        setBtn('tfa-confirm-btn','Verify & Activate',false);
+        setAlert('tfa-alert',msg,'err');
+    });
+}
+
+function tfaShowDisable() { el('tfa-disable').classList.add('on'); setTimeout(function(){ el('tfa-dis-pw').focus(); }, 100); }
+function tfaHideDisable() { el('tfa-disable').classList.remove('on'); el('tfa-dis-pw').value = ''; }
+
+function tfaConfirmDisable() {
+    var pw = el('tfa-dis-pw').value;
+    if (!pw) { setAlert('tfa-alert','Enter your password to confirm.','err'); return; }
+    var api = _tfaApi('totp_disable');
+    if (!api) return;
+    setBtn('tfa-dis-confirm','Disabling…',true);
+    _tfaCall(api.totp_disable(pw), 10000, function(r){
+        setBtn('tfa-dis-confirm','Disable 2FA',false);
+        if (!r || r.status !== 'success') { setAlert('tfa-alert',(r&&r.message)||'Could not disable.','err'); return; }
+        el('tfa-dis-pw').value = '';
+        tfaRender(false);
+        setAlert('tfa-alert','Two-factor authentication disabled.','ok');
+    }, function(msg){
+        setBtn('tfa-dis-confirm','Disable 2FA',false);
+        setAlert('tfa-alert',msg,'err');
+    });
+}
+
+function showBackupCodes(codes) {
+    var g = el('bk-grid'); g.innerHTML = '';
+    codes.forEach(function(c){ var d = document.createElement('div'); d.className = 'bk-code'; d.innerText = c; g.appendChild(d); });
+    el('bk-ov').classList.add('open');
+}
+function bkCopy() {
+    var text = _bkCodes.join('\n');
+    var btn = el('bk-copy');
+    function done(){ btn.innerText = 'Copied ✓'; setTimeout(function(){ btn.innerText = 'Copy'; }, 1500); }
+    function fallback(){
+        try { var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+              document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch(e){}
+        done();
+    }
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+        else fallback();
+    } catch(e) { fallback(); }
+}
+function bkDownload() {
+    var text = 'AurumOS — Two-Factor Backup Codes\nGenerated: ' + new Date().toLocaleString()
+             + '\n\n' + _bkCodes.join('\n') + '\n\nEach code can be used once. Keep them somewhere safe.';
+    var blob = new Blob([text], {type:'text/plain'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aurumos-backup-codes.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function bkDone() {
+    el('bk-ov').classList.remove('open');
+    tfaRender(true);
+    setAlert('tfa-alert','Two-factor authentication is now enabled.','ok');
+}
+
+function el(id){ return document.getElementById(id); }
+
+function setAlert(id, msg, type, durationMs) {
+    var a = el(id);
+    if (!a) return;
+
+    if (_alertTimers[id]) {
+        clearTimeout(_alertTimers[id]);
+        delete _alertTimers[id];
+    }
+
+    if (!msg) {
+        a.className = 'alert';
+        a.innerHTML = '';
+        a.style.display = 'none';
+        a.style.opacity = '1';
+        return;
+    }
+
+    a.className = 'alert' + (type ? ' ' + type : '');
+    a.style.display = 'flex';
+    a.style.opacity = '1';
+    a.innerHTML = (type === 'ok' ? '<span>✓</span>' : type === 'err' ? '<span>⚠</span>' : '') + h(msg);
+
+    var autoHideMs = durationMs || 3500;
+    _alertTimers[id] = setTimeout(function() {
+        a.style.opacity = '0';
+        setTimeout(function() {
+            a.className = 'alert';
+            a.innerHTML = '';
+            a.style.display = 'none';
+            a.style.opacity = '1';
+        }, 300);
+    }, autoHideMs);
+}
+
+function setBtn(id,label,disabled){ var b=el(id); b.innerText=label; b.disabled=disabled; }
+function toggleEye(id,btn){ var i=el(id); i.type=i.type==='password'?'text':'password'; btn.innerText=i.type==='password'?'\u{1F441}':'\u{1F648}'; }
+function h(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.addEventListener('keydown',function(e){
+    if(e.key!=='Enter') return;
+    var a=document.activeElement;
+    if(!a) return;
+    if(['e-biz','e-owner','e-phone','e-city','e-address'].includes(a.id)){e.preventDefault();saveProfile();}
+    if(['e-fine-limit','e-fine-discount-pct'].includes(a.id)){e.preventDefault();saveBillingRules();}
+    if(['cur-pw','new-pw','conf-pw'].includes(a.id)){e.preventDefault();changePassword();}
+});
+</script>
+</body>
+</html>

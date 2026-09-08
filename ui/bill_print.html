@@ -1,144 +1,534 @@
 <!DOCTYPE html>
-<html lang="gu">
+<html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
-<title>AurumOS | Bill Print</title>
+<title>AurumOS | Tax Invoice</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
-@page { size: auto; margin: 5mm 4mm; }
+@page { size: A4; margin: 0; }
 * { margin:0; padding:0; box-sizing:border-box; }
 
 body {
-    font-family:'Noto Sans Gujarati',Arial,sans-serif;
-    background:#d1d5db;
-    display:flex; flex-direction:column; align-items:center;
-    padding:14px; gap:10px; min-height:100vh;
+    font-family: Arial, 'Noto Sans Gujarati', sans-serif;
+    background: #e5e7eb;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px; gap: 10px; min-height: 100vh;
 }
 
+/* ── TOOLBAR (screen only) ─────────────────────────────────────────── */
 .toolbar {
-    width:420px; background:#0f172a; border-radius:8px;
-    padding:8px 14px; display:flex; align-items:center; gap:8px;
+    width: 780px; max-width: 100%; background: #0f172a; border-radius: 8px;
+    padding: 8px 16px; display: flex; align-items: center; gap: 10px;
 }
 .toolbar-title {
-    flex:1; font-family:'JetBrains Mono',monospace;
-    font-size:0.65rem; font-weight:600; color:#b59410;
-    letter-spacing:1.2px; text-transform:uppercase;
+    flex: 1; font-family: Arial, sans-serif;
+    font-size: 0.7rem; font-weight: 600; color: #fff;
+    letter-spacing: 1.2px; text-transform: uppercase;
 }
 .btn-p {
-    background:#b59410; color:#000; border:none;
-    padding:6px 16px; border-radius:5px;
-    font-weight:700; font-size:0.75rem; cursor:pointer;
+    background: #fff; color: #000; border: none;
+    padding: 7px 20px; border-radius: 5px;
+    font-weight: 700; font-size: 0.78rem; cursor: pointer;
 }
-.btn-p:hover { background:#d4ac15; }
+.btn-p:hover { background: #e5e7eb; }
 .btn-c {
-    background:transparent; color:#64748b;
-    border:1px solid #334155; padding:6px 10px;
-    border-radius:5px; font-weight:600; font-size:0.72rem; cursor:pointer;
+    background: transparent; color: #64748b;
+    border: 1px solid #334155; padding: 7px 12px;
+    border-radius: 5px; font-weight: 600; font-size: 0.75rem; cursor: pointer;
 }
-.btn-c:hover { color:#e11d48; border-color:#e11d48; }
+.btn-c:hover { color: #e11d48; border-color: #e11d48; }
 
+/* ── SLIP CONTAINER ────────────────────────────────────────────────── */
 .slip-wrap {
-    width:420px;
-    background:#fff;
-    box-shadow:0 2px 12px rgba(0,0,0,0.15);
-    border-radius:3px;
+    width: 780px; max-width: 100%;
+    background: #fff;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+    border-radius: 4px;
 }
 .copy-div {
-    background:#f1f5f9; text-align:center;
-    font-size:0.58rem; font-weight:600; color:#94a3b8;
-    letter-spacing:2px; text-transform:uppercase;
-    padding:4px; border-top:2px dashed #cbd5e1;
+    background: #f1f5f9; text-align: center;
+    font-size: 0.62rem; font-weight: 600; color: #94a3b8;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 5px; border-top: 2px dashed #cbd5e1;
 }
-.slip { padding:3px 0; background:#fff; }
+.slip { padding: 0; background: #fff; }
 
-.meta-row {
-    display:flex; align-items:center; justify-content:space-between;
-    width:100%; padding:4px 6px;
-    font-family: Arial, sans-serif !important; font-size:9pt;
-    border-bottom:1px solid #000;
+/* ── SLIP ──────────────────────────────────────────────────────────── */
+.slip { padding: 0; background: #fff; display: flex; flex-direction: column; min-height: 1122px; }
+.slip-body { }
+.slip-spacer { flex: 1; }
+
+/* ── FOOTER BLOCK (summary + terms + signature + thanks) ───────────── */
+.slip-footer-block {
+    margin: 0 28px;
+    border-top: 1.5px solid #000;
 }
-.meta-group { display:flex; align-items:center; gap:8px; }
-.m-cust { font-weight:500; font-size:10pt; color:#000; font-family:'Noto Sans Gujarati',Arial,sans-serif; }
-.m-vch  { font-weight:700; font-size:10pt; color:#000; }
-.m-time,.m-date { font-weight:400; color:#555; font-size:9pt; }
+.ft-summary {
+    width: 100%; border-collapse: collapse;
+}
+.ft-summary td {
+    padding: 3px 0; font-size: 9pt; color: #222;
+}
+.ft-summary td:first-child {
+    color: #555;
+}
+.ft-summary td:last-child {
+    text-align: right; font-weight: 700;
+    width: 130px;
+}
+.ft-summary .ft-sub td {
+    font-size: 8pt; color: #888; padding-left: 20px;
+}
+.ft-summary .ft-total td {
+    font-size: 11pt; font-weight: 800; color: #000;
+    border-top: 1.5px solid #000;
+    padding: 5px 0;
+}
 
-.bt { width:100%; border-collapse:collapse; table-layout:fixed; border:1.5px solid #000; }
+/* ── TERMS (inside footer block) ────────────────────────────────────── */
+.ft-terms {
+    border-top: 1px solid #ccc;
+    padding: 5px 0;
+    font-size: 7pt; color: #666;
+    line-height: 1.5;
+}
+.ft-terms .ft-terms-title {
+    font-weight: 700; color: #000; font-size: 7.5pt;
+    margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.ft-terms-list { list-style: none; padding: 0; }
+.ft-terms-list li { margin-bottom: 1px; }
+.ft-terms-list li::before { content: "\2022"; margin-right: 6px; color: #999; }
+
+/* ── SIGNATURE (inside footer block) ────────────────────────────────── */
+.ft-signature {
+    display: flex;
+    border-top: 1px solid #ccc;
+}
+.ft-sig-box {
+    flex: 1; text-align: center; padding: 10px 0;
+}
+.ft-sig-box:first-child { border-right: 1px solid #ddd; }
+.ft-sig-line {
+    border-top: 1px solid #000;
+    margin-top: 28px;
+    padding-top: 4px;
+    font-size: 7.5pt; font-weight: 600; color: #000;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ── THANKS (inside footer block) ───────────────────────────────────── */
+.ft-thanks {
+    padding: 8px 0;
+    text-align: center;
+}
+.ft-thanks-text {
+    font-size: 9pt; color: #222; font-weight: 500; margin-bottom: 3px;
+}
+.ft-thanks-powered {
+    font-size: 6.5pt; color: #888; letter-spacing: 0.5px;
+}
+.ft-thanks-powered strong { color: #000; font-weight: 700; }
+
+/* ── SHOP HEADER ───────────────────────────────────────────────────── */
+.shop-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 28px 14px;
+    border-bottom: 2.5px solid #000;
+}
+.shop-logo {
+    width: 58px; height: 58px; object-fit: contain;
+    border-radius: 6px; flex-shrink: 0;
+}
+.shop-brand { flex: 1; display: flex; align-items: center; gap: 20px; }
+.shop-brand-left { flex: 1; }
+.shop-name {
+    font-size: 18pt; font-weight: 800; color: #000;
+    letter-spacing: 0.5px; line-height: 1.1;
+    font-family: Arial, 'Noto Sans Gujarati', sans-serif;
+}
+.shop-sub {
+    font-size: 8.5pt; color: #444; margin-top: 2px;
+    font-weight: 500; letter-spacing: 0.3px;
+}
+.aurumos-badge {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 6px 14px; border: 1.5px solid #000; border-radius: 6px;
+    flex-shrink: 0; text-align: center;
+}
+.aurumos-badge .badge-name {
+    font-size: 11pt; font-weight: 800; color: #000; letter-spacing: 1px;
+    line-height: 1.1;
+}
+.aurumos-badge .badge-sub {
+    font-size: 5.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.8px;
+    font-weight: 600;
+}
+
+/* ── AURUMOS DETAILS BAR ────────────────────────────────────────────── */
+.aurumos-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 28px;
+    background: #000;
+    color: #fff;
+    font-size: 7.5pt;
+    letter-spacing: 0.3px;
+}
+.aurumos-bar .left { display: flex; align-items: center; gap: 16px; }
+.aurumos-bar .right { font-weight: 600; }
+.aurumos-bar span { white-space: nowrap; }
+
+/* ── SHOP CONTACT BAR ──────────────────────────────────────────────── */
+.shop-contact {
+    display: flex; align-items: center; gap: 20px;
+    padding: 6px 28px;
+    background: #fafafa;
+    border-bottom: 1px solid #ddd;
+    font-size: 8pt; color: #444;
+}
+.shop-contact span { white-space: nowrap; }
+.shop-contact .contact-icon {
+    display: inline-block; margin-right: 5px; color: #122238;
+    font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700;
+}
+
+/* ── TAX INVOICE BANNER ────────────────────────────────────────────── */
+.invoice-banner {
+    text-align: center;
+    padding: 5px 28px;
+    font-size: 10pt; font-weight: 800; color: #000;
+    letter-spacing: 2px; text-transform: uppercase;
+    border-bottom: 1.5px solid #000;
+    background: #f5f5f5;
+}
+
+/* ── INVOICE META ──────────────────────────────────────────────────── */
+.invoice-meta {
+    display: flex; justify-content: space-between;
+    padding: 12px 28px;
+    border-bottom: 1px solid #ddd;
+    font-size: 9pt; color: #222;
+}
+.meta-left div, .meta-right div { margin-bottom: 3px; }
+.meta-left { font-weight: 500; }
+.meta-right { text-align: right; }
+.meta-right div { color: #444; }
+.inv-label { font-weight: 700; color: #000; }
+.inv-vch { font-size: 11pt; font-weight: 800; color: #000; }
+.inv-status {
+    display: inline-block; padding: 1px 8px; border-radius: 3px;
+    font-size: 7.5pt; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.inv-status.paid { background: #f0f0f0; color: #000; border: 1px solid #ccc; }
+.inv-status.estimate { background: #f5f5f5; color: #555; border: 1px solid #bbb; }
+.inv-status.credit { background: #f0f0f0; color: #000; border: 1px solid #999; }
+
+/* ── ITEM TABLE ────────────────────────────────────────────────────── */
+.bt {
+    width: 100%; border-collapse: collapse; table-layout: fixed;
+    border: 1.5px solid #000;
+}
 .bt thead th {
-    height:36px; padding:0; font-size:12.5pt; font-weight:800; color:#000;
-    text-align:center !important; background:#efefef; vertical-align:middle;
-    white-space:nowrap; font-family:'Noto Sans Gujarati',Arial,sans-serif;
-    border-bottom:1.5px solid #000; border-right:1px solid #000;
+    height: 30px; padding: 0 4px; font-size: 8pt; font-weight: 700; color: #000;
+    text-align: center !important; background: #f0f0f0; vertical-align: middle;
+    white-space: nowrap; border-bottom: 1.5px solid #000; border-right: 1px solid #ccc;
 }
-.bt thead th:last-child { border-right:none; }
+.bt thead th:last-child { border-right: none; }
 .bt td {
-    height:38px; padding:2px 4px; font-size:14pt; font-weight:800; color:#000;
-    text-align:center !important; vertical-align:middle;
-    font-family: Arial, sans-serif !important;
-    border-bottom:1px solid #000; border-right:1px solid #000;
+    height: 22px; padding: 2px 4px; font-size: 9pt; font-weight: 500; color: #111;
+    text-align: center !important; vertical-align: middle;
+    border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
 }
-.bt td:last-child { border-right:none; }
-.bt tbody tr:last-child td { border-bottom:none; }
-.cb { font-weight:400 !important; }
+.bt td:last-child { border-right: none; }
+.bt tbody tr:last-child td { border-bottom: none; }
+.cb { font-weight: 400 !important; }
+.retail-column-space { flex: 1; min-height: 4px; }
+.bt-blank { height: 100%; border-top: none; }
+.bt-blank td { height: 100%; border-bottom: none !important; }
 
-.rt td {
-    height:40px !important; font-size:10.5pt !important; font-weight:600 !important;
-    text-align:center !important; background:#fff;
-    font-family: Arial, sans-serif !important;
-    border-top:1.5px solid #000 !important; border-bottom:1.5px solid #000 !important;
-    border-right:1px solid #000;
+/* ── REFERENCE-STYLE RETAIL INVOICE ─────────────────────────────────── */
+.retail-slip {
+    background: #fbf8f2;
+    color: #20241f;
+    position: relative;
+    padding-top: 6px;
 }
-.rt td:last-child { border-right:none; }
+.retail-slip::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 6px;
+    background: linear-gradient(90deg, #122238 0 60%, #a9803c 60% 100%);
+}
+.retail-slip .shop-header {
+    background: #fbf8f2;
+    border-bottom: 1px solid #e1dacb;
+    padding: 28px 42px 22px;
+}
+.retail-slip .shop-logo { width: 48px; height: 48px; }
+.retail-slip .shop-header {
+    align-items: center;
+    min-height: 82px;
+}
+.retail-slip .shop-brand {
+    gap: 24px;
+}
+.retail-slip .aurumos-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-left: 20px;
+    border-left: 1px solid #d8cdb9;
+    flex-shrink: 0;
+}
+.retail-slip .aurumos-brand-mark {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+.retail-slip .aurumos-brand-name {
+    color: #122238;
+    font-family: Georgia, serif;
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    line-height: 1;
+}
+.retail-slip .aurumos-brand-tagline {
+    margin-top: 4px;
+    color: #a9803c;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.retail-slip .shop-name,
+.retail-slip .inv-vch,
+.retail-slip .invoice-banner { color: #122238; }
+.retail-slip .shop-name { font-family: Georgia, serif; font-size: 20pt; }
+.retail-slip .shop-sub { color: #5b5f58; }
+.retail-slip .aurumos-bar {
+    background: #fbf8f2;
+    color: #5b5f58;
+    border-bottom: 1px solid #e1dacb;
+    padding: 7px 42px;
+}
+.retail-slip .aurumos-bar .right { color: #122238; }
+.retail-slip .shop-contact {
+    background: #fbf8f2;
+    border-bottom: 1px solid #e1dacb;
+    padding: 7px 42px;
+    color: #5b5f58;
+}
+.retail-slip .invoice-banner {
+    background: #fbf8f2;
+    border-bottom: 1.5px solid #122238;
+    padding: 14px 42px 10px;
+    font-family: Georgia, serif;
+    font-size: 18pt;
+    font-style: italic;
+    letter-spacing: .5px;
+    text-transform: none;
+}
+.retail-slip .invoice-meta {
+    padding: 22px 42px 16px;
+    border-bottom: 1px solid #e1dacb;
+    color: #5b5f58;
+}
+.retail-slip .meta-left { font-weight: 500; }
+.retail-slip .inv-label { color: #5b5f58; }
+.retail-slip .meta-right div { color: #5b5f58; }
+.retail-slip .bt { margin: 24px 42px 0; width: calc(100% - 84px); border: none; }
+.retail-slip .bt thead th {
+    height: 32px; padding: 0 10px 10px;
+    background: transparent; color: #5b5f58;
+    border-bottom: 1.5px solid #122238;
+    border-right: none; text-transform: uppercase;
+    letter-spacing: .08em; font-size: 7.5pt;
+}
+.retail-slip .bt td {
+    height: 42px; padding: 10px;
+    background: transparent; color: #20241f;
+    border-bottom: 1px solid #e1dacb;
+    border-right: 1px solid #e1dacb;
+}
+.retail-slip .bt td:last-child { border-right: none; }
+.retail-slip .retail-column-space {
+    display: flex;
+    align-items: stretch;
+    margin: 0 42px;
+    min-height: 4px;
+}
+.retail-slip .bt-blank {
+    flex: 1 1 auto;
+    height: auto;
+    margin: 0;
+    width: 100%;
+    border-left: 1px solid #e1dacb;
+    border-right: 1px solid #e1dacb;
+}
+.retail-slip .bt-blank tbody,
+.retail-slip .bt-blank tr {
+    height: 100%;
+}
+.retail-slip .bt-blank tfoot tr {
+    height: 34px;
+    border-top: 1.5px solid #122238;
+}
+.retail-slip .bt-blank tfoot td {
+    height: 34px;
+    padding: 8px 10px;
+    border-bottom: none !important;
+    border-right: 1px solid #e1dacb;
+    color: #122238;
+    font-weight: 700;
+}
+.retail-slip .bt-blank tfoot tr {
+    background: transparent;
+}
+.retail-slip .bt-blank tfoot td:first-child {
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.retail-slip .bt-blank tfoot td:last-child { border-right: none; }
+.retail-slip .bt-blank td {
+    border-right: 1px solid #e1dacb;
+    border-bottom: none !important;
+}
+.retail-slip .slip-footer-block {
+    margin: 0 42px;
+    border-top: 1.5px solid #122238;
+}
+.retail-slip .ft-summary td { color: #5b5f58; }
+.retail-slip .ft-summary .ft-total td {
+    color: #122238;
+    border-top-color: #122238;
+}
+.retail-slip .ft-summary .ft-subtotal td {
+    color: #122238;
+    font-weight: 700;
+    border-top: 1px solid #b9a77f;
+    background: transparent;
+}
+.retail-slip .ft-summary .ft-subtotal td:last-child,
+.retail-slip .ft-summary .ft-total td:last-child {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.retail-slip .ft-summary .ft-payment td {
+    padding-top: 6px;
+    color: #5b5f58;
+    font-size: 8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+.retail-slip .ft-summary .ft-payment td:last-child {
+    color: #122238;
+}
+.retail-slip .ft-terms,
+.retail-slip .ft-signature { border-top-color: #e1dacb; }
+.retail-slip .ft-thanks-text { color: #a9803c; font-family: Georgia, serif; font-style: italic; }
+
+/* Row types */
+.rt td {
+    height: 32px !important; font-size: 9pt !important; font-weight: 700 !important;
+    text-align: center !important; background: #f0f0f0;
+    border-top: 1.5px solid #000 !important; border-bottom: 1.5px solid #000 !important;
+    border-right: 1px solid #ccc;
+}
+.rt td:last-child { border-right: none; }
 
 .rr td {
-    height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
-    text-align:center !important; background:#fff;
-    border-bottom:1px solid #000; border-right:1px solid #000;
+    height: 24px !important; font-size: 8.5pt !important; font-weight: 500 !important;
+    text-align: center !important; background: #fff;
+    border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
 }
-.rr td:last-child { border-right:none; }
+.rr td:last-child { border-right: none; }
 
 .rd td {
-    height:30px !important; font-size:8.5pt !important; font-weight:400 !important;
-    text-align:center !important; background:#fffbeb; color:#000;
-    border-top:1px dashed #000 !important; border-bottom:1px dashed #000 !important;
-    border-right:1px solid #000;
+    height: 24px !important; font-size: 8.5pt !important; font-weight: 500 !important;
+    text-align: center !important; background: #f9f9f9; color: #222;
+    border-top: 1px dashed #999 !important; border-bottom: 1px dashed #999 !important;
+    border-right: 1px solid #e0e0e0;
 }
-.rd td:last-child { border-right:none; }
+.rd td:last-child { border-right: none; }
 
 .rf td {
-    height:32px !important; font-size:9pt !important; font-weight:500 !important;
-    text-align:center !important; background:#fff;
-    border-top:none !important; border-bottom:none !important;
-    border-right:1px solid #000;
+    height: 26px !important; font-size: 8.5pt !important; font-weight: 600 !important;
+    text-align: center !important; background: #fafafa;
+    border-top: none !important; border-bottom: none !important;
+    border-right: 1px solid #e0e0e0;
 }
-.rf td:last-child { border-right:none; }
+.rf td:last-child { border-right: none; }
 
-.rr .price-cell { font-size:10pt !important; font-weight:700 !important; color:#000!important; vertical-align:middle; }
-.rr td:first-child { font-size:10pt !important; font-weight:700 !important; }
+.rr .price-cell { font-size: 9.5pt !important; font-weight: 700 !important; color: #000 !important; }
+.rr td:first-child { font-size: 8.5pt !important; font-weight: 600 !important; }
 
-#mount  { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
-#status { font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#475569; padding:8px; text-align:center; }
+/* ── SUMMARY BOX (retail bills) ────────────────────────────────────── */
+.summary-box {
+    margin: 0 28px; padding: 12px 16px;
+    border: 1.5px solid #ccc; border-radius: 6px;
+    background: #fafafa;
+}
+.summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; font-size: 9pt; color: #333;
+}
+.summary-row.sub { font-weight: 400; color: #555; font-size: 8.5pt; }
+.summary-row.making { color: #555; font-size: 8.5pt; }
+.summary-row.disc { color: #000; font-size: 8.5pt; }
+.summary-row.gst { color: #555; font-size: 8.5pt; }
+.summary-row.gst-sub { padding-left: 16px; color: #888; font-size: 8pt; }
+.summary-row.old-gold { color: #000; font-size: 8.5pt; }
+.summary-row.loyalty { color: #333; font-size: 8.5pt; }
+.summary-divider {
+    border: none; border-top: 1px solid #ccc; margin: 6px 0;
+}
+.summary-divider.total {
+    border-top: 2.5px solid #000; margin: 8px 0 6px;
+}
+.summary-row.total {
+    font-size: 13pt; font-weight: 800; color: #000;
+    padding: 6px 0 2px;
+}
+.summary-label { font-weight: 600; }
+.summary-val { font-variant-numeric: tabular-nums; }
+.summary-val.neg { color: #000; }
+.summary-val.pos { color: #333; }
 
+/* ── MOUNT & STATUS ────────────────────────────────────────────────── */
+#mount { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#status { font-family: Arial, sans-serif; font-size: 0.72rem; color: #475569; padding: 8px; text-align: center; }
+
+/* ── PRINT ─────────────────────────────────────────────────────────── */
 @media print {
-    body { background:#fff; padding:0; margin:0; display:block; }
-    .toolbar,.copy-div,#status { display:none !important; }
-    #mount { display:block !important; width:100% !important; }
-    .slip-wrap { width:450px !important; box-shadow:none !important; border-radius:0 !important; overflow:visible !important; margin:0 auto !important; }
-    /* page-break-after set inline per slip div */
-    .slip { padding:0; }
-    .bt thead th { height:28px; font-size:9.5pt; font-weight:400; }
-    .bt td        { height:26px; font-size:9.5pt; font-weight:400; }
-    .rt td        { height:30px !important; font-size:8.5pt !important; font-weight:800; }
-    .rf td        { height:28px !important; font-size:9.5pt !important; font-weight:800; }
-    .rr td        { height:24px !important; font-size:8.5pt !important; font-weight:800; }
-    .rd td        { height:24px !important; font-size:8.5pt !important; }
+    body { background: #fff; padding: 0; margin: 0; display: block; }
+    .toolbar, .copy-div, #status { display: none !important; }
+    #mount { display: block !important; width: 100% !important; }
+    .slip-wrap {
+        width: 100% !important; box-shadow: none !important;
+        border-radius: 0 !important; overflow: visible !important;
+        margin: 0 !important;
+    }
+    .slip { padding: 0; display: flex; flex-direction: column; min-height: 1122px; }
+    .slip-body { }
+    .slip-footer-block { margin: 0 24px; }
+    .ft-summary td { font-size: 8pt; }
+    .ft-summary td:last-child { width: 110px; }
+    .ft-summary .ft-total td { font-size: 10pt; }
+    .ft-terms { font-size: 6.5pt; padding: 4px 0; }
+    .ft-sig-box { padding: 8px 0; }
+    .ft-sig-line { margin-top: 24px; font-size: 7pt; }
 }
 </style>
 </head>
 <body>
 
 <div class="toolbar">
-    <span class="toolbar-title">🖨 AurumOS Bill Print</span>
-    <span id="lbl-copies" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:500;color:#94a3b8;"></span>
+    <span class="toolbar-title">AurumOS — Tax Invoice</span>
+    <span id="lbl-copies" style="font-family:Arial,sans-serif;font-size:0.65rem;font-weight:500;color:#94a3b8;"></span>
     <button class="btn-p" onclick="window.print()">Print</button>
     <button class="btn-c" onclick="window.close()">Close</button>
 </div>
@@ -149,18 +539,43 @@ body {
 <script>
 'use strict';
 
-window.onload = function() {
-    showStatus('Waiting for bridge...');
-    var attempts = 0;
-    var wait = setInterval(function() {
-        attempts++;
+function showStatus(msg) { try { var el=document.getElementById('status'); if(el) el.innerText=msg; } catch(_e){} }
+
+window.onerror = function(msg, src, line, col, err) {
+    showStatus('RENDER ERROR: ' + msg + ' @' + (line||'?'));
+    return true;
+};
+window.addEventListener('unhandledrejection', function(ev){
+    showStatus('ASYNC ERROR: ' + String(ev && ev.reason));
+});
+
+var _fetched = false;
+
+function fetchBill() {
+    if (_fetched) return;
+    try {
         var vchId  = (window.__VCH_ID__ || '').toString().trim();
-        var copies = parseInt(window.__COPIES__ || 1);
-        if (!vchId || !window.pywebview || !window.pywebview.api) {
-            if (attempts >= 100) { clearInterval(wait); showStatus('ERROR: Bridge not ready.'); }
-            return;
+        if (!vchId) return;
+
+        var copies = parseInt(window.__COPIES__ || 1) || 1;
+        if (window.__BILL_PAYLOAD__ !== undefined && window.__BILL_PAYLOAD__ !== null) {
+            try {
+                var billData = typeof window.__BILL_PAYLOAD__ === 'string'
+                    ? JSON.parse(window.__BILL_PAYLOAD__)
+                    : window.__BILL_PAYLOAD__;
+                _fetched = true;
+                showStatus('');
+                doRender(billData, copies);
+                return;
+            } catch (e) {
+                showStatus('PAYLOAD ERROR: ' + String(e));
+            }
         }
-        clearInterval(wait);
+
+        if (!window.pywebview || !window.pywebview.api) return;
+        if (typeof window.pywebview.api.get_live_invoice_print_payload !== 'function') return;
+
+        _fetched = true;
         showStatus('Fetching: ' + vchId);
         window.pywebview.api.get_live_invoice_print_payload(vchId)
             .then(function(res) {
@@ -168,144 +583,405 @@ window.onload = function() {
                 else { showStatus('DB ERROR: ' + (res ? res.message : 'null')); }
             })
             .catch(function(e) { showStatus('API ERROR: ' + String(e)); });
-    }, 100);
-};
+    } catch (e) {
+        showStatus('BRIDGE ERROR: ' + String(e));
+    }
+}
 
-function showStatus(msg) { var el=document.getElementById('status'); if(el) el.innerText=msg; }
+window.addEventListener('pywebviewready', fetchBill);
+
+window.onload = function() {
+    showStatus('Waiting for bridge...');
+    fetchBill();
+    var attempts = 0;
+    var wait = setInterval(function() {
+        attempts++;
+        if (_fetched || attempts >= 300) { clearInterval(wait); if (!_fetched) showStatus('ERROR: Bridge not ready.'); return; }
+        fetchBill();
+    }, 50);
+};
 
 var _printed = false;
 
 function doRender(BILL, COPIES) {
-    var mount = document.getElementById('mount');
-    mount.innerHTML = '';
-    var names = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
-    document.getElementById('lbl-copies').innerText = COPIES===1 ? '1 Copy' : COPIES+' Copies';
+    try {
+        var mount = document.getElementById('mount');
+        mount.innerHTML = '';
+        var names = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
+        var lbl = document.getElementById('lbl-copies');
+        if (lbl) lbl.innerText = COPIES===1 ? '1 Copy' : COPIES+' Copies';
 
-    for (var c = 0; c < COPIES; c++) {
-        if (c > 0) {
-            var dv = document.createElement('div');
-            dv.className = 'copy-div';
-            dv.innerText = '\u2014 ' + (names[c]||'COPY '+(c+1)) + ' \u2014';
-            mount.appendChild(dv);
+        for (var c = 0; c < COPIES; c++) {
+            if (c > 0) {
+                var dv = document.createElement('div');
+                dv.className = 'copy-div';
+                dv.innerText = '\u2014 ' + (names[c]||'COPY '+(c+1)) + ' \u2014';
+                mount.appendChild(dv);
+            }
+            var w = document.createElement('div');
+            w.className = 'slip-wrap';
+            if (c < COPIES - 1) {
+                w.style.pageBreakAfter = 'always';
+                w.style.breakAfter = 'page';
+            }
+            w.innerHTML = buildSlip(BILL, COPIES > 1 ? names[c] : '');
+            mount.appendChild(w);
         }
-        var w = document.createElement('div');
-        w.className = 'slip-wrap';
-        w.innerHTML = buildSlip(BILL, COPIES > 1 ? names[c] : '');
-        mount.appendChild(w);
+    } catch (e) {
+        showStatus('BUILD ERROR: ' + String(e));
+        return;
     }
 
     if (!_printed) {
         _printed = true;
-        setTimeout(function() { window.print(); }, 700);
+        if (window.__PREVIEW_ONLY__) {
+            showStatus('Preview mode \u2014 click Print button to print.');
+            return;
+        }
+        var printerName = (window.__PRINTER__ || '').trim();
+        function firePrint() {
+            setTimeout(function() {
+                try { window.print(); }
+                catch (e) { showStatus('PRINT ERROR: ' + String(e) + ' \u2014 use the Print button.'); }
+            }, 500);
+        }
+        if (printerName && window.pywebview && window.pywebview.api && typeof window.pywebview.api.set_default_printer === 'function') {
+            window.pywebview.api.set_default_printer(printerName).then(firePrint).catch(firePrint);
+        } else {
+            firePrint();
+        }
     }
 }
 
-// ── DYNAMIC SPACER ────────────────────────────────────────────────────────
-// Shrinks automatically as rows fill the page. Minimum 4px so table stays intact.
-// extraRows = number of deduct/discount rows below Total1 (Coll.Fine, 995, Dhal, Disc)
-function buildSpacer(itemCount, extraRows) {
+// ── HELPERS ─────────────────────────────────────────────────────────
+function h(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _fmtDate() {
+    var now = new Date();
+    var d = now.getDate(); var m = now.getMonth()+1; var y = String(now.getFullYear()).slice(-2);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d + '-' + months[now.getMonth()] + '-' + y;
+}
+function _fmtTime() {
+    return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+}
+function _money(n) {
+    return '\u20B9' + parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+function _money2(n) {
+    return '\u20B9' + parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function _ls(k, fb) {
+    try { var v = localStorage.getItem(k); return (v !== null && v !== '') ? v : (fb || ''); }
+    catch(e) { return fb || ''; }
+}
+
+// ── SHOP HEADER BUILDER ────────────────────────────────────────────
+function buildShopHeader(D) {
+    var shopName = D.shop_name || _ls('aurum_biz_name', 'Aurum Jewels');
+    var shopOwner = D.shop_owner || _ls('aurum_owner_name');
+    var shopPhone = D.shop_phone || _ls('aurum_owner_phone');
+    var shopCity = D.shop_city || _ls('aurum_city');
+    var shopAddress = D.shop_address || _ls('aurum_address');
+    var shopGstin = D.shop_gstin || _ls('aurum_gstin');
+    var shopState = D.shop_state || _ls('aurum_state');
+    var shopStateCode = D.shop_state_code || _ls('aurum_state_code');
+
+    var header = '<div class="shop-header">'
+        + '<img class="shop-logo" src="aurum_mark.png" alt="Logo" onerror="this.style.display=\'none\'" />'
+        + '<div class="shop-brand">'
+        + '<div class="shop-brand-left">'
+        + '<div class="shop-name">' + h(shopName) + '</div>'
+        + (shopAddress ? '<div class="shop-sub" style="font-size:7.5pt;color:#555;">' + h(shopAddress) + '</div>' : '')
+        + '</div>'
+        + '<div class="aurumos-brand">'
+        + '<img class="aurumos-brand-mark" src="aurum_mark.png" alt="" onerror="this.style.display=\'none\'" />'
+        + '<div><div class="aurumos-brand-name">AURUMOS</div>'
+        + '<div class="aurumos-brand-tagline">Jewelry Management System</div></div>'
+        + '</div></div></div>';
+
+    var contactParts = [];
+    if (shopPhone) contactParts.push('<span class="contact-icon">&#9742;</span>' + h(shopPhone));
+    if (shopCity) contactParts.push('<span class="contact-icon">&#8982;</span>' + h(shopCity));
+    if (shopGstin) contactParts.push('GSTIN: ' + h(shopGstin));
+    if (contactParts.length) {
+        header += '<div class="shop-contact">' + contactParts.join('&nbsp;&nbsp;&nbsp;&nbsp;') + '</div>';
+    }
+    return header;
+}
+
+// ── INVOICE META BUILDER ───────────────────────────────────────────
+function buildInvoiceMeta(D, copyLabel) {
+    var vchRaw = (D.vch_id || '').toString();
+    var vch = vchRaw.replace(/\D/g,'').padStart(3,'0');
+    var cust = D.customer || 'Walk-in';
+    var mobile = D.mobile || D.phone || '';
+    var status = (D.status || 'PAID').toUpperCase();
+
+    var statusClass = 'paid';
+    if (status === 'ESTIMATE') statusClass = 'estimate';
+    else if (status === 'CREDIT') statusClass = 'credit';
+
+    var right = '<div class="meta-right">'
+        + '<div>' + _fmtDate() + '  ' + _fmtTime() + '</div>'
+        + '<div><span class="inv-status ' + statusClass + '">' + h(status) + '</span></div>'
+        + (copyLabel ? '<div style="font-weight:700;color:#000;margin-top:2px;">' + h(copyLabel) + '</div>' : '')
+        + '</div>';
+
+    var left = '<div class="meta-left">'
+        + '<div><span class="inv-label">Invoice # </span><span class="inv-vch">' + h(vch) + '</span></div>'
+        + '<div><span class="inv-label">Customer: </span>' + h(cust) + '</div>'
+        + (mobile ? '<div><span class="inv-label">Phone: </span>' + h(mobile) + '</div>' : '')
+        + '</div>';
+
+    return '<div class="invoice-meta">' + left + right + '</div>';
+}
+
+// ── DYNAMIC SPACER ─────────────────────────────────────────────────
+function buildSpacer8(colCount, itemCount, extraRows) {
     extraRows = extraRows || 0;
-    var PAPER_H  = 460;   // target slip height in px
-    var HEADER_H = 28;    // meta row
-    var TH_H     = 36;    // thead
-    var ROW_H    = 34;    // each item row
-    var TOTAL1_H = 40;    // first Total row
-    var RAT_H    = 30;    // Rat+ row
-    var EXTRA_H  = extraRows * 30; // deduct + discount rows
-    var TOTAL2_H = 40;    // Grand Total row
-    var FOOTER_H = 32;    // footer row
-    var BORDER_H = 12;    // border/padding buffer
+    var PAPER_H  = 1120;
+    var HEADER_H = 120;
+    var BANNER_H = 28;
+    var META_H   = 60;
+    var TH_H     = 30;
+    var ROW_H    = 22;
+    var EXTRA_H  = extraRows * 24;
+    var SUMMARY_H = 220;
+    var FOOTER_H = 80;
+    var TERMS_H  = 60;
+    var SIG_H    = 60;
+    var BORDER_H = 20;
 
-    var usedH = HEADER_H + TH_H + (itemCount * ROW_H)
-                + TOTAL1_H + RAT_H + EXTRA_H + TOTAL2_H + FOOTER_H + BORDER_H;
+    var usedH = HEADER_H + BANNER_H + META_H + TH_H + (itemCount * ROW_H)
+                + EXTRA_H + SUMMARY_H + FOOTER_H + TERMS_H + SIG_H + BORDER_H;
 
-    var spacerH = Math.max(PAPER_H - usedH, 4); // never below 4px
+    var spacerH = Math.max(PAPER_H - usedH, 4);
 
     var cells = '';
-    for (var i = 0; i < 8; i++) {
-        cells += '<td style="height:' + spacerH + 'px;padding:0;'
-               + (i < 7 ? 'border-right:1px solid #000;' : '')
-               + 'border-bottom:1.5px solid #000;"></td>';
+    for (var i = 0; i < colCount; i++) {
+        cells += '<td style="height:' + spacerH + 'px;padding:0;border:none;"></td>';
     }
     return '<tr>' + cells + '</tr>';
 }
 
-// ── MAIN SLIP BUILDER ─────────────────────────────────────────────────────
-function buildSlip(D, copyLabel) {
-    var isU   = D.is_uchak || false;
-    var vchRaw = (D.vch_id || '').toString();
-    var vch   = vchRaw.replace(/\D/g,'').padStart(3,'0');
-    var cust  = D.customer || '---';
-    var rate  = parseFloat(D.goldRate) || 0;
-    var items = D.items || [];
+function buildSpacerLegacy(itemCount, extraRows) {
+    extraRows = extraRows || 0;
+    var PAPER_H  = 1120;
+    var HEADER_H = 120;
+    var BANNER_H = 28;
+    var META_H   = 60;
+    var TH_H     = 30;
+    var ROW_H    = 22;
+    var TOTAL1_H = 32;
+    var RAT_H    = 24;
+    var EXTRA_H  = extraRows * 24;
+    var TOTAL2_H = 32;
+    var FOOTER_H = 40;
+    var TERMS_H  = 60;
+    var SIG_H    = 60;
+    var BORDER_H = 20;
 
-    var now = new Date();
-    var T   = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-    var Dt  = '(' + now.toISOString().split('T')[0] + ')';
+    var usedH = HEADER_H + BANNER_H + META_H + TH_H + (itemCount * ROW_H)
+                + TOTAL1_H + RAT_H + EXTRA_H + TOTAL2_H + FOOTER_H + TERMS_H + SIG_H + BORDER_H;
 
-    var discType  = D.discountType   || 'none';
-    var discTouch = parseFloat(D.discountTouch)  || 0;
-    var discFine  = parseFloat(D.discountFine)   || 0;
-    var discAmt   = parseFloat(D.discountAmount) || 0;
+    var spacerH = Math.max(PAPER_H - usedH, 4);
 
-    var meta = '<div class="meta-row">'
-        + '<span class="m-cust">' + h(cust) + '</span>'
-        + '<div class="meta-group">'
-            + '<span class="m-time">' + T + '</span>'
-            + '<span class="m-date">' + Dt + '</span>'
-            + '<span class="m-vch">'  + h(vch) + '</span>'
-        + '</div>'
+    var cells = '';
+    for (var i = 0; i < 8; i++) {
+        cells += '<td style="height:' + spacerH + 'px;padding:0;border:none;"></td>';
+    }
+    return '<tr>' + cells + '</tr>';
+}
+
+// ── TERMS SECTION ──────────────────────────────────────────────────
+function buildTermsSection() {
+    return '<div class="ft-terms">'
+        + '<div class="ft-terms-title">Terms &amp; Conditions</div>'
+        + '<ul class="ft-terms-list">'
+        + '<li>Goods once sold will not be taken back or exchanged.</li>'
+        + '<li>All disputes are subject to local jurisdiction only.</li>'
+        + '<li>Please check the items at the time of purchase.</li>'
+        + '<li>This is a computer-generated invoice.</li>'
+        + '<li>E. &amp; O.E (Errors and Omissions Excepted).</li>'
+        + '</ul></div>';
+}
+
+// ── SIGNATURE AREA ─────────────────────────────────────────────────
+function buildSignatureArea(D) {
+    var ownerName = (D && D.shop_owner) || _ls('aurum_owner_name') || '';
+    var shopName = _ls('aurum_biz_name', 'Aurum Jewels');
+    var displayName = ownerName || shopName;
+    return '<div class="ft-signature">'
+        + '<div class="ft-sig-box"><div class="ft-sig-line">Customer Signature</div></div>'
+        + '<div class="ft-sig-box"><div class="ft-sig-line">' + h(displayName) + '</div></div>'
         + '</div>';
+}
 
-    // ── UCHAK BILL ────────────────────────────────────────────────────────
-    if (isU) {
-        var tNang=0, tAmt=0, uRows='';
-        for (var i=0; i<items.length; i++) {
-            var it  = items[i];
-            var nng = parseInt(it.pcs||it.weight||1);
-            var pr  = parseFloat(it.price||it.rate||it.touch||0);
-            var amt = nng * pr;
-            tNang+=nng; tAmt+=amt;
-            var BB='border-bottom:1px solid #000;'; var BR='border-right:1px solid #000;';
-            uRows+='<tr>'
-                +'<td style="text-align:center !important;font-weight:400;font-family:\'JetBrains Mono\',monospace;font-size:9pt;'+BB+BR+'">'+h((it.it_code||it.name||'\u2014').replace(/\s+/g,''))+'</td>'
-                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+BR+'">'+nng+'</td>'
-                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+BR+'">'+pr.toFixed(2)+'</td>'
-                +'<td style="text-align:center !important;font-weight:400;font-size:9pt;'+BB+'">'+amt.toFixed(2)+'</td>'
-                +'</tr>';
-        }
-        var uDisc = (discType==='amount'&&discAmt>0)
-            ? '<tr class="rd"><td colspan="3">Discount</td><td style="font-weight:500;">-'+Math.round(discAmt).toLocaleString('en-IN')+'</td></tr>' : '';
+// ── MAIN SLIP BUILDER ──────────────────────────────────────────────
+function buildSlip(D, copyLabel) {
+    var isU = D.is_uchak || false;
+    var isRetail = (D.kind === 'sale' || D.kind === 'estimate' ||
+                    D.making_total !== undefined || D.makingTotal !== undefined);
 
-        var uFixed=28+36+34+16; var uRowH=34;
-        var uSpacerH=Math.min(Math.max(480-uFixed-(items.length*uRowH),10),200);
-        var uSpacer='<tr>'
-            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
-            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
-            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:1px solid #000;"></td>'
-            +'<td style="height:'+uSpacerH+'px;padding:0;border-bottom:1.5px solid #000;border-right:none;"></td>'
-            +'</tr>';
+    if (isRetail) return buildRetailSlip(D, copyLabel);
+    if (isU) return buildUchakSlip(D, copyLabel);
+    return buildWeightSlip(D, copyLabel);
+}
 
-        return '<div class="slip">'+meta
-            +'<table style="width:100%;border-collapse:collapse;table-layout:fixed;border:1.5px solid #000;">'
-            +'<colgroup><col style="width:158px;"><col style="width:54px;"><col style="width:100px;"><col style="width:108px;"></colgroup>'
-            +'<thead><tr style="background:#efefef;">'
-            +_uth('વિગત','')+_uth('નંગ','')+_uth('ભાવ','')+_uth('રૂપિયા','border-right:none;')
-            +'</tr></thead>'
-            +'<tbody>'+uRows+uDisc+uSpacer
-            +'<tr>'
-            +'<td style="height:34px;font-size:9.5pt;font-weight:600;text-align:center !important;border-right:1px solid #000;">Total</td>'
-            +'<td style="height:34px;font-size:9.5pt;font-weight:500;text-align:center !important;border-right:1px solid #000;">'+tNang+'</td>'
-            +'<td style="height:34px;text-align:center !important;border-right:1px solid #000;"></td>'
-            +'<td style="height:34px;font-size:9.5pt;font-weight:600;text-align:center !important;border-right:none;">'+Math.round(tAmt).toLocaleString('en-IN')+'</td>'
-            +'</tr></tbody></table></div>';
+// ════════════════════════════════════════════════════════════════════
+// RETAIL BILL (POS) — 8 columns
+// ════════════════════════════════════════════════════════════════════
+function buildRetailSlip(D, copyLabel) {
+    var items = D.items || [];
+    var shopHtml = buildShopHeader(D);
+    var metaHtml = buildInvoiceMeta(D, copyLabel);
+
+    var tWt = 0, tFine = 0, tMaking = 0, tAmount = 0;
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        tWt += parseFloat(it.weight || 0);
+        tFine += parseFloat(it.fine || 0);
+        tMaking += parseFloat(it.making || 0);
+        tAmount += parseFloat(it.amount || 0);
     }
 
-    // ── WEIGHT BILL — PAGINATED AT 10 ITEMS ──────────────────────────────
-    var MAX = 7; // items per page
+    var makingTotal = parseFloat(D.making_total || D.makingTotal) || tMaking;
+    var subTotal = parseFloat(D.sub_total || D.subTotal) || tAmount;
+    var discount = parseFloat(D.discount || D.discount_amount || D.discountAmount) || 0;
+    var discType = D.discount_type || D.discountType || 'none';
+    var discValue = parseFloat(D.discount_value || D.discountValue) || 0;
+    var cgstRate = parseFloat(D.cgst_rate || D.cgstRate) || 0;
+    var sgstRate = parseFloat(D.sgst_rate || D.sgstRate) || 0;
+    var cgst = parseFloat(D.cgst) || 0;
+    var sgst = parseFloat(D.sgst) || 0;
+    var gstTotal = parseFloat(D.gst_total || D.gstTotal) || (cgst + sgst);
+    var oldGold = parseFloat(D.old_gold || D.oldGold) || 0;
+    var oldGoldDesc = D.old_gold_desc || D.oldGoldDesc || '';
+    var loyaltyValue = parseFloat(D.loyalty_value || D.loyaltyValue) || 0;
+    var grandTotal = parseFloat(D.grand_total || D.grandTotal || D.totalAmount) || 0;
+    var totalBeforeGst = subTotal || tAmount;
+    var paymentMode = D.payment_mode || D.paymentMode || 'cash';
 
-    // Grand totals across ALL items
-    var gTG=0, gTL=0, gTP=0, gTN=0, gTF=0;
+    var taxAmount = Math.max(0, subTotal - discount);
+
+    // ── Item rows ───────────────────────────────────────────────────
+    var rows = '';
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var code = it.code || '\u2014';
+        var wt = parseFloat(it.weight || 0);
+        var touch = parseFloat(it.touch || 0);
+        var rate = parseFloat(it.rate || 0);
+        var qty = parseInt(it.qty || 1);
+        var making = parseFloat(it.making || 0);
+        var fine = parseFloat(it.fine || 0);
+        var amount = parseFloat(it.amount || 0);
+
+        rows += '<tr>'
+            +'<td class="cb">'+(i+1)+'</td>'
+            +'<td class="cb" style="text-align:left !important;padding-left:8px;">'+h(code)+'</td>'
+            +'<td class="cb">'+wt.toFixed(3)+'</td>'
+            +'<td class="cb">'+fine.toFixed(3)+'</td>'
+            +'<td class="cb">'+touch.toFixed(1)+'</td>'
+            +'<td class="cb">'+(rate > 0 ? rate.toLocaleString('en-IN') : '')+'</td>'
+            +'<td class="cb">'+qty+'</td>'
+            +'<td class="cb">'+(making > 0 ? _money(making) : '')+'</td>'
+            +'<td class="cb" style="font-weight:700;">'+_money(amount)+'</td>'
+            +'</tr>';
+    }
+
+    // ── Summary rows — built as footer block, not in table ──────────
+    var sumRows = '';
+
+    // Old Gold row
+    if (oldGold > 0) {
+        sumRows += '<tr><td>Old Gold' + (oldGoldDesc ? ' (' + h(oldGoldDesc) + ')' : '') + '</td><td>-' + _money(oldGold) + '</td></tr>';
+    }
+
+    // Loyalty row
+    if (loyaltyValue > 0) {
+        sumRows += '<tr><td>Loyalty Redeem</td><td>-' + _money(loyaltyValue) + '</td></tr>';
+    }
+
+    // Pre-tax total row, shown immediately above GST.
+    sumRows += '<tr class="ft-subtotal"><td>TOTAL</td><td>' + _money(totalBeforeGst) + '</td></tr>';
+
+    // Discount appears below TOTAL and immediately above GST.
+    if (discount > 0) {
+        var discLabel = discType === 'percent' ? 'Discount (' + discValue + '%)' : 'Discount';
+        sumRows += '<tr><td>' + h(discLabel) + '</td><td>-' + _money(discount) + '</td></tr>';
+    }
+
+    // GST rows
+    if (gstTotal > 0) {
+        var totalRate = cgstRate + sgstRate;
+        sumRows += '<tr><td>' + (totalRate > 0 ? 'GST @ ' + totalRate + '%' : 'GST') + '</td><td>+' + _money(gstTotal) + '</td></tr>';
+        if (cgst > 0) {
+            sumRows += '<tr class="ft-sub"><td>CGST @ ' + cgstRate + '%</td><td>' + _money(cgst) + '</td></tr>';
+            sumRows += '<tr class="ft-sub"><td>SGST @ ' + sgstRate + '%</td><td>' + _money(sgst) + '</td></tr>';
+        }
+    }
+
+    // Grand Total row
+    sumRows += '<tr class="ft-total"><td>GRAND TOTAL</td><td>' + _money(grandTotal) + '</td></tr>';
+    sumRows += '<tr class="ft-payment"><td>PAYMENT METHOD</td><td>' + h(String(paymentMode).toUpperCase()) + '</td></tr>';
+
+    // Table header
+    var tableHead = '<colgroup>'
+        +'<col style="width:28px;"><col style="width:140px;"><col style="width:60px;"><col style="width:55px;"><col style="width:45px;"><col style="width:60px;"><col style="width:32px;"><col style="width:70px;"><col style="width:85px;">'
+        +'</colgroup>'
+        +'<thead><tr>'
+        +'<th>#</th><th>Description</th><th>Weight (g)</th><th>Fine (g)</th><th>Touch</th><th>Rate/10g</th><th>Qty</th><th>Making</th><th>Amount</th>'
+        +'</tr></thead>';
+    var blankCells = '';
+    for (var blankIndex = 0; blankIndex < 9; blankIndex++) {
+        blankCells += '<td></td>';
+    }
+    var blankTable = '<div class="slip-spacer retail-column-space">'
+        + '<table class="bt bt-blank"><colgroup>'
+        + '<col style="width:28px;"><col style="width:140px;"><col style="width:60px;"><col style="width:55px;"><col style="width:45px;"><col style="width:60px;"><col style="width:32px;"><col style="width:70px;"><col style="width:85px;">'
+        + '</colgroup><tbody><tr>' + blankCells + '</tr></tbody>'
+        + '<tfoot><tr><td></td><td style="text-align:left !important;">TOTAL</td><td>' + tWt.toFixed(3) + ' g</td><td>' + tFine.toFixed(3) + ' g</td>'
+        + '<td></td><td></td><td></td><td></td><td>' + _money(tAmount) + '</td></tr></tfoot></table></div>';
+
+    // Assemble — items table + spacer + footer block (pinned at bottom)
+    var footerBlock = '<div class="slip-footer-block">'
+        + '<table class="ft-summary">' + sumRows + '</table>'
+        + buildTermsSection()
+        + buildSignatureArea(D)
+        + '<div class="ft-thanks">'
+        + '<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+        + '</div></div>';
+
+    return '<div class="slip retail-slip">'
+        + shopHtml
+        + '<div class="invoice-banner">Tax Invoice</div>'
+        + metaHtml
+        + '<table class="bt">' + tableHead
+        + '<tbody>' + rows
+        + '</tbody></table>'
+        + blankTable
+        + footerBlock
+        + '</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// WEIGHT BILL — 8 columns (backward compatible)
+// ════════════════════════════════════════════════════════════════════
+function buildWeightSlip(D, copyLabel) {
+    var items = D.items || [];
+    var rate = parseFloat(D.goldRate) || 0;
+    var shopHtml = buildShopHeader(D);
+    var metaHtml = buildInvoiceMeta(D, copyLabel);
+
+    var discType = D.discountType || 'none';
+    var discTouch = parseFloat(D.discountTouch) || 0;
+    var discFine = parseFloat(D.discountFine) || 0;
+    var discAmt = parseFloat(D.discountAmount) || 0;
+
+    var gTG=0, gTL=0, gTP=0, gTN=0, gTF=0, gPW=0;
     for (var j=0; j<items.length; j++) {
         var jt=items[j];
         var jg=parseFloat(jt.weight||jt.gr_wt||0);
@@ -316,18 +992,20 @@ function buildSlip(D, copyLabel) {
         var jws=parseFloat(jt.wastage||0);
         var jfn=parseFloat(jt.fine||((jn*(jtc+jws)/100)));
         gTG+=jg; gTL+=jl; gTP+=jp; gTN+=jn; gTF+=jfn;
+        gPW+=parseFloat(jt.pkg_wt||0);
     }
+    var totalQty = items.length;
 
-    var colFn   = parseFloat(D.collectedFine) || 0;
-    var f995    = parseFloat(D.fine995)       || 0;
-    var fDhal   = parseFloat(D.fineDhal)      || 0;
-    var totAmt  = parseFloat(D.totalAmount)   || 0;
-    var remFn   = parseFloat(D.remainingFine) || 0;
-    var isCredit= D.is_credit || false;
+    var colFn = parseFloat(D.collectedFine) || 0;
+    var f995 = parseFloat(D.fine995) || 0;
+    var fDhal = parseFloat(D.fineDhal) || 0;
+    var totAmt = parseFloat(D.totalAmount) || 0;
+    var remFn = parseFloat(D.remainingFine) || 0;
+    var isCredit = D.is_credit || false;
 
     var deduct = '';
     if (colFn>0) deduct+='<tr class="rr"><td>Coll.Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+colFn.toFixed(3)+'</td><td></td></tr>';
-    if (f995>0)  deduct+='<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+f995.toFixed(3)+'</td><td></td></tr>';
+    if (f995>0) deduct+='<tr class="rr"><td>995 Gold</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+f995.toFixed(3)+'</td><td></td></tr>';
     if (fDhal>0) deduct+='<tr class="rr"><td>Dhal Fine</td><td></td><td></td><td></td><td></td><td></td><td class="cb">-'+fDhal.toFixed(3)+'</td><td></td></tr>';
 
     var discRow='', discFineFinal=0;
@@ -338,133 +1016,158 @@ function buildSlip(D, copyLabel) {
         discFineFinal=discFine;
         discRow='<tr class="rd"><td colspan="5">Fine Disc</td><td></td><td class="cb">-'+discFine.toFixed(3)+'</td><td></td></tr>';
     } else if (discType==='amount' && discAmt>0) {
-        discRow='<tr class="rd"><td colspan="6">Discount</td><td></td><td class="cb price-cell">-&#x20B9;'+Math.round(discAmt).toLocaleString('en-IN')+'</td></tr>';
+        discRow='<tr class="rd"><td colspan="6">Discount</td><td></td><td class="cb price-cell">-'+_money(discAmt)+'</td></tr>';
     }
 
-    // Count extra rows for spacer calculation
-    var extraRows = (colFn>0?1:0) + (f995>0?1:0) + (fDhal>0?1:0) + (discRow?1:0);
+    var gstAmt = parseFloat(D.gstAmount)||0;
+    var gstRow = gstAmt>0 ? '<tr class="rd"><td colspan="5">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td></td><td class="cb">+</td><td class="cb price-cell">'+_money(gstAmt)+'</td></tr>' : '';
+
+    var extraRows = (colFn>0?1:0) + (f995>0?1:0) + (fDhal>0?1:0) + (discRow?1:0) + 1;
 
     var tableHead = '<colgroup>'
-        +'<col style="width:50px;"><col style="width:56px;"><col style="width:38px;"><col style="width:38px;"><col style="width:56px;"><col style="width:34px;"><col style="width:64px;"><col style="width:90px;">'
+        +'<col style="width:56px;"><col style="width:60px;"><col style="width:42px;"><col style="width:42px;"><col style="width:60px;"><col style="width:38px;"><col style="width:68px;"><col style="width:96px;">'
         +'</colgroup>'
         +'<thead><tr>'
-        +'<th>વિગત</th><th>ગ્રોસ</th><th>લેસ</th><th>આઇટમ</th><th>વજન</th><th>ટચ</th><th>ફાઇન</th><th>ભાવ</th>'
+        +'<th>Details</th><th>Gross</th><th>Less</th><th>Item</th><th>Weight</th><th>Touch</th><th>Fine</th><th>Amount</th>'
         +'</tr></thead>';
 
-    // Split into pages of MAX items each
     var pages = [];
-    for (var s=0; s<items.length; s+=MAX) { pages.push(items.slice(s,s+MAX)); }
+    for (var s=0; s<items.length; s+=7) { pages.push(items.slice(s,s+7)); }
     if (!pages.length) pages = [[]];
 
     var html = '';
-
     for (var pg=0; pg<pages.length; pg++) {
         var pageItems = pages[pg];
         var isLast = (pg === pages.length - 1);
-
         var wRows = '';
-        var pTG=0, pTN=0, pTF=0; // page subtotals (for continuation pages)
+        var pTG=0, pTN=0, pTF=0;
 
         for (var i=0; i<pageItems.length; i++) {
-            var it  = pageItems[i];
-            var g   = parseFloat(it.weight||it.gr_wt||0);
-            var p   = parseFloat(it.para||it.para_stone_wt||0);
-            var l   = parseFloat(it.less||it.ls_wt||0);
-            var n   = g - p - l;
-            var tc  = parseFloat(it.touch||0);
-            var ws  = parseFloat(it.wastage||0);
-            var fn  = parseFloat(it.fine||((n*(tc+ws)/100)));
+            var it=pageItems[i];
+            var g=parseFloat(it.weight||it.gr_wt||0);
+            var p=parseFloat(it.para||it.para_stone_wt||0);
+            var l=parseFloat(it.less||it.ls_wt||0);
+            var n=g-p-l;
+            var tc=parseFloat(it.touch||0);
+            var ws=parseFloat(it.wastage||0);
+            var fn=parseFloat(it.fine||((n*(tc+ws)/100)));
             pTG+=g; pTN+=n; pTF+=fn;
-
             var vib = ws>0 ? (tc+'+'+ws) : String(tc);
             wRows += '<tr>'
-            +'<td class="cb">'+h(vib)+'</td>'
-            +'<td class="cb">'+g.toFixed(3)+'</td>'
-            +'<td>'+(l>0?l.toFixed(3):'0')+'</td>'
-            +'<td>'+(p>0?p.toFixed(3):'0')+'</td>'
-            +'<td class="cb">'+n.toFixed(3)+'</td>'
-            +'<td class="cb">'+(tc+ws).toFixed(0)+'</td>'
-            +'<td class="cb">'+fn.toFixed(3)+'</td>'
-            +'<td></td>'
-            +'</tr>';
+                +'<td class="cb">'+h(vib)+'</td>'
+                +'<td class="cb">'+g.toFixed(3)+'</td>'
+                +'<td>'+(l>0?l.toFixed(3):'0')+'</td>'
+                +'<td>'+(p>0?p.toFixed(3):'0')+'</td>'
+                +'<td class="cb">'+n.toFixed(3)+'</td>'
+                +'<td class="cb">'+(tc+ws).toFixed(0)+'</td>'
+                +'<td class="cb">'+fn.toFixed(3)+'</td>'
+                +'<td></td></tr>';
         }
 
         if (!isLast) {
-            // ── Overflow page: items + page subtotal + "continued" note ──
-            // No footer, no spacer — page break forces next page
             var subRow = '<tr class="rt">'
                 +'<td class="cb" colspan="2" style="font-size:8pt;">Sub Total</td>'
                 +'<td></td><td></td>'
-                +'<td class="cb">'+pTN.toFixed(3)+'</td>'
-                +'<td></td>'
-                +'<td class="cb">'+pTF.toFixed(3)+'</td>'
-                +'<td></td>'
-                +'</tr>'
+                +'<td class="cb">'+pTN.toFixed(3)+'</td><td></td>'
+                +'<td class="cb">'+pTF.toFixed(3)+'</td><td></td></tr>'
                 +'<tr class="rr"><td colspan="8" style="font-size:8pt;font-weight:600;text-align:center!important;letter-spacing:1px;">... Continued on next page ...</td></tr>';
-
             html += '<div class="slip" style="page-break-after:always;">'
-                + meta
-                + '<table class="bt">'+tableHead+'<tbody>'+wRows+subRow+'</tbody></table></div>';
-
+                +shopHtml
+                +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+                +'<table class="bt" style="margin-bottom:0;">'+tableHead+'<tbody>'+wRows+subRow+'</tbody></table>'
+                +'<div class="ft-thanks" style="border-top:1.5px solid #000;margin:0 28px;">'
+                +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+                +'</div></div>';
         } else {
-            // ── Last (or only) page: grand total + dynamic spacer + footer ──
             var netFine = gTF - colFn - discFineFinal - f995 - fDhal;
-
             var totRow1 = '<tr class="rt">'
-                +'<td class="cb">Total</td>'
-                +'<td class="cb">'+gTG.toFixed(3)+'</td>'
-                +'<td></td><td></td>'
-                +'<td class="cb">'+gTN.toFixed(3)+'</td>'
-                +'<td></td>'
-                +'<td class="cb">'+gTF.toFixed(3)+'</td>'
-                +'<td></td>'
-                +'</tr>';
-
-            var ratRow = '<tr class="rr">'
-                +'<td class="cb">Rat+</td>'
-                +'<td></td><td></td><td></td><td></td><td></td><td></td>'
-                +'<td class="cb price-cell">'+(rate>0 ? '&#x20B9;'+Math.round(rate).toLocaleString('en-IN') : '')+'</td>'
-                +'</tr>';
-
+                +'<td class="cb">Total</td><td class="cb">'+gTG.toFixed(3)+'</td><td></td><td></td>'
+                +'<td class="cb">'+gTN.toFixed(3)+'</td><td></td>'
+                +'<td class="cb">'+gTF.toFixed(3)+'</td><td></td></tr>';
+            var ratRow = '<tr class="rr"><td class="cb">Rat+</td><td></td><td></td><td></td><td></td><td></td><td></td>'
+                +'<td class="cb price-cell">'+(rate>0 ? _money(Math.round(rate)) : '')+'</td></tr>';
             var totRow2 = '<tr class="rt">'
-                +'<td class="cb">Total</td>'
-                +'<td colspan="5"></td>'
+                +'<td class="cb">Total</td><td colspan="5"></td>'
                 +'<td class="cb" style="font-size:10pt;">'+netFine.toFixed(3)+'</td>'
-                +'<td class="cb price-cell" style="font-size:10pt;">&#x20B9;'+Math.round(totAmt).toLocaleString('en-IN')+'</td>'
-                +'</tr>';
-
+                +'<td class="cb price-cell" style="font-size:10pt;">'+_money(Math.round(totAmt))+'</td></tr>';
+            var baakiValue = isCredit ? remFn.toFixed(3) : "0.000";
             var footRow = '<tr class="rf">'
-                +'<td class="cb">P.Wt</td>'
-                +'<td class="cb">1</td>'
-                +'<td class="cb">Qty</td>'
-                +'<td class="cb">1</td>'
-                +'<td class="cb" style="font-family:\'Noto Sans Gujarati\',Arial,sans-serif;">બાકી</td>'
-                +'<td class="cb" colspan="3">0.000</td>'
-                +'</tr>';
-
-            // Dynamic spacer: pass last-page item count + extra rows
-            var spacer = buildSpacer(pageItems.length, extraRows);
-
+                +'<td class="cb">P.Wt</td><td class="cb">'+(isNaN(gPW)||gPW<=0?"0.000":gPW.toFixed(3))+'</td>'
+                +'<td class="cb">Qty</td><td class="cb">'+totalQty+'</td>'
+                +'<td class="cb" style="font-family:\'Noto Sans Gujarati\',Arial,sans-serif;">Balance</td>'
+                +'<td class="cb" colspan="3">'+baakiValue+'</td></tr>';
+            var spacer = buildSpacerLegacy(pageItems.length, extraRows);
             html += '<div class="slip">'
-                + meta
-                + '<table class="bt">'+tableHead
-                + '<tbody>'+wRows+totRow1+ratRow+deduct+discRow+totRow2+spacer+footRow+'</tbody>'
-                + '</table></div>';
+                +shopHtml
+                +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+                +'<table class="bt">'+tableHead
+                +'<tbody>'+wRows+totRow1+ratRow+deduct+discRow+gstRow+totRow2+spacer+footRow+'</tbody>'
+                +'</table>'
+                +'<div class="ft-thanks" style="border-top:1.5px solid #000;margin:0 28px;">'
+                +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+                +'</div></div>';
         }
     }
-
     return html;
 }
 
-function _uth(label, extra) {
-    return '<th style="height:28px;font-size:8pt;font-weight:600;'
-        +'text-align:center !important;border-bottom:1.5px solid #000;'
-        +'border-right:1px solid #000;font-family:\'Noto Sans Gujarati\',Arial,sans-serif;'
-        +extra+'">'+label+'</th>';
-}
+// ════════════════════════════════════════════════════════════════════
+// UCHAK BILL — 4 columns (backward compatible)
+// ════════════════════════════════════════════════════════════════════
+function buildUchakSlip(D, copyLabel) {
+    var items = D.items || [];
+    var shopHtml = buildShopHeader(D);
+    var metaHtml = buildInvoiceMeta(D, copyLabel);
 
-function h(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    var discType = D.discountType || 'none';
+    var discAmt = parseFloat(D.discountAmount) || 0;
+
+    var tNang=0, tAmt=0, uRows='';
+    for (var i=0; i<items.length; i++) {
+        var it=items[i];
+        var nng=parseInt(it.pcs||it.weight||1);
+        var pr=parseFloat(it.price||it.rate||it.touch||0);
+        var amt=nng*pr;
+        tNang+=nng; tAmt+=amt;
+        uRows+='<tr>'
+            +'<td class="cb" style="text-align:left !important;padding-left:8px;">'+h((it.it_code||it.name||'\u2014').replace(/\s+/g,''))+'</td>'
+            +'<td class="cb">'+nng+'</td>'
+            +'<td class="cb">'+pr.toFixed(2)+'</td>'
+            +'<td class="cb" style="font-weight:700;">'+_money(amt)+'</td>'
+            +'</tr>';
+    }
+
+    var uDisc = (discType==='amount'&&discAmt>0)
+        ? '<tr class="rd"><td colspan="3">Discount</td><td class="cb" style="font-weight:700;">-'+_money(discAmt)+'</td></tr>' : '';
+
+    var uGstAmt = parseFloat(D.gstAmount)||0;
+    var uGst = uGstAmt>0 ? '<tr class="rd"><td colspan="3">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td class="cb" style="font-weight:700;">+'+_money(uGstAmt)+'</td></tr>' : '';
+
+    var extraCount = (uDisc ? 1 : 0) + (uGst ? 1 : 0);
+    var spacer = buildSpacer8(4, items.length, extraCount + 1);
+
+    var tableHead = '<colgroup>'
+        +'<col style="width:200px;"><col style="width:70px;"><col style="width:100px;"><col style="width:100px;">'
+        +'</colgroup>'
+        +'<thead><tr>'
+        +'<th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th>'
+        +'</tr></thead>';
+
+    var totalRow = '<tr class="rt">'
+        +'<td class="cb" style="font-weight:700;">Total</td>'
+        +'<td class="cb" style="font-weight:700;">'+tNang+'</td>'
+        +'<td class="cb"></td>'
+        +'<td class="cb" style="font-weight:800;font-size:10pt;">'+_money(tAmt)+'</td>'
+        +'</tr>';
+
+    return '<div class="slip">'
+        +shopHtml
+        +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+        +'<table class="bt">'+tableHead
+        +'<tbody>'+uRows+uDisc+uGst+spacer+totalRow+'</tbody></table>'
+        +'<div class="ft-thanks">'
+        +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+        +'</div></div>';
 }
 </script>
 </body>

@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Stock Report</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
 :root{
-    --cream:#faf8f3;--cream2:#f2efe7;--white:#fff;--ink:#0e0c09;--ink3:#5c5a52;
-    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
-    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.20);
+    --cream:#f8fafb;--cream2:#f1f5f9;--white:#fff;--ink:#0e0c09;--ink3:#5c5a52;
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
     --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
-    --muted:#7a7268;--muted2:#9e9890;
-    --green:#15803d;--red:#b91c1c;
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--red:#dc2626;
     --serif:"DM Serif Display",Georgia,serif;
-    --mono:"DM Mono",monospace;
+    --mono:Arial,sans-serif;
     --sans:"DM Sans",system-ui,sans-serif;
-    --sh:0 1px 3px rgba(14,12,9,0.07);
+    --sh:0 1px 3px rgba(0,0,0,0.04);
 }
-*{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);}
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--sans);font-variant-numeric:tabular-nums;}
 body{background:var(--cream);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;}
 header{height:56px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
 header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
@@ -238,8 +239,26 @@ function hesc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function f3(v){ return parseFloat(v||0).toFixed(3); }
 
 window.onload = function(){
-    document.getElementById('dt-to').value = new Date().toISOString().split('T')[0];
-    var t=setInterval(function(){ if(window.pywebview&&window.pywebview.api){ clearInterval(t); load(); } },150);
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+
+    // Financial year start = April 1st
+    var fyStart;
+    if(today.getMonth() >= 3) { // April=3 onwards
+        fyStart = today.getFullYear() + '-04-01';
+    } else {
+        fyStart = (today.getFullYear()-1) + '-04-01';
+    }
+
+    document.getElementById('dt-from').value = fyStart;
+    document.getElementById('dt-to').value   = todayStr;
+
+    var t = setInterval(function(){
+        if(window.pywebview && window.pywebview.api){
+            clearInterval(t);
+            load();
+        }
+    }, 150);
 };
 
 function switchMode(m){
@@ -287,7 +306,16 @@ function load(){
             var cls=opn+iN-oN;
             if(cls<0) cls=0;
             return{tv:tv,opn:opn,opnFn:opn*(tv/100),iP:iP,iN:iN,iFn:iN*(tv/100),oP:oP,oN:oN,oFn:oN*(tv/100),cls:cls,clsFn:cls*(tv/100)};
-        }).filter(function(r){ return r.opn>0||r.iN>0||r.oN>0||r.cls>0; });
+        }).filter(function(r){
+            if(MODE === 'pcs') {
+                // Pieces mode: only show rows with actual piece transactions
+                return r.iP > 0 || r.oP > 0;
+            } else {
+                // Weight mode: show rows with opening OR weight movement
+                // BUT exclude pure weight-based opening stock (tag_id starts with OPENING-)
+                return r.iN > 0 || r.oN > 0 || r.cls > 0;
+            }
+        });
         renderMaster();
     });
 }
@@ -470,14 +498,14 @@ function printStatement(){
             rows+='<tr style="background:'+bg+';">'
                 +'<td style="padding:4px 6px;text-align:center;font-size:6pt;color:#9e9890;border-right:'+B+';border-bottom:'+B+';">'+idx+'</td>'
                 +'<td style="padding:4px 7px;font-size:7pt;color:#5c5a52;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.vch_dt||'-')+'</td>'
-                +'<td style="padding:4px 7px;font-family:monospace;font-size:7pt;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.vch_no||'-')+'</td>'
+                +'<td style="padding:4px 7px;font-family:Arial,sans-serif;font-size:7pt;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.vch_no||'-')+'</td>'
                 +'<td style="padding:4px 7px;font-size:7pt;max-width:130px;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.ac_name||v.it_name||'-')+'</td>'
-                +'<td style="padding:4px 7px;font-family:monospace;font-size:6.5pt;color:#7a7268;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.tag_no||v.huid||'-')+'</td>'
+                +'<td style="padding:4px 7px;font-family:Arial,sans-serif;font-size:6.5pt;color:#7a7268;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.tag_no||v.huid||'-')+'</td>'
                 +'<td style="padding:4px 7px;font-size:7pt;color:#8a6c0a;border-right:'+B+';border-bottom:'+B+';">'+hesc(v.it_code||'-')+'</td>'
                 +'<td style="padding:4px 7px;text-align:center;border-right:'+B+';border-bottom:'+B+';"><span style="padding:1px 5px;border-radius:3px;font-size:6pt;'+(isOut?'background:rgba(185,28,28,0.08);color:#b91c1c;border:0.5px solid rgba(185,28,28,0.2);':'background:rgba(21,128,61,0.08);color:#15803d;border:0.5px solid rgba(21,128,61,0.2);')+'">'+(isOut?'Dr':'Cr')+'</span></td>'
-                +'<td style="padding:4px 7px;text-align:right;font-family:monospace;font-size:7.5pt;font-weight:'+(drAmt>0?'700':'400')+';color:#15803d;opacity:'+(drAmt>0?'1':'0.3')+';background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+(drAmt>0?f3(drAmt):'—')+'</td>'
-                +'<td style="padding:4px 7px;text-align:right;font-family:monospace;font-size:7.5pt;font-weight:'+(crAmt>0?'700':'400')+';color:#b91c1c;opacity:'+(crAmt>0?'1':'0.3')+';background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+(crAmt>0?f3(crAmt):'—')+'</td>'
-                +'<td style="padding:4px 7px;text-align:right;font-family:monospace;font-size:7.5pt;color:'+balColor+';border-bottom:'+B+';">'+f3(Math.abs(balance))+(balance<0?' Dr':' Cr')+'</td>'
+                +'<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;font-weight:'+(drAmt>0?'700':'400')+';color:#15803d;opacity:'+(drAmt>0?'1':'0.3')+';background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+(drAmt>0?f3(drAmt):'—')+'</td>'
+                +'<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;font-weight:'+(crAmt>0?'700':'400')+';color:#b91c1c;opacity:'+(crAmt>0?'1':'0.3')+';background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+(crAmt>0?f3(crAmt):'—')+'</td>'
+                +'<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:'+balColor+';border-bottom:'+B+';">'+f3(Math.abs(balance))+(balance<0?' Dr':' Cr')+'</td>'
                 +'</tr>';
         });
 
@@ -485,9 +513,9 @@ function printStatement(){
         rows+='<tr style="background:#f2efe7;border-top:2px solid rgba(168,125,30,0.3);">'
             +'<td colspan="6" style="padding:6px 7px;font-size:7.5pt;color:#8a6c0a;letter-spacing:0.5px;">CLOSING BALANCE</td>'
             +'<td style="background:#f2efe7;border-right:'+B+';"></td>'
-            +'<td style="padding:6px 7px;text-align:right;font-family:monospace;font-size:8pt;color:#15803d;background:#dcfce7;">'+f3(totDr)+'</td>'
-            +'<td style="padding:6px 7px;text-align:right;font-family:monospace;font-size:8pt;color:#b91c1c;background:#fee2e2;">'+f3(totCr)+'</td>'
-            +'<td style="padding:6px 7px;text-align:right;font-family:monospace;font-size:9pt;color:#8a6c0a;background:#fef9c3;">'+f3(Math.abs(balance))+(balance<0?' Dr':' Cr')+'</td>'
+            +'<td style="padding:6px 7px;text-align:right;font-family:Arial,sans-serif;font-size:8pt;color:#15803d;background:#dcfce7;">'+f3(totDr)+'</td>'
+            +'<td style="padding:6px 7px;text-align:right;font-family:Arial,sans-serif;font-size:8pt;color:#b91c1c;background:#fee2e2;">'+f3(totCr)+'</td>'
+            +'<td style="padding:6px 7px;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:#8a6c0a;background:#fef9c3;">'+f3(Math.abs(balance))+(balance<0?' Dr':' Cr')+'</td>'
             +'</tr>';
 
         var html='<!DOCTYPE html><html><head>'
@@ -519,7 +547,7 @@ function printStatement(){
             +'.s-cell{flex:1;padding:6px 10px;border-right:1px solid rgba(168,125,30,0.15);}'
             +'.s-cell:last-child{border-right:none;}'
             +'.s-cell label{display:block;font-size:5.5pt;text-transform:uppercase;letter-spacing:0.7px;color:#9e9890;margin-bottom:3px;}'
-            +'.s-cell .sv{font-family:monospace;font-size:8.5pt;}'
+            +'.s-cell .sv{font-family:Arial,sans-serif;font-size:8.5pt;}'
             +'.s-cell.opn{background:#eff6ff;}'
             +'.s-cell.opn .sv{color:#1d4ed8;font-size:10pt;}'
             /* Table */
@@ -642,32 +670,32 @@ function printMaster(){
             var bg=i%2===0?'#ffffff':'#faf8f3';
             rows+='<tr style="background:'+bg+';">'
                 +'<td style="padding:5px 7px;text-align:center;font-size:6pt;color:#9e9890;border-right:'+B+';border-bottom:'+B+';">'+(i+1)+'</td>'
-                +'<td style="padding:5px 8px;border-right:'+B+';border-bottom:'+B+';"><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.1);border:1px solid rgba(168,125,30,0.25);font-family:monospace;font-size:7.5pt;color:#8a6c0a;">'+r.tv+'%</span></td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#1d4ed8;background:#eff6ff;border-right:'+B+';border-bottom:'+B+';">'+f3(r.opn)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#3b82f6;background:#eff6ff;border-right:'+B+';border-bottom:'+B+';">'+f3(r.opnFn)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#166534;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+r.iP+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#15803d;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+f3(r.iN)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#22c55e;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+f3(r.iFn)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#9f1239;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+r.oP+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#b91c1c;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+f3(r.oN)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#ef4444;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+f3(r.oFn)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7.5pt;color:#8a6c0a;background:#fefce8;border-right:'+B+';border-bottom:'+B+';">'+f3(r.cls)+'</td>'
-                +'<td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:7pt;color:#a87d1e;background:#fefce8;border-right:'+B+';border-bottom:'+B+';">'+f3(r.clsFn)+'</td>'
+                +'<td style="padding:5px 8px;border-right:'+B+';border-bottom:'+B+';"><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.1);border:1px solid rgba(168,125,30,0.25);font-family:Arial,sans-serif;font-size:7.5pt;color:#8a6c0a;">'+r.tv+'%</span></td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#1d4ed8;background:#eff6ff;border-right:'+B+';border-bottom:'+B+';">'+f3(r.opn)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#3b82f6;background:#eff6ff;border-right:'+B+';border-bottom:'+B+';">'+f3(r.opnFn)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#166534;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+r.iP+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#15803d;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+f3(r.iN)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#22c55e;background:#f0fdf4;border-right:'+B+';border-bottom:'+B+';">'+f3(r.iFn)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#9f1239;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+r.oP+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#b91c1c;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+f3(r.oN)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#ef4444;background:#fff1f2;border-right:'+B+';border-bottom:'+B+';">'+f3(r.oFn)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#8a6c0a;background:#fefce8;border-right:'+B+';border-bottom:'+B+';">'+f3(r.cls)+'</td>'
+                +'<td style="padding:5px 8px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;color:#a87d1e;background:#fefce8;border-right:'+B+';border-bottom:'+B+';">'+f3(r.clsFn)+'</td>'
                 +'<td style="padding:5px 8px;text-align:center;background:#fefce8;border-bottom:'+B+';font-size:6pt;color:'+(r.cls>0?'#15803d':'#9e9890')+'">'+(r.cls>0?'ACTIVE':'NIL')+'</td>'
                 +'</tr>';
         });
         rows+='<tr style="border-top:2px solid rgba(168,125,30,0.3);">'
             +'<td style="padding:6px 7px;background:#f2efe7;"></td>'
             +'<td style="padding:6px 8px;background:#f2efe7;font-size:7.5pt;color:#8a6c0a;">TOTAL</td>'
-            +'<td style="padding:6px 8px;text-align:right;font-family:monospace;font-size:8.5pt;color:#1d4ed8;background:#dbeafe;">'+f3(tO)+'</td>'
+            +'<td style="padding:6px 8px;text-align:right;font-family:Arial,sans-serif;font-size:8.5pt;color:#1d4ed8;background:#dbeafe;">'+f3(tO)+'</td>'
             +'<td style="background:#dbeafe;"></td>'
             +'<td style="background:#dcfce7;"></td>'
-            +'<td style="padding:6px 8px;text-align:right;font-family:monospace;font-size:8.5pt;color:#15803d;background:#dcfce7;">'+f3(tI)+'</td>'
+            +'<td style="padding:6px 8px;text-align:right;font-family:Arial,sans-serif;font-size:8.5pt;color:#15803d;background:#dcfce7;">'+f3(tI)+'</td>'
             +'<td style="background:#dcfce7;"></td>'
             +'<td style="background:#fee2e2;"></td>'
-            +'<td style="padding:6px 8px;text-align:right;font-family:monospace;font-size:8.5pt;color:#b91c1c;background:#fee2e2;">'+f3(tOu)+'</td>'
+            +'<td style="padding:6px 8px;text-align:right;font-family:Arial,sans-serif;font-size:8.5pt;color:#b91c1c;background:#fee2e2;">'+f3(tOu)+'</td>'
             +'<td style="background:#fee2e2;"></td>'
-            +'<td style="padding:6px 8px;text-align:right;font-family:monospace;font-size:9pt;color:#8a6c0a;background:#fef9c3;">'+f3(tC)+'</td>'
+            +'<td style="padding:6px 8px;text-align:right;font-family:Arial,sans-serif;font-size:9pt;color:#8a6c0a;background:#fef9c3;">'+f3(tC)+'</td>'
             +'<td style="background:#fef9c3;"></td>'
             +'<td style="background:#fef9c3;"></td>'
             +'</tr>';
@@ -698,13 +726,13 @@ function printMaster(){
             +'.rpt-title{font-family:Georgia,serif;font-size:12pt;color:#0e0c09;}'
             +'.rpt-title em{color:#8a6c0a;font-style:italic;}'
             +'.rpt-meta{font-size:6.5pt;color:#7a7268;margin-top:3px;line-height:1.6;}'
-            +'.rpt-mode{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.08);border:1px solid rgba(168,125,30,0.2);font-size:6pt;color:#8a6c0a;text-transform:uppercase;font-family:monospace;}'
+            +'.rpt-mode{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:4px;background:rgba(168,125,30,0.08);border:1px solid rgba(168,125,30,0.2);font-size:6pt;color:#8a6c0a;text-transform:uppercase;font-family:Arial,sans-serif;}'
             +'.sums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4mm;}'
             +'.sb{border:1px solid rgba(14,12,9,0.1);border-radius:5px;padding:6px 9px;}'
             +'.sb.b{border-top:3px solid #3b82f6;background:#eff6ff;}.sb.g{border-top:3px solid #15803d;background:#f0fdf4;}.sb.r{border-top:3px solid #b91c1c;background:#fff1f2;}.sb.o{border-top:3px solid #a87d1e;background:#fefce8;}'
             +'.sl{font-size:5.5pt;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:3px;}'
             +'.sb.b .sl{color:#3b82f6;}.sb.g .sl{color:#22c55e;}.sb.r .sl{color:#f87171;}.sb.o .sl{color:#c9a227;}'
-            +'.sv{font-family:monospace;font-size:12pt;line-height:1;}'
+            +'.sv{font-family:Arial,sans-serif;font-size:12pt;line-height:1;}'
             +'.sb.b .sv{color:#1d4ed8;}.sb.g .sv{color:#15803d;}.sb.r .sv{color:#b91c1c;}.sb.o .sv{color:#8a6c0a;}'
             +'.tbl{width:100%;border-collapse:collapse;border:1px solid rgba(14,12,9,0.1);}'
             +'.tbl .sec th{padding:5px 7px;font-size:6pt;text-transform:uppercase;letter-spacing:0.6px;text-align:center;}'

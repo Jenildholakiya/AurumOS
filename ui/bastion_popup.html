@@ -84,7 +84,7 @@
 
         <div id="bastion-detail" style="
             font-size:0.65rem;
-            font-family:'DM Mono',monospace;
+            font-family:Arial,sans-serif;
             color:rgba(255,255,255,0.25);
             background:rgba(0,0,0,0.3);
             border-radius:6px;
@@ -117,7 +117,7 @@
             Lock Code
         </div>
         <div id="bastion-lock-code" style="
-            font-family:'DM Mono',monospace;
+            font-family:Arial,sans-serif;
             font-size:1.8rem;
             letter-spacing:8px;
             color:#c9a227;
@@ -152,7 +152,7 @@
             type="password"
             maxlength="16"
             autocomplete="off"
-            placeholder="16-char BASTION admin key"
+            placeholder="12-char unlock key or 16-char BASTION key"
             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
             style="
                 width:100%;
@@ -162,7 +162,7 @@
                 border:1px solid rgba(168,125,30,0.2);
                 background:rgba(255,255,255,0.04);
                 color:#fff;
-                font-family:'DM Mono',monospace;
+                font-family:Arial,sans-serif;
                 font-size:1rem;
                 letter-spacing:3px;
                 text-align:center;
@@ -247,8 +247,8 @@ function bastionSubmitUnlock() {
     msg.style.color = '#f87171';
     msg.innerText = '';
 
-    if (!key || key.length !== 16) {
-        msg.innerText = 'BASTION key must be 16 characters';
+    if (!key || (key.length !== 16 && key.length !== 12)) {
+        msg.innerText = 'Key must be 12 or 16 characters';
         return;
     }
 

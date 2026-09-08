@@ -418,14 +418,11 @@ def check_logs():
 def generate_unlock_key(lc):
     head("CHECK 7: Unlock Key Generator")
     info("Two types of keys:")
-    info("  Regular (12 chars) — clears wrong-password lock")
+    info("  Regular (12 chars) — clears wrong-password / login lock")
     info("  BASTION  (16 chars) — clears BASTION security suspension\n")
 
     REGULAR_SALT = 'AurumOS@Jewel#2024$Prof'
     BASTION_SALT = 'BASTION@AurumOS#Jenil$2024!Admin'
-    today     = datetime.date.today()
-    yesterday = today - datetime.timedelta(days=1)
-    tomorrow  = today + datetime.timedelta(days=1)
 
     def make_regular(lock_code, date_str):
         lc = str(lock_code).strip().upper()[:8]
@@ -435,7 +432,10 @@ def generate_unlock_key(lc):
         lc = str(lock_code).strip().upper()[:8]
         return hashlib.sha256((lc + BASTION_SALT + date_str).encode()).hexdigest()[:16].upper()
 
-    # Try to read lock_code from DB first (most reliable)
+    # Read lock_code from the LOCAL DB only as a HINT. The authoritative code
+    # is the one shown on the CLIENT's lock screen, which the operator must
+    # type in. Using the local DB's cached code was a bug: it generated keys
+    # for THIS machine instead of the locked client, so they never matched.
     db_lock_code = None
     try:
         db_path = get_db_path()
@@ -447,9 +447,8 @@ def generate_unlock_key(lc):
             ).fetchone()
             if row and row['value']:
                 db_lock_code = str(row['value']).strip().upper()
-                info(f"Lock code from DB cache: {db_lock_code}")
 
-            # Also check if account is BASTION suspended
+            # Also report if THIS PC is BASTION-suspended
             b_row = conn.execute(
                 "SELECT value FROM app_config WHERE key='bastion_suspended'"
             ).fetchone()
@@ -462,45 +461,45 @@ def generate_unlock_key(lc):
                     try:
                         rec = _j.loads(b_rec['value'])
                         print()
-                        warn(f"BASTION ACTIVE: {rec.get('title','Unknown')}")
+                        warn(f"BASTION ACTIVE (this PC): {rec.get('title','Unknown')}")
                         warn(f"Reason: {rec.get('reason','')}")
                         warn(f"At: {rec.get('timestamp','')}")
-                        info("Use BASTION admin key (16 chars) to clear this suspension")
                     except Exception: pass
             conn.close()
     except Exception as e:
         warn(f"Could not read DB: {e}")
 
-    effective_lc = db_lock_code if db_lock_code else lc
-    print(f"\n  Using lock code : {effective_lc}")
-
-    print("\n  REGULAR UNLOCK KEY (12 chars) — for wrong-password lock:")
-    print("  " + "-" * 46)
-    for label, d in [("YESTERDAY", yesterday), ("TODAY    ", today), ("TOMORROW ", tomorrow)]:
-        key = make_regular(effective_lc, d.strftime('%Y-%m-%d'))
-        print(f"  {label} ({d})  ->  {key}")
-
-    print("\n  BASTION ADMIN KEY (16 chars) — for BASTION suspension:")
-    print("  " + "-" * 46)
-    for label, d in [("YESTERDAY", yesterday), ("TODAY    ", today), ("TOMORROW ", tomorrow)]:
-        key = make_bastion(effective_lc, d.strftime('%Y-%m-%d'))
-        print(f"  {label} ({d})  ->  {key}")
-
-    # Manual override
+    # ── FIX: the CLIENT's on-screen lock code is the source of truth ──
     print()
     custom = input(
-        "  Enter lock code manually (from client screen) or Enter to skip: "
+        "  Enter the LOCK CODE shown on the CLIENT's screen (e.g. 66FA090F)\n"
+        "  or press Enter to use this PC's cached code: "
     ).strip().upper()
 
     if custom and len(custom) >= 6:
-        lc_clean = custom[:8].upper()
-        print(f"\n  Keys for manual lock code: {lc_clean}")
-        print("  REGULAR:")
-        for label, d in [("YESTERDAY", yesterday), ("TODAY    ", today), ("TOMORROW ", tomorrow)]:
-            print(f"    {label} ({d})  ->  {make_regular(lc_clean, d.strftime('%Y-%m-%d'))}")
-        print("  BASTION:")
-        for label, d in [("YESTERDAY", yesterday), ("TODAY    ", today), ("TOMORROW ", tomorrow)]:
-            print(f"    {label} ({d})  ->  {make_bastion(lc_clean, d.strftime('%Y-%m-%d'))}")
+        effective_lc = custom[:8].upper()
+    elif db_lock_code:
+        effective_lc = db_lock_code
+    else:
+        effective_lc = str(lc).strip().upper()[:8]
+
+    print(f"\n  Generating keys for lock code : {effective_lc}")
+    print(f"  (Day-based — the validator also tries IST/UTC/local ±1 day)\n")
+
+    today = datetime.date.today()
+    day_range = [(today + datetime.timedelta(days=i)).strftime('%Y-%m-%d') for i in (-1, 0, 1)]
+
+    print("  REGULAR UNLOCK KEY (12 chars) — for login / wrong-password lock:")
+    print("  " + "-" * 52)
+    for d in day_range:
+        print(f"    {d}  ->  {make_regular(effective_lc, d)}")
+
+    print("\n  BASTION ADMIN KEY (16 chars) — for BASTION suspension:")
+    print("  " + "-" * 52)
+    for d in day_range:
+        print(f"    {d}  ->  {make_bastion(effective_lc, d)}")
+
+    print("\n  Use the key whose date matches the CLIENT's local day.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

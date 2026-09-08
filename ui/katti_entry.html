@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="boot.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Katti Terminal</title>
@@ -8,21 +9,21 @@
 <script src="scale_widget.js"></script>
 <style>
 :root{
-    --cream:#faf8f3;--cream2:#f2efe7;--cream3:#e8e3d8;
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
     --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
-    --gold:#a87d1e;--gold2:#c9a227;--gold3:#8a6c0a;
-    --gold-bg:rgba(168,125,30,0.07);--gold-ln:rgba(168,125,30,0.20);
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
     --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
-    --muted:#7a7268;--muted2:#9e9890;
-    --green:#15803d;--green-bg:rgba(21,128,61,0.07);
-    --red:#b91c1c;--red-bg:rgba(185,28,28,0.07);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
     --serif:"DM Serif Display",Georgia,serif;
-    --mono:"DM Mono",monospace;
+    --mono:Arial,sans-serif;
     --sans:"DM Sans",system-ui,sans-serif;
-    --sh:0 1px 3px rgba(14,12,9,0.07);
-    --sh2:0 8px 28px rgba(14,12,9,0.10);
+    --sh:0 1px 3px rgba(0,0,0,0.04);
+    --sh2:0 8px 28px rgba(0,0,0,0.10);
 }
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;font-variant-numeric:tabular-nums;}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
 input[type=number]{-moz-appearance:textfield;}
 body{font-family:var(--sans);background:var(--cream);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -43,15 +44,15 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .meta-input.wide{min-width:240px;text-align:left;}
 .meta-date{font-family:var(--mono);font-size:0.8rem;color:var(--muted);padding:6px 0;}
 .hdr-div{width:1px;height:28px;background:var(--rule);}
-.hdr-scale-wrap{position:absolute;left:58%;transform:translateX(-50%);top:0;bottom:0;display:flex;align-items:center;}
-.hdr-scale{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 24px;border-radius:8px;background:var(--cream2);border:1px solid var(--rule);cursor:pointer;transition:all 0.13s;}
-.hdr-scale:hover{border-color:var(--gold-ln);background:var(--gold-bg);}
+.hdr-scale-wrap{position:absolute;left:50%;transform:translateX(-50%);top:0;bottom:0;display:flex;align-items:center;z-index:10;}
+.hdr-scale{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 36px;border-radius:10px;background:linear-gradient(180deg,var(--cream),var(--white));border:1.5px solid var(--rule);cursor:pointer;transition:all 0.18s;box-shadow:0 2px 8px rgba(14,12,9,0.04);}
+.hdr-scale:hover{border-color:var(--gold-ln);background:linear-gradient(180deg,var(--gold-bg),var(--white));box-shadow:0 4px 16px rgba(37,99,235,0.1);transform:scale(1.02);}
 .hdr-sc-status{display:flex;align-items:center;gap:5px;}
-.hdr-sc-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
-.hdr-sc-lbl{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);}
-.hdr-sc-num{display:flex;align-items:baseline;gap:5px;}
-.hdr-sc-wt{font-family:var(--mono);font-size:3.8rem;color:var(--muted2);letter-spacing:-2px;line-height:1;}
-.hdr-sc-g{font-family:var(--mono);font-size:1.4rem;color:var(--muted2);}
+.hdr-sc-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);flex-shrink:0;transition:background 0.3s;}
+.hdr-sc-lbl{font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted2);transition:color 0.3s;}
+.hdr-sc-num{display:flex;align-items:baseline;gap:6px;}
+.hdr-sc-wt{font-family:var(--mono);font-size:4.2rem;color:var(--muted2);letter-spacing:-2px;line-height:1;transition:color 0.3s;min-width:120px;text-align:center;}
+.hdr-sc-g{font-family:var(--mono);font-size:1.6rem;color:var(--muted2);font-weight:600;transition:color 0.3s;}
 
 /* HISTORY BANNER */
 .history-banner{display:none;background:rgba(180,83,9,0.07);color:#92400e;padding:8px 24px;font-size:0.7rem;border-bottom:1px solid rgba(180,83,9,0.15);text-align:center;flex-shrink:0;}
@@ -144,19 +145,42 @@ var _scW=null, _scStable=false, _scConnected=false;
 
 function JSLOG(m){try{console.log('[KT] '+m);}catch(e){} try{if(window.pywebview&&window.pywebview.api&&window.pywebview.api.js_log)window.pywebview.api.js_log(m);}catch(e){}}
 
-window.__onScale=function(d){
-    if(!d) return;
-    if(d.error){_scConnected=false;_scSetStatus('ERROR','#b91c1c');return;}
-    _scW=d.weight; _scStable=!!d.stable;
-    var w=(_scW!==null)?parseFloat(_scW).toFixed(3):'--.-';
-    var col=d.stable?'#15803d':'#d97706';
-    var wEl=document.getElementById('hdr-sc-wt'),dEl=document.getElementById('hdr-sc-dot'),lEl=document.getElementById('hdr-sc-lbl'),gEl=document.getElementById('hdr-sc-g'),pEl=document.getElementById('sc-popup-wt');
-    if(wEl){wEl.innerText=w;wEl.style.color=col;}
-    if(dEl)dEl.style.background=d.stable?'#16a34a':'#d97706';
-    if(lEl){lEl.innerText=d.stable?'STABLE':'READING';lEl.style.color=col;}
-    if(gEl)gEl.style.color=col;
-    if(pEl)pEl.innerText=w;
+window.__onScale = function(d) {
+    if (!d) return;
+
+    // --- FIX: Zero-Threshold Logic ---
+    var rawWeight = parseFloat(d.weight || 0);
+    // If reading is between 0.001g and 0.015g, force it to 0.000g
+    if (rawWeight > 0 && rawWeight < 0.015) {
+        rawWeight = 0;
+    }
+    // ---------------------------------
+
+    if (d.error) {
+        _scConnected = false;
+        _scSetStatus('ERROR', '#b91c1c');
+        return;
+    }
+
+    _scW = rawWeight.toFixed(3);
+    _scStable = !!d.stable;
+
+    var w = _scW;
+    var col = d.stable ? '#15803d' : '#d97706';
+
+    var wEl = document.getElementById('hdr-sc-wt'),
+        dEl = document.getElementById('hdr-sc-dot'),
+        lEl = document.getElementById('hdr-sc-lbl'),
+        gEl = document.getElementById('hdr-sc-g'),
+        pEl = document.getElementById('sc-popup-wt');
+
+    if (wEl) { wEl.innerText = w; wEl.style.color = col; }
+    if (dEl) dEl.style.background = d.stable ? '#16a34a' : '#d97706';
+    if (lEl) { lEl.innerText = d.stable ? 'STABLE' : 'READING'; lEl.style.color = col; }
+    if (gEl) gEl.style.color = col;
+    if (pEl) pEl.innerText = w;
 };
+
 window.__onScaleConnected=function(){_scConnected=true;_scSetStatus('AUTO','#15803d');};
 function _scSetStatus(lbl,color){var dEl=document.getElementById('hdr-sc-dot'),lEl=document.getElementById('hdr-sc-lbl');if(dEl)dEl.style.background=color;if(lEl){lEl.innerText=lbl;lEl.style.color=color;}}
 
@@ -208,7 +232,7 @@ function scDisconnect(){
     _scConnected=false;_scW=null;
     if(window.pywebview&&window.pywebview.api)window.pywebview.api.scale_disconnect().catch(function(){});
     _scSetStatus('OFFLINE','#9e9890');
-    var wEl=document.getElementById('hdr-sc-wt');if(wEl){wEl.innerText='--.-';wEl.style.color='var(--muted2)';}
+    var wEl=document.getElementById('hdr-sc-wt');if(wEl){wEl.innerText='--.---';wEl.style.color='var(--muted2)';}
     var gEl=document.getElementById('hdr-sc-g');if(gEl)gEl.style.color='var(--muted2)';
     var connBtn=document.getElementById('sc-popup-connect-btn'),discBtn=document.getElementById('sc-popup-disconnect-btn');
     if(connBtn){connBtn.style.display='block';connBtn.innerText='Connect Scale';}
@@ -269,7 +293,7 @@ function scDisconnect(){
                 <span class="hdr-sc-lbl" id="hdr-sc-lbl">offline</span>
             </div>
             <div class="hdr-sc-num">
-                <span class="hdr-sc-wt" id="hdr-sc-wt">--.-</span>
+                <span class="hdr-sc-wt" id="hdr-sc-wt">--.---</span>
                 <span class="hdr-sc-g"  id="hdr-sc-g">g</span>
             </div>
         </div>
@@ -310,7 +334,9 @@ function scDisconnect(){
     <div class="entry-group">
         <div class="fld">
             <label>Box No.</label>
-            <input type="text" id="in-box" class="box-inp nav-input" value="B-001">
+            <input type="text" id="in-box" class="box-inp nav-input" value="B-001"
+                   onfocus="this.select();" onmouseup="return false;"
+                   oninput="boxFormatLive(this);" onblur="boxNormalize(this);">
         </div>
         <button class="btn-add" onclick="commitEntry()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -408,7 +434,7 @@ function lookUpVoucher(val){
     window.pywebview.api.get_voucher_history(typed).then(function(response){
         if(response&&response.status==='success'&&response.voucher){
             kattiLedger=(response.items||[]).map(function(i){
-                return{name:i.it_name||i.name||'',touch:parseFloat(i.touch||0),weight:parseFloat(i.nt_wt||i.weight||0).toFixed(3),packets:parseInt(i.pcs||i.packets||1),box:i.huid||i.box||'B-001'};
+                return{name:i.it_name||i.name||'',touch:parseFloat(i.touch||0),weight:parseFloat(i.nt_wt||i.weight||0).toFixed(3),packets:parseInt(i.pcs||i.packets||0),box:i.huid||i.box||'B-001'};
             });
             document.getElementById('vch-note').value=(response.voucher||{}).note||'';
             document.getElementById('vch-id').value=typed;
@@ -470,7 +496,7 @@ function saveVoucherToDB() {
             it_code: 'KATTI-' + parseFloat(item.touch),
             name: item.name,
             weight: parseFloat(item.weight) || 0,
-            packets: parseInt(item.packets) || 1,
+            packets: parseInt(item.packets) || 0,
             touch: parseFloat(item.touch) || 0,
             box: item.box || 'B-001'
         };
@@ -511,25 +537,56 @@ function deleteVoucher(){
     triggerPopup('danger','Delete Voucher?','This will permanently delete VCH-'+vchId+' and remove all its stock entries.\n\nThis cannot be undone.',function(){
         if(!window.pywebview||!window.pywebview.api) return;
         window.pywebview.api.delete_katti_voucher(vchId).then(function(res){
-            loadHistoryList();
-            triggerPopup('success','Deleted','VCH-'+vchId+' removed.');
-            initializeVoucher();
+             triggerPopup('success','Deleted','VCH-'+vchId+' removed.');
+             initializeVoucher();
         }).catch(function(e){ triggerPopup('danger','Error',String(e)); });
     });
 }
 
 // ── ENTRY MANAGEMENT ──────────────────────────────────────────
-function commitEntry(){
-    var touch=parseFloat(document.getElementById('in-touch').value);
-    var weight=parseFloat(document.getElementById('in-weight').value);
-    var name=document.getElementById('in-note').value.trim();
-    if(isNaN(touch)||touch<=0){triggerPopup('warn','Touch Required','Enter touch % first.');document.getElementById('in-touch').focus();return;}
-    if(isNaN(weight)||weight<=0){triggerPopup('warn','Weight Required','Enter a valid weight.');document.getElementById('in-weight').focus();return;}
-    kattiLedger.push({name:name||('Katti '+touch+'%'),touch:touch,weight:weight.toFixed(3),packets:parseInt(document.getElementById('in-packets').value)||1,box:document.getElementById('in-box').value.trim()||'B-001'});
+function commitEntry() {
+    var touch = parseFloat(document.getElementById('in-touch').value);
+    var rawWeight = parseFloat(document.getElementById('in-weight').value);
+    var name = document.getElementById('in-note').value.trim();
+
+    // --- FIX: Zero-Threshold Logic ---
+    // If the entered weight is noise (greater than 0 but less than 0.015), force it to 0
+    var weight = (rawWeight > 0 && rawWeight < 0.015) ? 0 : rawWeight;
+    // ---------------------------------
+
+    if (isNaN(touch) || touch <= 0) {
+        triggerPopup('warn', 'Touch Required', 'Enter touch % first.');
+        document.getElementById('in-touch').focus();
+        return;
+    }
+
+    // Use the 'weight' variable (which has been sanitized) for validation and storage
+    if (isNaN(weight) || weight <= 0) {
+        triggerPopup('warn', 'Weight Required', 'Enter a valid weight.');
+        document.getElementById('in-weight').focus();
+        return;
+    }
+
+    kattiLedger.push({
+        name: name || ('Katti ' + touch + '%'),
+        touch: touch,
+        weight: weight.toFixed(3), // Stores the sanitized weight
+        packets: parseInt(document.getElementById('in-packets').value) || 0,
+        box: document.getElementById('in-box').value.trim() || 'B-001'
+    });
+
     renderTerminal();
-    if(kattiLedger.length%4===0){currentBoxIdx++;document.getElementById('in-box').value='B-'+String(currentBoxIdx).padStart(3,'0');}
-    document.getElementById('in-touch').value='';document.getElementById('in-note').value='';
-    document.getElementById('in-weight').value='';document.getElementById('in-packets').value='';
+
+    if (kattiLedger.length % 4 === 0) {
+        currentBoxIdx++;
+        document.getElementById('in-box').value = 'B-' + String(currentBoxIdx).padStart(3, '0');
+    }
+
+    // Clear inputs
+    document.getElementById('in-touch').value = '';
+    document.getElementById('in-note').value = '';
+    document.getElementById('in-weight').value = '';
+    document.getElementById('in-packets').value = '';
     document.getElementById('in-touch').focus();
 }
 
@@ -541,7 +598,7 @@ function saveEdit(idx){
     if(!tEl||!wEl) return;
     var touch=parseFloat(tEl.value),weight=parseFloat(wEl.value);
     if(isNaN(touch)||touch<=0||isNaN(weight)||weight<=0){tEl.style.borderColor='var(--red)';setTimeout(function(){tEl.style.borderColor='';},800);return;}
-    kattiLedger[idx]={touch:touch,weight:weight.toFixed(3),name:nEl?nEl.value.trim()||('Katti '+touch+'%'):kattiLedger[idx].name,packets:pEl?parseInt(pEl.value)||1:kattiLedger[idx].packets,box:bEl?bEl.value.trim()||'B-001':kattiLedger[idx].box};
+    kattiLedger[idx]={touch:touch,weight:weight.toFixed(3),name:nEl?nEl.value.trim()||('Katti '+touch+'%'):kattiLedger[idx].name,packets:pEl?parseInt(pEl.value)||0:kattiLedger[idx].packets,box:bEl?bEl.value.trim()||'B-001':kattiLedger[idx].box};
     editingIdx=-1; renderTerminal();
 }
 
@@ -616,6 +673,24 @@ function triggerPopup(type,title,text,onConfirm){
     document.getElementById('modal-wrap').classList.add('open');
 }
 function closePopup(){document.getElementById('modal-wrap').classList.remove('open');}
+
+// ── BOX NO. AUTO-FORMAT ────────────────────────────────────────
+// Type any number -> auto-prefixes "B-" and pads to 3 digits (e.g. 2 -> B-002,
+// 25 -> B-025). Only the last 3 digits entered are kept. Field selects on focus
+// so typing replaces the current box number instantly.
+function boxFormatLive(el){
+    var d = (el.value || '').replace(/\D/g, '');   // keep digits only
+    if (d === '') { el.value = 'B-'; return; }      // allow clearing mid-edit
+    d = d.slice(-3);                                // keep the last 3 digits typed
+    el.value = 'B-' + d.padStart(3, '0');
+    try { el.setSelectionRange(el.value.length, el.value.length); } catch(_e) {}
+}
+function boxNormalize(el){
+    var d = (el.value || '').replace(/\D/g, '');
+    var n = parseInt(d, 10);
+    if (!n || n < 1) n = 1;
+    el.value = 'B-' + String(n).padStart(3, '0');
+}
 
 // ── KEYBOARD ───────────────────────────────────────────────────
 document.addEventListener('keydown',function(e){

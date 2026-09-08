@@ -1,0 +1,89 @@
+# AurumOS — push-to-update release pipeline.
+#
+# HOW TO SHIP AN UPDATE (the only command you ever need):
+#   git tag v1.0.3 -m "Fix dashboard totals" && git push origin v1.0.3
+#
+# That's it. This workflow then:
+#   1. Generates version.json (manifest: UI + backend files, hashes, URLs)
+#   2. Creates GitHub Release v1.0.3 with changelog from the tag message
+#   3. Uploads version.json + every UI file + every backend .py (flat names)
+# Client terminals pick it up silently within hours — zero clicks, zero
+# installs. Backend .py files auto-apply on next app launch; UI applies live.
+#
+# NOTES:
+# - Tag MUST look like vX.Y.Z (e.g. v1.0.3). Anything else is ignored.
+# - main.py / updater.py are NEVER shipped (self-update protection) — if you
+#   change those, build a new EXE with build.py and attach it manually.
+# - EXE/binary changes are NOT part of this pipeline (file updates only).
+
+name: Push-to-Update Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build manifest + stage assets
+        id: build
+        env:
+          AURUM_UI_DIR: ui
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v1.0.3
+          VER="${TAG#v}"                    # e.g. 1.0.3
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          CHANGELOG="$(git tag -l --format='%(contents)' "$TAG" | head -n 5)"
+          [ -z "$CHANGELOG" ] && CHANGELOG="Bug fixes and improvements"
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          python3 gen_version_manifest.py "$VER" "$CHANGELOG"
+          # Stage assets driven by the manifest itself (single source of truth):
+          # _internal/ui/X -> ui/X (flat name X), backend a/b.py -> a__b.py
+          mkdir -p release_assets
+          python3 -c "
+import json, shutil, os
+m = json.load(open('version.json'))
+n = 0
+for f in m['files']:
+    rel = f['path'].replace(chr(92), '/')
+    if rel.startswith('_internal/ui/'):
+        src, asset = os.path.join('ui', rel.split('/')[-1]), rel.split('/')[-1]
+    else:
+        src, asset = rel, rel.replace('/', '__')
+    if os.path.isfile(src):
+        shutil.copyfile(src, os.path.join('release_assets', asset)); n += 1
+    else:
+        print('MISSING:', src)
+          print('staged:', n, 'of', len(m['files']))
+"
+          cp version.json release_assets/
+          echo "--- assets ---"
+          ls release_assets | head -n 100
+          echo "total: $(ls release_assets | wc -l) files"
+
+      - name: Create release + upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AurumOS v${{ steps.build.outputs.version }}
+          body: ${{ steps.build.outputs.changelog }}
+          files: release_assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

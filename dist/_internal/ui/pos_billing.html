@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="fonts.css">
+<meta charset="UTF-8">
+<title>Gold Billing - POS</title>
+<style>
+:root {
+  --bg: #f4f5f7;
+  --bg-card: #ffffff;
+  --bg-card2: #f9fafb;
+  --bg-hover: #f0f1f3;
+  --bg-input: #f4f5f7;
+  --border: #e2e4e8;
+  --accent: #2563eb;
+  --accent2: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --green: #16a34a;
+  --green-soft: #ecfdf5;
+  --blue: #2563eb;
+  --blue-soft: #eff6ff;
+  --red: #dc2626;
+  --red-soft: #fef2f2;
+  --text: #111827;
+  --text2: #4b5563;
+  --muted: #9ca3af;
+  --muted2: #6b7280;
+  --input-border: #d1d5db;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:0.82rem;-webkit-user-select:none;user-select:none;}
+input,select,textarea,button{font-family:inherit;font-size:inherit;}
+
+.pos-header{display:flex;align-items:center;gap:14px;padding:8px 20px;background:var(--bg-card);border-bottom:1px solid var(--border);box-shadow:var(--shadow-sm);}
+.h-brand{display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:0.5px;white-space:nowrap;}
+.h-brand .icon{width:26px;height:26px;background:var(--accent);border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:11px;}
+.h-scale{display:flex;align-items:center;gap:14px;margin:0 auto;padding:10px 24px;background:var(--bg-card2);border:1px solid var(--border);border-radius:12px;}
+.h-scale .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all 0.3s;}
+.h-scale .dot.online{background:var(--green);box-shadow:0 0 6px rgba(22,163,74,0.4);}
+.h-scale .label{font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;font-size:0.78rem;}
+.h-scale .weight{font-size:1.8rem;font-weight:800;color:var(--text);min-width:100px;text-align:right;transition:color 0.3s;font-variant-numeric:tabular-nums;}
+.h-scale .weight.stable{color:var(--green);}
+.h-scale .status{font-size:0.78rem;color:var(--muted);}
+.h-scale .status.online{color:var(--green);font-weight:600;}
+.h-scale .hint{color:var(--muted);font-style:italic;font-size:0.75rem;}
+.h-scale .connect-btn{background:var(--blue-soft);border:1px solid var(--blue);color:var(--blue);padding:8px 22px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;transition:all 0.12s;}
+.h-scale .connect-btn:hover{background:var(--blue);color:#fff;}
+.h-clock{color:var(--muted);font-size:0.72rem;letter-spacing:0.3px;white-space:nowrap;}
+.h-user{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:0.72rem;margin-left:auto;white-space:nowrap;}
+.h-user .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent);color:var(--accent);display:grid;place-items:center;font-size:0.58rem;font-weight:700;}
+
+.bill-type-row{display:flex;align-items:center;gap:8px;padding:6px 20px;background:var(--bg-card);border-bottom:1px solid var(--border);}
+.bt-btn{padding:5px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:all 0.15s;}
+.bt-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.bt-btn:hover:not(.active){border-color:var(--muted);color:var(--text2);}
+.estimate-banner{display:none;background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;padding:4px 14px;margin-left:8px;font-size:0.72rem;color:var(--accent);font-weight:700;letter-spacing:0.6px;}
+.estimate-banner.open{display:inline-block;}
+
+.held-bills-row{display:flex;align-items:center;gap:8px;padding:6px 20px;background:var(--bg-card);border-bottom:1px solid var(--border);}
+.held-label{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;white-space:nowrap;}
+.held-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg-card2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:0.7rem;color:var(--text2);cursor:pointer;transition:all 0.12s;white-space:nowrap;}
+.held-chip:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);box-shadow:var(--shadow-sm);}
+.held-chip .num{font-weight:700;color:var(--accent);}
+.held-chip .cust{font-weight:600;color:var(--text);font-size:0.68rem;}
+.held-chip .amt{color:var(--text2);}
+.held-chip .del{color:var(--muted);font-size:0.7rem;padding:2px 4px;border-radius:4px;margin-left:4px;}
+.held-chip .del:hover{background:var(--red-soft);color:var(--red);}
+.held-empty{color:var(--muted);font-size:0.7rem;font-style:italic;}
+
+.pos-main{display:flex;}
+.pos-left{flex:1;min-width:0;display:flex;flex-direction:column;padding:10px 14px;gap:8px;}
+.pos-right{width:340px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg-card);display:flex;flex-direction:column;overflow-y:auto;padding:10px;gap:8px;}
+.pos-right .section-card{flex-shrink:0;}
+.pos-right .section-card.summary-card{display:flex;flex-direction:column;}
+.pos-right .section-card.summary-card .summary-section{overflow:visible;}
+
+.section-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-card2);}
+.section-head h3{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text2);}
+.section-head .sec-badge{font-size:0.62rem;color:var(--muted);font-weight:600;}
+
+.cust-row{display:flex;gap:8px;padding:10px 14px;align-items:center;}
+.search-container{position:relative;flex:1;}
+.search-container input{width:100%;background:var(--bg-input);border:1px solid var(--input-border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.8rem;transition:border-color 0.12s;}
+.search-container input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.search-container .placeholder{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.75rem;pointer-events:none;}
+.cust-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:auto;z-index:100;display:none;box-shadow:var(--shadow-md);}
+.cust-dropdown.open{display:block;}
+.cust-option{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.75rem;color:var(--text2);transition:background 0.1s;}
+.cust-option:last-child{border-bottom:none;}
+.cust-option:hover{background:var(--bg-hover);}
+.cust-option .cust-loyalty{color:var(--accent);font-weight:700;font-size:0.72rem;}
+.cust-option-phone{color:var(--muted);font-size:0.72rem;margin-top:2px;}
+.new-customer-box{display:none;padding:10px 12px;background:var(--accent-soft);border-top:1px solid var(--border);gap:6px;align-items:center;}
+.new-customer-box.open{display:flex;}
+.new-customer-box input{min-width:0;flex:1;background:#fff;border:1px solid var(--input-border);border-radius:5px;padding:6px 8px;font-size:0.75rem;}
+.new-customer-box button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:5px;padding:6px 10px;cursor:pointer;font-size:0.72rem;font-weight:700;white-space:nowrap;}
+.loyalty-bar{display:none;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-soft);border-top:1px solid rgba(37,99,235,0.2);font-size:0.72rem;color:var(--accent);font-weight:600;border-radius:0 0 8px 8px;}
+.loyalty-bar .loyalty-toggle{margin-left:auto;padding:4px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:6px;cursor:pointer;font-size:0.72rem;font-weight:700;transition:all 0.12s;}
+.loyalty-bar .loyalty-toggle.active{background:var(--accent);color:#fff;}
+.loyalty-redeem-row{display:none;align-items:center;gap:6px;padding:6px 14px;border-top:1px solid var(--border);background:var(--bg-card2);font-size:0.72rem;color:var(--text2);border-radius:0 0 8px 8px;}
+.loyalty-redeem-row input{width:72px;background:var(--bg-input);border:1px solid var(--input-border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.72rem;text-align:right;}
+.loyalty-redeem-row input:focus{border-color:var(--accent);outline:none;}
+.loyalty-redeem-row .apply-loyalty-btn{padding:4px 10px;background:var(--accent);border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:700;font-size:0.72rem;transition:background 0.12s;}
+.loyalty-redeem-row .apply-loyalty-btn:hover{background:var(--accent2);}
+.loyalty-redeem-row.open{display:flex;}
+
+.entry-row{display:flex;flex-direction:column;gap:8px;padding:12px 14px;}
+.entry-row .er-top{display:flex;gap:10px;align-items:end;}
+.entry-row .er-top .field-group{flex:1;}
+.entry-row .er-bottom{display:flex;gap:8px;align-items:end;}
+.entry-row .er-bottom .field-group{flex:1;}
+.entry-row .er-bottom .entry-actions{flex:0 0 44px;}
+.entry-row .er-bottom .btn-add{width:44px;height:34px;font-size:1.1rem;}
+.field-group{display:flex;flex-direction:column;gap:4px;}
+.field-group.fg-grow{flex:1;}
+.field-group label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;}
+.field-group input{background:var(--bg-input);border:1px solid var(--input-border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:0.8rem;transition:border-color 0.12s;}
+.field-group input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.it-code-wrapper{position:relative;}
+.it-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;max-height:240px;overflow-y:auto;z-index:200;display:none;box-shadow:var(--shadow-md);}
+.it-dropdown.open{display:block;}
+.it-option{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;}
+.it-option:last-child{border-bottom:none;}
+.it-option:hover,.it-option.highlighted{background:var(--bg-hover);}
+.it-option-row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.it-option-code{font-weight:700;font-size:0.82rem;color:var(--accent);}
+.it-option-name{color:var(--text2);font-size:0.75rem;}
+.it-option-stock{color:var(--green);font-size:0.72rem;font-weight:700;}
+.it-option-touch{color:var(--blue);font-size:0.72rem;}
+.it-option-huid{color:var(--muted);font-size:0.68rem;}
+.it-no-results{padding:12px;text-align:center;color:var(--muted);font-style:italic;font-size:0.75rem;}
+.entry-actions{display:flex;gap:4px;align-items:end;}
+.btn-add{background:var(--accent);border:none;color:#fff;width:44px;height:34px;border-radius:6px;cursor:pointer;font-size:1.1rem;display:grid;place-items:center;font-weight:700;transition:all 0.12s;box-shadow:var(--shadow-sm);}
+.btn-add:hover{background:var(--accent2);transform:scale(1.05);box-shadow:var(--shadow-md);}
+
+.items-wrap{flex:1;min-height:0;overflow:auto;}
+table.item-table{width:100%;border-collapse:collapse;font-size:0.75rem;}
+.item-table th{position:sticky;top:0;background:var(--bg-card);padding:8px 10px;text-align:left;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;border-bottom:2px solid var(--border);z-index:10;font-weight:700;}
+.item-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;}
+.item-table tbody tr:hover td{background:var(--bg-hover);}
+.pos-empty-row td{text-align:center;color:var(--muted);padding:40px 0;font-style:italic;}
+.it-name-cell{font-weight:700;color:var(--text);font-size:0.82rem;}
+.it-huid{color:var(--muted);font-size:0.65rem;margin-top:2px;}
+.it-wt,.it-touch,.it-rate,.it-making,.it-amount{font-variant-numeric:tabular-nums;}
+.it-amount{font-weight:700;color:var(--accent);}
+.row-edit-btn{background:var(--blue-soft);border:1px solid var(--blue);color:var(--blue);width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:inline-grid;place-items:center;transition:all 0.12s;}
+.row-edit-btn:hover{background:var(--blue);color:#fff;}
+.remove-btn{background:var(--red-soft);border:1px solid var(--red);color:var(--red);width:24px;height:24px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:inline-grid;place-items:center;transition:all 0.12s;}
+.remove-btn:hover{background:var(--red);color:#fff;}
+
+.og-section{display:flex;gap:10px;padding:12px 14px;align-items:end;flex-wrap:wrap;}
+.og-section .field-group{min-width:80px;}
+.og-val{font-size:0.9rem;font-weight:800;color:var(--accent);margin-left:auto;white-space:nowrap;}
+
+.disc-section{display:flex;gap:8px;padding:10px 14px;align-items:center;flex-wrap:wrap;}
+.disc-section select{background:var(--bg-input);border:1px solid var(--input-border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:0.78rem;transition:border-color 0.12s;}
+.disc-section select:focus{border-color:var(--accent);outline:none;}
+.disc-section input.disc-val-input{width:92px;background:var(--bg-input);border:1px solid var(--input-border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:0.78rem;visibility:hidden;transition:border-color 0.12s;}
+.disc-section input.disc-val-input:focus{border-color:var(--accent);outline:none;}
+.disc-preview{color:var(--green);font-weight:700;font-size:0.75rem;margin-left:4px;}
+
+.summary-section{display:flex;flex-direction:column;gap:6px;padding:12px 14px;}
+.sum-row{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text2);padding:2px 0;}
+.sum-row.wt-fine{color:var(--muted);font-size:0.72rem;}
+.sum-row.total{border-top:2px solid var(--accent);padding-top:10px;margin-top:6px;font-size:1.1rem;font-weight:800;color:var(--accent);}
+.sum-row .disc-tag{color:var(--muted);font-size:0.72rem;margin-left:4px;}
+.sum-row.loyalty{color:var(--accent);font-weight:700;}
+
+.gst-row{display:flex;gap:8px;align-items:center;padding:8px 14px;font-size:0.72rem;color:var(--muted);border-top:1px solid var(--border);}
+.gst-row label{white-space:nowrap;font-weight:600;}
+.gst-row input{width:52px;background:var(--bg-input);border:1px solid var(--input-border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.72rem;text-align:center;}
+.gst-row input:focus{border-color:var(--accent);outline:none;}
+
+.pay-section{display:flex;flex-direction:column;gap:10px;padding:12px 14px;}
+.pay-cards{display:flex;gap:8px;padding:12px 14px;}
+.pay-card{flex:1;padding:10px 8px;background:var(--bg-card2);border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:all 0.15s;}
+.pay-card:hover{border-color:var(--muted);}
+.pay-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);}
+.pay-card .pay-icon{font-size:1.2rem;margin-bottom:4px;}
+.pay-card .pay-label{font-size:0.65rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;}
+.pay-card.selected .pay-label{color:var(--accent);}
+.pay-amount-wrap{display:none;align-items:center;gap:8px;padding:8px 0;}
+.pay-amount-wrap.open{display:flex;}
+.pay-amount-wrap label{font-size:0.75rem;color:var(--muted);white-space:nowrap;font-weight:600;}
+.pay-amount-wrap input{flex:1;background:var(--bg-input);border:1px solid var(--input-border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.9rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.pay-amount-wrap input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.pay-split-total{display:none;align-items:center;justify-content:space-between;padding:10px 0 4px;font-size:0.78rem;font-weight:700;border-top:2px solid var(--border);margin-top:8px;}
+.pay-split-total.ok{color:var(--green);}
+.pay-split-total.bad{color:var(--red);}
+
+.actions-section{display:flex;flex-direction:column;gap:8px;padding:12px 14px;}
+.action-row{display:flex;gap:8px;}
+.action-btn{flex:1;padding:10px 8px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.72rem;font-weight:700;text-align:center;transition:all 0.12s;background:var(--bg-card2);color:var(--text2);display:flex;align-items:center;justify-content:center;gap:6px;}
+.action-btn:hover{background:var(--bg-hover);border-color:var(--muted);color:var(--text);}
+.action-btn.btn-hold{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+.action-btn.btn-hold:hover{background:var(--accent);color:#fff;}
+.action-btn.btn-clear{border-color:var(--red);color:var(--red);background:var(--red-soft);}
+.action-btn.btn-clear:hover{background:var(--red);color:#fff;}
+.btn-charge{width:100%;padding:14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:0.88rem;font-weight:800;cursor:pointer;letter-spacing:0.6px;transition:all 0.15s;margin-top:6px;box-shadow:var(--shadow-md);}
+.btn-charge:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,0.25);}
+
+
+.print-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.print-selector-overlay.open{display:flex;}
+.print-selector-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px 32px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.print-selector-panel h3{color:var(--text);font-size:1.05rem;margin-bottom:18px;font-weight:700;}
+.print-cards{display:flex;gap:12px;margin-bottom:22px;}
+.print-card{flex:1;padding:16px;background:var(--bg-card2);border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:all 0.15s;}
+.print-card:hover{border-color:var(--muted);}
+.print-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);}
+.print-card .print-num{font-size:1.5rem;font-weight:800;color:var(--accent);display:block;margin-bottom:4px;}
+.print-card .print-label{font-size:0.72rem;color:var(--text2);font-weight:600;}
+.print-selector-actions{display:flex;gap:10px;justify-content:flex-end;}
+.print-selector-actions button{padding:10px 20px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.82rem;font-weight:600;background:var(--bg-card2);color:var(--text2);transition:all 0.12s;}
+.print-selector-actions button:hover{background:var(--bg-hover);color:var(--text);}
+.print-selector-actions .btn-print-go{background:var(--accent);color:#fff;border-color:var(--accent);}
+.print-selector-actions .btn-print-go:hover{background:var(--accent2);}
+.printer-row{margin-bottom:18px;}
+.printer-row label{display:block;font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:6px;}
+.printer-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card2);color:var(--text);font-size:0.82rem;font-weight:500;cursor:pointer;appearance:auto;}
+.printer-select:focus{border-color:var(--accent);outline:none;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px 32px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.modal-panel h3{color:var(--text);font-size:1.05rem;margin-bottom:12px;font-weight:700;}
+.modal-panel p{color:var(--text2);font-size:0.85rem;line-height:1.6;margin-bottom:22px;}
+.modal-panel button{background:var(--accent);color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;transition:background 0.12s;}
+.modal-panel button:hover{background:var(--accent2);}
+
+#sidebar-container{flex-shrink:0;width:252px;}
+body.sidebar-collapsed #sidebar-container{width:66px;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto;}
+body{display:flex;}
+
+/* ── DESKTOP ONLY: LARGER FONTS ─────────────── */
+@media(min-width:1024px){
+  body{font-size:0.92rem;}
+  .h-brand{font-size:1.15rem;}
+  .h-scale .label{font-size:0.88rem;}
+  .h-scale .weight{font-size:2.2rem;min-width:120px;}
+  .h-scale .status{font-size:0.88rem;}
+  .h-scale .hint{font-size:0.85rem;}
+  .h-scale .connect-btn{font-size:0.95rem;padding:10px 28px;}
+  .h-clock{font-size:0.82rem;}
+  .h-user{font-size:0.82rem;}
+  .bt-btn{font-size:0.82rem;}
+  .estimate-banner{font-size:0.82rem;}
+  .held-label{font-size:0.78rem;}
+  .held-chip{font-size:0.82rem;}
+  .held-chip .del{font-size:0.82rem;}
+  .held-empty{font-size:0.82rem;}
+  .section-head h3{font-size:0.82rem;}
+  .section-head .sec-badge{font-size:0.72rem;}
+  .search-container input{font-size:0.88rem;}
+  .cust-option{font-size:0.85rem;}
+  .cust-option .cust-loyalty{font-size:0.82rem;}
+  .cust-option-phone{font-size:0.82rem;}
+  .loyalty-bar{font-size:0.82rem;}
+  .loyalty-bar .loyalty-toggle{font-size:0.82rem;}
+  .loyalty-redeem-row{font-size:0.82rem;}
+  .loyalty-redeem-row input{font-size:0.82rem;}
+  .loyalty-redeem-row .apply-loyalty-btn{font-size:0.82rem;}
+  .field-group label{font-size:0.72rem;}
+  .field-group input{font-size:0.88rem;}
+  .it-option-code{font-size:0.92rem;}
+  .it-option-name{font-size:0.85rem;}
+  .it-option-stock{font-size:0.82rem;}
+  .it-option-touch{font-size:0.82rem;}
+  .it-option-huid{font-size:0.78rem;}
+  .it-no-results{font-size:0.85rem;}
+  .btn-add{font-size:1.3rem;}
+  table.item-table{font-size:0.85rem;}
+  .item-table th{font-size:0.78rem;}
+  .it-name-cell{font-size:0.92rem;}
+  .it-huid{font-size:0.75rem;}
+  .row-edit-btn{font-size:0.82rem;}
+  .remove-btn{font-size:0.82rem;}
+  .og-val{font-size:1.1rem;}
+  .disc-section select{font-size:0.88rem;}
+  .disc-section input.disc-val-input{font-size:0.88rem;}
+  .disc-preview{font-size:0.85rem;}
+  .sum-row{font-size:0.85rem;}
+  .sum-row.wt-fine{font-size:0.82rem;}
+  .sum-row.total{font-size:1.25rem;}
+  .sum-row .disc-tag{font-size:0.82rem;}
+  .gst-row{font-size:0.82rem;}
+  .gst-row input{font-size:0.82rem;}
+  .pay-card .pay-icon{font-size:1.4rem;}
+  .pay-card .pay-label{font-size:0.78rem;}
+  .pay-amount-wrap label{font-size:0.85rem;}
+  .pay-amount-wrap input{font-size:1.05rem;}
+  .pay-split-total{font-size:0.88rem;}
+  .action-btn{font-size:0.82rem;}
+  .btn-charge{font-size:0.95rem;}
+  .print-selector-panel h3{font-size:1.2rem;}
+  .print-card .print-num{font-size:1.6rem;}
+  .print-card .print-label{font-size:0.82rem;}
+  .print-selector-actions button{font-size:0.92rem;}
+  .modal-panel h3{font-size:1.2rem;}
+  .modal-panel p{font-size:0.92rem;}
+  .modal-panel button{font-size:0.92rem;}
+}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+<div id="error-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-panel">
+    <h3 id="modal-title">Error</h3>
+    <p id="modal-error-text"></p>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+<div id="print-selector-modal" class="print-selector-overlay" onclick="if(event.target===this)closePrintSelectorModal()">
+  <div class="print-selector-panel">
+    <h3>Print Settings</h3>
+    <div class="printer-row">
+      <label>Printer</label>
+      <select id="printer-select" class="printer-select" onchange="_selectedPrinter=this.value">
+        <option value="">Loading printers...</option>
+      </select>
+    </div>
+    <div class="print-cards">
+      <div class="print-card selected" onclick="selectPrintCopyCount(1)">
+        <span class="print-num">1</span>
+        <span class="print-label">Copy</span>
+      </div>
+      <div class="print-card" onclick="selectPrintCopyCount(2)">
+        <span class="print-num">2</span>
+        <span class="print-label">Copies</span>
+      </div>
+      <div class="print-card" onclick="selectPrintCopyCount(3)">
+        <span class="print-num">3</span>
+        <span class="print-label">Copies</span>
+      </div>
+    </div>
+    <div class="print-selector-actions">
+      <button onclick="closePrintSelectorModal()">Cancel</button>
+      <button onclick="commitBillPreview()" style="background:var(--bg-card2);color:var(--text2);border:1px solid var(--border);">Preview</button>
+      <button class="btn-print-go" onclick="commitBill(false)">Print</button>
+    </div>
+  </div>
+</div>
+<div id="aurum-confirm-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)_aurumConfirmResolve(false)">
+  <div class="modal-panel" style="max-width:380px;text-align:center;">
+    <h3 id="aurum-confirm-title" style="margin-bottom:10px;">Confirm</h3>
+    <p id="aurum-confirm-msg" style="margin-bottom:22px;"></p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="aurum-confirm-cancel" style="background:var(--bg-card2);color:var(--text2);border:1px solid var(--border);" onclick="_aurumConfirmResolve(false)">Cancel</button>
+      <button id="aurum-confirm-ok" style="background:var(--accent);color:#fff;" onclick="_aurumConfirmResolve(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+<script>
+var _aurumConfirmResolve=null;
+window.aurumConfirm=function(msg,opts){
+  opts=opts||{};
+  document.getElementById('aurum-confirm-title').innerText=opts.title||'Confirm';
+  document.getElementById('aurum-confirm-msg').innerText=msg;
+  var okBtn=document.getElementById('aurum-confirm-ok');
+  okBtn.innerText=opts.confirmText||'Confirm';
+  okBtn.style.background=(opts.type==='danger')?'var(--red)':'var(--accent)';
+  okBtn.style.color='#fff';
+  document.getElementById('aurum-confirm-cancel').style.display=opts.hideCancel?'none':'';
+  document.getElementById('aurum-confirm-modal').style.display='flex';
+  return new Promise(function(r){_aurumConfirmResolve=function(v){document.getElementById('aurum-confirm-modal').style.display='none';r(v);};});
+};
+</script>
+<main>
+<div class="pos-header">
+  <div class="h-brand"></div>
+  <div class="h-scale">
+    <span class="dot" id="sp-dot"></span>
+    <span class="label">Scale</span>
+    <span class="status" id="sp-status">Offline</span>
+    <span class="weight" id="sp-weight-big">--.-</span>
+    <span class="hint" id="sp-enter-hint" style="display:none;">Press Enter</span>
+    <button class="connect-btn" id="sp-connect-btn" onclick="if(window.ScaleWidget)window.ScaleWidget.connect()" style="display:inline-flex;">Connect</button>
+  </div>
+  <div class="h-clock" id="clock"></div>
+  <div class="h-user"><div class="avatar" id="h-avatar">OS</div><span id="h-uname">Owner</span></div>
+</div>
+<div class="bill-type-row">
+  <button class="bt-btn active" id="bt-sale" onclick="setBillType('sale')">Sale</button>
+  <button class="bt-btn" id="bt-estimate" onclick="setBillType('estimate')">Estimate</button>
+  <div class="estimate-banner" id="estimate-banner">ESTIMATE MODE</div>
+</div>
+<div class="held-bills-row">
+  <span class="held-label">Held:</span>
+  <span class="held-empty" id="held-empty">None</span>
+  <div id="held-strip"></div>
+</div>
+<div class="pos-main">
+  <div class="pos-left">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Item Entry</h3>
+        <span class="sec-badge" id="sec-edit-hint" style="display:none;">Editing</span>
+      </div>
+      <div class="entry-row">
+        <div class="er-top">
+          <div class="field-group">
+            <label>Customer</label>
+            <div class="search-container">
+              <input type="text" id="cust-name" placeholder="Search customer…" autocomplete="off" oninput="onCustomerInput(this.value)" onkeydown="onCustomerKeydown(event)" data-next="it-code" />
+              <div class="cust-dropdown" id="cust-dropdown"></div>
+              <div class="new-customer-box" id="new-customer-box">
+                <input type="tel" id="new-customer-phone" placeholder="Phone number" maxlength="20" />
+                <button type="button" onclick="saveNewCustomer()">Save Customer</button>
+              </div>
+            </div>
+            <div class="loyalty-bar" id="loyalty-bar">
+              <span>&#11088; <span id="loyalty-pts">0 pts</span></span>
+              <button class="loyalty-toggle" id="loyalty-toggle" onclick="toggleLoyaltyRedeem()">Redeem</button>
+            </div>
+            <div class="loyalty-redeem-row" id="loyalty-redeem-row">
+              <input type="number" id="loyalty-redeem-amt" step="0.01" min="1" placeholder="Redeem ₹" />
+              <button class="apply-loyalty-btn" onclick="applyLoyaltyRedeem()">Apply</button>
+            </div>
+          </div>
+          <div class="field-group it-code-wrapper">
+            <label>IT Code / Tag ID</label>
+            <input type="text" id="it-code" placeholder="Scan or type IT code / tag ID…" autocomplete="off" oninput="onITCodeInput(this.value)" onkeydown="onEntryKey(event)" data-next="it-weight" />
+            <div class="it-dropdown" id="it-dropdown"></div>
+          </div>
+          <div class="field-group">
+            <label>Weight (g)</label>
+            <input type="number" id="it-weight" step="0.001" placeholder="0.000" onkeydown="onEntryKey(event)" data-next="it-touch" />
+          </div>
+          <div class="field-group">
+            <label>Touch (%)</label>
+            <input type="number" id="it-touch" step="0.01" placeholder="0.00" onkeydown="onEntryKey(event)" data-next="it-rate" />
+          </div>
+        </div>
+        <div class="er-bottom">
+          <div class="field-group">
+            <label>Rate /10g</label>
+            <input type="text" id="it-rate" inputmode="decimal" placeholder="0" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" data-next="it-qty" />
+          </div>
+          <div class="field-group">
+            <label>Qty</label>
+            <input type="number" id="it-qty" value="1" min="1" onkeydown="onEntryKey(event)" data-next="it-making" />
+          </div>
+          <div class="field-group">
+            <label>Making</label>
+            <input type="text" id="it-making" inputmode="decimal" placeholder="e.g. 500" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
+          </div>
+          <div class="entry-actions">
+            <button class="btn-add" onclick="addItemToBill()" title="Add item">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section-card items-wrap">
+      <div class="section-head">
+        <h3>Bill Items</h3>
+        <span class="sec-badge" id="sum-items">0 items</span>
+      </div>
+      <table class="item-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>IT Code</th>
+            <th>Tag ID</th>
+            <th>Tag Details</th>
+            <th>Weight</th>
+            <th>Touch</th>
+            <th>Rate</th>
+            <th>Qty</th>
+            <th>Making</th>
+            <th>Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="item-list">
+          <tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>Old Gold / Exchange</h3></div>
+      <div class="og-section">
+        <div class="field-group fg-grow">
+          <label>Description</label>
+          <input type="text" id="og-desc" placeholder="Item description" />
+        </div>
+        <div class="field-group">
+          <label>Weight</label>
+          <input type="number" id="og-wt" step="0.001" placeholder="0.000" oninput="recalcOldGold()" />
+        </div>
+        <div class="field-group">
+          <label>Touch</label>
+          <input type="number" id="og-touch" step="0.01" placeholder="0.00" oninput="recalcOldGold()" />
+        </div>
+        <div class="field-group">
+          <label>Rate /10g</label>
+          <input type="number" id="og-rate" step="0.01" placeholder="0" oninput="recalcOldGold()" />
+        </div>
+        <div class="og-val" id="og-val">Rs. 0.00</div>
+      </div>
+    </div>
+  </div>
+  <div class="pos-right">
+    <div class="section-card summary-card">
+      <div class="section-head"><h3>Bill Summary</h3></div>
+      <div class="summary-section">
+        <div class="sum-row wt-fine"><span>Weight</span><span id="sum-weight">0.000 g</span></div>
+        <div class="sum-row wt-fine"><span>Fine</span><span id="sum-fine">0.000 g</span></div>
+        <div class="sum-row"><span>Metal + Making</span><span id="sum-subtotal">Rs. 0.00</span></div>
+        <div class="sum-row" style="color:var(--muted);font-size:0.7rem;margin-top:2px;"><span>&nbsp;&nbsp;↳ Making</span><span id="sum-making">Rs. 0.00</span></div>
+        <div class="sum-row"><span>GST</span><span id="sum-gst">Rs. 0.00</span></div>
+        <div class="sum-row" style="color:var(--muted);font-size:0.68rem;margin-top:2px;"><span>&nbsp;&nbsp;↳ CGST</span><span id="sum-cgst">Rs. 0.00</span></div>
+        <div class="sum-row" style="color:var(--muted);font-size:0.68rem;"><span>&nbsp;&nbsp;↳ SGST</span><span id="sum-sgst">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Discount <span class="disc-tag" id="sum-disc-tag"></span></span><span id="sum-discount">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Old Gold</span><span id="sum-oldgold">Rs. 0.00</span></div>
+        <div class="sum-row loyalty" id="sum-loyalty-row" style="display:none;"><span>Loyalty Redeem</span><span id="sum-loyalty">Rs. 0.00</span></div>
+        <div class="sum-row total"><span>TOTAL</span><span id="sum-total">Rs. 0.00</span></div>
+      </div>
+      <div class="gst-row">
+        <label>CGST %</label>
+        <input type="number" id="gst-cgst-rate" step="0.01" value="1.5" oninput="recalcSummary()" />
+        <label>SGST %</label>
+        <input type="number" id="gst-sgst-rate" step="0.01" value="1.5" oninput="recalcSummary()" />
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>Discount</h3></div>
+      <div class="disc-section">
+        <select id="disc-type" onchange="onDiscTypeChange()">
+          <option value="none">None</option>
+          <option value="flat">Flat ₹</option>
+          <option value="percent">Percent %</option>
+        </select>
+        <input type="number" class="disc-val-input" id="disc-val" step="0.01" placeholder="0" oninput="recalcSummary()" />
+        <span class="disc-preview" id="disc-preview"></span>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>Payment</h3></div>
+      <div class="pay-cards">
+        <div class="pay-card selected" data-pay="cash" onclick="selectPayment(this)">
+          <div class="pay-icon">💵</div>
+          <div class="pay-label">Cash</div>
+        </div>
+        <div class="pay-card" data-pay="upi" onclick="selectPayment(this)">
+          <div class="pay-icon">📱</div>
+          <div class="pay-label">UPI</div>
+        </div>
+        <div class="pay-card" data-pay="card" onclick="selectPayment(this)">
+          <div class="pay-icon">💳</div>
+          <div class="pay-label">Card</div>
+        </div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><h3>Actions</h3></div>
+      <div class="actions-section">
+        <div class="action-row">
+          <button class="action-btn btn-hold" id="btn-hold">&#9208; Hold</button>
+          <button class="action-btn btn-clear" onclick="clearBill()">&#10005; Clear</button>
+        </div>
+        <button class="action-btn" onclick="openPrintSelector()" style="flex:1;">&#128424; Print</button>
+        <button class="btn-charge" onclick="openPrintSelector()"><span id="charge-btn-label">Charge & Print</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+<script>
+'use strict';
+
+function tick(){
+    var n=new Date();
+    document.getElementById('clock').innerText=n.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
+}
+tick(); setInterval(tick,1000);
+
+var _billItems = [];
+var _selectedCustomer = null;
+var _paymentMode = 'cash';
+var _printCopies = 1;
+var _allProducts = [];
+var _allClients = [];
+var _billType = 'sale';
+var _oldGold = { desc:'', wt:0, touch:0, rate:0, value:0 };
+var _discount = { type:'none', value:0, amount:0 };
+var _loyalty = { points:0, redeem:0, redeemValue:0 };
+var _heldBills = [];
+var _editingIdx = -1;
+var _billMeta = null;
+
+initSidebar('billing');
+// Rate + Making persist across bills until changed.
+(function(){
+    try{
+        var r=localStorage.getItem('aurum_pos_rate'),m=localStorage.getItem('aurum_pos_making');
+        if(r) document.getElementById('it-rate').value=r;
+        if(m) document.getElementById('it-making').value=m;
+        document.getElementById('it-rate').addEventListener('change',persistRateMaking);
+        document.getElementById('it-making').addEventListener('change',persistRateMaking);
+        try{if(window.AurumOS&&window.AurumOS.setLiveRate&&r)window.AurumOS.setLiveRate(r,'pos');}catch(e2){}
+    }catch(e){}
+})();
+(function(){
+    function rv(k,d){try{var v=localStorage.getItem(k);return v!==null?parseFloat(v):d;}catch(e){return d;}}
+    var cg=rv('aurum_gst_cgst',1.5), sg=rv('aurum_gst_sgst',1.5);
+    var cgEl=document.getElementById('gst-cgst-rate'), sgEl=document.getElementById('gst-sgst-rate');
+    if(cgEl) cgEl.value=isNaN(cg)?1.5:cg;
+    if(sgEl) sgEl.value=isNaN(sg)?1.5:sg;
+})();
+
+(function(){
+    var _a=0;
+    function _try(){
+        _a++;
+        if(window.pywebview&&window.pywebview.api){
+            window.pywebview.api.get_dynamic_greeting && window.pywebview.api.get_dynamic_greeting().then(function(g){
+                if(!g) return;
+                var nm=g.owner_title||'Director';
+                document.getElementById('h-uname').innerText=nm;
+                var ini=nm.split(' ').filter(function(w){return w;}).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()||'OS';
+                document.getElementById('h-avatar').innerText=ini;
+            }).catch(function(){});
+        } else if(_a<300){
+            setTimeout(_try,50);
+        }
+    }
+    _try();
+})();
+
+function _loadProducts(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    var fn = window.pywebview.api.get_pos_stock || window.pywebview.api.get_products;
+    fn && fn().then(function(res){
+        var list = (res && res.stock) ? res.stock : (Array.isArray(res) ? res : []);
+        _allProducts = list || [];
+    }).catch(function(){});
+}
+function _loadClients(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    window.pywebview.api.get_client_list && window.pywebview.api.get_client_list().then(function(c){
+        _allClients = c || [];
+    }).catch(function(){});
+}
+(function(){
+    var _a=0;
+    function _try(){
+        _a++;
+        if(window.pywebview&&window.pywebview.api){
+            _loadProducts();
+            _loadClients();
+        } else if(_a<300){
+            setTimeout(_try,50);
+        }
+    }
+    _try();
+})();
+
+(function(){
+    var _a=0;
+    function _try(){
+        _a++;
+        if(window.ScaleWidget){
+            var origOnStable = window.ScaleWidget._onStable;
+            window.ScaleWidget._onStable = function(wt){
+                if(origOnStable) origOnStable(wt);
+                var el = document.getElementById('it-weight');
+                if(el && document.activeElement === el){
+                    el.value = parseFloat(wt).toFixed(3);
+                }
+            };
+            setInterval(function(){
+                var dot = document.getElementById('sp-dot');
+                var status = document.getElementById('sp-status');
+                var wt = document.getElementById('sp-weight-big');
+                var hint = document.getElementById('sp-enter-hint');
+                var connectBtn = document.getElementById('sp-connect-btn');
+                if(window.ScaleWidget && window.ScaleWidget._connected){
+                    dot.classList.add('online');
+                    status.innerText = 'Online';
+                    status.classList.add('online');
+                    if(window.ScaleWidget._lastWeight){
+                        var w = parseFloat(window.ScaleWidget._lastWeight);
+                        wt.innerText = isNaN(w) ? '--.-' : w.toFixed(1);
+                        if(window.ScaleWidget._stable){
+                            wt.classList.add('stable');
+                            if(hint) hint.style.display = 'flex';
+                            if(connectBtn) connectBtn.style.display = 'none';
+                        } else {
+                            wt.classList.remove('stable');
+                            if(hint) hint.style.display = 'none';
+                        }
+                    }
+                } else {
+                    dot.classList.remove('online');
+                    status.innerText = 'Offline';
+                    status.classList.remove('online');
+                    wt.innerText = '--.-';
+                    wt.classList.remove('stable');
+                    if(hint) hint.style.display = 'none';
+                    if(connectBtn) connectBtn.style.display = 'inline-flex';
+                }
+            }, 300);
+        } else if(_a<300){
+            setTimeout(_try,100);
+        }
+    }
+    _try();
+})();
+
+function onITCodeInput(val){
+    _lastPicked = null;
+    var dd=document.getElementById('it-dropdown');
+    if(!val||val.length<1){dd.classList.remove('open');return;}
+    var q=normalizeStockKey(val);
+    var exact = _allProducts.filter(function(p){
+        return normalizeStockKey(p.it_code)===q ||
+               normalizeStockKey(p.tag_id)===q ||
+               normalizeStockKey(p.huid)===q;
+    });
+    if(exact.length===1){
+        if(isTagStockRow(exact[0], val)){
+            addTaggedStockRow(exact[0], val);
+        } else {
+            pickStockRow(exact[0], val);
+        }
+        return;
+    }
+    var matches = _allProducts.filter(function(p){
+        return (p.it_code||'').toLowerCase().indexOf(q)>-1 ||
+               (p.it_name||'').toLowerCase().indexOf(q)>-1 ||
+               (p.tag_id||'').toLowerCase().indexOf(q)>-1 ||
+               (p.huid||'').toLowerCase().indexOf(q)>-1;
+    }).slice(0,10);
+    if(!matches.length){
+        dd.innerHTML = '<div class="it-no-results">No items found</div>';
+        dd.classList.add('open');
+        return;
+    }
+    dd.innerHTML=matches.map(function(it){
+        var huid = it.huid ? '<span class="it-option-huid">HUID: '+esc(it.huid)+'</span>' : '';
+        var tag = it.tag_id ? '<span class="it-option-touch">'+esc(it.tag_id)+'</span>' : '';
+        return '<div class="it-option" onclick="pickStockItem(\''+esc(it.it_code||'')+'\','+num(it.gr_wt)+','+num(it.touch)+',\''+esc(it.huid||'')+'\',\''+esc(it.tag_id||'')+'\',\''+esc(it.it_name||'')+'\')">'
+            +'<div class="it-option-row"><span class="it-option-code">'+esc(it.it_code||'')+'</span><span class="it-option-stock">'+(it.gr_wt?it.gr_wt.toFixed(3)+'g':(it.pcs?it.pcs+' pcs':''))+'</span></div>'
+            +'<div class="it-option-row"><span class="it-option-name">'+esc(it.it_name||'')+'</span><span class="it-option-touch">'+(it.touch||0)+'%</span>'+huid+'</div>'
+            +'<div class="it-option-row">'+tag+'</div>'
+            +'</div>';
+    }).join('');
+    dd.classList.add('open');
+}
+var _navigating=false;
+async function onEntryKey(e){
+    if(e.key==='Enter'){
+        e.preventDefault();
+        var cur=e.target;
+        if(cur.id==='it-code'){
+            var typed=cur.value.trim();
+            var exact=resolveStockRow(typed);
+            if(exact){
+                if(isTagStockRow(exact,typed)){
+                    addTaggedStockRow(exact,typed);
+                } else {
+                    pickStockRow(exact,typed);
+                }
+                return;
+            }
+            if(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_product_by_tag==='function'){
+                var tagged=await window.pywebview.api.get_product_by_tag(typed);
+                if(tagged){
+                    addTaggedStockRow(tagged,typed);
+                    return;
+                }
+            }
+            var dd=document.getElementById('it-dropdown');
+            var hl=dd?dd.querySelector('.it-option.highlighted'):null;
+            if(dd&&dd.classList.contains('open')&&hl){hl.click();return;}
+        }
+        if(cur.id==='it-making'){
+            addItemToBill();
+            return;
+        }
+        var nextId=cur.getAttribute('data-next');
+        if(nextId){
+            var next=document.getElementById(nextId);
+            if(next){
+                next.focus();
+                if(next.tagName==='INPUT') next.select();
+            }
+        }
+    }
+}
+var _lastPicked = null;
+function normalizeStockKey(value){
+    return String(value||'').trim().toLowerCase().replace(/\s+/g,'');
+}
+function resolveStockRow(value){
+    var key=normalizeStockKey(value);
+    if(!key) return null;
+    var matches=_allProducts.filter(function(p){
+        return normalizeStockKey(p.it_code)===key ||
+               normalizeStockKey(p.tag_id)===key ||
+               normalizeStockKey(p.huid)===key;
+    });
+    return matches.length ? matches[0] : null;
+}
+function isTagStockRow(row, enteredValue){
+    var key=normalizeStockKey(enteredValue);
+    return key && (normalizeStockKey(row.tag_id)===key || normalizeStockKey(row.huid)===key);
+}
+function addTaggedStockRow(row, enteredValue){
+    var code=String(row.it_code||'').trim();
+    var wt=parseFloat(row.gr_wt)||0;
+    var touch=parseFloat(row.touch)||0;
+    var tagId=String(row.tag_id||'');
+    var huid=String(row.huid||'');
+    var name=String(row.it_name||'');
+    _lastPicked={code:code,weight:wt,touch:touch,huid:huid,tag_id:tagId,name:name};
+    document.getElementById('it-code').value=enteredValue||tagId||huid||code;
+    document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
+    document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
+    addItemToBill();
+}
+function pickStockItem(code,wt,touch,huid,tag_id,name){
+    _lastPicked = {code:code, weight:wt, touch:touch, huid:huid, tag_id:tag_id, name:name||''};
+    document.getElementById('it-code').value=code;
+    document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
+    document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
+    document.getElementById('it-dropdown').classList.remove('open');
+    document.getElementById('it-weight').focus();
+}
+function pickStockRow(row, enteredValue){
+    var code=String(row.it_code||'').trim();
+    var wt=parseFloat(row.gr_wt)||0;
+    var touch=parseFloat(row.touch)||0;
+    var huid=String(row.huid||'');
+    var tagId=String(row.tag_id||'');
+    var name=String(row.it_name||'');
+    _lastPicked={code:code,weight:wt,touch:touch,huid:huid,tag_id:tagId,name:name};
+    document.getElementById('it-code').value=enteredValue || code;
+    document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
+    document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
+    document.getElementById('it-dropdown').classList.remove('open');
+    document.getElementById('it-weight').focus();
+}
+
+function onCustomerInput(val){
+    var dd=document.getElementById('cust-dropdown');
+    if(!val||val.length<1){dd.classList.remove('open');return;}
+
+    if(_billType==='estimate'){
+        _searchEstimateCustomers(val);
+        return;
+    }
+
+    var matches = _allClients.filter(function(c){
+        return (c.name||'').toLowerCase().indexOf(val.toLowerCase())>-1;
+    }).slice(0,6);
+    if(!matches.length){
+        dd.innerHTML='<div class="cust-option" onclick="openNewCustomerForm()" style="color:var(--accent);font-weight:700;">+ Add customer "'+esc(val)+'"</div>';
+        dd.classList.add('open');
+        return;
+    }
+    dd.innerHTML=matches.map(function(c){
+        var pts = (c.loyalty_points||0) ? '<span class="cust-loyalty">'+c.loyalty_points+' pts</span>' : '';
+        return '<div class="cust-option" onclick="pickCustomer(\''+esc(c.name||'')+'\',\''+esc(c.phone||'')+'\','+num(c.balance)+','+num(c.loyalty_points)+')">'
+            +'<div style="display:flex;justify-content:space-between;gap:8px;"><span>'+esc(c.name||'')+'</span>'+pts+'</div>'
+            +'<div class="cust-option-phone">'+esc(c.phone||'')+'</div>'
+            +'</div>';
+    }).join('');
+    dd.classList.add('open');
+}
+
+function openNewCustomerForm(){
+    var name=(document.getElementById('cust-name').value||'').trim();
+    if(!name){return;}
+    document.getElementById('new-customer-box').classList.add('open');
+    document.getElementById('new-customer-phone').focus();
+    document.getElementById('cust-dropdown').classList.remove('open');
+}
+
+function saveNewCustomer(){
+    var name=(document.getElementById('cust-name').value||'').trim();
+    var phone=(document.getElementById('new-customer-phone').value||'').trim();
+    if(!name){showModal('Customer name required','Enter a customer name first.');return;}
+    if(!phone){showModal('Phone number required','Enter the customer phone number.');return;}
+    var api=window.pywebview&&window.pywebview.api;
+    if(!api||typeof api.add_new_client!=='function'){showModal('Unavailable','Customer saving is not available.');return;}
+    api.add_new_client({name:name,phone:phone,metal_limit:0,cash_limit:0}).then(function(res){
+        if(!res||res.status!=='success'){
+            showModal('Could not save customer',(res&&res.message)||'Customer may already exist.');
+            return;
+        }
+        var customer={name:name,phone:phone,metal_limit:0,cash_limit:0,loyalty_points:0};
+        _allClients.push(customer);
+        _selectedCustomer=customer;
+        document.getElementById('cust-name').value=name;
+        document.getElementById('new-customer-phone').value='';
+        document.getElementById('new-customer-box').classList.remove('open');
+        document.getElementById('cust-dropdown').classList.remove('open');
+        _showToast('Customer saved','var(--green)');
+    }).catch(function(e){showModal('Could not save customer',e.toString());});
+}
+
+var _estimateCustomers = null;
+
+function _searchEstimateCustomers(val){
+    var dd=document.getElementById('cust-dropdown');
+    if(_estimateCustomers){
+        _filterEstimateDropdown(dd, _estimateCustomers, val);
+        return;
+    }
+    var api = window.pywebview && window.pywebview.api;
+    if(!api){showModal('Offline','Backend not available.');return;}
+    if(typeof api.get_estimate_customers!=='function'){
+        dd.innerHTML='<div class="it-no-results">Estimate search unavailable — please rebuild the app.</div>';
+        dd.classList.add('open');
+        return;
+    }
+    api.get_estimate_customers().then(function(res){
+        if(!res || res.status!=='success'){
+            dd.innerHTML='<div class="it-no-results">Failed to load estimates.</div>';
+            dd.classList.add('open');
+            return;
+        }
+        _estimateCustomers = res.customers || [];
+        _filterEstimateDropdown(dd, _estimateCustomers, val);
+    }).catch(function(e){
+        console.error('get_estimate_customers error:',e);
+        dd.innerHTML='<div class="it-no-results">Error loading estimates.</div>';
+        dd.classList.add('open');
+    });
+}
+
+function _filterEstimateDropdown(dd, list, val){
+    var q = val.toLowerCase();
+    var matches = list.filter(function(c){
+        return (c.name||'').toLowerCase().indexOf(q)>-1;
+    }).slice(0,8);
+    if(!matches.length){
+        dd.innerHTML='<div class="it-no-results">No estimates found for "'+esc(val)+'"</div>';
+        dd.classList.add('open');
+        return;
+    }
+    dd.innerHTML=matches.map(function(c){
+        var vch = c.vch_id ? '<span class="cust-option-phone">'+esc(c.vch_id)+'</span>' : '';
+        var dt = c.date ? '<span class="cust-option-phone">'+esc(c.date)+'</span>' : '';
+        var amt = c.total_amount ? '<span class="cust-loyalty">Rs.'+parseFloat(c.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</span>' : '';
+        return '<div class="cust-option" onclick="pickEstimateCustomer(\''+esc(c.name)+'\')">'
+            +'<div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-weight:700;">'+esc(c.name)+'</span>'+amt+'</div>'
+            +'<div style="display:flex;gap:10px;">'+vch+dt+'</div>'
+            +'</div>';
+    }).join('');
+    dd.classList.add('open');
+}
+
+function pickEstimateCustomer(name){
+    document.getElementById('cust-name').value = name;
+    document.getElementById('cust-dropdown').classList.remove('open');
+    var api = window.pywebview && window.pywebview.api;
+    if(!api){showModal('Offline','Backend not available.');return;}
+    if(typeof api.get_customer_estimate!=='function'){
+        showModal('Unavailable','Estimate loading not available — rebuild the app first.');
+        return;
+    }
+    api.get_customer_estimate(name).then(function(res){
+        if(!res || res.status!=='success'){
+            showModal('Not Found',(res&&res.message)||'No estimate found for '+name+'.');
+            return;
+        }
+        var v = res.voucher;
+        var items = res.items || [];
+        if(!items.length){
+            showModal('Empty Estimate','This estimate has no items.');
+            return;
+        }
+        _billItems = items.map(function(it){
+            return {
+                code: it.code || it.it_code || '',
+                weight: parseFloat(it.weight||it.gr_wt||0),
+                touch: parseFloat(it.touch||0),
+                rate: parseFloat(it.rate||0),
+                qty: parseInt(it.qty||1),
+                fine: parseFloat(it.fine||0),
+                making: parseFloat(it.making||0),
+                makingRaw: it.makingRaw||'',
+                amount: parseFloat(it.amount||0),
+                huid: it.huid||'',
+                tag_id: it.tag_id||'',
+                name: it.name||it.it_name||''
+            };
+        });
+        _selectedCustomer = {name: v.customer||name, phone: v.mobile||'', balance:0, loyalty_points:0};
+        _loadedEstimateVch = v.vch_id;
+        if(v.discount_type && v.discount_type!=='none'){
+            _discount = {type:v.discount_type, value:parseFloat(v.discount_value||0), amount:parseFloat(v.discount_amount||0)};
+            document.getElementById('disc-type').value = v.discount_type;
+            if(v.discount_type!=='none'){
+                document.getElementById('disc-val').value=v.discount_value||0;
+                document.getElementById('disc-val').style.visibility='visible';
+            }
+        }
+        document.getElementById('charge-btn-label').innerText = 'Convert to Paid & Print';
+        renderItems();
+        recalcSummary();
+        showModal('Estimate Loaded','Items from '+v.vch_id+' loaded. Click "Convert to Paid & Print" to finalize.');
+    }).catch(function(e){
+        showModal('Error','Failed to load estimate: '+e.toString());
+    });
+}
+function onCustomerKeydown(e){
+    if(e.key==='Enter'){e.preventDefault();document.getElementById('it-code').focus();}
+}
+function pickCustomer(name,phone,balance,loyalty){
+    _selectedCustomer={name:name,phone:phone,balance:balance||0,loyalty_points:loyalty||0};
+    document.getElementById('cust-name').value=name;
+    document.getElementById('cust-dropdown').classList.remove('open');
+    _loyalty.points = parseInt(loyalty||0);
+    _loyalty.redeem = 0; _loyalty.redeemValue = 0;
+    var bar = document.getElementById('loyalty-bar');
+    if(_loyalty.points>0){
+        bar.style.display='flex';
+        document.getElementById('loyalty-pts').innerText=_loyalty.points+' pts';
+        document.getElementById('loyalty-redeem-row').classList.remove('open');
+        document.getElementById('loyalty-toggle').classList.remove('active');
+    } else {
+        bar.style.display='none';
+    }
+    document.getElementById('it-code').focus();
+    recalcSummary();
+}
+
+function toggleLoyaltyRedeem(){
+    var row = document.getElementById('loyalty-redeem-row');
+    var btn = document.getElementById('loyalty-toggle');
+    row.classList.toggle('open');
+    btn.classList.toggle('active');
+    if(btn.classList.contains('active')){
+        btn.innerText='Cancel';
+        recalcSummary();
+    } else {
+        btn.innerText='Redeem';
+        _loyalty.redeem = 0; _loyalty.redeemValue = 0;
+        recalcSummary();
+    }
+}
+function applyLoyaltyRedeem(){
+    var amt = parseFloat(document.getElementById('loyalty-redeem-amt').value)||0;
+    if(amt<=0) return;
+    var ptsNeeded = Math.ceil(amt*100);
+    if(ptsNeeded > _loyalty.points){
+        showModal('Not enough points','Customer has '+_loyalty.points+' pts. Need '+ptsNeeded+' pts for Rs '+amt.toFixed(2)+'.');
+        return;
+    }
+    _loyalty.redeem = ptsNeeded;
+    _loyalty.redeemValue = amt;
+    recalcSummary();
+}
+
+function addItemToBill(){
+    var enteredCode=document.getElementById('it-code').value.trim();
+    if(!_lastPicked){
+        var resolved=resolveStockRow(enteredCode);
+        if(resolved) pickStockRow(resolved,enteredCode);
+    }
+    var code=(_lastPicked&&_lastPicked.code)?_lastPicked.code:enteredCode;
+    var wt=parseFloat(document.getElementById('it-weight').value)||0;
+    var touch=parseFloat(document.getElementById('it-touch').value)||0;
+    var rate=parseFloat((document.getElementById('it-rate').value||'').replace(/,/g,''))||0;
+    var qty=parseInt(document.getElementById('it-qty').value)||1;
+    var makingRaw=(document.getElementById('it-making').value||'').replace(/,/g,'').trim();
+    if(!enteredCode){showModal('Enter IT Code or Tag ID','Please scan or type an IT code or tag ID.');return;}
+    if(wt<=0){showModal('Enter Weight','Please enter the item weight.');return;}
+    if(touch<=0){showModal('Touch required','Enter a valid touch before adding this item.');return;}
+    var stockRows=_allProducts.filter(function(p){return String(p.it_code||'').trim().toLowerCase()===code.toLowerCase();});
+    if(!stockRows.length){showModal('IT code not found','IT code '+code+' is not available in inventory.');return;}
+    var matchingStock=stockRows.filter(function(p){return Math.abs((parseFloat(p.touch)||0)-touch)<=0.01;});
+    if(!matchingStock.length){showModal('Touch not available','Touch '+touch.toFixed(2)+'% is not available for IT code '+code+'.');return;}
+    var available=matchingStock.reduce(function(sum,p){return sum+(parseFloat(p.gr_wt)||0);},0);
+    var needed=wt*Math.max(qty,1);
+    var existingNeeded=_billItems.reduce(function(sum,it){
+        return sum+(String(it.code||'').trim().toLowerCase()===code.toLowerCase() &&
+          Math.abs((parseFloat(it.touch)||0)-touch)<=0.01 ? (parseFloat(it.weight)||0)*Math.max(parseInt(it.qty)||1,1) : 0);
+    },0);
+    needed+=existingNeeded;
+    if(available+0.001<needed){showModal('Stock over','Available stock for '+code+' is '+available.toFixed(3)+'g, but '+needed.toFixed(3)+'g is required.');return;}
+    var fine=parseFloat((wt*touch/100).toFixed(3));
+    var baseAmount=parseFloat((wt/10*rate*qty).toFixed(2));
+    var making=parseMaking(makingRaw, baseAmount, wt, qty);
+    var amount=parseFloat((baseAmount+making).toFixed(2));
+    var item={code:code,weight:wt,touch:touch,rate:rate,qty:qty,fine:fine,making:making,makingRaw:makingRaw,amount:amount,
+              huid:_lastPicked?_lastPicked.huid:'', tag_id:_lastPicked?_lastPicked.tag_id:'',
+              name:_lastPicked?_lastPicked.name:''
+            };
+    if(_editingIdx>=0){
+        _billItems[_editingIdx]=item;
+        _editingIdx=-1;
+    } else {
+        _billItems.push(item);
+    }
+    renderItems();
+    persistRateMaking();
+    clearEntry();
+    document.getElementById('it-code').focus();
+}
+function parseMaking(raw, baseAmount, wt, qty){
+    if(!raw) return 0;
+    raw=raw.replace(/,/g,'').trim();
+    qty=qty||1;
+    var perGram=parseFloat(raw)||0;
+    return parseFloat((perGram*wt*qty).toFixed(2));
+}
+function clearEntry(){
+    document.getElementById('it-code').value='';
+    document.getElementById('it-weight').value='';
+    document.getElementById('it-touch').value='';
+    document.getElementById('it-qty').value='1';
+    // Rate + Making persist until changed (restored below if empty).
+    if(!document.getElementById('it-rate').value) document.getElementById('it-rate').value=localStorage.getItem('aurum_pos_rate')||'';
+    if(!document.getElementById('it-making').value) document.getElementById('it-making').value=localStorage.getItem('aurum_pos_making')||'';
+}
+function persistRateMaking(){
+    var r=document.getElementById('it-rate').value||'';
+    var m=document.getElementById('it-making').value||'';
+    if(r) localStorage.setItem('aurum_pos_rate',r);
+    if(m) localStorage.setItem('aurum_pos_making',m);
+    try{if(window.AurumOS&&window.AurumOS.setLiveRate&&r)window.AurumOS.setLiveRate(r,'pos');}catch(e){}
+}
+function editItem(idx){
+    var it=_billItems[idx];
+    _editingIdx=idx;
+    _lastPicked={code:it.code||'',weight:it.weight||0,touch:it.touch||0,huid:it.huid||'',tag_id:it.tag_id||'',name:it.name||''};
+    document.getElementById('it-code').value=it.code;
+    document.getElementById('it-weight').value=it.weight.toFixed(3);
+    document.getElementById('it-touch').value=it.touch.toFixed(2);
+    document.getElementById('it-rate').value=it.rate.toLocaleString('en-IN',{maximumFractionDigits:2});
+    document.getElementById('it-qty').value=it.qty;
+    var makingInput=it.makingRaw||'';
+    document.getElementById('it-making').value=makingInput ? parseFloat(String(makingInput).replace(/,/g,'')) .toLocaleString('en-IN',{maximumFractionDigits:2}) : '';
+    document.getElementById('it-code').focus();
+}
+function removeItem(idx){
+    if(_editingIdx===idx){_editingIdx=-1;clearEntry();}
+    _billItems.splice(idx,1);
+    renderItems();
+}
+function renderItems(){
+    var tbody=document.getElementById('item-list');
+    if(!_billItems.length){
+        tbody.innerHTML='<tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>';
+    } else {
+        tbody.innerHTML=_billItems.map(function(it,i){
+            return '<tr>'
+                +'<td style="color:var(--muted2);">'+(i+1)+'</td>'
+                +'<td><div class="it-name-cell">'+esc(it.code)+'</div></td>'
+                +'<td>'+(it.tag_id?'<div class="it-name-cell">'+esc(it.tag_id)+'</div>':'—')+'</td>'
+                +'<td>'+(it.name||it.huid?'<div class="it-huid">'+esc(it.name||'')+(it.name&&it.huid?' · ':'')+(it.huid?'HUID: '+esc(it.huid):'')+'</div>':'—')+'</td>'
+                +'<td class="it-wt">'+it.weight.toFixed(3)+'</td>'
+                +'<td class="it-touch">'+it.touch.toFixed(2)+'%</td>'
+                +'<td class="it-rate">Rs.'+it.rate.toLocaleString('en-IN')+'</td>'
+                +'<td>'+it.qty+'</td>'
+                +'<td class="it-making">'+(it.making>0?('Rs.'+it.making.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
+                +'<td class="it-amount">Rs.'+it.amount.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
+                +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
+                +'</tr>';
+        }).join('');
+    }
+    recalcSummary();
+}
+
+function recalcOldGold(){
+    var d=document.getElementById('og-desc').value;
+    var wt=parseFloat(document.getElementById('og-wt').value)||0;
+    var touch=parseFloat(document.getElementById('og-touch').value)||0;
+    var rate=parseFloat(document.getElementById('og-rate').value)||0;
+    var value=parseFloat((wt*touch/100*rate).toFixed(2));
+    _oldGold={desc:d,wt:wt,touch:touch,rate:rate,value:value};
+    document.getElementById('og-val').innerText='Rs. '+value.toLocaleString('en-IN',{minimumFractionDigits:2});
+    recalcSummary();
+}
+
+function onDiscTypeChange(){
+    var t=document.getElementById('disc-type').value;
+    var val=document.getElementById('disc-val');
+    if(t==='none'){val.style.visibility='hidden';val.value='';}
+    else {val.style.visibility='visible';val.focus();val.select();}
+    recalcSummary();
+}
+
+function recalcSummary(){
+    var items=_billItems.length;
+    var tw=sumField('weight'), tf=sumField('fine');
+    var sub=sumField('amount');
+    var making=sumField('making');
+
+    var discType=document.getElementById('disc-type').value;
+    var discVal=parseFloat(document.getElementById('disc-val').value)||0;
+    var disc=0;
+    if(discType==='flat'){disc=Math.min(discVal,sub);}
+    else if(discType==='percent'){disc=parseFloat((sub*discVal/100).toFixed(2));}
+    _discount={type:discType,value:discVal,amount:disc};
+    var dp=document.getElementById('disc-preview');
+    dp.innerText = disc>0 ? ('−Rs. '+disc.toLocaleString('en-IN',{minimumFractionDigits:2})) : '';
+
+    var taxable=Math.max(0,sub-disc);
+    var cgstRate=parseFloat(document.getElementById('gst-cgst-rate').value)||0;
+    var sgstRate=parseFloat(document.getElementById('gst-sgst-rate').value)||0;
+    try{localStorage.setItem('aurum_gst_cgst',cgstRate);localStorage.setItem('aurum_gst_sgst',sgstRate);}catch(e){}
+    var cgst=parseFloat((taxable*cgstRate/100).toFixed(2));
+    var sgst=parseFloat((taxable*sgstRate/100).toFixed(2));
+    var gst=parseFloat((cgst+sgst).toFixed(2));
+
+    var loyValue=_loyalty.redeemValue||0;
+    var grand=sub+gst-disc-_oldGold.value-loyValue;
+    grand=Math.max(0,parseFloat(grand.toFixed(2)));
+
+    var earned = (grand>0) ? Math.floor(grand/100) : 0;
+
+    document.getElementById('sum-items').innerText=items;
+    document.getElementById('sum-weight').innerText=tw.toFixed(3)+' g';
+    document.getElementById('sum-fine').innerText=tf.toFixed(3)+' g';
+    document.getElementById('sum-subtotal').innerText=money(sub);
+    document.getElementById('sum-making').innerText=money(making);
+    document.getElementById('sum-gst').innerText=money(gst);
+    document.getElementById('sum-cgst').innerText=money(cgst);
+    document.getElementById('sum-sgst').innerText=money(sgst);
+    document.getElementById('sum-discount').innerText=money(disc);
+    document.getElementById('sum-disc-tag').innerText = discType==='percent'?(discVal+'%'):discType==='flat'?'Rs '+discVal:'';
+    document.getElementById('sum-oldgold').innerText=money(_oldGold.value);
+    var loyRow=document.getElementById('sum-loyalty-row');
+    if(loyValue>0){loyRow.style.display='flex';document.getElementById('sum-loyalty').innerText=money(loyValue);}
+    else{loyRow.style.display='none';}
+    document.getElementById('sum-total').innerText=money(grand);
+
+    _billMeta={items:items,tw:tw,tf:tf,sub:sub,making:making,disc:disc,discType:discType,discVal:discVal,
+               gst:gst,cgst:cgst,sgst:sgst,grand:grand,earned:earned};
+    recalcPayment();
+}
+function sumField(f){return parseFloat(_billItems.reduce(function(s,i){return s+(parseFloat(i[f])||0);},0).toFixed(2));}
+function money(n){return 'Rs. '+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2});}
+function formatPriceInput(el){
+    var raw=String(el.value||'').replace(/,/g,'').replace(/[^\d.]/g,'');
+    var parts=raw.split('.');
+    var whole=parts.shift()||'';
+    var decimal=parts.join('').slice(0,2);
+    whole=whole.replace(/^0+(?=\d)/,'');
+    el.value=(whole ? parseInt(whole,10).toLocaleString('en-IN') : '0')+(raw.indexOf('.')>=0 ? '.'+decimal : '');
+}
+
+function selectPayment(el){
+    document.querySelectorAll('.pay-card').forEach(function(c){c.classList.remove('selected');});
+    el.classList.add('selected');
+    _paymentMode=el.dataset.pay;
+}
+function recalcPayment(){
+    if(!_billMeta) _billMeta={grand:0};
+}
+
+function setBillType(t){
+    try{
+    _billType=t;
+    document.getElementById('bt-sale').classList.toggle('active', t==='sale');
+    document.getElementById('bt-estimate').classList.toggle('active', t==='estimate');
+    document.getElementById('estimate-banner').classList.toggle('open', t==='estimate');
+    document.getElementById('charge-btn-label').innerText = (t==='estimate') ? 'Save Estimate' : 'Charge & Print';
+    var custInput = document.getElementById('cust-name');
+    if(t==='estimate'){
+        custInput.placeholder = 'Search customer with estimate…';
+        _estimateCustomers = null;
+    } else {
+        custInput.placeholder = 'Search customer…';
+    }
+    }catch(e){console.error('setBillType error:',e);_showToast('Error: '+e.message,'#dc2626');}
+}
+
+var _loadedEstimateVch = null;
+
+function cancelEstimateLoad(){
+    _loadedEstimateVch = null;
+    _billItems = [];
+    _selectedCustomer = null;
+    _discount = {type:'none', value:0, amount:0};
+    document.getElementById('cust-name').value = '';
+    document.getElementById('charge-btn-label').innerText = 'Charge & Print';
+    document.getElementById('disc-type').value = 'none';
+    document.getElementById('disc-val').style.visibility = 'hidden';
+    document.getElementById('disc-preview').innerText = '';
+    _estimateCustomers = null;
+    clearEntry();
+    renderItems();
+    recalcSummary();
+}
+
+function convertEstimateToPaid(){
+    if(!_loadedEstimateVch){showModal('No Estimate','Load an estimate first.');return;}
+    if(!_billItems.length){showModal('Empty Bill','No items to convert.');return;}
+    var api = window.pywebview && window.pywebview.api;
+    if(!api){showModal('Offline','Backend not available.');return;}
+    var inv = {
+        vch_id: _loadedEstimateVch,
+        kind: 'sale',
+        customer: _selectedCustomer ? _selectedCustomer.name : 'Walk-in',
+        phone: _selectedCustomer ? (_selectedCustomer.phone||'') : '',
+        status: 'PAID',
+        items: _billItems.map(function(it){
+            return {code:it.code,weight:parseFloat(it.weight.toFixed(3)),touch:parseFloat(it.touch.toFixed(2)),
+                    rate:it.rate,qty:it.qty,fine:parseFloat(it.fine.toFixed(3)),
+                    making:parseFloat(it.making.toFixed(2)),makingRaw:it.makingRaw||'',
+                    amount:parseFloat(it.amount.toFixed(2)),huid:it.huid||'',tag_id:it.tag_id||''};
+        }),
+        grand_total: _billMeta ? _billMeta.grand : 0,
+        sub_total: _billMeta ? _billMeta.sub : 0,
+        discount: _discount.amount || 0,
+        discount_type: _discount.type || 'none',
+        discount_value: _discount.value || 0,
+        payment_mode: _paymentMode || 'cash'
+    };
+    var p;
+    if(typeof api.convert_estimate_to_paid==='function'){
+        p=api.convert_estimate_to_paid({invoice:inv});
+    } else {
+        var g={vch_id:inv.vch_id,customer:inv.customer,mobile:inv.phone||'',status:'PAID',
+            totalLedgerFine:0,collectedFine:0,fine995:0,fineDhal:0,remainingFine:0,goldRate:0,
+            totalAmount:inv.grand_total||inv.sub_total||0,items:inv.items||[],
+            discountType:inv.discount_type||'none',discountTouch:0,discountFine:0,
+            discountAmount:inv.discount||0,is_uchak:false};
+        p=api.generate_bill(g);
+    }
+    p.then(function(res){
+        if(!res || res.status!=='success'){showModal('Error',(res&&res.message)||'Conversion failed.');return;}
+        if(api.trigger_print_window){api.trigger_print_window(inv.vch_id, 1, inv);}
+        cancelEstimateLoad();
+        hardClearBill();
+    }).catch(function(e){showModal('Error','Failed: '+e.toString());});
+}
+
+function refreshHeldBills(){
+    var strip=document.getElementById('held-strip');
+    var empty=document.getElementById('held-empty');
+    if(!strip) return;
+    var chips=strip.querySelectorAll('.held-chip');
+    for(var i=0;i<chips.length;i++) chips[i].remove();
+    if(!_heldBills.length){
+        if(empty) empty.style.display='inline';
+        return;
+    }
+    if(empty) empty.style.display='none';
+    _heldBills.forEach(function(h){
+        var chip=document.createElement('div');
+        chip.className='held-chip';
+        var vid=String(h.vch_id||'').replace(/'/g,'&#39;');
+        chip.innerHTML='<span class="num">'+esc(h.vch_id)+'</span><span class="cust">'+esc(h.customer||'Walk-in')+'</span><span class="amt">Rs.'+parseFloat(h.grand_total||0).toLocaleString('en-IN')+'</span><span class="del">&#10005;</span>';
+        chip.querySelector('.del').addEventListener('click',function(e){
+            e.stopPropagation();
+            _heldBills=_heldBills.filter(function(b){return b.vch_id!==h.vch_id;});
+            refreshHeldBills();
+        });
+        chip.addEventListener('click',function(){loadHeldBill(h.vch_id);});
+        strip.appendChild(chip);
+    });
+}
+function loadHeldBill(vchId){
+    var h=null;
+    for(var i=0;i<_heldBills.length;i++){if(_heldBills[i].vch_id===vchId){h=_heldBills[i];break;}}
+    if(!h){showModal('Error','Bill not found.');return;}
+    _billItems=(h.items||[]).map(function(it){
+        return {code:it.code||'',weight:parseFloat(it.weight)||0,touch:parseFloat(it.touch)||0,rate:parseFloat(it.rate)||0,qty:parseInt(it.qty)||1,fine:parseFloat(it.fine)||0,making:parseFloat(it.making)||0,makingRaw:it.makingRaw||'',amount:parseFloat(it.amount)||0,huid:it.huid||'',tag_id:it.tag_id||'',name:it.name||it.it_name||''};
+    });
+    _heldBills=_heldBills.filter(function(b){return b.vch_id!==vchId;});
+    refreshHeldBills();
+    renderItems();
+    document.getElementById('it-code').focus();
+}
+async function deleteHeldBill(e,vchId){
+    e.stopPropagation();
+    if(!await aurumConfirm('Delete held bill '+vchId+'?',{title:'Delete Held Bill',confirmText:'Delete',type:'danger'})) return;
+    _heldBills=_heldBills.filter(function(h){return h.vch_id!==vchId;});
+    refreshHeldBills();
+}
+
+async function clearBill(){
+    if(!_billItems.length && !_selectedCustomer) return;
+    if(!await aurumConfirm('Clear all items from this bill?',{title:'Clear Bill',confirmText:'Clear',type:'danger'})) return;
+    _billItems=[];
+    _selectedCustomer=null;
+    _oldGold={desc:'',wt:0,touch:0,rate:0,value:0};
+    _discount={type:'none',value:0,amount:0};
+    _loyalty={points:0,redeem:0,redeemValue:0};
+    _loadedEstimateVch = null;
+    _estimateCustomers = null;
+    document.getElementById('cust-name').value='';
+    document.getElementById('loyalty-bar').style.display='none';
+    document.getElementById('og-desc').value='';document.getElementById('og-wt').value='';document.getElementById('og-touch').value='';document.getElementById('og-rate').value='';
+    document.getElementById('disc-type').value='none';document.getElementById('disc-val').value='';document.getElementById('disc-val').style.visibility='hidden';document.getElementById('disc-preview').innerText='';
+    clearEntry();
+    renderItems();
+}
+function holdBill(){
+    if(!_billItems||!_billItems.length){showModal('Empty Bill','Add at least one item before holding.');return;}
+    try{
+        var vch='H-'+Date.now().toString().slice(-7);
+        var snapshot=[];
+        for(var i=0;i<_billItems.length;i++){
+            var it=_billItems[i];
+            snapshot.push({code:it.code||'',weight:parseFloat(it.weight)||0,touch:parseFloat(it.touch)||0,rate:parseFloat(it.rate)||0,qty:parseInt(it.qty)||1,fine:parseFloat(it.fine)||0,making:parseFloat(it.making)||0,makingRaw:it.makingRaw||'',amount:parseFloat(it.amount)||0,huid:it.huid||'',tag_id:it.tag_id||''});
+        }
+        var grand=_billMeta?_billMeta.grand:0;
+        _heldBills.push({vch_id:vch,grand_total:grand,items:snapshot,customer:_selectedCustomer?_selectedCustomer.name:(document.getElementById('cust-name').value.trim()||'Walk-in')});
+        refreshHeldBills();
+        _billItems=[];
+        _selectedCustomer=null;
+        _oldGold={desc:'',wt:0,touch:0,rate:0,value:0};
+        _discount={type:'none',value:0,amount:0};
+        _loyalty={points:0,redeem:0,redeemValue:0};
+        _editingIdx=-1;
+        _billMeta=null;
+        try{document.getElementById('cust-name').value='';}catch(e){}
+        try{document.getElementById('loyalty-bar').style.display='none';}catch(e){}
+        try{document.getElementById('og-desc').value='';document.getElementById('og-wt').value='';document.getElementById('og-touch').value='';document.getElementById('og-rate').value='';}catch(e){}
+        try{document.getElementById('disc-type').value='none';document.getElementById('disc-val').value='';document.getElementById('disc-val').style.visibility='hidden';document.getElementById('disc-preview').innerText='';}catch(e){}
+        try{document.getElementById('it-code').value='';document.getElementById('it-weight').value='';document.getElementById('it-touch').value='';document.getElementById('it-rate').value=localStorage.getItem('aurum_pos_rate')||'';document.getElementById('it-qty').value='1';document.getElementById('it-making').value=localStorage.getItem('aurum_pos_making')||'';}catch(e){}
+        try{renderItems();}catch(e){}
+        try{document.getElementById('it-code').focus();}catch(e){}
+        _showToast(vch+' held ('+snapshot.length+' items, Rs.'+grand.toLocaleString('en-IN')+')','var(--accent)');
+    }catch(e){
+        _showToast('Hold failed: '+e.toString(),'#dc2626');
+    }
+}
+function hardClearBill(){
+    _billItems=[];
+    _selectedCustomer=null;
+    _oldGold={desc:'',wt:0,touch:0,rate:0,value:0};
+    _discount={type:'none',value:0,amount:0};
+    _loyalty={points:0,redeem:0,redeemValue:0};
+    _editingIdx=-1;
+    _billMeta=null;
+    _loadedEstimateVch = null;
+    _estimateCustomers = null;
+    document.getElementById('cust-name').value='';
+    document.getElementById('new-customer-phone').value='';
+    document.getElementById('new-customer-box').classList.remove('open');
+    document.getElementById('loyalty-bar').style.display='none';
+    document.getElementById('og-desc').value='';document.getElementById('og-wt').value='';document.getElementById('og-touch').value='';document.getElementById('og-rate').value='';
+    document.getElementById('disc-type').value='none';document.getElementById('disc-val').value='';document.getElementById('disc-val').style.visibility='hidden';document.getElementById('disc-preview').innerText='';
+    clearEntry();
+    renderItems();
+}
+function openPrintSelector(){
+    try{
+    if(!_billItems.length){showModal('Empty Bill','Add at least one item before printing.');return;}
+    if(_loadedEstimateVch){convertEstimateToPaid();return;}
+    if(_billType==='estimate'){
+        commitBill(true);
+        return;
+    }
+    loadPrinters();
+    document.getElementById('print-selector-modal').classList.add('open');
+    }catch(e){console.error('openPrintSelector error:',e);showModal('Error',e.message||e.toString());}
+}
+function closePrintSelectorModal(){document.getElementById('print-selector-modal').classList.remove('open');}
+var _selectedPrinter = '';
+function loadPrinters(){
+    var sel = document.getElementById('printer-select');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Loading printers...</option>';
+    var api = window.pywebview && window.pywebview.api;
+    if(!api || typeof api.get_printers !== 'function'){
+        sel.innerHTML = '<option value="">Printer API not available</option>';
+        return;
+    }
+    api.get_printers().then(function(printers){
+        sel.innerHTML = '';
+        if(!printers || !printers.length){
+            sel.innerHTML = '<option value="">No printers found</option>';
+            return;
+        }
+        printers.forEach(function(p){
+            var opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name + (p.is_default ? ' (Default)' : '');
+            sel.appendChild(opt);
+            if(p.is_default) sel.value = p.name;
+        });
+        _selectedPrinter = sel.value;
+    }).catch(function(e){
+        sel.innerHTML = '<option value="">Failed to load printers</option>';
+    });
+}
+function selectPrintCopyCount(n){
+    _printCopies=n;
+    document.querySelectorAll('.print-card').forEach(function(c,i){c.classList.toggle('selected',i+1===n);});
+}
+function commitBill(isEstimate){
+    try{
+    if(!window.pywebview||!window.pywebview.api){
+        showModal('Offline','Backend not available.');
+        return;
+    }
+    if(!isEstimate) closePrintSelectorModal();
+    if(_loadedEstimateVch){convertEstimateToPaid();return;}
+    var inv = buildInvoice(_billType);
+    inv._printer = _selectedPrinter || '';
+    inv._printCopies = _printCopies || 1;
+    var api = window.pywebview.api;
+
+    function doSaveAndPrint(){
+        var p;
+        if(typeof api.generate_retail_bill==='function'){
+            p=api.generate_retail_bill({invoice:inv});
+        } else {
+            var g={
+                vch_id:inv.vch_id,customer:inv.customer,mobile:inv.phone||'',
+                status:inv.status||'PAID',
+                totalLedgerFine:inv.making_total||0,collectedFine:inv.making_total||0,
+                fine995:0,fineDhal:0,remainingFine:0,goldRate:0,
+                totalAmount:inv.grand_total||inv.sub_total||0,
+                items:inv.items||[],
+                discountType:inv.discount_type||'none',discountTouch:0,
+                discountFine:0,discountAmount:inv.discount||0,is_uchak:false
+            };
+            p=api.generate_bill(g);
+        }
+        p.then(function(res){
+            if(res.status==='success'){
+                if(isEstimate){
+                    _showToast('Estimate '+inv.vch_id+' saved.','var(--green)');
+                    hardClearBill();
+                    return;
+                }
+                if(api.trigger_print_window){
+                    api.trigger_print_window(inv.vch_id, _printCopies, inv);
+                }
+                hardClearBill();
+                loadHeldBills();
+            } else {
+                showModal('Error',res.message||'Failed to save invoice.');
+            }
+        }).catch(function(e){console.error('save bill error:',e);showModal('Error','Failed to save: '+e.toString());});
+    }
+
+    if(!isEstimate && _selectedPrinter && api.set_default_printer){
+        api.set_default_printer(_selectedPrinter).then(function(){ doSaveAndPrint(); }).catch(function(){ doSaveAndPrint(); });
+    } else {
+        doSaveAndPrint();
+    }
+    }catch(e){console.error('commitBill error:',e);showModal('Error',e.message||e.toString());}
+}
+function commitBillPreview(){
+    if(!window.pywebview||!window.pywebview.api){showModal('Offline','Backend not available.');return;}
+    closePrintSelectorModal();
+    var inv = buildInvoice(_billType);
+    inv._printer = _selectedPrinter || '';
+    inv._printCopies = _printCopies || 1;
+    inv._previewOnly = true;
+    var api = window.pywebview.api;
+    if(api.trigger_print_window){
+        api.trigger_print_window(inv.vch_id, _printCopies, inv);
+    }
+}
+
+function buildInvoice(kind){
+    var paid = 0;
+    var vch = 'R-' + Date.now().toString().slice(-7);
+    var enteredCustomer = (document.getElementById('cust-name').value || '').trim();
+    var customer = _selectedCustomer ? _selectedCustomer.name : (enteredCustomer || 'Walk-in');
+    var phone = _selectedCustomer ? (_selectedCustomer.phone||'') : '';
+    var items = _billItems.map(function(it){
+        return {code:it.code, weight:parseFloat(it.weight.toFixed(3)), touch:parseFloat(it.touch.toFixed(2)),
+                rate:it.rate, qty:it.qty, fine:it.fine, making:it.making, makingRaw:it.makingRaw||'',
+                amount:parseFloat(it.amount.toFixed(2)), huid:it.huid||'', tag_id:it.tag_id||''};
+    });
+    return {
+        vch_id: vch,
+        kind: kind || _billType,
+        customer: customer,
+        phone: phone,
+        status: (kind==='estimate') ? 'ESTIMATE' : 'PAID',
+        items: items,
+        making_total: _billMeta?_billMeta.making:0,
+        sub_total: _billMeta?_billMeta.sub:0,
+        gst_total: _billMeta?_billMeta.gst:0,
+        cgst: _billMeta?_billMeta.cgst:0,
+        sgst: _billMeta?_billMeta.sgst:0,
+        discount: _discount.amount || 0,
+        discount_type: _discount.type || 'none',
+        discount_value: _discount.value || 0,
+        cgst_rate: (parseFloat(document.getElementById('gst-cgst-rate').value)||0),
+        sgst_rate: (parseFloat(document.getElementById('gst-sgst-rate').value)||0),
+        old_gold: _oldGold.value,
+        old_gold_desc: _oldGold.desc,
+        old_gold_weight: _oldGold.wt,
+        old_gold_touch: _oldGold.touch,
+        old_gold_rate: _oldGold.rate,
+        grand_total: _billMeta?_billMeta.grand:0,
+        paid_cash: 0,
+        paid_upi: 0,
+        paid_card: 0,
+        loyalty_earned: _billMeta?_billMeta.earned:0,
+        loyalty_used: _loyalty.redeem,
+        loyalty_value: _loyalty.redeemValue,
+        huid_required: 1,
+        note: '',
+        shop_name: localStorage.getItem('aurum_biz_name') || 'AurumOS',
+        shop_owner: localStorage.getItem('aurum_owner_name') || '',
+        shop_phone: localStorage.getItem('aurum_owner_phone') || '',
+        shop_city: localStorage.getItem('aurum_city') || '',
+        shop_address: localStorage.getItem('aurum_address') || '',
+        payment_mode: _paymentMode || 'cash'
+    };
+}
+
+function loadHeldBills(){
+    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.get_held_bills){
+        window.pywebview.api.get_held_bills().then(function(res){
+            if(res.status==='success'){_heldBills=res.bills||[];refreshHeldBills();}
+        }).catch(function(){});
+    }
+}
+loadHeldBills();
+
+function showModal(title,msg){
+    if(typeof window.aurumAlert==='function'){
+        var lower=String(title||'').toLowerCase();
+        var type=(lower.indexOf('error')>=0||lower.indexOf('failed')>=0||lower.indexOf('over')>=0||lower.indexOf('required')>=0||lower.indexOf('not found')>=0)?'error':
+            (lower.indexOf('empty')>=0||lower.indexOf('offline')>=0||lower.indexOf('unavailable')>=0)?'warn':'info';
+        window.aurumAlert(title,msg,type);
+        return;
+    }
+    document.getElementById('modal-title').innerText=title;
+    document.getElementById('modal-error-text').innerText=msg;
+    document.getElementById('error-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('error-modal').classList.remove('open');}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function num(v){return parseFloat(v)||0;}
+
+function _showToast(msg,color){
+    var t=document.createElement('div');
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:'+(color||'var(--accent)')+';color:#fff;padding:10px 22px;border-radius:8px;font-size:0.78rem;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.18);transition:opacity 0.3s;pointer-events:none;';
+    t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},300);},2500);
+}
+
+document.addEventListener('click',function(e){
+    var itdd=document.getElementById('it-dropdown');
+    var cdd=document.getElementById('cust-dropdown');
+    if(!e.target.closest('.it-code-wrapper')) itdd.classList.remove('open');
+    if(!e.target.closest('.search-container') || !e.target.closest('#cust-name')) cdd.classList.remove('open');
+});
+
+document.getElementById('btn-hold').addEventListener('click',function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    holdBill();
+});
+</script>
+</body>
+</html>

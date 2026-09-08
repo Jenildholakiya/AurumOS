@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Chart of Accounts</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]{-moz-appearance:textfield;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --serif:'DM Serif Display',Georgia,serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
+  --sh2:0 4px 16px rgba(0,0,0,0.08);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+header{height:56px;background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.header-title{font-family:var(--serif);font-size:15px;font-weight:400;color:var(--ink);}
+.header-title em{color:var(--gold3);font-style:italic;}
+#clock{font-family:var(--mono);font-size:11px;color:var(--muted2);background:var(--cream2);
+  border:1px solid var(--rule);border-radius:5px;padding:5px 12px;}
+.content{padding:20px 24px 24px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+
+.form-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:20px;box-shadow:var(--sh);position:relative;overflow:hidden;}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.form-card-title{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:600;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:16px;}
+.form-card-icon{width:20px;height:20px;border-radius:5px;background:var(--ink);color:var(--white);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.form-group{margin-bottom:11px;}
+.form-group label{display:block;font-size:9px;font-weight:600;letter-spacing:0.07em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+input,select{width:100%;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:7px;
+  font-size:13px;font-weight:500;outline:none;background:var(--cream);color:var(--ink);font-family:inherit;
+  transition:border-color .14s,box-shadow .14s,background .14s;}
+select{appearance:none;cursor:pointer;}
+input:focus,select:focus{border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+input[readonly]{background:var(--cream2);color:var(--muted2);cursor:default;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-primary{width:100%;height:40px;background:var(--ink);color:#fff;border:none;border-radius:8px;
+  font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:background .15s,transform .13s,box-shadow .15s;margin-top:12px;}
+.btn-primary:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(14,12,9,0.15);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.gst-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin-top:4px;cursor:pointer;}
+.gst-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--gold3);}
+.gst-extra{display:none;margin-top:8px;}
+.gst-extra.show{display:block;}
+
+.table-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--sh);}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-size:11px;font-weight:600;color:var(--ink);letter-spacing:0.02em;}
+.table-count{font-family:var(--mono);font-size:10px;color:var(--muted2);background:var(--cream2);
+  border:1px solid var(--rule);border-radius:100px;padding:2px 9px;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;background:var(--cream2);padding:9px 16px;font-size:9px;font-weight:600;
+  color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--rule);}
+td{padding:10px 16px;font-size:12.5px;font-weight:500;border-bottom:1px solid var(--rule2);color:var(--ink);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tr.row:hover td{background:rgba(168,125,30,0.025);}
+.mono{font-family:var(--mono);font-size:11px;color:var(--muted2);}
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:10.5px;font-weight:600;
+  font-family:var(--mono);border:1px solid transparent;text-transform:uppercase;letter-spacing:.04em;}
+.pill-asset{background:var(--gold-bg);color:var(--gold3);border-color:var(--gold-ln);}
+.pill-liability{background:rgba(29,78,216,0.07);color:#1d4ed8;border-color:rgba(29,78,216,0.2);}
+.pill-equity{background:rgba(168,125,30,0.1);color:#7c5e12;border-color:rgba(168,125,30,0.25);}
+.pill-income{background:var(--green-bg);color:var(--green);border-color:rgba(21,128,61,0.2);}
+.pill-expense{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.action-btns{display:flex;gap:5px;justify-content:flex-end;}
+.btn-icon{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .13s;border:1px solid var(--rule);background:var(--cream);color:var(--muted2);}
+.btn-icon:hover.edit{background:var(--gold-bg);color:var(--gold3);border-color:var(--gold-ln);}
+.btn-icon:hover.del{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.empty-state{text-align:center;padding:32px;font-size:12.5px;color:var(--muted2);}
+.wrap{display:block;}
+.btn-add-head{height:30px;padding:0 14px;border:none;border-radius:7px;background:var(--ink);color:#fff;
+  font-family:inherit;font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:background .15s,transform .13s;margin-left:10px;}
+.btn-add-head:hover{background:var(--ink2);transform:translateY(-1px);}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(14,12,9,0.45);display:none;align-items:center;
+  justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--white);width:440px;max-width:100%;border-radius:12px;box-shadow:var(--sh2);
+  max-height:92vh;display:flex;flex-direction:column;overflow:hidden;animation:pop .16s ease-out;}
+@keyframes pop{from{transform:translateY(8px) scale(.98);opacity:0;}to{transform:none;opacity:1;}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule);}
+.modal-close{width:30px;height:30px;border:1px solid var(--rule);background:var(--cream);border-radius:7px;
+  font-size:18px;line-height:1;color:var(--muted2);cursor:pointer;transition:all .13s;}
+.modal-close:hover{background:var(--red-bg);color:var(--red);border-color:rgba(185,28,28,0.2);}
+.modal-body{padding:18px;overflow-y:auto;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+  <header>
+    <div class="header-title">Chart of <em>Accounts</em></div>
+    <div id="clock">—</div>
+  </header>
+
+  <div class="content">
+    <div class="wrap">
+
+      <!-- Accounts table -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title">Account Heads</span>
+          <span style="display:flex;align-items:center;">
+            <span class="table-count" id="acc-count">0 heads</span>
+            <button class="btn-add-head" onclick="openModal()">+ New Account</button>
+            <button class="btn-add-head" style="background:var(--red);" onclick="deleteAllAccounts()">Delete All</button>
+          </span>
+        </div>
+        <table>
+          <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Group</th><th style="text-align:right;">Opening</th><th style="text-align:right;">Action</th></tr></thead>
+          <tbody id="acc-tbody">
+            <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- Add / Edit modal -->
+<div class="modal-overlay" id="acc-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="form-card-title" style="margin-bottom:0;"><div class="form-card-icon">+</div><span id="form-mode">New Account</span></div>
+      <button class="modal-close" onclick="closeModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Account Code</label>
+        <input type="text" id="a-code" placeholder="e.g. CASH, BANK, SALES" style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label>Account Name</label>
+        <input type="text" id="a-name" placeholder="e.g. Cash in Hand">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Type</label>
+          <select id="a-type">
+            <option value="ASSET">Asset</option>
+            <option value="LIABILITY">Liability</option>
+            <option value="EQUITY">Equity</option>
+            <option value="INCOME">Income</option>
+            <option value="EXPENSE">Expense</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Balance Type</label>
+          <select id="a-bal">
+            <option value="Dr">Debit (Dr)</option>
+            <option value="Cr">Credit (Cr)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Group</label>
+        <input type="text" id="a-group" placeholder="e.g. Bank Accounts">
+      </div>
+      <div class="form-group">
+        <label>Opening Balance (Rs.)</label>
+        <input type="number" id="a-opening" placeholder="0.00" step="0.01">
+      </div>
+      <label class="gst-row"><input type="checkbox" id="a-gst" onchange="document.getElementById('gst-extra').classList.toggle('show',this.checked)"> GST / Tax head</label>
+      <div class="gst-extra" id="gst-extra">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>GST Rate (%)</label>
+            <input type="number" id="a-gstrate" placeholder="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>HSN Code</label>
+            <input type="text" id="a-hsn" placeholder="7113">
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-save" onclick="saveAccount()">Create Account</button>
+      <button class="btn-primary" id="btn-cancel" onclick="closeModal()" style="display:none;background:var(--cream2);color:var(--ink2);margin-top:8px;">Cancel Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm / Alert popup -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box" style="width:380px;">
+    <div class="modal-body" style="text-align:center;padding:24px 22px;">
+      <div id="cf-icon" style="font-size:28px;margin-bottom:10px;">⚠️</div>
+      <div id="cf-msg" style="font-size:13.5px;color:var(--ink2);line-height:1.55;margin-bottom:20px;white-space:pre-line;"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-primary" id="cf-cancel" style="background:var(--cream2);color:var(--ink2);margin-top:0;" onclick="cfCancel()">Cancel</button>
+        <button class="btn-primary" id="cf-ok" style="margin-top:0;" onclick="cfOk()">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateClock(){
+  var n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();
+}
+setInterval(updateClock,1000); updateClock();
+
+var editing=false;
+function typeClass(t){return 'pill pill-'+t.toLowerCase();}
+function typeLabel(t){return t.charAt(0)+t.slice(1).toLowerCase();}
+
+function openModal(){ resetForm(); document.getElementById('acc-modal').classList.add('show'); }
+function closeModal(){ document.getElementById('acc-modal').classList.remove('show'); resetForm(); }
+document.getElementById('acc-modal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+/* Custom confirm / alert popup (replaces native confirm()/alert()) */
+var _cfCb=null;
+function showConfirm(message, onConfirm, opts){
+  opts=opts||{};
+  document.getElementById('cf-msg').textContent=message;
+  document.getElementById('cf-icon').textContent=opts.icon||'⚠️';
+  var ok=document.getElementById('cf-ok');
+  ok.textContent=opts.okText||'Confirm';
+  ok.style.background=opts.danger?'var(--red)':'var(--ink)';
+  document.getElementById('cf-cancel').style.display=opts.noCancel?'none':'block';
+  _cfCb=onConfirm||null;
+  document.getElementById('confirm-modal').classList.add('show');
+}
+function showAlert(message, opts){
+  opts=opts||{};
+  showConfirm(message, null, {okText:opts.okText||'OK', icon:opts.icon||'ℹ️', noCancel:true});
+}
+function cfCancel(){ document.getElementById('confirm-modal').classList.remove('show'); _cfCb=null; }
+function cfOk(){ var cb=_cfCb; _cfCb=null; document.getElementById('confirm-modal').classList.remove('show'); if(cb) cb(); }
+document.getElementById('confirm-modal').addEventListener('click',function(e){ if(e.target===this) cfCancel(); });
+
+async function loadAccounts(){
+  var res=await window.pywebview.api.get_chart_of_accounts();
+  var accs=(res&&res.accounts)||[];
+  var tb=document.getElementById('acc-tbody');
+  document.getElementById('acc-count').textContent=accs.length+' head'+(accs.length===1?'':'s');
+  if(!accs.length){tb.innerHTML='<tr><td colspan="6" class="empty-state">No accounts yet. Click “+ New Account”.</td></tr>';return;}
+  tb.innerHTML='';
+  accs.forEach(function(a){
+    var tr=document.createElement('tr');tr.className='row';
+    tr.innerHTML='<td class="mono">'+(a.code||'')+'</td>'
+      +'<td><b>'+(a.name||'')+'</b></td>'
+      +'<td><span class="'+typeClass(a.type)+'">'+typeLabel(a.type)+'</span></td>'
+      +'<td class="mono">'+(a.acc_group||'—')+'</td>'
+      +'<td style="text-align:right;" class="mono">'+parseFloat(a.opening_balance||0).toLocaleString('en-IN',{minimumFractionDigits:2})+(a.balance_type==='Cr'?' (Cr)':'')+'</td>'
+      +'<td style="text-align:right;"><div class="action-btns">'
+      +'<button class="btn-icon edit" title="Edit" onclick="openEdit(\''+a.code+'\')">'
+      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></button>'
+      +'<button class="btn-icon del" title="Delete" onclick="removeAccount(\''+a.code+'\')">'
+      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>'
+      +'</div></td>';
+    tb.appendChild(tr);
+  });
+}
+
+function resetForm(){
+  editing=false;
+  document.getElementById('form-mode').textContent='New Account';
+  document.getElementById('btn-save').textContent='Create Account';
+  document.getElementById('btn-cancel').style.display='none';
+  ['a-code','a-name','a-group','a-opening','a-gstrate','a-hsn'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('a-type').value='ASSET';
+  document.getElementById('a-bal').value='Dr';
+  document.getElementById('a-gst').checked=false;
+  document.getElementById('gst-extra').classList.remove('show');
+  document.getElementById('a-code').readOnly=false;
+}
+
+function openEdit(code){
+  window.pywebview.api.get_chart_of_accounts().then(function(res){
+    var a=(res&&res.accounts||[]).find(function(x){return x.code===code;});
+    if(!a) return;
+    editing=true;
+    document.getElementById('form-mode').textContent='Edit Account';
+    document.getElementById('btn-save').textContent='Save Changes';
+    document.getElementById('btn-cancel').style.display='block';
+    document.getElementById('acc-modal').classList.add('show');
+    document.getElementById('a-code').value=a.code; document.getElementById('a-code').readOnly=true;
+    document.getElementById('a-name').value=a.name;
+    document.getElementById('a-type').value=a.type;
+    document.getElementById('a-bal').value=a.balance_type;
+    document.getElementById('a-group').value=a.acc_group||'';
+    document.getElementById('a-opening').value=a.opening_balance||0;
+    var gst=!!a.is_gst;
+    document.getElementById('a-gst').checked=gst;
+    document.getElementById('gst-extra').classList.toggle('show',gst);
+    document.getElementById('a-gstrate').value=a.gst_rate||0;
+    document.getElementById('a-hsn').value=a.hsn||'';
+  });
+}
+
+async function saveAccount(){
+  var code=document.getElementById('a-code').value.trim().toUpperCase();
+  var name=document.getElementById('a-name').value.trim();
+  if(!code||!name){ showAlert('Code and Name are required.', {icon:'⚠️'}); return; }
+  var btn=document.getElementById('btn-save'); btn.disabled=true; btn.textContent='Saving…';
+  var data={
+    code:code, name:name,
+    type:document.getElementById('a-type').value,
+    balance_type:document.getElementById('a-bal').value,
+    acc_group:document.getElementById('a-group').value,
+    opening_balance:parseFloat(document.getElementById('a-opening').value)||0,
+    is_gst:document.getElementById('a-gst').checked?1:0,
+    gst_rate:parseFloat(document.getElementById('a-gstrate').value)||0,
+    hsn:document.getElementById('a-hsn').value
+  };
+  try{
+    var res=await window.pywebview.api.save_account(data);
+    if(res&&res.status==='success'){ closeModal(); loadAccounts(); }
+    else showAlert('Failed: '+(res&&res.message||'Unknown error'));
+  }catch(e){ showAlert('Error: '+e); }
+  finally{ btn.disabled=false; btn.textContent=editing?'Save Changes':'Create Account'; }
+}
+
+async function removeAccount(code){
+  showConfirm('Delete account '+code+'?\n\nIt cannot be deleted if it has posted entries.', function(){
+    window.pywebview.api.delete_account(code).then(function(res){
+      if(res&&res.status==='success') loadAccounts();
+      else showAlert('Failed: '+(res&&res.message||'Cannot delete'));
+    });
+  }, {okText:'Delete', danger:true});
+}
+
+async function deleteAllAccounts(){
+  showConfirm('DELETE ALL accounts?\n\nThis permanently removes every account head and cannot be undone.\n\nAccounts with posted voucher entries will be kept.', function(){
+    window.pywebview.api.delete_all_accounts().then(function(res){
+      if(res&&res.status==='success'){
+        var msg='Deleted '+res.deleted+' account'+(res.deleted===1?'':'s')+'.';
+        if(res.blocked>0) msg+='\n'+res.blocked+' skipped (have posted entries).';
+        showAlert(msg, {icon:'✅'}); loadAccounts();
+      } else showAlert('Failed: '+(res&&res.message||'Cannot delete all'));
+    });
+  }, {okText:'Delete All', danger:true});
+}
+
+window.addEventListener('load',function(){
+  initSidebar('coa');
+  var t=setInterval(function(){
+    if(!window.pywebview?.api) return;
+    clearInterval(t);
+    loadAccounts();
+  },100);
+});
+</script>
+</body>
+</html>

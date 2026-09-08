@@ -1,0 +1,11 @@
+{
+  "plan_change": {
+    "data": {
+      "key": "AU-F927-4C4B-DFT8-5TSX",
+      "plan": "pro",
+      "message": "Subscription renewed. Expires: 28/08/2027",
+      "subscription_expires_at": "2027-08-28T09:58:07.682Z"
+    },
+    "timestamp": 1787911089.0646832
+  }
+}

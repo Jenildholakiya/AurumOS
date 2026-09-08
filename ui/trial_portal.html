@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumOS | Evaluation Portal Concluded</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap');
+
+        :root {
+            --primary: #0e0c09;
+            --primary-light: #1c1a16;
+            --accent: #a87d1e;
+            --accent-light: #c9a227;
+            --accent-soft: rgba(168, 125, 30, 0.08);
+            --bg-main: #fcfbfa;
+            --card: #ffffff;
+            --border: rgba(14, 12, 9, 0.06);
+            --border-heavy: rgba(168, 125, 30, 0.18);
+            --text-main: #0e0c09;
+            --text-muted: #6e675f;
+            --text-muted2: #a19a91;
+            --serif: "DM Serif Display", Georgia, serif;
+            --sans: "DM Sans", system-ui, sans-serif;
+            --mono:Arial,sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(168, 125, 30, 0.02) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(14, 12, 9, 0.01) 0%, transparent 50%);
+            color: var(--text-main);
+            font-family: var(--sans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Luxury Editorial Container */
+        .portal-container {
+            background: var(--card);
+            padding: 55px 50px 45px 50px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 30px 70px rgba(14, 12, 9, 0.03),
+                0 4px 12px rgba(168, 125, 30, 0.01);
+            width: 100%;
+            max-width: 460px;
+            text-align: center;
+            position: relative;
+            box-sizing: border-box;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Top Elegant Subtle Shimmer Banner Line */
+        .portal-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent), var(--accent-light), transparent);
+            border-radius: 12px 12px 0 0;
+        }
+
+        /* Minimalist Abstract Logo Badge */
+        .brand-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 28px;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffffff, var(--bg-main));
+            color: var(--accent);
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 1.35rem;
+            user-select: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.01), 0 4px 12px rgba(168,125,30,0.05);
+        }
+
+        h2 {
+            font-family: var(--serif);
+            font-weight: 400;
+            color: var(--text-main);
+            margin: 0 0 12px 0;
+            font-size: 2.1rem;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin: 0 0 28px 0;
+            line-height: 1.6;
+        }
+
+        /* Luxury Telemetry Status Box */
+        .status-box {
+            background: var(--accent-soft);
+            border: 1px solid var(--border-heavy);
+            padding: 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-align: left;
+            margin-bottom: 28px;
+        }
+
+        .status-icon {
+            font-size: 1.5rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.96); }
+        }
+
+        .status-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-title {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .status-desc {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* Luxury Contact Channels Grid */
+        .contact-box {
+            border-top: 1px dashed rgba(14, 12, 9, 0.08);
+            padding-top: 24px;
+            margin-bottom: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            text-align: left;
+        }
+
+        .contact-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .contact-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted2);
+            font-weight: 600;
+        }
+
+        .contact-value {
+            font-family: var(--mono);
+            font-size: 0.92rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .contact-value a {
+            color: inherit;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(14, 12, 9, 0.15);
+            transition: all 0.2s;
+        }
+
+        .contact-value a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Action Buttons Matrix */
+        .action-row {
+            margin-bottom: 24px;
+        }
+
+        .btn-refresh {
+            width: 100%;
+            height: 44px;
+            border-radius: 6px;
+            background: var(--primary);
+            color: #ffffff;
+            border: 1px solid var(--primary);
+            font-family: var(--sans);
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(14,12,9,0.1);
+        }
+
+        .btn-refresh:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(168,125,30,0.2);
+        }
+
+        .btn-refresh:active {
+            transform: translateY(0);
+        }
+
+        /* Premium Editorial Footer Line */
+        .divider-line {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(14,12,9,0.06), transparent);
+            margin-bottom: 18px;
+        }
+
+        .support-notice {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted2);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<div class="portal-container">
+    <div class="brand-icon">AOS</div>
+
+    <h2>Evaluation Period Concluded</h2>
+    <p>The operational access window for this terminal session has expired. To preserve ledger data integrity, options require workspace activation.</p>
+
+    <div class="status-box">
+        <span class="status-icon">⏳</span>
+        <div class="status-content">
+            <span class="status-title">System Telemetry Status</span>
+            <span class="status-desc">Evaluation Horizon Met (00h 00m 00s)</span>
+        </div>
+    </div>
+
+    <div class="action-row">
+        <button class="btn-refresh" onclick="checkUpgrade()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Verify Premium Initialization
+        </button>
+    </div>
+
+    <div class="contact-box">
+        <div class="contact-item">
+            <span class="contact-label">Administration Desk</span>
+            <span class="contact-value">+91 70411 26244</span>
+        </div>
+        <div class="contact-item">
+            <span class="contact-label">Digital Support Routing</span>
+            <span class="contact-value"><a href="mailto:aurumos.software@gmail.com">aurumos.software@gmail.com</a></span>
+        </div>
+    </div>
+
+    <div class="divider-line"></div>
+    <div class="support-notice">AurumOS Architecture Management</div>
+</div>
+
+<script>
+function checkUpgrade() {
+    if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.recover_from_trial === 'function') {
+        window.pywebview.api.recover_from_trial().then(function(res) {
+            if (res && res.success) {
+                // Backend natively shifts view target to login.html protocol seamlessly
+                console.log("Telemetry target match confirmed. Terminal authorized.");
+            } else {
+                alert(res.message || "Your workspace profile is currently queued under standard limits. Please complete transaction verification with your node administrator.");
+            }
+        }).catch(function(e) {
+            console.error("Communication pipeline failure:", e);
+        });
+    } else {
+        console.warn("Desktop framework link unavailable or uninitialized.");
+    }
+}
+</script>
+
+</body>
+</html>

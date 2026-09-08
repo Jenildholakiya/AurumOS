@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Karigar Details</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-ln:rgba(22,163,74,0.18);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-ln:rgba(220,38,38,0.18);
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);--amber-ln:rgba(217,119,6,0.18);
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 1px 3px rgba(14,12,9,0.04), 0 10px 30px rgba(14,12,9,0.05);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+
+/* ── HEADER ── */
+header{
+  height:58px;background:var(--white);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;position:relative;gap:12px;z-index:100;
+}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 4%,var(--gold-ln) 50%,transparent 96%);}
+.h-back{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:1px solid var(--rule);border-radius:8px;background:var(--white);font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--ink3);text-transform:uppercase;letter-spacing:0.4px;transition:all 0.15s;}
+.h-back:hover{background:var(--gold-bg);border-color:var(--gold);color:var(--gold3);transform:translateX(-2px);}
+.h-brand{font-family:var(--serif);font-size:1.2rem;color:var(--ink);font-weight:400;letter-spacing:-0.2px;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-tools{display:flex;align-items:center;gap:14px;}
+.h-clock{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:7px;border:1px solid var(--rule);}
+
+/* ── CONTENT SHELL (table owns the scroll) ── */
+.content{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px;overflow:hidden;}
+
+.page-head{flex-shrink:0;}
+.page-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;color:var(--ink);letter-spacing:-0.4px;display:flex;align-items:baseline;gap:9px;}
+.page-title em{font-style:italic;color:var(--gold3);}
+.page-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+
+/* ── COMPACT PROFILE BAR ── */
+.hero{flex-shrink:0;background:var(--white);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--sh-lux);
+  display:flex;align-items:stretch;overflow:hidden;transition:box-shadow 0.2s ease;}
+.hero:hover{box-shadow:0 8px 28px rgba(14,12,9,0.07),0 2px 6px rgba(14,12,9,0.03);}
+.hero-id{display:flex;align-items:center;gap:16px;padding:18px 22px;min-width:0;flex:1;}
+.hero-av{width:62px;height:62px;border-radius:13px;flex-shrink:0;
+  background:linear-gradient(140deg,var(--gold3),var(--gold2));color:#fff;
+  font-family:var(--serif);font-size:1.5rem;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 16px rgba(37,99,235,0.28);text-transform:uppercase;}
+.hero-meta{min-width:0;}
+.hero-name{font-family:var(--serif);font-size:1.45rem;color:var(--ink);letter-spacing:-0.3px;line-height:1.1;}
+.hero-specialty{font-size:0.76rem;color:var(--muted);margin-top:3px;}
+.hero-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:0.64rem;font-weight:600;letter-spacing:0.2px;border:1px solid var(--rule);color:var(--ink3);background:var(--cream2);max-width:280px;}
+.chip svg{width:11px;height:11px;flex-shrink:0;}
+.chip.gold{background:var(--gold-bg);border-color:var(--gold-ln);color:var(--gold3);}
+.chip .chip-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0;}
+.dot.green{background:var(--green);box-shadow:0 0 8px rgba(22,163,74,0.4);}
+.dot.amber{background:var(--amber);box-shadow:0 0 8px rgba(217,119,6,0.4);}
+.dot.red{background:var(--red);box-shadow:0 0 8px rgba(220,38,38,0.4);}
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;font-size:0.56rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:1px solid transparent;}
+.pill.green{background:var(--green-bg);color:var(--green);border-color:var(--green-ln);}
+.pill.amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-ln);}
+.pill.red{background:var(--red-bg);color:var(--red);border-color:var(--red-ln);}
+
+/* metric strip */
+.hero-metrics{flex:1.5;display:grid;grid-template-columns:repeat(4,1fr);border-left:1px solid var(--rule2);}
+.tile{padding:14px 18px;display:flex;flex-direction:column;justify-content:center;position:relative;}
+.tile + .tile::before{content:'';position:absolute;left:0;top:18%;bottom:18%;width:1px;background:var(--rule2);}
+.tile-lbl{font-size:0.5rem;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.tile-lbl svg{width:11px;height:11px;}
+.tile-val{font-family:Arial, Helvetica, sans-serif;font-size:1.2rem;font-weight:700;line-height:1;letter-spacing:-0.3px;}
+.tile-val.blue{color:var(--blue);}.tile-val.gold{color:var(--gold3);}.tile-val.amber{color:var(--amber);}.tile-val.red{color:var(--red);}
+.tile-sub{font-size:0.62rem;color:var(--muted);margin-top:5px;line-height:1.3;}
+
+/* ── ORDERS CARD (tall, owns scroll) ── */
+.view-card{flex:1;min-height:0;background:var(--white);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--sh-lux);display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.2s ease;}
+.view-card:hover{box-shadow:0 8px 28px rgba(14,12,9,0.07),0 2px 6px rgba(14,12,9,0.03);}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg,var(--cream2),var(--white));flex-shrink:0;flex-wrap:wrap;}
+.card-title{font-family:var(--serif);font-size:1.05rem;font-weight:400;color:var(--ink);letter-spacing:-0.2px;}
+.card-title em{color:var(--gold3);font-style:italic;}
+.head-acts{display:flex;align-items:center;gap:14px;}
+.search-wrapper{position:relative;width:240px;}
+.search-wrapper input{width:100%;height:34px;padding:0 12px 0 32px;border:1px solid var(--rule);border-radius:8px;font-size:0.78rem;background:var(--white);outline:none;transition:all 0.15s;}
+.search-wrapper input:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(37,99,235,0.07);}
+.search-wrapper svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;}
+.row-count{font-family:var(--mono);font-size:0.66rem;color:var(--muted2);white-space:nowrap;}
+
+.btn-print{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 15px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;font-family:var(--sans);}
+.btn-print:hover{background:var(--gold3);border-color:var(--gold3);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3);}
+.btn-print svg{width:13px;height:13px;}
+
+.tab-bar{display:flex;gap:2px;padding:0 20px;background:var(--white);border-bottom:1px solid var(--rule);flex-shrink:0;}
+.tab{height:40px;padding:0 18px;border:1px solid transparent;border-bottom:none;border-radius:9px 9px 0 0;font-size:0.72rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.15s;background:transparent;font-family:var(--sans);text-transform:uppercase;letter-spacing:0.4px;}
+.tab:hover{color:var(--ink);background:var(--cream2);}
+.tab.active{background:var(--white);color:var(--ink);border-color:var(--rule);border-bottom-color:var(--white);box-shadow:inset 0 -2px 0 var(--gold2);}
+
+.scroll-frame{flex:1;min-height:0;overflow:auto;}
+.scroll-frame::-webkit-scrollbar{width:8px;height:8px;}
+.scroll-frame::-webkit-scrollbar-thumb{background:var(--cream3);border-radius:99px;border:2px solid var(--white);}
+.scroll-frame::-webkit-scrollbar-track{background:transparent;}
+
+table{width:100%;border-collapse:collapse;}
+th{background:var(--cream2);padding:11px 16px;text-align:left;font-size:0.54rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:10;}
+td{padding:12px 16px;font-size:0.8rem;font-weight:500;border-bottom:1px solid var(--rule2);vertical-align:middle;color:var(--ink2);}
+tbody tr{transition:background 0.12s;}
+tbody tr:hover td{background:rgba(37,99,235,0.04);}
+tr:last-child td{border-bottom:none;}
+tbody tr:nth-child(even) td{background:rgba(14,12,9,0.012);}
+tbody tr:nth-child(even):hover td{background:rgba(37,99,235,0.04);}
+.num{text-align:right;font-family:Arial, Helvetica, sans-serif;font-weight:600;}
+.mono-cell{font-family:var(--mono);font-size:0.74rem;}
+.txt-muted{color:var(--muted2)!important;}
+.txt-red{color:var(--red)!important;}
+
+.items-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:6px;font-size:0.66rem;font-weight:700;cursor:pointer;background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);transition:all 0.12s;}
+.items-btn:hover{background:rgba(37,99,235,0.15);transform:translateY(-1px);}
+
+.empty{padding:48px 20px;text-align:center;color:var(--muted2);font-size:0.82rem;line-height:1.8;}
+
+/* ── ITEM MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,0.42);backdrop-filter:blur(6px);z-index:9000;display:none;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.item-modal{background:var(--white);width:540px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;border-radius:16px;box-shadow:0 24px 60px rgba(14,12,9,0.3);border:1px solid var(--rule);overflow:hidden;animation:pop .22s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(.94) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-bar{height:4px;background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold3));border-top-left-radius:16px;border-top-right-radius:16px;}
+.modal-head{padding:18px 22px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.modal-title{font-family:var(--serif);font-size:1.15rem;font-weight:400;}
+.modal-title em{color:var(--gold3);font-style:italic;}
+.modal-sub{font-size:0.72rem;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+.modal-x{border:none;background:var(--cream2);cursor:pointer;color:var(--muted2);font-size:1rem;width:28px;height:28px;border-radius:7px;line-height:1;transition:all 0.13s;flex-shrink:0;}
+.modal-x:hover{background:var(--red);color:#fff;}
+.modal-body{padding:12px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.item-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;background:var(--cream);border:1px solid var(--rule2);transition:background 0.12s;}
+.item-row:hover{background:var(--cream2);}
+.item-name{flex:1;font-size:0.8rem;font-weight:700;color:var(--ink);}
+.item-idx{width:24px;height:24px;border-radius:7px;background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);font-family:var(--mono);font-size:0.68rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.item-meta{font-family:var(--mono);font-size:0.68rem;color:var(--muted);text-align:right;line-height:1.55;flex-shrink:0;}
+.item-meta b{color:var(--ink2);font-weight:700;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:0.78rem;font-weight:600;padding:12px 22px;border-radius:8px;z-index:9999;opacity:0;pointer-events:none;transition:all 0.2s ease;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+</style>
+</head>
+<body>
+
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+  <header>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="h-back" onclick="goBack()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Master Register
+      </button>
+      <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Karigar Details</div>
+    </div>
+    <div class="h-tools">
+      <span class="h-clock" id="clock">-- : --</span>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="page-head">
+      <div class="page-title">Karigar <em>Details</em></div>
+      <div class="page-sub" id="pageSub">Full artisan profile &amp; complete job-work record.</div>
+    </div>
+
+    <!-- ── COMPACT PROFILE BAR ── -->
+    <div class="hero" id="hero">
+      <div class="hero-id">
+        <div class="hero-av" id="d-avatar">?</div>
+        <div class="hero-meta">
+          <div class="hero-name" id="d-name">Loading…</div>
+          <div class="hero-specialty" id="d-specialty">—</div>
+          <div class="hero-chips" id="d-chips"></div>
+        </div>
+      </div>
+      <div class="hero-metrics" id="d-tiles"></div>
+    </div>
+
+    <!-- ── ORDERS REGISTER ── -->
+    <div class="view-card">
+      <div class="card-head">
+        <div class="card-title">Job-Work <em>Order Register</em></div>
+        <div class="head-acts">
+          <div class="search-wrapper">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="orderSearch" placeholder="Search orders…" oninput="renderOrders()">
+          </div>
+          <span class="row-count" id="orderCount">0 orders</span>
+          <button class="btn-print" onclick="printStatement()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab active" id="tab-all" onclick="switchTab('all')">All Orders</button>
+        <button class="tab" id="tab-ongoing" onclick="switchTab('ongoing')">Ongoing</button>
+        <button class="tab" id="tab-completed" onclick="switchTab('completed')">Completed</button>
+      </div>
+      <div class="scroll-frame">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:110px;">Order No</th>
+              <th style="width:100px;">Issue Date</th>
+              <th style="width:100px;">Due Date</th>
+              <th style="width:120px;">Status</th>
+              <th class="num" style="width:110px;">Given Fine (g)</th>
+              <th class="num" style="width:100px;">Touch (%)</th>
+              <th class="num" style="width:120px;">Returned (g)</th>
+              <th class="num" style="width:150px;">Loss (g) / Allow.</th>
+              <th style="width:90px; text-align:center;">Items</th>
+            </tr>
+          </thead>
+          <tbody id="order-tbody">
+            <tr><td colspan="9" class="empty">Loading orders…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ── ITEM DETAIL MODAL ── -->
+<div class="modal-bg" id="itemModalBg" onclick="closeItemModal()">
+  <div class="item-modal" onclick="event.stopPropagation()">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Order <em>Items</em></div>
+        <div class="modal-sub" id="itemModalSub">—</div>
+      </div>
+      <button class="modal-x" onclick="closeItemModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="itemModalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+var KID     = 0;
+var KNAME   = '';
+var profile = null;
+var ORDERS  = [];
+var tab     = 'all';
+
+// ── BOOT ─────────────────────────────────────────────────────────
+function getApi(){ return window.pywebview && window.pywebview.api; }
+
+(function boot(n){
+    if (getApi()) { load(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+    else document.getElementById('order-tbody').innerHTML =
+        '<tr><td colspan="9" class="empty">Bridge not ready.</td></tr>';
+})(50);
+
+function load() {
+    if (!getApi()) return;
+    var api = getApi();
+    // Selection stashed by the master register in localStorage (works across
+    // file:// navigations without relying on fragile URL query strings).
+    try {
+        KID   = parseInt(localStorage.getItem('aurum_karigar_id') || '0', 10) || 0;
+        KNAME = localStorage.getItem('aurum_karigar_name') || '';
+    } catch(e) { KID = 0; KNAME = ''; }
+
+    if (!KID) {
+        document.getElementById('order-tbody').innerHTML =
+            '<tr><td colspan="9" class="empty">No karigar selected. Return to the Master Register and double-click an artisan.</td></tr>';
+        return;
+    }
+    fetchData(api);
+}
+
+function fetchData(api) {
+    // Profile from the master list (carries metrics + health)
+    api.get_all_karigars().then(function(list){
+        var k = (Array.isArray(list) ? list : []).find(function(x){ return x.id === KID; });
+        profile = k || null;
+        renderProfile();
+    }).catch(function(){ renderProfile(); });
+
+    // Orders for this karigar
+    api.get_karigar_orders(KID).then(function(list){
+        ORDERS = Array.isArray(list) ? list : [];
+        renderOrders();
+    }).catch(function(e){
+        document.getElementById('order-tbody').innerHTML =
+            '<tr><td colspan="9" class="empty">Error loading orders: ' + e + '</td></tr>';
+    });
+}
+
+// ── RENDER: PROFILE BAR ─────────────────────────────────────────
+function renderProfile() {
+    var k = profile;
+    if (!k) {
+        document.getElementById('d-name').textContent = KNAME || 'Unknown Karigar';
+        document.getElementById('pageSub').textContent = 'No profile data found for this artisan.';
+        return;
+    }
+    var initial  = (k.name || '?').charAt(0).toUpperCase();
+    var given    = parseFloat(k.metal_given || 0);
+    var holding  = parseFloat(k.metal_holding || 0);
+    var lossWt   = parseFloat(k.ghat_wt || 0);
+    var overAllow= parseFloat(k.over_allowed || 0);
+    var allow    = parseFloat(k.ghat_allowance || 0);
+    var ghatNorm = parseFloat(k.ghat_norm || 0.5);
+    var ongoing  = parseInt(k.ongoing || 0);
+    var completed= parseInt(k.completed || 0);
+    var oldest   = parseInt(k.oldest_job_days || 0);
+    var health   = k.health || 'GREEN';
+    var active   = (k.active === 1 || k.active === true || k.active === '1');
+
+    var pillCls = health === 'GREEN' ? 'green' : (health === 'AMBER' ? 'amber' : 'red');
+    var pillTxt = health === 'GREEN' ? 'Normal' : (health === 'AMBER' ? 'Over Allowance' : 'Overdue (Critical)');
+    var dotCls  = health === 'GREEN' ? 'green' : (health === 'AMBER' ? 'amber' : 'red');
+
+    document.getElementById('d-avatar').textContent    = initial;
+    document.getElementById('d-name').textContent      = k.name || '—';
+    document.getElementById('d-specialty').textContent = (k.specialty || '—');
+
+    var chips = '';
+    chips += '<span class="chip"><span class="pill ' + pillCls + '"><span class="dot ' + dotCls + '"></span>' + pillTxt + '</span></span>';
+    if (k.phone)   chips += chip(phoneIcon(), k.phone);
+    if (k.address) chips += chip(pinIcon(), k.address);
+    chips += chip(allowIcon(), 'Allowance ' + f3(allow) + ' g');
+    chips += chip(normIcon(), 'Ghat Norm ' + f3(ghatNorm) + ' g');
+    chips += chip(jobIcon(), ongoing + ' ongoing · ' + completed + ' done');
+    chips += chip(active ? activeIcon() : inactiveIcon(), active ? 'Active' : 'Inactive');
+    document.getElementById('d-chips').innerHTML = chips;
+
+    document.getElementById('d-tiles').innerHTML =
+        tile('Metal Given',   f3(given) + ' g', 'blue', 'Total fine issued', metalIcon()) +
+        tile('Holding',      holding > 0 ? f3(holding) + ' g' : '—', 'gold', 'Out with artisan', holdIcon()) +
+        tile('Total Loss',   f3(lossWt) + ' g', 'amber', 'From completed jobs', lossIcon()) +
+        tile('Over Allow',   overAllow > 0 ? '+' + f3(overAllow) + ' g' : '0.000 g', 'red', 'Beyond allowance', alertIcon());
+}
+
+// ── RENDER: ORDERS ───────────────────────────────────────────────
+function renderOrders() {
+    var tbody = document.getElementById('order-tbody');
+    var q = (document.getElementById('orderSearch').value || '').toLowerCase().trim();
+
+    var rows = ORDERS.filter(function(o){
+        var isCompleted = (o.status === 'completed');
+        if (tab === 'ongoing'   && isCompleted) return false;
+        if (tab === 'completed' && !isCompleted) return false;
+        if (!q) return true;
+        return (o.order_no||'').toLowerCase().indexOf(q) !== -1
+            || (o.issue_date||'').indexOf(q) !== -1
+            || (o.status||'').toLowerCase().indexOf(q) !== -1;
+    });
+
+    document.getElementById('orderCount').textContent =
+        rows.length + ' order' + (rows.length !== 1 ? 's' : '');
+
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty">' +
+            (q ? 'No orders match your search.' : 'No job-work orders recorded for this artisan yet.') + '</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map(function(o){
+        var isCompleted = (o.status === 'completed');
+        var given   = parseFloat(o.given_fine_wt || 0);
+        var touch   = parseFloat(o.given_touch || 0);
+        var returned= parseFloat(o.returned_fine || 0);
+        var loss    = parseFloat(o.loss || 0);
+        var allow   = parseFloat(o.allowance || 0);
+        var over    = Math.max(0, loss - allow);
+
+        var stCls = isCompleted ? 'green' : 'amber';
+        var stTxt = isCompleted ? 'Completed' : 'Ongoing';
+        var stHtml = '<span class="pill ' + stCls + '">' + stTxt + '</span>';
+
+        var lossCls = over > 0 ? 'txt-red' : '';
+        var lossHtml = '<span style="font-weight:700;">' + f3(loss) + ' g</span>'
+            + '<div class="txt-muted" style="font-size:0.62rem;font-family:var(--mono);">of ' + f3(allow) + ' g'
+            + (over > 0 ? ' · <span class="txt-red">+' + f3(over) + ' g</span>' : '') + '</div>';
+
+        var retHtml = isCompleted ? f3(returned) + ' g' : '<span class="txt-muted">—</span>';
+        var itemsCount = (o.items || []).length;
+
+        return '<tr>'
+            + '<td class="mono-cell" style="color:var(--gold3);font-weight:600;">' + hesc(o.order_no || '—') + '</td>'
+            + '<td class="mono-cell" style="color:var(--muted);">' + hesc(o.issue_date || '—') + '</td>'
+            + '<td class="mono-cell" style="color:var(--muted);">' + hesc(o.due_date || '—') + '</td>'
+            + '<td>' + stHtml + '</td>'
+            + '<td class="num">' + f3(given) + ' g</td>'
+            + '<td class="num">' + f2(touch) + '</td>'
+            + '<td class="num">' + retHtml + '</td>'
+            + '<td class="num ' + lossCls + '">' + lossHtml + '</td>'
+            + '<td style="text-align:center;">'
+              + (itemsCount
+                  ? '<button class="items-btn" onclick="openItemModal(' + o.id + ')">' + itemsCount + '&nbsp;items&nbsp;›</button>'
+                  : '<span class="txt-muted">—</span>')
+            + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+// ── ITEM MODAL ───────────────────────────────────────────────────
+function openItemModal(orderId) {
+    var o = ORDERS.find(function(x){ return x.id === orderId; });
+    if (!o) return;
+    var items = o.items || [];
+    document.getElementById('itemModalSub').textContent =
+        'Order ' + (o.order_no || o.id) + '  ·  ' + items.length + ' item' + (items.length !== 1 ? 's' : '');
+
+    var body = document.getElementById('itemModalBody');
+    if (!items.length) {
+        body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;">No item detail recorded for this order.</div>';
+    } else {
+        body.innerHTML = items.map(function(it, i){
+            var recv = parseInt(it.received || 0);
+            var meta = [];
+            meta.push('Given: <b>' + f3(it.fine_wt) + ' g</b> @ <b>' + f2(it.touch) + '%</b>');
+            meta.push('Exp. Return: <b>' + f3(it.expected_return_wt) + ' g</b>');
+            if (recv) {
+                meta.push('Received: <b>' + f3(it.recv_gross_wt) + ' g</b> @ <b>' + f2(it.recv_touch) + '%</b>');
+            } else {
+                meta.push('<span style="color:var(--amber);">Not yet received</span>');
+            }
+            return '<div class="item-row">'
+                + '<span class="item-idx">' + (i+1) + '</span>'
+                + '<span class="item-name">' + hesc(it.item_name || 'Unnamed Item') + '</span>'
+                + '<span class="item-meta">' + meta.join('<br>') + '</span>'
+                + '</div>';
+        }).join('');
+    }
+    document.getElementById('itemModalBg').classList.add('open');
+}
+function closeItemModal(){ document.getElementById('itemModalBg').classList.remove('open'); }
+
+// ── TABS ─────────────────────────────────────────────────────────
+function switchTab(name) {
+    tab = name;
+    document.getElementById('tab-all').classList.toggle('active', name === 'all');
+    document.getElementById('tab-ongoing').classList.toggle('active', name === 'ongoing');
+    document.getElementById('tab-completed').classList.toggle('active', name === 'completed');
+    renderOrders();
+}
+
+// ── NAV ─────────────────────────────────────────────────────────
+function goBack(){
+    if (getApi()) getApi().navigate('karigar_master.html');
+    else if (history.length > 1) history.back();
+}
+
+// ── PRINT: A4 STATEMENT (mirrors the ledger print engine) ───────────────
+function printStatement() {
+    if (!profile) { showToast('Profile still loading — please wait.'); return; }
+    var k = profile;
+    var now = new Date();
+    var dtStr = now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+    var tmStr = now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    var ref = 'KAR-' + (k.id || 0) + '-' + now.toISOString().slice(0,10).replace(/-/g,'');
+
+    var given=0, holding=0, loss=0, over=0, ongoing=0, completed=0;
+    ORDERS.forEach(function(o){
+        var g = parseFloat(o.given_fine_wt || 0);
+        var isC = (o.status === 'completed');
+        given += g;
+        if (!isC) holding += g;
+        var l = parseFloat(o.loss || 0);
+        loss += l;
+        over += Math.max(0, l - parseFloat(o.allowance || 0));
+        if (isC) completed++; else ongoing++;
+    });
+
+    var B = '1px solid rgba(14,12,9,0.08)';
+
+    function orderRow(o, idx) {
+        var isC = (o.status === 'completed');
+        var g  = parseFloat(o.given_fine_wt || 0);
+        var t  = parseFloat(o.given_touch || 0);
+        var ret= parseFloat(o.returned_fine || 0);
+        var l  = parseFloat(o.loss || 0);
+        var al = parseFloat(o.allowance || 0);
+        var ov = Math.max(0, l - al);
+        var st = isC
+            ? 'background:rgba(22,163,74,0.08);color:#16a34a;border:0.5px solid rgba(22,163,74,0.2);'
+            : 'background:rgba(217,119,6,0.08);color:#d97706;border:0.5px solid rgba(217,119,6,0.2);';
+        return '<tr>'
+            + '<td style="padding:4px 6px;text-align:center;font-family:Arial,sans-serif;font-size:6pt;color:#94a3b8;border-right:'+B+';border-bottom:'+B+';">'+idx+'</td>'
+            + '<td style="padding:4px 7px;font-family:Arial,sans-serif;font-size:7pt;color:#5c5a52;border-right:'+B+';border-bottom:'+B+';">'+hesc(o.order_no||'--')+'</td>'
+            + '<td style="padding:4px 7px;font-family:Arial,sans-serif;font-size:7pt;color:#5c5a52;border-right:'+B+';border-bottom:'+B+';">'+hesc(o.issue_date||'--')+'</td>'
+            + '<td style="padding:4px 7px;font-family:Arial,sans-serif;font-size:7pt;color:#5c5a52;border-right:'+B+';border-bottom:'+B+';">'+hesc(o.due_date||'--')+'</td>'
+            + '<td style="padding:4px 6px;border-right:'+B+';border-bottom:'+B+';"><span style="padding:2px 7px;border-radius:3px;font-size:6pt;text-transform:uppercase;letter-spacing:0.3px;'+st+'">'+(isC?'Completed':'Ongoing')+'</span></td>'
+            + '<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#0e0c09;border-right:'+B+';border-bottom:'+B+';">'+f3(g)+' g</td>'
+            + '<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#0e0c09;border-right:'+B+';border-bottom:'+B+';">'+f2(t)+'</td>'
+            + '<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#0e0c09;border-right:'+B+';border-bottom:'+B+';">'+ (isC ? f3(ret)+' g' : '—') +'</td>'
+            + '<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7pt;'+(ov>0?'color:#dc2626;':'color:#0e0c09;')+'border-right:'+B+';border-bottom:'+B+';">'+f3(l)+' / '+f3(al)+' g'+(ov>0?' (+'+f3(ov)+' g)':'')+'</td>'
+            + '<td style="padding:4px 7px;text-align:right;font-family:Arial,sans-serif;font-size:7.5pt;color:#0e0c09;border-bottom:'+B+';">'+((o.items||[]).length)+'</td>'
+            + '</tr>';
+    }
+
+    function build(biz) {
+        var chunkSize = 20;
+        var totalPages = Math.max(1, Math.ceil(ORDERS.length / chunkSize));
+        var pagesHtml = '';
+
+        for (var p = 0; p < ORDERS.length || pagesHtml === ''; p += chunkSize) {
+            var currentPageIndex = Math.floor(p / chunkSize) + 1;
+            var chunk = ORDERS.slice(p, p + chunkSize);
+            var isLastPage = (currentPageIndex === totalPages);
+
+            var rowsHtml = chunk.map(function(o, idx){ return orderRow(o, p + idx + 1); }).join('');
+            var rendered = chunk.length;
+            for (var pp = 0; pp < (chunkSize - rendered); pp++) {
+                rowsHtml += '<tr style="height:24px;">'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-right:'+B+';border-bottom:'+B+';">&nbsp;</td>'
+                    + '<td style="border-bottom:'+B+';">&nbsp;</td>'
+                    + '</tr>';
+            }
+
+            var totalsBoxHtml = '';
+            if (isLastPage) {
+                totalsBoxHtml = '<div style="background:#e3d9be;border:1px solid rgba(14,12,9,0.12);border-top:none;border-radius:0 0 6px 6px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;margin-top:-1px;">'
+                    + '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">SUMMARY ('+ORDERS.length+' orders)</div>'
+                    + '<div style="display:flex;gap:50px;font-family:Arial,Helvetica,sans-serif;font-size:11pt;text-align:right;font-weight:700;line-height:1.4;">'
+                        + '<div><div style="color:#dc2626;">'+f3(given)+' g given</div><div style="color:#d97706;margin-top:2px;">'+f3(loss)+' g loss</div></div>'
+                        + '<div style="min-width:140px;font-size:12pt;"><div style="color:#1d4ed8;">'+f3(holding)+' g held</div><div style="color:#dc2626;margin-top:2px;">'+(over>0?'+'+f3(over)+' g':'0.000 g')+' over</div></div>'
+                    + '</div></div>';
+            }
+
+            pagesHtml += '<div class="print-page">'
+                + '<div class="wm">Aurum<em>OS</em></div>'
+                + '<div class="top-bar"></div>'
+                + '<div class="hdr">'
+                    + '<div class="brand-container-left"><div class="brand">Aurum<em>OS</em></div><div class="brand-sub">Jewellery Business Management</div><div class="brand-acc"><div class="brand-dash"></div><span class="brand-lbl">Karigar Statement</span></div></div>'
+                    + '<div class="rpt-r">'
+                        + (biz.name?'<div class="biz">'+hesc(biz.name)+'</div>':'')+(biz.city?'<div class="meta">'+hesc(biz.city)+(biz.phone?' | '+hesc(biz.phone):'')+'</div>':'')
+                        + '<div class="rpt-title">Karigar Job-Work <em>Statement</em></div>'
+                        + '<div class="meta">Artisan: '+hesc(k.name||'—')+(k.specialty?' · '+hesc(k.specialty):'')+'<br>Printed: '+dtStr+' at '+tmStr+'</div>'
+                        + '<div class="badge">'+ref+'</div>'
+                    + '</div>'
+                + '</div>'
+                + (currentPageIndex === 1
+                    ? '<div class="sums">'
+                        + '<div class="sb r"><div class="sl">Metal Given</div><div class="sv">'+f3(given)+' g</div></div>'
+                        + '<div class="sb g"><div class="sl">Metal Holding</div><div class="sv">'+f3(holding)+' g</div></div>'
+                        + '<div class="sb r"><div class="sl">Total Loss</div><div class="sv">'+f3(loss)+' g</div></div>'
+                        + '<div class="sb r"><div class="sl">Over Allowance</div><div class="sv">'+(over>0?'+'+f3(over)+' g':'0.000 g')+'</div></div>'
+                    + '</div>'
+                    : '')
+                + '<table class="tbl"><thead><tr class="hr">'
+                    + '<th style="width:20px;text-align:center;">#</th>'
+                    + '<th style="min-width:64px;">Order No</th>'
+                    + '<th style="min-width:58px;">Issue</th>'
+                    + '<th style="min-width:58px;">Due</th>'
+                    + '<th style="min-width:54px;text-align:center;">Status</th>'
+                    + '<th class="tr" style="min-width:74px;">Given (g)</th>'
+                    + '<th class="tr" style="min-width:46px;">Touch</th>'
+                    + '<th class="tr" style="min-width:78px;">Returned (g)</th>'
+                    + '<th class="tr" style="min-width:120px;">Loss / Allow (g)</th>'
+                    + '<th class="tr" style="min-width:38px;">Items</th>'
+                + '</tr></thead><tbody>'+rowsHtml+'</tbody></table>'
+                + totalsBoxHtml
+                + '<div class="print-footer">'
+                    + '<div class="sigs"><div class="sig"><div class="sigline">Prepared By</div></div><div class="sig"><div class="sigline">Checked By</div></div><div class="sig"><div class="sigline">Authorised Signatory</div></div></div>'
+                    + '<div class="fbar">'
+                        + '<div class="ftxt"><div>System-generated karigar statement from AurumOS Jewellery Management.</div><div>Page '+currentPageIndex+' of '+totalPages+' — Generated: '+dtStr+' at '+tmStr+'.</div></div>'
+                        + '<div style="text-align:right;"><div class="fbrand">Aurum<em>OS</em></div><div class="fbsub">Jewellery Business Management</div></div>'
+                    + '</div>'
+                    + '<div class="bot-bar"></div>'
+                + '</div>'
+                + '</div>';
+
+            if (ORDERS.length === 0) break;
+        }
+
+        var css = '@page{size:A4 portrait;margin:0;}'
+            + '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;}'
+            + 'html,body{font-family:Arial,Helvetica,sans-serif;color:#0e0c09;background:#fff;}'
+            + '.print-page{width:210mm;height:297mm;position:relative;page-break-after:always;background:#fff;padding:8mm 10mm 42mm 10mm;overflow:hidden;}'
+            + '.print-page:last-child{page-break-after:avoid;}'
+            + '.wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-family:Georgia,serif;font-size:72pt;color:rgba(37,99,235,0.04);white-space:nowrap;letter-spacing:4px;user-select:none;pointer-events:none;z-index:0;}.wm em{font-style:italic;}'
+            + '.top-bar{height:6px;background:linear-gradient(90deg,#1d4ed8,#2563eb,#3b82f6,#2563eb,#1d4ed8);margin:-8mm -10mm 0 -10mm;}'
+            + '.hdr{display:flex;justify-content:space-between;align-items:center;padding:5mm 0 4mm;border-bottom:1.5px solid rgba(37,99,235,0.22);margin-bottom:4mm;}'
+            + '.brand-container-left{display:flex;flex-direction:column;justify-content:center;text-align:left;}'
+            + '.brand{font-family:Georgia,serif;font-size:32pt;font-weight:700;color:#0e0c09;line-height:0.95;letter-spacing:-1.2px;}'
+            + '.brand em{color:#2563eb;font-style:italic;}'
+            + '.brand-sub{font-size:7.5pt;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-top:4px;}'
+            + '.brand-acc{display:flex;align-items:center;gap:5px;margin-top:5px;}'
+            + '.brand-dash{height:2px;width:16px;background:linear-gradient(90deg,#2563eb,#3b82f6);border-radius:99px;}'
+            + '.brand-lbl{font-size:5.5pt;color:#2563eb;text-transform:uppercase;letter-spacing:0.8px;}'
+            + '.rpt-r{text-align:right;}.biz{font-family:Georgia,serif;font-size:14pt;color:#0e0c09;}'
+            + '.rpt-title{font-family:Georgia,serif;font-size:11pt;color:#0e0c09;margin-top:4px;}.rpt-title em{color:#2563eb;font-style:italic;}'
+            + '.meta{font-size:6.5pt;color:#64748b;margin-top:3px;line-height:1.6;}'
+            + '.badge{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:4px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);font-size:6pt;color:#2563eb;font-family:Arial,sans-serif;}'
+            + '.sums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4mm;}'
+            + '.sb{border:1px solid rgba(14,12,9,0.1);border-radius:5px;padding:6px 9px;position:relative;z-index:1;}'
+            + '.sb.r{border-top:3px solid #dc2626;background:#fff1f2;}.sb.g{border-top:3px solid #16a34a;background:#f0fdf4;}'
+            + '.sl{font-size:5.5pt;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:3px;}'
+            + '.sb.r .sl{color:#f87171;}.sb.g .sl{color:#22c55e;}'
+            + '.sv{font-family:Arial,sans-serif;font-size:11pt;line-height:1;}.sb.r .sv{color:#dc2626;}.sb.g .sv{color:#16a34a;}'
+            + '.tbl{width:100%;border-collapse:collapse;border:1px solid rgba(14,12,9,0.1);border-bottom:none;z-index:1;position:relative;}'
+            + '.tbl .hr th{padding:5px 7px;font-size:6pt;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-right:1px solid rgba(14,12,9,0.08);border-bottom:2px solid rgba(14,12,9,0.12);background:#f8fafb;color:#64748b;}'
+            + '.tbl .hr th.tr{text-align:right;}.tbl td{vertical-align:middle;}'
+            + '.print-footer{position:absolute;bottom:0;left:10mm;right:10mm;padding-bottom:4mm;background:#fff;z-index:2;}'
+            + '.sigs{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:4mm;}'
+            + '.sig{text-align:center;padding:0 10px;}'
+            + '.sigline{border-top:1px solid rgba(14,12,9,0.2);padding-top:4px;font-size:6pt;color:#64748b;}'
+            + '.fbar{padding:3mm 0 0;border-top:1px solid rgba(37,99,235,0.18);display:flex;justify-content:space-between;align-items:flex-end;}'
+            + '.ftxt{font-size:5.5pt;color:#94a3b8;line-height:1.8;}'
+            + '.fbrand{font-family:Georgia,serif;font-size:20pt;font-weight:700;color:#0e0c09;line-height:1;}.fbrand em{color:#2563eb;font-style:italic;}'
+            + '.fbsub{font-size:7pt;font-weight:600;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;margin-top:2px;}'
+            + '.bot-bar{height:5px;background:linear-gradient(90deg,#1d4ed8,#2563eb,#3b82f6,#2563eb,#1d4ed8);margin-top:4mm;}';
+
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AurumOS Karigar Statement</title>'
+            + '<style>' + css + '</style></head><body>' + pagesHtml + '</body></html>';
+
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.open_print_window) {
+            window.pywebview.api.open_print_window(html).then(function(r){
+                if (r && r.status !== 'success') showToast('Print error: ' + (r && r.message || 'unknown'));
+            }).catch(function(e){ showToast('Print error: ' + e); });
+        } else {
+            var w = window.open('', '_blank', 'width=900,height=750');
+            w.document.open(); w.document.write(html); w.document.close();
+        }
+    }
+
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_settings) {
+        window.pywebview.api.get_settings().then(function(res){
+            var biz = {name:'',city:'',phone:''};
+            if (res && res.data) { var d=res.data; biz.name=d.business_name||d.owner_name||''; biz.city=d.city||''; biz.phone=d.owner_phone||''; }
+            build(biz);
+        }).catch(function(){ build({name:'',city:'',phone:''}); });
+    } else { build({name:'',city:'',phone:''}); }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function hesc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function f2(v){ return parseFloat(v||0).toFixed(2); }
+function f3(v){ return parseFloat(v||0).toFixed(3); }
+function tile(lbl, val, color, sub, icon){
+    return '<div class="tile"><div class="tile-lbl">' + (icon||'') + lbl + '</div>'
+        + '<div class="tile-val ' + color + '">' + val + '</div>'
+        + '<div class="tile-sub">' + (sub||'') + '</div></div>';
+}
+function chip(innerSvg, txt){
+    return '<span class="chip">' + innerSvg + '<span class="chip-txt">' + hesc(txt) + '</span></span>';
+}
+function phoneIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.51 12 19.79 19.79 0 0 1 1.18 3.4 2 2 0 0 1 3.16 1h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'; }
+function pinIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'; }
+function activeIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>'; }
+function inactiveIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'; }
+function allowIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'; }
+function normIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>'; }
+function jobIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'; }
+function metalIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg>'; }
+function holdIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="var(--gold3)" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>'; }
+function lossIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'; }
+function alertIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'; }
+
+var toastTimer;
+function showToast(msgTxt){
+    var t=document.getElementById('toast');
+    t.textContent=msgTxt; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+/* Clock */
+setInterval(function(){
+    var c=document.getElementById('clock');
+    if(c) c.textContent=new Date().toLocaleString('en-GB',{dateStyle:'short',timeStyle:'medium'});
+},1000);
+
+document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){ closeItemModal(); }
+});
+
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('karigar'); });
+</script>
+</body>
+</html>
