@@ -1117,6 +1117,18 @@ function retailFallback(s){
 // ── INIT ──────────────────────────────────────────────────────────
 initSidebar('dashboard');
 setTimeout(function(){try{renderUrgentInbox();}catch(e){}},1200);
+// Nudge a silent update check (debounced 15 min): keeps the terminal
+// minutes behind git pushes instead of hours. No UI unless something lands.
+setTimeout(function(){
+    try{
+        var last=parseInt(localStorage.getItem('aurum_silent_check')||'0',10);
+        if(Date.now()-last<15*60*1000) return;
+        localStorage.setItem('aurum_silent_check',String(Date.now()));
+        if(window.pywebview&&window.pywebview.api&&window.pywebview.api.auto_update_silent){
+            window.pywebview.api.auto_update_silent().catch(function(){});
+        }
+    }catch(e){}
+},8000);
 
 // ── PLAN BATCH ────────────────────────────────────────────────────
 function _updatePlanBatch() {
