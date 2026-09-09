@@ -4705,7 +4705,7 @@ class AurumAPI:
             self._auto_update_busy = False
 
     def auto_update_loop(self):
-        """Background loop: silent check at startup, then every 4 hours."""
+        """Background loop: silent check at startup, then every 30 minutes."""
         import time as _t
         try:
             _t.sleep(45)  # let the app settle first
@@ -4714,7 +4714,7 @@ class AurumAPI:
             LOG(f"[AUTO-UPDATE] {e}")
         while not getattr(self, '_app_closing', False):
             try:
-                for _ in range(4 * 3600):
+                for _ in range(30 * 60):
                     _t.sleep(1)
                     if getattr(self, '_app_closing', False):
                         break
