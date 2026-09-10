@@ -3290,7 +3290,7 @@ class AurumAPI:
             return {'status':'error','message':str(e)}
 
     def get_business_name(self):
-        try: return self.db.get_config("business_name","AurumOS")
+        try: return self.db.get_business_name()
         except: return "AurumOS"
 
     # -- STAFF -----------------------------------------------------------------
