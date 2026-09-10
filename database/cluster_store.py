@@ -209,3 +209,100 @@ def within_seat_limit(db, terminal_id, licensed):
         ).fetchone()
         ahead = int(row[0] or 0)
     return ahead < licensed
+
+
+# ── Relaying data between PCs ────────────────────────────────────────────
+# The shop server is a hub, not a peer. A staff PC sends only its own rows and
+# receives everyone else's, so a bill taken at one counter reaches the owner
+# and every other counter without any PC having to talk to any other directly.
+#
+# The merge itself is db_manager's apply_incoming_rows, which already handles
+# duplicate voucher numbers, line items following a renumbered parent, and
+# replayed payloads. Nothing here re-implements any of that.
+
+# Outbound progress is kept in sync_state under a reserved peer id. That table
+# already means "how far have I pulled from X"; this is the mirror of it, and
+# using a reserved id avoids a schema change to record it.
+OUTBOUND_PEER = '__outbound__'
+
+
+def cursors_by_origin(db):
+    """How far this PC has pulled from every other, as {origin: {table: version}}.
+
+    Sent with a pull so the other end returns only what is new. Empty on a
+    fresh PC, which is what makes a first sync fetch the shop's history.
+    """
+    out = {}
+    with db._get_connection() as conn:
+        rows = conn.execute(
+            "SELECT peer_device_id, table_name, last_version FROM sync_state "
+            "WHERE peer_device_id != ?", (OUTBOUND_PEER,)
+        ).fetchall()
+    for r in rows:
+        out.setdefault(r['peer_device_id'], {})[r['table_name']] = int(r['last_version'] or 0)
+    return out
+
+
+def outbound_cursor(db):
+    """How much of this PC's own data the other end has already acknowledged."""
+    out = {}
+    with db._get_connection() as conn:
+        rows = conn.execute(
+            "SELECT table_name, last_version FROM sync_state WHERE peer_device_id=?",
+            (OUTBOUND_PEER,)
+        ).fetchall()
+    return {r['table_name']: int(r['last_version'] or 0) for r in rows}
+
+
+def record_outbound(db, changes):
+    """Remember what was just accepted, so the next push sends only the delta.
+
+    Recorded after the other end confirms, never before: a push that fails
+    halfway is retried in full rather than silently skipped.
+    """
+    if not changes:
+        return
+    with db._get_connection() as conn:
+        for table, rows in changes.items():
+            if not rows:
+                continue
+            highest = max(int(r.get('sync_version') or 0) for r in rows)
+            conn.execute(
+                "INSERT OR REPLACE INTO sync_state "
+                "(peer_device_id, table_name, last_version, last_synced_at) "
+                "VALUES (?,?,?,datetime('now'))",
+                (OUTBOUND_PEER, table, highest))
+        conn.commit()
+
+
+def changes_from_others(db, asking_device_id, since_by_origin, limit=400):
+    """Everything this PC holds that did not come from the PC asking.
+
+    Grouped by the device each row originated on, because the receiver tracks
+    its progress per origin. Without that grouping a terminal could not tell
+    the server's own bills from another counter's, and would lose its place
+    every time a third PC joined.
+    """
+    asking = str(asking_device_id or '')
+    relayed = {}
+    with db._get_connection() as conn:
+        for table in db.SYNC_TABLES:
+            try:
+                origins = [
+                    row[0] for row in conn.execute(
+                        f"SELECT DISTINCT device_id FROM {table} "
+                        f"WHERE device_id IS NOT NULL AND device_id != '' AND device_id != ?",
+                        (asking,)).fetchall()
+                ]
+            except Exception:
+                continue                      # table predates the sync columns
+            for origin in origins:
+                seen = int((since_by_origin.get(origin) or {}).get(table, 0) or 0)
+                rows = conn.execute(
+                    f"SELECT * FROM {table} WHERE device_id=? AND sync_version>? "
+                    f"ORDER BY sync_version ASC LIMIT ?",
+                    (origin, seen, limit)).fetchall()
+                if rows:
+                    relayed.setdefault(origin, {})[table] = [dict(r) for r in rows]
+    return relayed
+

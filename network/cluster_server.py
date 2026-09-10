@@ -41,6 +41,11 @@ _ATTEMPTS_LOCK = threading.Lock()
 _MAX_ATTEMPTS = 5
 _ATTEMPT_WINDOW = 300.0
 
+# How long a staff PC may keep working after it last reached the server. The
+# grace exists so a router reboot does not stop a sale mid-way; past it the
+# terminal has no authority to continue and says so.
+LEASE_SECONDS = 300
+
 
 def _log(msg):
     try:
@@ -139,6 +144,8 @@ class _ClusterHandler(BaseHTTPRequestHandler):
                 return self._enroll(self._body())
             if self.path.startswith('/aurum/login'):
                 return self._login(self._body())
+            if self.path.startswith('/aurum/sync'):
+                return self._sync(self._body())
             self._send({'status': 'error', 'message': 'unknown endpoint'}, 404)
         except Exception as e:
             _log(f'request failed: {e}')
@@ -185,6 +192,71 @@ class _ClusterHandler(BaseHTTPRequestHandler):
             'shop_id':     self.db.get_or_create_shop_id(),
             'business':    self._ask('business_name'),
             'server_plan': self._ask('plan', 'lite'),
+        })
+
+    def _authenticate_terminal(self, payload):
+        """Confirm the PC is one we know and still allow. Returns the terminal
+        row, or None after having already answered with the refusal."""
+        from database import cluster_store as store
+        terminal_id = str(payload.get('terminal_id') or '').strip()
+        terminal = store.get_terminal(self.db, terminal_id) if terminal_id else None
+        if not terminal:
+            self._send({'status': 'not_enrolled',
+                        'message': 'This PC is not connected to the shop server.'}, 403)
+            return None
+        if terminal.get('status') == store.STATUS_BLOCKED:
+            self._send({'status': 'blocked',
+                        'message': 'This PC has been blocked by the owner.'}, 403)
+            return None
+        if str(payload.get('secret') or '') != store.get_secret(self.db, terminal_id):
+            self._send({'status': 'denied',
+                        'message': 'This PC is no longer recognised. Run setup again.'}, 403)
+            return None
+        return terminal
+
+    def _sync(self, payload):
+        """Take a staff PC's new rows and hand back everyone else's.
+
+        The server is a hub. A terminal never talks to another terminal: it
+        sends only what it wrote and receives everything it has not seen, so a
+        bill taken at one counter reaches the owner and every other counter
+        through here.
+        """
+        from database import cluster_store as store
+
+        terminal = self._authenticate_terminal(payload)
+        if terminal is None:
+            return
+
+        device_id = str(payload.get('device_id') or '').strip()
+        if not device_id:
+            self._send({'status': 'error', 'message': 'device_id is required'}, 400)
+            return
+
+        accepted = {}
+        incoming = payload.get('changes') or {}
+        if incoming:
+            result = self.db.apply_incoming_rows(device_id, incoming)
+            accepted = result.get('applied', {}) or {}
+
+        relayed = store.changes_from_others(
+            self.db, device_id, payload.get('since') or {})
+
+        store.touch_terminal(
+            self.db, terminal.get('terminal_id'),
+            self.client_address[0] if self.client_address else '')
+
+        if accepted or relayed:
+            _log(f"sync with {terminal.get('hostname') or device_id}: "
+                 f"took {sum(accepted.values())}, sent "
+                 f"{sum(len(t) for o in relayed.values() for t in o.values())}")
+
+        self._send({
+            'status':        'success',
+            'changes':       relayed,
+            'accepted':      accepted,
+            'lease_seconds': LEASE_SECONDS,
+            'server_time':   time.time(),
         })
 
     def _login(self, payload):
