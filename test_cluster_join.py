@@ -13,7 +13,8 @@ import shutil
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.abspath('.'))
+REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, REPO_ROOT)
 
 FAIL = []
 PORT = 58971          # not the live port, so a running AurumOS is undisturbed
@@ -238,8 +239,14 @@ check("with the signed-in name", api._session_username, 'meena')
 check("a terminal cannot manage other PCs",
       dispatch(api, 'list_terminals', {})['status'], 'not_server')
 
-# Become the server again to check the owner-side actions.
+# Become the server again to check the owner-side actions. Both halves matter:
+# the machine has to be the server, and the session has to be the owner's. The
+# sign-in above left this session as staff, which is now refused.
 client.save_config({'cluster_role': client.ROLE_SERVER})
+check("a staff session is refused even on the main PC",
+      dispatch(api, 'list_terminals', {}).get('status'), 'denied')
+
+api._session_role = 'admin'
 owner_view = dispatch(api, 'list_terminals', {})
 check("the owner can list connected PCs", owner_view['status'], 'success')
 check("and sees both of them", len(owner_view['terminals']), 2)
@@ -256,6 +263,54 @@ fine = dispatch(api, 'assign_terminal', {'terminal_id': saved['terminal_id'],
                                          'bundles': ['billing']})
 check("an allowed module is accepted", fine['status'], 'success')
 check("and is stored against the PC", fine['terminal']['bundles'], ['billing'])
+
+print("\n-- a staff member sitting at the main PC cannot manage it --")
+# cluster() is open to any signed-in user, because a terminal has to reach it
+# to verify an address and sign in. That means the owner-side actions need
+# their own check, or a billing-only staff member logged in on the main PC
+# could hand their own terminal every module and remove the others.
+PLAN['value'] = 'enterprise'
+api._session_role = 'staff'
+api._session_bundles = ['billing']
+
+check("staff cannot list the shop's computers",
+      dispatch(api, 'list_terminals', {}).get('status'), 'denied')
+grab = dispatch(api, 'assign_terminal', {'terminal_id': saved['terminal_id'],
+                                         'username': 'meena',
+                                         'bundles': ['billing', 'inventory', 'karigar']})
+check("staff cannot grant themselves more modules", grab.get('status'), 'denied')
+check("staff cannot block a computer",
+      dispatch(api, 'block_terminal', {'terminal_id': saved['terminal_id']}).get('status'),
+      'denied')
+check("staff cannot remove a computer",
+      dispatch(api, 'remove_terminal', {'terminal_id': saved['terminal_id']}).get('status'),
+      'denied')
+
+still = store.get_terminal(db, saved['terminal_id'])
+check_that("the PC is still registered", bool(still))
+check("and nothing was actually changed", still['bundles'], ['billing'])
+check("a terminal can still identify itself while that is refused",
+      dispatch(api, 'identity', {}).get('status'), 'success')
+
+api._session_role = 'admin'
+check("the owner is unaffected",
+      dispatch(api, 'list_terminals', {}).get('status'), 'success')
+
+print("\n-- which plans open the Network screen --")
+import importlib.util                                   # noqa: E402
+_spec = importlib.util.spec_from_file_location('sm', os.path.join(REPO_ROOT,
+                                                                  'subscription_manager.py'))
+_sm = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_sm)
+
+check("lite does not include multi-PC",
+      'lan_multi_pc' in _sm.PLAN_FEATURES['lite'], False)
+check("pro does, because it connects one PC",
+      'lan_multi_pc' in _sm.PLAN_FEATURES['pro'], True)
+check("enterprise does too",
+      'lan_multi_pc' in _sm.PLAN_FEATURES['enterprise'], True)
+check("and a pro licence no longer has it stripped",
+      'lan_multi_pc' in _sm._enforce_plan_tier('pro', ['lan_multi_pc']), True)
 
 cluster_server.stop_server()
 shutil.rmtree(work, ignore_errors=True)

@@ -33,6 +33,7 @@ var NAV_RETAIL = [
     { id:'old-gold',  label:'Old Gold',     icon:'old-gold',  page:'old_gold.html',        section:'Business' },
     { id:'reports',   label:'Reports',      icon:'bar-chart', page:'reports.html',         section:'Business' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'System'   },
+    { id:'network',   label:'Network',      icon:'wifi',      page:'network_manager.html', section:'System'   },
     { id:'settings',  label:'Settings',     icon:'settings',  page:'settings.html',        section:'System'   },
 ];
 
@@ -190,7 +191,7 @@ var _FEATURE_PLANS = {
     'accounting.html':     'Pro',
     'ledger.html':         'Pro',
     'reports.html':        'Pro',
-    'network_manager.html':'Enterprise'
+    'network_manager.html':'Pro'
 };
 
 function _lockTooltip(page) {
@@ -285,7 +286,7 @@ function _buildNav(items, activePage, compact) {
             h += '<div class="' + cls + '" data-tip="' + item.label + '"'
                + ' data-feature="' + (_FEATURE_MAP[item.page] || '') + '"'
                + ' data-page="' + item.page + '"'
-               + (locked ? ' title="' + (_FEATURE_NAMES[item.page] || 'Upgrade to unlock') + '"' : '')
+               + (locked ? ' title="' + _lockTooltip(item.page) + '"' : '')
                + ' onclick="' + clickAction + '">'
                + '<div class="sb-icon">' + (ICONS[item.icon] || '') + '</div>'
                + '<span class="sb-label">' + item.label + '</span>'

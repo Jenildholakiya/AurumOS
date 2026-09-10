@@ -50,11 +50,17 @@ LITE_FEATURES = [
 PRO_FEATURES = LITE_FEATURES + [
     'karigar_vouchers', 'touch_groups', 'full_accounts',
     'tag_audit', 'stock_med_reports', 'tsc_network_printing', 'multi_staff',
-    'analytics_dashboard', 'year_close', 'bastion_enhanced'
+    'analytics_dashboard', 'year_close', 'bastion_enhanced',
+    # Pro connects one staff PC, Enterprise connects four. The plans differ by
+    # how many seats they allow, not by whether the screen exists, so the page
+    # has to open on both: a Pro shop that cannot reach it can never set up the
+    # one computer it has paid for. The seat count is enforced separately, in
+    # core/permissions.py.
+    'lan_multi_pc',
 ]
 
 ENTERPRISE_FEATURES = PRO_FEATURES + [
-    'lan_multi_pc', 'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai',
+    'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai',
     'nexus_management', 'bridge_server', 'custom_db_location',
     'priority_support', 'api_integration'
 ]
