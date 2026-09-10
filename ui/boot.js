@@ -339,7 +339,7 @@
     'custom_db_location':'Custom DB Location','priority_support':'Priority Support','api_integration':'API Integration'
   };
   var _FEATURE_PLAN = {
-    'lan_multi_pc':'enterprise','karigar_vouchers':'pro','touch_groups':'pro','full_accounts':'pro',
+    'lan_multi_pc':'pro','karigar_vouchers':'pro','touch_groups':'pro','full_accounts':'pro',
     'tag_audit':'pro','stock_med_reports':'pro','tsc_network_printing':'pro','multi_staff':'pro',
     'analytics_dashboard':'pro','year_close':'pro','bastion_enhanced':'pro',
     'cloud_sync':'enterprise','fleet_bastion':'enterprise','customer_loyalty':'enterprise',
