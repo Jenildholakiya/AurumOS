@@ -72,6 +72,9 @@ jobs:
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
+          # tee would otherwise swallow a planner failure and let the job
+          # carry on to publish a release built from nothing.
+          set -o pipefail
           ARGS=""
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             ARGS="--tag ${GITHUB_REF_NAME}"
@@ -82,8 +85,10 @@ jobs:
 
       - name: Nothing to release
         if: steps.plan.outputs.skip == 'true'
+        env:
+          REASON: ${{ steps.plan.outputs.reason }}
         run: |
-          echo "### Skipped: ${{ steps.plan.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Skipped: $REASON" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build manifest + stage assets
         if: steps.plan.outputs.skip != 'true'
@@ -97,11 +102,13 @@ jobs:
 
       - name: Tag the commit
         if: steps.plan.outputs.skip != 'true' && github.ref_type != 'tag'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.plan.outputs.tag }}" -F release_changelog.txt "${GITHUB_SHA}"
-          git push origin "refs/tags/${{ steps.plan.outputs.tag }}"
+          git tag -a "$TAG" -F release_changelog.txt "${GITHUB_SHA}"
+          git push origin "refs/tags/$TAG"
 
       - name: Publish release
         if: steps.plan.outputs.skip != 'true'
@@ -118,13 +125,16 @@ jobs:
 
       - name: Summary
         if: steps.plan.outputs.skip != 'true'
+        env:
+          NEEDS_REBUILD: ${{ steps.plan.outputs.needs_rebuild }}
+          REBUILD_COUNT: ${{ steps.plan.outputs.rebuild_count }}
         run: |
           {
             cat release_notes.md
             echo
-            echo "Manifest: $(python3 -c "import json;m=json.load(open('version.json'));print(len(m['files']),'files,',m['size_bytes'],'bytes')")"
-            if [ "${{ steps.plan.outputs.needs_rebuild }}" = "true" ]; then
+            python3 -c "import json;m=json.load(open('version.json'));print('Manifest:',len(m['files']),'files,',format(m['size_bytes'],','),'bytes')"
+            if [ "$NEEDS_REBUILD" = "true" ]; then
               echo
-              echo "> :warning: **Rebuild needed** — ${{ steps.plan.outputs.rebuild_count }} frozen file(s) changed. Run \`python build.py\` and reinstall on each PC to ship them."
+              echo "> :warning: **Rebuild needed** — $REBUILD_COUNT frozen file(s) changed. Run \`python build.py\` and reinstall on each PC to ship them."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
