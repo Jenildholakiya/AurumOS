@@ -526,6 +526,11 @@ def build():
          'The login screen shows a <b>Staff terminal</b> badge with your shop '
          'name. The staff member enters their own password, and the computer '
          'opens straight into the screen they are allowed to use.'),
+        ('Say who uses it, back on the main PC',
+         'Open <b>Network</b> on the main PC. The new computer is listed as '
+         'needing setting up. Press <b>Set up</b>, choose the person, tick what '
+         'they may open, and save. Until you do, it gets whatever your plan '
+         'allows by default.'),
     ], start=1):
         s += [Step(n, t, b), Spacer(1, 11)]
 
@@ -562,7 +567,18 @@ def build():
         'A staff computer shows only what that person has been given. Someone '
         'set up for billing opens the billing screen and sees nothing else in '
         'the sidebar. They cannot open settings, staff accounts, or year end, '
-        'and they cannot delete a bill.', BODY), Spacer(1, 12)]
+        'and they cannot delete a bill. The limit is enforced by the '
+        'application itself, not just by the menu leaving things out.',
+        BODY), Spacer(1, 12)]
+
+    s += [Paragraph('Changing what someone can do', H2), Spacer(1, 8)]
+    s += [Paragraph(
+        'Open <b>Network</b> on the main PC. Every connected computer is '
+        'listed with who uses it and what it can open. Press <b>Set up</b> on '
+        'a row to change either. <b>Block</b> stops a computer signing in and '
+        'frees its seat for another; <b>Remove</b> forgets it entirely, and '
+        'that PC would have to run setup again to come back.',
+        BODY), Spacer(1, 12)]
 
     s += [Paragraph('Turning a computer on and off', H2), Spacer(1, 8)]
     s += [Paragraph(
@@ -633,10 +649,12 @@ def build():
     s += [PageBreak()]
     s += heading(5, 'What is finished, and what is not', RED)
     s += [Paragraph(
-        'This feature is <b>not complete</b>. The joining and sign-in flow in '
-        'Parts 1 to 3 is built and tested. Three pieces are still outstanding, '
-        'and one of them affects security. Read this before putting the guide '
-        'in front of a customer.', LEAD), Spacer(1, 16)]
+        'Everything described in Parts 1 to 4 is built, and the limits a staff '
+        'member works under are enforced by the application rather than by the '
+        'menu leaving things out. What has <b>not</b> happened is a run across '
+        'two real computers, and the installer that carries all of this. Read '
+        'this before putting the guide in front of a customer.',
+        LEAD), Spacer(1, 16)]
 
     s += [Paragraph('Built and tested', H2), Spacer(1, 8)]
     s += [table([
@@ -645,37 +663,36 @@ def build():
         ['Joining a staff PC to the shop', 'Done'],
         ['Sign-in answered by the main PC', 'Done'],
         ['Seat limits for Pro and Enterprise', 'Done'],
-        ['Blocking a computer from the main PC', 'Done, no screen for it yet'],
+        ['Connected Computers screen', 'Done'],
+        ['Assigning a person and modules to a PC', 'Done'],
+        ['Blocking and removing a computer', 'Done'],
         ['Sidebar limited to assigned screens', 'Done'],
+        ['Limits enforced inside the application', 'Done'],
+        ['Previous networking code removed', 'Done'],
     ], [CONTENT_W - 150, 150]), Spacer(1, 16)]
 
     s += [Paragraph('Still to do', H2), Spacer(1, 8)]
     s += [table([
         ['Piece', 'Why it matters'],
-        ['Enforce permissions inside the application',
-         'The sidebar hides what a staff member may not use, but the underlying '
-         'commands can still be reached by someone determined. Until this lands, '
-         'treat the staff limits as tidiness, not security.'],
-        ['A screen for assigning staff to a computer',
-         'Assigning works underneath, but the owner has no page to do it from, '
-         'so every staff PC currently gets the plan default.'],
-        ['Remove the old networking code',
-         'About 1,400 lines of the previous attempt are still in place and '
-         'inert. Until they go, the new server runs on a different port to '
-         'avoid a clash.'],
         ['Test across two real computers',
          'Everything so far was proved on one machine talking to itself. Real '
-         'network conditions and Windows Firewall have not been exercised.'],
+         'network conditions, Windows Firewall and a router handing out '
+         'addresses have not been exercised.'],
         ['Build and distribute a new installer',
          'The changes include a file that cannot be sent out as an update, so '
-         'every computer needs a fresh install once.'],
+         'every computer needs a fresh install once. Nothing in this guide '
+         'works until that is done.'],
+        ['Printing to a printer on another PC',
+         'Each computer prints to its own printer. Sending a tag to the main '
+         'PC\'s printer from a staff PC is not built.'],
     ], [150, CONTENT_W - 150]), Spacer(1, 16)]
 
-    s += [Callout('critical', 'Not ready for a customer site',
-                  'Because permissions are not yet enforced inside the '
-                  'application, and nothing has run across two real computers, '
-                  'this should stay on test machines until those two items are '
-                  'finished.')]
+    s += [Callout('warn', 'Test machines first, then a shop',
+                  'The limits a staff member works under are now enforced by '
+                  'the application itself rather than by the menu hiding '
+                  'things. What remains is that none of it has run across two '
+                  'real computers. Put it on two test machines, work through '
+                  'Parts 1 and 2, and only then take it to a counter.')]
 
     doc.build(s)
     return OUT
