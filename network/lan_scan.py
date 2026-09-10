@@ -16,12 +16,14 @@ How it looks around, and why:
 
   * The ARP table is then read back. Anything that answered is a real device.
 
-  * Each device is asked, on the shop port only, whether it is running
-    AurumOS. One connection, one known port, nothing else probed.
+  * Each device is asked whether it is running AurumOS, on the shop port, and
+    whether it is a Windows machine at all, on the file-sharing port. Two
+    connections to two well-known ports, and nothing else.
 
-Deliberately no wider port scanning and no attempt to fingerprint anything.
-The question being answered is "which of my computers can run the till", not
-"what is on this network".
+That second question is what makes the list worth reading. Sixteen addresses
+tell an owner nothing; knowing which five are computers that could run a till,
+and which one already is, tells them where to walk. No wider port scanning and
+no attempt to fingerprint anything beyond that.
 
 Lives under network/ so it reaches customers through the auto-updater.
 """
@@ -41,6 +43,7 @@ from network.cluster_server import CLUSTER_PORT
 MAX_HOSTS = 512
 ARP_SETTLE_SECONDS = 1.2
 PROBE_TIMEOUT = 0.6
+PC_PROBE_TIMEOUT = 0.4
 # Whole-pass budget for asking the network for device names. gethostbyaddr
 # cannot be given a timeout, so the pass is bounded rather than each call.
 NAME_DEADLINE = 2.5
@@ -169,6 +172,33 @@ def _probe_aurum(address, port=CLUSTER_PORT):
     return {'aurum': False}
 
 
+def _looks_like_a_pc(address):
+    """Is this a Windows machine, as opposed to a phone or a printer?
+
+    Windows keeps file sharing listening on 445, and 139 before that. Almost
+    nothing else on a shop network does: phones listen on nothing, printers
+    answer on their own printing and web ports, routers on their admin page.
+
+    This is the difference between a list of sixteen addresses and a list that
+    says which two machines could actually run the till. One extra connection
+    to one well-known port, and nothing else is probed.
+    """
+    for port in (445, 139):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(PC_PROBE_TIMEOUT)
+        try:
+            if sock.connect_ex((address, port)) == 0:
+                return True
+        except Exception:
+            pass
+        finally:
+            try:
+                sock.close()
+            except Exception:
+                pass
+    return False
+
+
 def _name_of(address):
     """The device's name, if the network will say.
 
@@ -227,11 +257,16 @@ def scan(db=None, wake=True, port=CLUSTER_PORT):
     # Two passes rather than one. Asking whether AurumOS is there has its own
     # timeout and always finishes; asking the network for a name does not, so
     # it gets a deadline and anything still outstanding is left unnamed.
+    def look(address):
+        return _probe_aurum(address, port), _looks_like_a_pc(address)
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
-        probes = {pool.submit(_probe_aurum, a, port): a for a in addresses}
-        aurum = {}
+        probes = {pool.submit(look, a): a for a in addresses}
+        aurum, is_pc = {}, {}
         for future in concurrent.futures.as_completed(probes, timeout=None):
-            aurum[probes[future]] = future.result()
+            found, pc = future.result()
+            aurum[probes[future]] = found
+            is_pc[probes[future]] = pc
 
     names = {}
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=32)
@@ -257,6 +292,11 @@ def scan(db=None, wake=True, port=CLUSTER_PORT):
             kind = 'joined'
         elif found.get('aurum'):
             kind = 'aurum'
+        elif is_pc.get(address):
+            # A Windows machine with no AurumOS on it. This is the row the
+            # owner is looking for when they ask which computer they could
+            # turn into a till.
+            kind = 'pc'
         else:
             kind = 'device'
         devices.append({
@@ -268,6 +308,7 @@ def scan(db=None, wake=True, port=CLUSTER_PORT):
             'business':    found.get('business', ''),
             'terminal_id': (terminal or {}).get('terminal_id', ''),
             'joined':      bool(terminal),
+            'is_pc':       bool(is_pc.get(address)),
         })
 
     _log(f'{len(devices)} device(s) on {network} in {time.time() - started:.1f}s')

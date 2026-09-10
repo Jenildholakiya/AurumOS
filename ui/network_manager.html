@@ -593,10 +593,14 @@ var DEVICE_KINDS = {
                note: 'The computer you are sitting at' },
     joined:  { pill: 'pill ok',   label: 'Staff PC',
                note: 'Already connected to this shop' },
-    aurum:   { pill: 'pill wait', label: 'Running AurumOS',
-               note: 'Not connected yet. Use this address on that PC.' },
+    aurum:   { pill: 'pill wait', label: 'Ready to connect',
+               note: 'AurumOS is running. On that PC pick <b>Client Node</b> '
+                     + 'and enter this PC\'s address.' },
+    pc:      { pill: 'pill wait', label: 'Can be connected',
+               note: 'Windows PC without AurumOS. Install it there, pick '
+                     + '<b>Client Node</b>, enter this PC\'s address.' },
     device:  { pill: 'pill idle', label: 'Other device',
-               note: 'Phone, printer, router or a PC without AurumOS' }
+               note: 'Phone, printer or router' }
 };
 
 function scanNetwork() {
@@ -634,15 +638,45 @@ function renderDevices(res) {
     }
 
     var list = res.devices || [];
-    document.getElementById('devices-sub').innerText =
+    // Lead with the number that answers the question the owner came here with:
+    // which of these could become a till.
+    var candidates = list.filter(function (d) {
+        return d.kind === 'pc' || d.kind === 'aurum';
+    }).length;
+    document.getElementById('devices-sub').innerHTML =
+        (candidates
+            ? '<b>' + candidates + (candidates === 1 ? ' computer' : ' computers') +
+              ' could be connected</b> · '
+            : '') +
         list.length + (list.length === 1 ? ' device' : ' devices') + ' on ' +
-        res.network + ' · took ' + res.took + 's';
+        h(res.network) + ' · took ' + res.took + 's';
 
     if (!list.length) {
         wrap.innerHTML = '<div class="empty"><div class="empty-ttl">Nothing answered</div>' +
             '<div class="empty-sub">Only this PC appears to be on the network.</div></div>';
         return;
     }
+
+    // Useful order, not address order: what you can act on first, phones last.
+    var RANK = { this_pc: 0, joined: 1, aurum: 2, pc: 3, device: 4 };
+    list = list.slice().sort(function (a, b) {
+        var d = (RANK[a.kind] === undefined ? 9 : RANK[a.kind]) -
+                (RANK[b.kind] === undefined ? 9 : RANK[b.kind]);
+        return d !== 0 ? d : a.ip.localeCompare(b.ip, undefined, { numeric: true });
+    });
+
+    // Saying a PC can be connected is misleading when no seat is free, and
+    // this is exactly where someone is about to walk off and try it.
+    var holding = STATE.terminals.filter(function (t) { return t.status !== 'blocked'; }).length;
+    var freeSeats = Math.max(STATE.licensed - holding, 0);
+    var seatWarning = (candidates && !freeSeats)
+        ? '<div class="notice notice-amber" style="margin:14px 16px 0;">' +
+          '<span>&#9888;</span><div><b>No seats free</b>' +
+          'Your plan connects ' + STATE.licensed +
+          (STATE.licensed === 1 ? ' staff computer' : ' staff computers') +
+          ', and they are all in use. Remove one above, or add a connection to ' +
+          'your plan, before setting another up.</div></div>'
+        : '';
 
     var rows = '';
     list.forEach(function (d) {
@@ -659,7 +693,7 @@ function renderDevices(res) {
             '</tr>';
     });
 
-    wrap.innerHTML =
+    wrap.innerHTML = seatWarning +
         '<table><thead><tr>' +
         '<th>Device</th><th>Address</th><th>Hardware ID</th>' +
         '<th>What it is</th><th>Notes</th>' +
