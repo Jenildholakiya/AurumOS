@@ -14,6 +14,7 @@ a licence check and several background threads.
 """
 
 import ast
+import inspect
 import io
 import os
 import sys
@@ -31,6 +32,14 @@ def check(label, got, want):
     if not ok:
         print(f"         expected {want!r}")
         print(f"         got      {got!r}")
+        FAIL.append(label)
+
+
+def check_that(label, ok, detail=''):
+    print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
+    if not ok:
+        if detail:
+            print(f"         {detail}")
         FAIL.append(label)
 
 
@@ -111,6 +120,173 @@ print("\n-- what an owner may hand out --")
 check("pro offers billing only", P.bundles_for_plan('pro'), ['billing'])
 check("enterprise offers all four", len(P.bundles_for_plan('enterprise')), 4)
 check("lite offers nothing", P.bundles_for_plan('lite'), [])
+
+print("\n-- the guard, and the bridge surviving it --")
+
+
+class FakeApi:
+    """Stands in for AurumAPI with real signatures on the methods that matter."""
+
+    def __init__(self):
+        self._session_role = None
+        self._session_username = ''
+        self._session_bundles = []
+
+    def get_session(self):
+        return 'session'
+
+    def generate_bill(self, bill_data):
+        return 'billed:' + str(bill_data)
+
+    def add_stock_entry(self, data):
+        return 'stocked'
+
+    def add_staff(self, username, password, permissions=None):
+        return 'staff added'
+
+    def delete_bill(self, vch_id):
+        return 'deleted'
+
+    def _private(self):
+        return 'private'
+
+
+def pywebview_view(obj):
+    """Exactly how pywebview builds the JavaScript API, from its own source:
+    walk dir(), keep methods and functions, take the argument list and drop
+    the first entry as self."""
+    seen = {}
+    for name in dir(obj):
+        if name.startswith('_'):
+            continue
+        attr = getattr(obj, name)
+        if inspect.ismethod(attr) or inspect.isfunction(attr):
+            seen[name] = inspect.getfullargspec(attr).args[1:]
+    return seen
+
+
+api = FakeApi()
+before = pywebview_view(api)
+count = P.install_guard(api)
+after = pywebview_view(api)
+
+check_that("the guard wrapped the methods", count >= 5, f'wrapped {count}')
+check("every method is still visible to the page",
+      sorted(after), sorted(before))
+check("and each keeps its own argument list", after, before)
+check("argument names really did survive",
+      after.get('add_staff'), ['username', 'password', 'permissions'])
+check("installing twice does nothing the second time", P.install_guard(api), 0)
+
+print("\n-- what the guard actually stops --")
+api._session_role = None
+check("before anyone signs in, nothing is blocked",
+      api.generate_bill('x'), 'billed:x')
+
+api._session_role = 'admin'
+check("the owner is untouched", api.add_staff('a', 'b'), 'staff added')
+check("and can still delete a bill", api.delete_bill('VCH-1'), 'deleted')
+
+api._session_role = 'staff'
+api._session_bundles = ['billing']
+check("billing staff can raise a bill", api.generate_bill('x'), 'billed:x')
+check("billing staff can read the session", api.get_session(), 'session')
+
+blocked = api.add_staff('mallory', 'pw')
+check_that("billing staff cannot add a staff account",
+           isinstance(blocked, dict) and blocked.get('denied') is True, str(blocked))
+check_that("nor delete a bill",
+           isinstance(api.delete_bill('VCH-1'), dict), str(api.delete_bill('VCH-1')))
+check_that("nor enter stock they were not given",
+           isinstance(api.add_stock_entry({}), dict), str(api.add_stock_entry({})))
+check_that("a refusal explains itself rather than throwing",
+           'access' in blocked.get('message', '').lower(), str(blocked))
+
+api._session_bundles = ['billing', 'inventory']
+check("granting inventory lets the same PC enter stock",
+      api.add_stock_entry({}), 'stocked')
+
+print("\n-- the same, against every real signature in main.py --")
+# The fake above only proves the idea. This rebuilds a stub carrying the exact
+# signature of every public method on AurumAPI and checks that the guard leaves
+# the bridge's view of all of them untouched. Cheaper and safer than importing
+# main.py, which would start a window, a licence check and several threads.
+tree = ast.parse(io.open('main.py', encoding='utf-8').read())
+cls_node = next(n for n in tree.body
+                if isinstance(n, ast.ClassDef) and n.name == 'AurumAPI')
+
+lines, skipped = [], []
+for item in cls_node.body:
+    if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        continue
+    if item.name.startswith('_'):
+        continue
+    try:
+        lines.append(f'    def {item.name}({ast.unparse(item.args)}):\n        return "ok"')
+    except Exception:
+        skipped.append(item.name)
+
+namespace = {}
+exec('class RealShape:\n' + '\n'.join(lines), namespace)
+shape = namespace['RealShape']()
+shape._session_role = None
+shape._session_bundles = []
+
+real_before = pywebview_view(shape)
+P.install_guard(shape)
+real_after = pywebview_view(shape)
+
+check("no signature could not be reproduced", skipped, [])
+check_that(f"all {len(real_before)} real methods still reach the page",
+           len(real_before) == len(real_after) and len(real_before) > 190,
+           f'{len(real_before)} before, {len(real_after)} after')
+check("and every argument list is byte-for-byte unchanged",
+      real_after, real_before)
+
+drifted = [n for n in real_before if real_before[n] != real_after.get(n)]
+check("no single method drifted", drifted, [])
+
+print("\n-- the app's own calls still work while staff are signed in --")
+
+
+class InnerApi:
+    """Mirrors the shapes that would break: a method calling another method,
+    and a background thread calling in from outside."""
+
+    def __init__(self):
+        self._session_role = 'staff'
+        self._session_bundles = ['billing']
+
+    def generate_bill(self, bill_data):
+        # An allowed method reaching a restricted one internally, which is
+        # exactly what billing does when it writes to the ledger.
+        return self.delete_bill('VCH-1')
+
+    def delete_bill(self, vch_id):
+        return 'deleted ' + vch_id
+
+    def check_license_revoked(self, network=True):
+        return 'valid'
+
+    def get_recent_logs(self, lines=50):
+        return ['a log line']
+
+
+inner = InnerApi()
+P.install_guard(inner)
+
+check("a licence check on a timer is not refused mid-shift",
+      inner.check_license_revoked(), 'valid')
+check("an allowed method may use a restricted one internally",
+      inner.generate_bill('x'), 'deleted VCH-1')
+check_that("but the page still cannot call that restricted one directly",
+           isinstance(inner.delete_bill('VCH-1'), dict),
+           str(inner.delete_bill('VCH-1')))
+check_that("and a method neither internal nor granted stays refused",
+           isinstance(inner.get_recent_logs(), dict), str(inner.get_recent_logs()))
+
+check("every internal name is a real bridge method",
+      sorted(set(P.INTERNAL) - real), [])
 
 uncovered = sorted(real - named)
 print(f"\n  {len(uncovered)} bridge methods are in no bundle, so staff are refused them.")

@@ -17,7 +17,10 @@ Three layers, checked in this order:
   3. BUNDLES      -- the modules an owner assigns to a terminal.
 """
 
+import functools
+import inspect
 import re
+import threading
 
 # -- Seats ---------------------------------------------------------------
 # How many PCs may connect to a shop's server, over and above the server
@@ -225,6 +228,98 @@ def is_allowed(method_name, role, bundle_ids=None):
     if name in OWNER_ONLY:
         return False
     return name in methods_for(bundle_ids)
+
+
+# Methods the application calls on itself from its own background threads,
+# rather than anything a page asked for. Licence checks, the event stream and
+# the scale reconnect all run on timers, and a staff member being signed in at
+# that moment must not make them fail. Found by scanning main.py for calls of
+# the form api.<name>() outside the class, not by guesswork; re-run that scan
+# if the startup code changes. Calls nested inside an already-authorised method
+# are handled separately, by depth, so `self.<name>()` chains need no entry.
+INTERNAL = frozenset([
+    'set_window', 'check_license_revoked', 'fire_revoked_screen',
+    'start_sse_stream', 'scale_get_saved_config',
+])
+
+# Tracks whether this thread is already inside a guarded method. Authorisation
+# belongs at the boundary: once a call has been allowed in, whatever that
+# method does internally is the application's own business.
+_depth = threading.local()
+
+
+def denial(method_name):
+    """What a refused call hands back to the page that made it."""
+    return {
+        'status': 'denied',
+        'denied': True,
+        'method': str(method_name or ''),
+        'message': 'Your account does not have access to this.',
+    }
+
+
+def _guarded(name, function, on_denied=None):
+    @functools.wraps(function)
+    def call(self, *args, **kwargs):
+        outer = getattr(_depth, 'level', 0)
+        if outer == 0 and name not in INTERNAL:
+            role = getattr(self, '_session_role', None)
+            if role and not is_allowed(name, role,
+                                       getattr(self, '_session_bundles', None)):
+                if on_denied:
+                    try:
+                        on_denied(name, role)
+                    except Exception:
+                        pass
+                return denial(name)
+        _depth.level = outer + 1
+        try:
+            return function(self, *args, **kwargs)
+        finally:
+            _depth.level = outer
+
+    # Carry the original signature across explicitly.
+    #
+    # pywebview reads every method with inspect.getfullargspec and drops the
+    # first argument, assuming it is self. getfullargspec does NOT follow the
+    # __wrapped__ link that functools.wraps sets, so on its own the wrapper
+    # would report (*args, **kwargs), which comes back as an empty argument
+    # list. Every method would then be published to the page as taking no
+    # arguments. getfullargspec does honour __signature__, so setting it keeps
+    # the bridge exactly as it was.
+    try:
+        call.__signature__ = inspect.signature(function)
+    except (TypeError, ValueError):
+        pass
+
+    return call
+
+
+def install_guard(api, on_denied=None):
+    """Check the policy before any bridge method runs.
+
+    Wraps on the class rather than the instance, because pywebview finds the
+    API's methods with dir() plus inspect.ismethod. An instance attribute
+    holding a plain function would still be found, but its signature would be
+    read one argument out of step; a bound method built by hand would report no
+    arguments at all. A wrapped class function stays a bound method and keeps
+    the signature it started with.
+
+    Returns how many methods are now guarded.
+    """
+    cls = type(api)
+    if getattr(cls, '_aurum_guard_installed', False):
+        return 0
+
+    guarded = 0
+    for name, attribute in list(vars(cls).items()):
+        if name.startswith('_') or not inspect.isfunction(attribute):
+            continue
+        setattr(cls, name, _guarded(name, attribute, on_denied))
+        guarded += 1
+
+    cls._aurum_guard_installed = True
+    return guarded
 
 
 def describe_bundles(plan=None):
