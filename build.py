@@ -216,8 +216,19 @@ def get_paths():
     ]
     venv_site = next((p for p in candidates if os.path.isdir(p)), '')
     if not venv_site:
+        # Falling back to getsitepackages()[0] is wrong on Windows: the first
+        # entry is the environment prefix, not its site-packages folder, so
+        # every binary path in the generated spec came out one level too high
+        # and the build silently lost them. Pick the entry that is actually
+        # site-packages, and ask sysconfig if none of them is.
         import site as _s
-        venv_site = _s.getsitepackages()[0]
+        import sysconfig as _sc
+        venv_site = next(
+            (p for p in _s.getsitepackages()
+             if p.lower().replace('\\', '/').rstrip('/').endswith('site-packages')),
+            '')
+        if not venv_site or not os.path.isdir(venv_site):
+            venv_site = _sc.get_paths().get('purelib', '')
 
     # Prefer venv's webview to avoid cross-drive relpath issues
     _wv_venv = os.path.join(venv_site, 'webview')
