@@ -6,6 +6,11 @@ logs/
 
 # PyInstaller build output
 build/
+# AurumOS.spec is written from scratch by build.py on every run, and the paths
+# inside it belong to whichever machine last built. Tracking it meant the
+# committed copy pointed at a drive that does not exist here, and every build
+# left a change that blocked the next merge.
+AurumOS.spec
 database/aurum_local.db
 db_path.txt
 machine.lock
