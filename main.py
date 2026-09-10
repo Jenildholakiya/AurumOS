@@ -828,6 +828,24 @@ class AurumAPI:
         # A staff PC starts nothing; it only ever calls out.
         self._start_cluster()
 
+        # ── PERMISSION GUARD ──────────────────────────────────────────────
+        # Up to now a staff member's limits were the sidebar choosing not to
+        # draw things. The role itself came from the address bar, so editing
+        # the URL restored the full menu, and every method here stayed
+        # callable from the developer console regardless. This makes the
+        # bridge refuse work the signed-in role has no business doing.
+        # The policy sits in core/permissions.py, which auto-updates, so a
+        # rule can be tightened without rebuilding the EXE.
+        try:
+            from core.permissions import install_guard
+            _guarded = install_guard(
+                self,
+                on_denied=lambda method, role: LOG(
+                    f"[PERM] refused {method} for role={role}"))
+            LOG(f"[PERM] Guard active on {_guarded} bridge methods")
+        except Exception as _pe:
+            ERR(f"[PERM] Guard NOT installed: {_pe}")
+
         # ── HEALTH DASHBOARD: auto-provision, zero manual setup ───────────
         # Runs once per PC, in the background. If already provisioned,
         # this is a no-op. Never blocks startup -- happens silently.
