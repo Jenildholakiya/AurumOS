@@ -178,8 +178,13 @@ var _FEATURE_MAP = {
     'chart_of_accounts.html': 'full_accounts',
     'accounting.html':     'full_accounts',
     'ledger.html':         'full_accounts',
-    'reports.html':        'stock_med_reports',
-    'network_manager.html':'lan_multi_pc'
+    'reports.html':        'stock_med_reports'
+    // network_manager.html is deliberately absent. Connecting computers is
+    // limited by seats, not by hiding the screen, and the seat limit is
+    // enforced on the main PC where it cannot be bypassed. Locking the page
+    // as well meant the screen depended on subscription state having arrived
+    // correctly, and when it had not, a paying shop was left staring at a
+    // padlock with no way through.
 };
 
 // Plan tier required for each gated page — used for the lock tooltip.
@@ -190,8 +195,7 @@ var _FEATURE_PLANS = {
     'chart_of_accounts.html': 'Pro',
     'accounting.html':     'Pro',
     'ledger.html':         'Pro',
-    'reports.html':        'Pro',
-    'network_manager.html':'Pro'
+    'reports.html':        'Pro'
 };
 
 function _lockTooltip(page) {

@@ -165,6 +165,33 @@ mismatched = {f: (t, cheapest_plan(f)) for f, t in tiers.items()
               if cheapest_plan(f) and t != cheapest_plan(f)}
 check("ui/feature_test.html agrees", mismatched, {})
 
+print("\n-- the Network screen is not gated in the interface --")
+# It was gated in four places at once: the sidebar padlock, a wrapper around
+# navigate, and two page gates that redirected to the dashboard. One of those
+# judged from a feature list cached in localStorage, so a list cached before a
+# rule changed kept bouncing a paying shop off the page with no way to clear
+# it. Connecting computers is limited by seats, and the main PC enforces that
+# where it cannot be bypassed, so the screen stays open and the seat count does
+# the work. Anything added back here brings the whole problem with it.
+NETWORK_PAGE = 'network_manager.html'
+gates = {
+    'ui/sidebar.js': ['_FEATURE_MAP'],
+    'ui/boot.js': ['_PAGE_GATE', '_PAGE_FEATURE_GATE'],
+}
+still_gated = []
+for path, names in gates.items():
+    found = js_values(path, *names)
+    for name in names:
+        if NETWORK_PAGE in (found.get(name) or {}):
+            still_gated.append(f'{path}:{name}')
+check("no interface gate blocks the Network page", still_gated, [])
+
+print("\n-- but a downgrade to Lite still moves you off it --")
+sse = io.open('ui/sse_stream.js', encoding='utf-8').read()
+lite_block = re.search(r"newPlan === 'lite'\).*?\];", sse, re.S)
+check_lite = NETWORK_PAGE in (lite_block.group(0) if lite_block else '')
+check("a live downgrade to lite redirects away from it", check_lite, True)
+
 print("\n-- what a Pro shop ends up with --")
 pro = sm._enforce_plan_tier('pro', [])
 check("multi-PC is granted even if the server never lists it",

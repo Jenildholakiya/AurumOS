@@ -176,6 +176,20 @@ tbody tr:hover{background:var(--accent-light);}
     </div>
   </div>
 
+  <!-- Shown when the plan allows no staff computers. The screen stays open
+       rather than being locked away, because the seat limit is the real
+       constraint and the main PC enforces it; hiding the page only left
+       people guessing why they could not add a computer. -->
+  <div id="no-seats-notice" style="display:none;">
+    <div class="notice notice-blue">
+      <span>&#8505;</span>
+      <div><b>Your plan does not connect staff computers</b>
+      Pro connects one, Enterprise connects four, and more can be added to
+      either. Everything on this page keeps working the moment a seat is
+      available.</div>
+    </div>
+  </div>
+
   <div class="stats-row">
     <div class="stat-card">
       <div class="stat-lbl">This computer</div>
@@ -371,11 +385,16 @@ function render() {
     document.getElementById('st-online').innerText = online.length;
     document.getElementById('st-online-sub').innerText =
         list.length + (list.length === 1 ? ' computer known' : ' computers known');
+    document.getElementById('no-seats-notice').style.display =
+        STATE.licensed === 0 ? 'block' : 'none';
+
     document.getElementById('st-seats').innerText = holding.length + ' / ' + STATE.licensed;
     document.getElementById('st-seats-sub').innerText =
-        STATE.licensed > holding.length
-            ? ((STATE.licensed - holding.length) + ' still available')
-            : 'All seats in use';
+        STATE.licensed === 0
+            ? 'None on this plan'
+            : (STATE.licensed > holding.length
+                ? ((STATE.licensed - holding.length) + ' still available')
+                : 'All seats in use');
     document.getElementById('st-pending').innerText = pending.length;
     document.getElementById('st-pending-sub').innerText =
         pending.length ? 'Choose who uses them' : 'Nothing waiting';
