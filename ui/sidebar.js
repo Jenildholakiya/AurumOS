@@ -433,7 +433,9 @@ function _renderSidebar(activePage) {
        + '<span id="sb-staff-name" style="font-size:0.56rem;font-weight:500;color:#94a3b8;letter-spacing:0.3px;">'
        + (isStaff ? _cacheGet('aurum_staff_name','Staff') : '') + '</span>'
        + (isStaff ? '<span style="width:3px;height:3px;border-radius:50%;background:#94a3b8;"></span>' : '')
-       + '<span id="sb-ver-pill" style="font-size:0.52rem;font-weight:500;color:#94a3b8;font-family:var(--sb-mono);">v' + appVer + '</span>'
+       + '<span id="sb-ver-pill" data-aurum-version title="Installed AurumOS version" style="font-size:0.52rem;font-weight:500;color:#94a3b8;font-family:var(--sb-mono);">v' + appVer + '</span>'
+       + '<span id="sb-ver-new" data-aurum-update hidden title="A newer version is downloading in the background" '
+       + 'style="font-size:0.5rem;font-weight:700;color:#22c55e;letter-spacing:0.3px;">UPDATE READY</span>'
        + '</div>'
        + '<button class="sb-collapse-btn" onclick="toggleSidebar()">'
        + '<span class="sb-collapse-icon">&#8592;</span>'
@@ -530,37 +532,17 @@ function _fillDynamic() {
                 }).catch(function(){});
             } catch(e) {}
 
+            // The version pill (and the "update ready" flag beside it) is
+            // painted by the shared version module in boot.js, which every
+            // page loads. It also repaints on a silent update, so the number
+            // here cannot drift from the one Settings shows.
             try {
-                window.pywebview.api.get_current_version &&
-                window.pywebview.api.get_current_version().then(function(v) {
-                    if (!v) return;
-                    var el = document.getElementById('sb-ver-pill');
-                    if (el) el.innerText = 'v' + v;
-                    _cacheSet('aurum_app_version', v);
-                }).catch(function(){});
-            } catch(e) {}
-            // Silent auto-updates change the version mid-session — repaint
-            // the pill immediately instead of showing a stale number.
-            try {
-                window.addEventListener('aurum-auto-updated', function(e) {
-                    var v=(e.detail&&e.detail.version)||'';
-                    if (!v) {
-                        try {
-                            window.pywebview.api.get_current_version &&
-                            window.pywebview.api.get_current_version().then(function(rv) {
-                                if (!rv) return;
-                                var el2 = document.getElementById('sb-ver-pill');
-                                if (el2) el2.innerText = 'v' + rv;
-                                _cacheSet('aurum_app_version', rv);
-                            }).catch(function(){});
-                        } catch(err) {}
-                        return;
-                    }
-                    var el = document.getElementById('sb-ver-pill');
-                    if (el) el.innerText = 'v' + v;
-                    _cacheSet('aurum_app_version', v);
-                });
-            } catch(e) {}
+                if (window.AurumOS && window.AurumOS.refreshVersion) {
+                    window.AurumOS.refreshVersion(false).then(function (v) {
+                        if (v && v.installed) _cacheSet('aurum_app_version', v.installed);
+                    }).catch(function () {});
+                }
+            } catch (e) {}
 
             if (_getRole() === 'staff') {
                 _loadStaffAccess();

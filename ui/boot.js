@@ -53,6 +53,164 @@
     return null;
   };
 
+  /* ── VERSION ─────────────────────────────────────────────────────────
+   * One answer to "which AurumOS is this, and is there a newer one", shared
+   * by every screen so the sidebar, the login box and Settings can never
+   * disagree.
+   *
+   *   AurumOS.version            {installed, latest, available, releaseDate,
+   *                               changelog, checkedAt}
+   *   AurumOS.refreshVersion(f)  re-read; f=true ignores the cache
+   *   'aurum-version' event      fires whenever any of it changes
+   *
+   * Elements repaint themselves, no page code required:
+   *   data-aurum-version   installed number   ("v1.1.8")
+   *   data-aurum-latest    newest published   ("v1.1.9", or "—")
+   *   data-aurum-update    shown only while an update is waiting
+   * Add data-aurum-raw to any of them to drop the leading "v".
+   *
+   * The newest number comes from api.github.com, which is the only GitHub
+   * endpoint that allows a browser to read it: release asset downloads send
+   * no CORS header, so a page cannot fetch version.json itself. Python has
+   * no such limit and does the downloading. Asking here as well means the
+   * number on screen is right even on copies built before the bridge could
+   * report it, which matters because main.py only changes on a reinstall.
+   */
+  var VER_API = 'https://api.github.com/repos/Jenildholakiya/AurumOS/releases/latest';
+  var VER_CACHE = 'aurum_version_state';
+  var VER_TTL = 30 * 60 * 1000;          // ask GitHub at most twice an hour
+  var SEMVER = /^\d+\.\d+\.\d+$/;
+
+  function _verKey(v) {
+    var p = String(v || '').replace(/^v/, '').split('.');
+    return [parseInt(p[0], 10) || 0, parseInt(p[1], 10) || 0, parseInt(p[2], 10) || 0];
+  }
+  function _verNewer(a, b) {
+    var x = _verKey(a), y = _verKey(b);
+    for (var i = 0; i < 3; i++) { if (x[i] !== y[i]) return x[i] > y[i]; }
+    return false;
+  }
+  function _verClean(v) {
+    v = String(v || '').trim().replace(/^v/, '');
+    return SEMVER.test(v) ? v : '';
+  }
+
+  var V = window.AurumOS.version = { installed: '', latest: '', available: false,
+                                     releaseDate: '', changelog: [], checkedAt: 0 };
+  try {
+    var cached = JSON.parse(localStorage.getItem(VER_CACHE) || 'null');
+    if (cached && typeof cached === 'object') {
+      V.installed = _verClean(cached.installed);
+      V.latest = _verClean(cached.latest);
+      V.releaseDate = cached.releaseDate || '';
+      V.changelog = Array.isArray(cached.changelog) ? cached.changelog : [];
+      V.checkedAt = parseInt(cached.checkedAt, 10) || 0;
+    }
+  } catch (e) {}
+
+  function _verSave() {
+    try { localStorage.setItem(VER_CACHE, JSON.stringify(V)); } catch (e) {}
+  }
+
+  function _verPaint() {
+    V.available = !!(V.latest && V.installed && _verNewer(V.latest, V.installed));
+    function set(sel, text) {
+      var nodes = document.querySelectorAll(sel);
+      for (var i = 0; i < nodes.length; i++) {
+        var raw = nodes[i].hasAttribute('data-aurum-raw');
+        nodes[i].textContent = (text && !raw) ? 'v' + text : (text || (raw ? '' : '—'));
+      }
+    }
+    try {
+      set('[data-aurum-version]', V.installed);
+      set('[data-aurum-latest]', V.latest);
+      var marks = document.querySelectorAll('[data-aurum-update]');
+      for (var i = 0; i < marks.length; i++) marks[i].hidden = !V.available;
+    } catch (e) {}
+    try {
+      window.dispatchEvent(new CustomEvent('aurum-version', { detail: {
+        installed: V.installed, latest: V.latest, available: V.available,
+        releaseDate: V.releaseDate, changelog: V.changelog } }));
+    } catch (e) {}
+  }
+
+  // What this copy runs. The bridge is the authority; the cache covers the
+  // moment before it answers so no screen flashes a blank version.
+  function _verReadInstalled() {
+    return new Promise(function (done) {
+      var api = window.pywebview && window.pywebview.api;
+      if (!api) { done(false); return; }
+      var call = (typeof api.get_version_info === 'function')
+        ? api.get_version_info().then(function (info) { return info && info.installed; })
+        : (typeof api.get_current_version === 'function'
+            ? api.get_current_version()
+            : Promise.resolve(''));
+      call.then(function (v) {
+        v = _verClean(v);
+        if (v && v !== V.installed) { V.installed = v; done(true); } else { done(false); }
+      }).catch(function () { done(false); });
+    });
+  }
+
+  // What GitHub has. Failure is normal (a shop counter is often offline) and
+  // leaves the last known answer in place rather than blanking the screen.
+  function _verReadLatest(force) {
+    return new Promise(function (done) {
+      if (!force && V.latest && (Date.now() - V.checkedAt) < VER_TTL) { done(false); return; }
+      if (typeof fetch !== 'function') { done(false); return; }
+      var ctl = null, timer = null;
+      try { ctl = new AbortController(); timer = setTimeout(function () { ctl.abort(); }, 8000); } catch (e) {}
+      fetch(VER_API, { headers: { 'Accept': 'application/vnd.github+json' },
+                       signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (rel) {
+          if (timer) clearTimeout(timer);
+          var v = rel && _verClean(rel.tag_name);
+          if (!v) { done(false); return; }
+          var changed = (v !== V.latest);
+          V.latest = v;
+          V.checkedAt = Date.now();
+          V.releaseDate = (rel.published_at || '').slice(0, 10) || V.releaseDate;
+          V.changelog = String(rel.body || '').split('\n')
+            .map(function (s) { return s.replace(/^[-*#\s]+/, '').trim(); })
+            .filter(function (s) { return s && s.indexOf('Rebuild needed') === -1; })
+            .slice(0, 8);
+          done(changed);
+        })
+        .catch(function () { if (timer) clearTimeout(timer); done(false); });
+    });
+  }
+
+  var _verBusy = null;
+  window.AurumOS.refreshVersion = function (force) {
+    if (_verBusy) return _verBusy;
+    _verBusy = Promise.all([_verReadInstalled(), _verReadLatest(force)])
+      .then(function () { _verSave(); _verPaint(); _verBusy = null; return V; })
+      .catch(function () { _verBusy = null; return V; });
+    return _verBusy;
+  };
+
+  // Paint from cache at once so nothing shows a placeholder, then confirm.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _verPaint);
+  } else {
+    _verPaint();
+  }
+  window.apiReady(function () { window.AurumOS.refreshVersion(false); });
+
+  // A silent update rewrites version.lock mid-session: re-read rather than
+  // leave the old number on screen until the next launch.
+  window.addEventListener('aurum-auto-updated', function (e) {
+    var v = _verClean(e && e.detail && e.detail.version);
+    if (v) { V.installed = v; _verSave(); _verPaint(); }
+    setTimeout(function () { window.AurumOS.refreshVersion(true); }, 1500);
+  });
+  window.addEventListener('aurum-update-done', function (e) {
+    if (e && e.detail && e.detail.success) {
+      setTimeout(function () { window.AurumOS.refreshVersion(true); }, 1500);
+    }
+  });
+
   // ── Auto-defer window.onload (16+ pages use this) ─────────────────────
   var _onload = null;
   try {

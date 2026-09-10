@@ -11,6 +11,7 @@ import os
 import sys
 import glob
 import platform
+import re
 import shutil
 import subprocess
 import fnmatch
@@ -338,6 +339,54 @@ except Exception:
 
 
 # ── STEP 3: Write AurumOS.spec ────────────────────────────────────────────────
+def stamp_version():
+    """Write build_version.txt: the number this EXE will report as its own.
+
+    Releases are numbered by git (every push to main tags the next vX.Y.Z, see
+    .github/workflows/release.yml), so the version is taken from the highest
+    tag in the repository rather than typed into a source file. The file is
+    bundled into _internal/ and read by updater.CURRENT_VERSION.
+
+    Build from a checkout with the tags fetched. Without them this falls back
+    to updater.FALLBACK_VERSION, and an EXE that under-reports its version
+    re-downloads an update it already has.
+    """
+    print("\n[2b/7] Stamping build version...")
+    version, source = None, ''
+    try:
+        out = subprocess.run(['git', 'tag', '-l', 'v*'], capture_output=True,
+                             text=True, cwd=ROOT, timeout=30)
+        found = []
+        for t in out.stdout.split():
+            m = re.match(r'^v(\d+)\.(\d+)\.(\d+)$', t.strip())
+            if m:
+                found.append(tuple(int(x) for x in m.groups()))
+        if found:
+            version = '.'.join(str(x) for x in max(found))
+            source = 'highest git tag'
+    except Exception as e:
+        print(f"  (warning) could not read git tags: {e}")
+
+    if not version:
+        try:
+            with open(os.path.join(ROOT, 'updater.py'), 'r', encoding='utf-8') as f:
+                for line in f:
+                    m = re.match(r'FALLBACK_VERSION\s*=\s*["\'](.+?)["\']', line)
+                    if m:
+                        version, source = m.group(1), 'updater.FALLBACK_VERSION'
+                        break
+        except Exception:
+            pass
+    if not version:
+        version, source = '0.0.0', 'nothing found'
+        print("  WARNING: no git tags and no fallback -- this EXE will report 0.0.0")
+
+    with open(os.path.join(ROOT, 'build_version.txt'), 'w', encoding='utf-8') as f:
+        f.write(version)
+    print(f"  OK -- v{version} (from {source}) -> build_version.txt")
+    return version
+
+
 def write_spec(venv_site, webview_dir, arch):
     print("\n[3/7] Writing AurumOS.spec...")
 
@@ -415,6 +464,7 @@ a = Analysis(
 {winspool_str}{serial_bin_str}
     ],
     datas=[
+        ("build_version.txt", "."),
         ("ui",    "ui"),
         ("fonts", "fonts"),
         ("core",  "core"),
@@ -768,13 +818,22 @@ def write_trusted_hash():
     print(f"  OK -- {digest[:16]}... written to dist\\exe_trusted_hash.txt")
 
 # ── STEP 6: Report ────────────────────────────────────────────────────────────
-def report():
+def report(built_version='?'):
     print("\n[7/7] Build report...")
     exe = os.path.join(DIST, 'AurumOS.exe')
     if os.path.exists(exe):
+        # Match version.lock to this build. A lock left behind by an older
+        # install claims a version this EXE does not have, and the app trusts
+        # the higher of the two, so a stale lock hides real updates.
+        try:
+            with open(os.path.join(DIST, 'version.lock'), 'w', encoding='utf-8') as f:
+                f.write(built_version)
+        except Exception as e:
+            print(f"  (warning) could not write dist\\version.lock: {e}")
         size_mb = os.path.getsize(exe) / 1024 / 1024
         print(f"\n  ✓ SUCCESS")
         print(f"  EXE   : {exe}")
+        print(f"  Version: v{built_version}  (shown in the app; updates count up from here)")
         print(f"  Runtime: {os.path.join(ROOT, 'dist', '_internal')}")
         print(f"  Size: {size_mb:.1f} MB")
         print(f"\n  Ship the WHOLE dist\\ folder to each client PC. Clean layout:")
@@ -1030,6 +1089,7 @@ if __name__ == '__main__':
     check_env()
     kill_running_exe()
     venv_site, webview_dir, arch = get_paths()
+    built_version = stamp_version()
     write_hooks()
     write_spec(venv_site, webview_dir, arch)
 
@@ -1044,6 +1104,6 @@ if __name__ == '__main__':
     sign_exe()
     write_trusted_hash()
     finalize_dist()
-    report()
+    report(built_version)
     print(f"\n  Total time: {time.time()-t0:.0f}s")
     print("=" * 50)

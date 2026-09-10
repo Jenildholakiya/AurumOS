@@ -396,7 +396,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
     <div class="foot">
         <div class="sr"><div class="sd" id="sd"></div><span id="st">Starting…</span></div>
-        <span class="vr" id="vr">AurumOS</span>
+        <span class="vr" id="vr" data-aurum-version>AurumOS</span>
     </div>
 
     <div class="sec-badge">
@@ -489,12 +489,11 @@ setTimeout(function() {
 function onReady() {
     setSt('on','Ready');
 
-    // Version
+    // Version: painted by the shared module in boot.js via data-aurum-version,
+    // so the number on the sign-in screen is the one Settings and the sidebar
+    // show, including right after a silent update.
     try {
-        var vp = window.pywebview.api.get_current_version();
-        if (vp && typeof vp.then === 'function') {
-            vp.then(function(v){ try{ if(v) document.getElementById('vr').innerText='v'+v; }catch(e){} }).catch(function(){});
-        }
+        if (window.AurumOS && window.AurumOS.refreshVersion) window.AurumOS.refreshVersion(false);
     } catch(e) {}
 
     // Last login — try API first, fallback to localStorage

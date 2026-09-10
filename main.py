@@ -191,12 +191,19 @@ except ImportError:
         def notify_session_active(self, *a): pass
         def get_weekly_report(self): return {}
 
+# The version is not typed in here: build.py stamps the highest git tag into
+# build_version.txt inside the bundle and updater reads it, so every build
+# reports the number its release was published under.
+# This import used to also ask for download_and_install, which was deleted from
+# updater.py in June. The missing name made the whole import fail, so the app
+# silently fell back to the stub below: it called itself 1.0.6 and every update
+# check returned None. Import only what exists.
 try:
-    from updater import check_for_update, download_and_install, CURRENT_VERSION
-except ImportError:
-    CURRENT_VERSION = '1.0.6'
+    from updater import check_for_update, CURRENT_VERSION
+except ImportError as _upd_err:
+    CURRENT_VERSION = '0.0.0'
     def check_for_update(**kw): return None
-    def download_and_install(*a, **kw): pass
+    print(f'[UPDATE] updater unavailable, update checks disabled: {_upd_err}')
 # noinspection PyUnresolvedReferences
 from core.tag_engine import TagFactory  # obfuscated module — resolved at runtime
 
@@ -4973,6 +4980,40 @@ class AurumAPI:
             return get_installed_version()
         except Exception:
             return CURRENT_VERSION
+
+    def get_version_info(self):
+        """Everything the screens show about versions, in one call.
+
+        installed  the number this copy runs and displays
+        built      the number frozen into the EXE, for support questions
+        latest     the newest published release, when it could be reached
+        available  true when latest is newer and a download is waiting
+
+        The pages do not depend on this method existing: boot.js asks GitHub
+        directly when the bridge cannot answer, so the version on screen is
+        right on copies built before this method was added.
+        """
+        info = {'installed': CURRENT_VERSION, 'built': CURRENT_VERSION,
+                'latest': '', 'available': False, 'release_date': '',
+                'changelog': [], 'checked': False}
+        try:
+            from updater import get_installed_version, fetch_latest_manifest, is_newer
+            info['installed'] = get_installed_version()
+        except Exception as e:
+            LOG(f"[VERSION] local read failed: {e}")
+            return info
+        try:
+            manifest = fetch_latest_manifest(timeout=6)
+            if manifest:
+                info['checked'] = True
+                info['latest'] = str(manifest.get('version', '') or '')
+                info['release_date'] = str(manifest.get('release_date', '') or '')
+                info['changelog'] = list(manifest.get('changelog') or [])[:8]
+                info['available'] = bool(
+                    is_newer(info['latest'], info['installed']) or manifest.get('force'))
+        except Exception as e:
+            LOG(f"[VERSION] remote check failed: {e}")
+        return info
 
     def restart_app(self):
         import subprocess

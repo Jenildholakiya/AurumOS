@@ -327,7 +327,7 @@ td:not(:first-child){text-align:right;}
         <div class="ub-inner">
             <div class="ub-icon">&#11088;</div>
             <div class="ub-text">
-                <div class="ub-title">AurumOS <em id="ub-version">v1.0.1</em> is available</div>
+                <div class="ub-title">AurumOS <em id="ub-version" data-aurum-latest>—</em> is available</div>
                 <div class="ub-sub" id="ub-sub">A new version is ready.</div>
                 <div class="ub-changelog" id="ub-changelog"></div>
             </div>
@@ -600,31 +600,42 @@ window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.deta
 function manualCheckUpdate(){
     var btn=document.getElementById('check-update-btn');
     var lbl=document.getElementById('upd-btn-label');
+    var api=window.pywebview&&window.pywebview.api;
+    // Updates land on their own within half an hour of a push. This button is
+    // for the shop that would rather watch it happen than wait.
+    //
+    // It no longer calls api.check_for_update: that one lives in main.py, the
+    // file an update can never replace, and on every copy built before today
+    // it answers "nothing available" whatever GitHub actually has. Asking the
+    // shared version module instead means the button tells the truth on the
+    // machines already in shops.
+    if(!window.AurumOS||!window.AurumOS.refreshVersion){
+        if(lbl) lbl.innerText='Check Update';
+        return;
+    }
     if(lbl) lbl.innerText='Checking…';
     btn.disabled=true;
 
-    // Use Python API (reads GitHub release assets, always current)
-    if(window.pywebview&&window.pywebview.api&&window.pywebview.api.check_for_update){
-        window.pywebview.api.check_for_update().then(function(info){
-            btn.disabled=false;
-            if(info&&info.available){
-                btn.classList.add('upd-ready');
-                if(lbl) lbl.innerText='v'+info.version+' Ready!';
-                showUpdateBanner(info);
-            } else {
-                btn.classList.add('upd-ok');
-                if(lbl) lbl.innerText='✓ Latest';
-                setTimeout(function(){btn.className='btn-update';if(lbl)lbl.innerText='Check Update';},3000);
-            }
-        }).catch(function(){
-            btn.disabled=false;
-            if(lbl) lbl.innerText='No Internet';
-            setTimeout(function(){if(lbl)lbl.innerText='Check Update';},2000);
-        });
-    } else {
+    function settle(text, cls){
         btn.disabled=false;
-        if(lbl) lbl.innerText='Check Update';
+        btn.className='btn-update'+(cls?' '+cls:'');
+        if(lbl) lbl.innerText=text;
+        setTimeout(function(){btn.className='btn-update';if(lbl)lbl.innerText='Check Update';},4000);
     }
+
+    window.AurumOS.refreshVersion(true).then(function(v){
+        if(!v||!v.latest){ settle('No Internet'); return; }
+        if(!v.available){ settle('✓ Latest','upd-ok'); return; }
+        if(lbl) lbl.innerText='v'+v.latest+' downloading…';
+        if(api&&typeof api.auto_update_silent==='function'){
+            api.auto_update_silent().then(function(r){
+                if(r&&r.status==='success'){ settle('✓ v'+(r.version||v.latest)+' installed','upd-ok'); }
+                else { settle('✓ Latest','upd-ok'); }
+            }).catch(function(){ settle('Update failed'); });
+        } else {
+            settle('v'+v.latest+' ready','upd-ready');
+        }
+    }).catch(function(){ settle('No Internet'); });
 }
 
 
