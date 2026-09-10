@@ -5367,7 +5367,11 @@ class AurumAPI:
         try:
             if cluster_client.is_terminal():
                 where = cluster_client.load_config().get('server_ip', '?')
-                LOG(f"[CLUSTER] Terminal mode -- shop server is {where}")
+                # A terminal keeps its own database so a router hiccup does not
+                # stop a sale. This is what makes that safe: what it writes goes
+                # to the shop, and what the shop knows comes back.
+                cluster_client.start_sync(self.db)
+                LOG(f"[CLUSTER] Terminal mode -- syncing with shop server {where}")
                 return
             started = cluster_server.start_server(self.db, context={
                 'business_name': self.get_business_name,
@@ -5925,9 +5929,10 @@ def run_aur_os():
         except Exception:
             pass
         try:
-            from network import cluster_server as _cs
+            from network import cluster_server as _cs, cluster_client as _cc
+            _cc.stop_sync()
             _cs.stop_server()
-            LOG("[CLUSTER] Shop server stopped on close")
+            LOG("[CLUSTER] Shop network stopped on close")
         except Exception:
             pass
         try:

@@ -41,15 +41,29 @@ def identity(api, payload):
 
 
 def status(api, payload):
-    """Whether this PC can currently see its server."""
+    """Whether this PC can currently see its server, and may still be used."""
     role = client.local_role()
     if role == client.ROLE_SERVER:
         from network import cluster_server
         return {'status': 'success', 'role': role,
                 'serving': cluster_server.is_running()}
-    return {'status': 'success', 'role': role,
-            'online': client.server_online(),
-            'server_ip': client.load_config().get('server_ip', '')}
+    state = client.sync_state()
+    out = {'status': 'success', 'role': role,
+           'server_ip': client.load_config().get('server_ip', '')}
+    out.update(state)
+    # Before the first exchange there is nothing to judge staleness against,
+    # so the door stays open rather than locking a PC out of a shop it has
+    # only just joined.
+    out['online'] = state['lease_valid'] or not state['ever_synced']
+    return out
+
+
+def sync_now(api, payload):
+    """Exchange with the shop server immediately, rather than on the timer."""
+    if client.local_role() != client.ROLE_TERMINAL:
+        return _fail('Only a staff PC syncs with the shop server.',
+                     status='not_terminal')
+    return client.sync_once(api.db)
 
 
 # -- joining a shop -------------------------------------------------------
@@ -237,6 +251,7 @@ ACTIONS = {
     'block_terminal':  block_terminal,
     'remove_terminal': remove_terminal,
     'scan_network':    scan_network,
+    'sync_now':        sync_now,
     'seats':           seats,
 }
 

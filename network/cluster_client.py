@@ -11,6 +11,7 @@ import json
 import os
 import socket
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -264,3 +265,130 @@ def server_online():
                          '/aurum/hello', VERIFY_TIMEOUT).get('aurumos'))
     except Exception:
         return False
+
+
+# ── Keeping a staff PC's data with the shop ──────────────────────────────
+# A terminal holds its own database so a router hiccup does not stop a sale.
+# That only works if what it writes reaches the owner, which is what this does:
+# push what this PC wrote, take back everything it has not seen, on a timer.
+#
+# The exchange is one request. Two would leave a window where a terminal had
+# sent its bills but not yet received the stock they consumed.
+
+SYNC_INTERVAL = 20.0          # seconds between exchanges while all is well
+SYNC_RETRY = 5.0              # after a failure, try again sooner
+_sync_thread = None
+_sync_stop = None
+
+# Last time the server answered, and the lease it granted. The application
+# reads these to decide whether this PC may still be used.
+_last_contact = 0.0
+_lease_seconds = 300.0
+_last_error = ''
+
+
+def sync_state():
+    """Whether this PC is still entitled to work, and how stale it is."""
+    age = time.time() - _last_contact if _last_contact else None
+    return {
+        'ever_synced':  bool(_last_contact),
+        'seconds_ago':  round(age, 1) if age is not None else None,
+        'lease_valid':  bool(_last_contact) and age is not None and age < _lease_seconds,
+        'lease_seconds': _lease_seconds,
+        'last_error':   _last_error,
+    }
+
+
+def sync_once(db):
+    """One exchange with the shop server.
+
+    Own rows first, then whatever the server holds from every other PC. The
+    outbound mark is only advanced once the server confirms, so a push that
+    dies halfway is repeated rather than skipped.
+    """
+    global _last_contact, _lease_seconds, _last_error
+    from database import cluster_store as store
+
+    cfg = load_config()
+    ip = str(cfg.get('server_ip') or '').strip()
+    if not ip:
+        return {'status': 'error', 'message': 'This PC is not connected to a shop server.'}
+
+    try:
+        mine = db.get_changes_since('', store.outbound_cursor(db)).get('changes', {})
+    except Exception as e:
+        return {'status': 'error', 'message': f'Could not read local changes: {e}'}
+
+    try:
+        reply = _post(ip, int(cfg.get('server_port') or CLUSTER_PORT), '/aurum/sync', {
+            'terminal_id': cfg.get('terminal_id', ''),
+            'secret':      cfg.get('terminal_secret', ''),
+            'device_id':   db.get_or_create_device_id(),
+            'changes':     mine,
+            'since':       store.cursors_by_origin(db),
+        }, CALL_TIMEOUT)
+    except Exception as e:
+        _last_error = str(getattr(e, 'reason', e))
+        return _friendly_failure(e, ip)
+
+    if reply.get('status') != 'success':
+        _last_error = reply.get('message', '')
+        return reply
+
+    if mine:
+        store.record_outbound(db, mine)
+
+    received = 0
+    for origin, tables in (reply.get('changes') or {}).items():
+        if not tables:
+            continue
+        db.apply_incoming_rows(origin, tables)
+        received += sum(len(rows) for rows in tables.values())
+
+    _last_contact = time.time()
+    _lease_seconds = float(reply.get('lease_seconds') or _lease_seconds)
+    _last_error = ''
+
+    sent = sum(len(rows) for rows in mine.values())
+    if sent or received:
+        _log(f'sync: sent {sent}, received {received}')
+    return {'status': 'success', 'sent': sent, 'received': received,
+            'lease_seconds': _lease_seconds}
+
+
+def start_sync(db):
+    """Run the exchange on a timer, for as long as this PC is a terminal."""
+    global _sync_thread, _sync_stop
+    import threading
+    if _sync_thread is not None and _sync_thread.is_alive():
+        return False
+    if not is_terminal():
+        return False
+
+    _sync_stop = threading.Event()
+
+    def loop():
+        # A moment's grace so the window is up before the first exchange,
+        # which on a fresh PC pulls the whole shop down.
+        _sync_stop.wait(3.0)
+        while not _sync_stop.is_set():
+            wait = SYNC_INTERVAL
+            try:
+                if sync_once(db).get('status') != 'success':
+                    wait = SYNC_RETRY
+            except Exception as e:
+                _log(f'sync loop error: {e}')
+                wait = SYNC_RETRY
+            _sync_stop.wait(wait)
+
+    _sync_thread = threading.Thread(target=loop, daemon=True, name='AurumShopSync')
+    _sync_thread.start()
+    _log(f'syncing with the shop every {SYNC_INTERVAL:.0f}s')
+    return True
+
+
+def stop_sync():
+    global _sync_thread
+    if _sync_stop is not None:
+        _sync_stop.set()
+    _sync_thread = None

@@ -653,3 +653,93 @@ document.addEventListener('DOMContentLoaded', function(){
     _toastTimer = setTimeout(function() { tEl.classList.remove('show'); }, dur);
   };
 });
+
+/* ── Staff terminal: stop work when the shop server is out of reach ────────
+ * A staff PC keeps its own database so a router hiccup does not interrupt a
+ * sale. The other side of that is this: once it has been out of contact past
+ * the lease the server granted, it has no authority to carry on, and says so
+ * rather than quietly taking bills nobody will ever see.
+ *
+ * Deliberately fails open. If the check itself breaks, or the bridge is not
+ * ready, nothing is blocked. A bug here must never be able to lock a shop out
+ * of its own till; the data cannot reach anyone while the server is down
+ * either way, so availability is the safer way to be wrong.
+ */
+(function () {
+  var CHECK_EVERY = 15000;
+  var overlay = null;
+  var isTerminal = null;          // unknown until the bridge answers
+
+  function build() {
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'aurum-offline-lock';
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:99999;display:none;align-items:center;' +
+      'justify-content:center;background:rgba(15,23,42,.72);backdrop-filter:blur(4px);' +
+      'font-family:system-ui,sans-serif;';
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:16px;max-width:430px;width:88vw;' +
+      'padding:30px 28px;text-align:center;box-shadow:0 24px 64px rgba(15,23,42,.35);">' +
+      '<div style="width:52px;height:52px;border-radius:15px;background:rgba(180,83,9,.1);' +
+      'color:#b45309;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;' +
+      'font-size:1.5rem;">&#9888;</div>' +
+      '<div style="font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:9px;">' +
+      'Cannot reach the main PC</div>' +
+      '<div style="font-size:.82rem;color:#475569;line-height:1.65;">' +
+      'This computer works through the shop\'s main PC, and has not been able to ' +
+      'reach it. Check that the main PC is switched on with AurumOS open, and ' +
+      'that this computer is on the shop network.</div>' +
+      '<div id="aurum-offline-note" style="font-size:.72rem;color:#94a3b8;margin-top:16px;">' +
+      'Work continues automatically the moment the connection returns.</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function show(note) {
+    var el = build();
+    el.style.display = 'flex';
+    var n = document.getElementById('aurum-offline-note');
+    if (n && note) n.innerText = note;
+  }
+
+  function hide() {
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function check() {
+    try {
+      if (!window.pywebview || !window.pywebview.api ||
+          typeof window.pywebview.api.cluster !== 'function') return;
+      window.pywebview.api.cluster('status').then(function (s) {
+        if (!s || s.status !== 'success') return;
+        isTerminal = s.role === 'terminal';
+        if (!isTerminal) { hide(); return; }
+        if (s.online === false) {
+          var ago = (typeof s.seconds_ago === 'number')
+            ? 'Last reached ' + Math.round(s.seconds_ago / 60) + ' min ago. ' +
+              'Work continues automatically when the connection returns.'
+            : '';
+          show(ago);
+        } else {
+          hide();
+        }
+      }).catch(function () { /* fail open */ });
+    } catch (e) { /* fail open */ }
+  }
+
+  function begin() {
+    // The setup and login screens are how a PC gets connected in the first
+    // place, so locking them would leave no way back.
+    var page = '';
+    try { page = location.pathname.replace(/.*[\/]/, '').toLowerCase(); } catch (e) {}
+    if (page === 'setup.html' || page === 'login.html' || page === 'splash.html') return;
+    check();
+    setInterval(check, CHECK_EVERY);
+  }
+
+  if (window.apiReady) { window.apiReady(begin); }
+  else { window.addEventListener('load', function () { setTimeout(begin, 2500); }); }
+})();
