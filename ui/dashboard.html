@@ -653,17 +653,20 @@ function UX_checkHeartbeat() {
     var label = document.getElementById('runtime-net-label');
     if (!pill || !label) return;
 
-    window.pywebview.api.bridge_ping().then(function(res) {
-        if (res && res.status === 'ok' && res.reachable) {
+    window.pywebview.api.cluster('status').then(function(res) {
+        if (res && res.role === 'server') {
             pill.className = "network-status-pill net-online";
-            label.innerText = "Host Core Connected";
+            label.innerText = "Main PC";
+        } else if (res && res.online) {
+            pill.className = "network-status-pill net-online";
+            label.innerText = "Connected to main PC";
         } else {
-            pill.className = "network-status-pill net-syncing";
-            label.innerText = "Reconnecting Core...";
+            pill.className = "network-status-pill net-offline";
+            label.innerText = "Main PC offline";
         }
     }).catch(function() {
         pill.className = "network-status-pill net-offline";
-        label.innerText = "Host Connection Offline";
+        label.innerText = "Main PC offline";
     });
 }
 

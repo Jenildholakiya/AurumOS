@@ -65,6 +65,23 @@ def join(api, payload):
                               payload.get('port') or CLUSTER_PORT)
 
 
+def become_server(api, payload):
+    """Mark this PC as the one that holds the shop, and start serving.
+
+    Called from setup when the Host Core card is chosen. Starting the server
+    here means a staff PC can be joined immediately afterwards, without the
+    owner having to restart the application first.
+    """
+    client.leave_server()
+    try:
+        api._start_cluster()
+    except Exception:
+        pass
+    from network import cluster_server
+    return {'status': 'success', 'role': client.ROLE_SERVER,
+            'serving': cluster_server.is_running(), 'ip': api.get_local_ip()}
+
+
 def leave(api, payload):
     return client.leave_server()
 
@@ -185,6 +202,7 @@ ACTIONS = {
     'verify_server':   verify_server,
     'join':            join,
     'leave':           leave,
+    'become_server':   become_server,
     'login':           login,
     'list_terminals':  list_terminals,
     'assign_terminal': assign_terminal,

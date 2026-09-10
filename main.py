@@ -176,7 +176,6 @@ def _is_valid_key_format(key):
     return isinstance(key, str) and len(key) == 22 and key.upper().startswith(_VALID_KEY_PREFIXES)
 # noinspection PyUnresolvedReferences
 from database.db_manager import DBManager  # obfuscated module — resolved at runtime
-from sync_engine import SyncEngine
 from subscription_manager import SubscriptionManager
 from sse_listener import LicenseEventListener
 try:
@@ -807,20 +806,6 @@ class AurumAPI:
         # bastion_verify_exe() is no longer called at startup. Disabled per
         # explicit request -- this check kept producing false suspensions.
         LOG("[BASTION] EXE integrity check disabled")
-
-        # ── LAN SYNC: shop-scoped auto-discovery, any number of PCs ────────
-        # Every PC broadcasts + listens on the LAN. PCs sharing the same
-        # shop_id automatically find and sync with each other -- no fixed
-        # IP list, works for 2 PCs or 20. Different shops never mix even
-        # on the same WiFi router, because shop_id must match exactly.
-        # ── LAN SYNC: always on, no plan flag needed ─────────────────────
-        try:
-            self.sync_engine = SyncEngine(self.db)
-            self.sync_engine.start()
-            LOG(f"[SYNC] Started. shop_id={self.db.get_or_create_shop_id()}")
-        except Exception as _syne:
-            LOG(f"[SYNC] Failed to start sync engine: {_syne}")
-            self.sync_engine = None
 
         # ── SHOP NETWORK: this PC serves the shop, or joins one ───────────
         # The main PC listens so staff PCs can verify its address, enrol, and
@@ -3639,30 +3624,8 @@ class AurumAPI:
     def get_uchak_price_by_code(self, it_code):       return self.db.get_uchak_price_by_code(it_code)
 
     def get_sync_status(self):
-        """Returns whether this PC last reached its peer successfully, for an optional status indicator."""
-        try:
-            eng = getattr(self, 'sync_engine', None)
-            if not eng:
-                return {'enabled': False}
-            st = eng.status()
-            st['enabled'] = True
-            return st
-        except Exception as e:
-            return {'enabled': False, 'error': str(e)}
-
-    def join_shop(self, shop_id):
-        """
-        Called when setting up a NEW PC for a shop that already has
-        other PCs running AurumOS. The owner reads the shop_id off any
-        existing PC (see get_sync_status -> shop_id) and types it in
-        here on the new PC. After this, the new PC broadcasts the same
-        shop_id and gets discovered by its shopmates automatically --
-        no restart needed, discovery picks it up within seconds.
-        """
-        result = self.db.set_shop_id(shop_id)
-        if result.get('status') == 'success':
-            LOG(f"[SYNC] Joined shop: {result.get('shop_id')}")
-        return result
+        """Whether this PC can currently see the rest of the shop."""
+        return self.cluster('status')
 
     def get_sync_conflicts(self, include_resolved=False):
         return self.db.get_sync_conflicts(include_resolved)
@@ -5290,22 +5253,13 @@ class AurumAPI:
 
     # ── NETWORK BRIDGE — PC2 tag print via PC1 ───────────────────────────
     def print_tag_network(self, tags):
-        """Send tag print job to PC1 bridge (called from PC2)."""
-        try:
-            cfg_path = os.path.join(os.path.dirname(sys.executable)
-                       if getattr(sys,'frozen',False) else '.', 'config.json')
-            import json as _j
-            cfg = _j.load(open(cfg_path)) if os.path.exists(cfg_path) else {}
-            if cfg.get('mode') == 'network' and cfg.get('printer_on_server'):
-                sys.path.insert(0, os.path.join(os.path.dirname(
-                    sys.executable if getattr(sys,'frozen',False) else __file__
-                ), 'database'))
-                from network_client import BridgeClient
-                client = BridgeClient(cfg)
-                return client.print_tag(tags)
-        except Exception as e:
-            LOG(f'[NET_PRINT] fallback to local: {e}')
-        # Fallback: print locally
+        """Kept so an older page calling this still prints.
+
+        This used to hand the job to a bridge on the main PC, but that client
+        was a stub that always refused, so every call already fell through to
+        the local printer. Printing across the shop network is not built yet;
+        when it is, it belongs on the cluster server.
+        """
         return self.print_tag_local(tags)
 
     def print_tag_local(self, tags):
@@ -5376,74 +5330,6 @@ class AurumAPI:
             ERR(f'[PRINT] Error sending to printer: {e}')
         finally:
             win32print.ClosePrinter(hp)
-
-    def bridge_discover(self):
-        """PC2: Auto-discover PC1 bridge server on LAN."""
-        try:
-            sys.path.insert(0, os.path.join(
-                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
-                'database'
-            ))
-            from network_client import discover_server, _save_config, _load_config
-            info = discover_server(timeout=3.0)
-            if info:
-                cfg = _load_config()
-                cfg['server_ip']   = info['ip']
-                cfg['server_port'] = info['port']
-                cfg['mode']        = 'network'
-                _save_config(cfg)
-                return {'status': 'success', 'ip': info['ip'], 'port': info['port']}
-            return {'status': 'error', 'message': 'No bridge server found on LAN'}
-        except Exception as e:
-            return {'status': 'error', 'message': str(e)}
-
-    def bridge_ping(self):
-        """Check if PC1 bridge is reachable."""
-        try:
-            from network_client import get_bridge_client
-            client = get_bridge_client()
-            if not client:
-                return {'status': 'local', 'message': 'Running in local mode'}
-            ok = client.ping()
-            return {'status': 'ok' if ok else 'error',
-                    'reachable': ok,
-                    'server': client._base}
-        except Exception as e:
-            return {'status': 'error', 'message': str(e)}
-
-    def start_bridge_server(self):
-        """Start FastAPI bridge server on PC1 in background thread."""
-        try:
-            import subprocess, sys
-            bridge = os.path.join(
-                os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
-                'network_bridge.py'
-            )
-            if not os.path.exists(bridge):
-                return {'status':'error','message':'network_bridge.py not found'}
-            subprocess.Popen(
-                [sys.executable, bridge],
-                creationflags=0x08000000,
-                stdout=open(os.path.join(
-                    os.path.dirname(sys.executable if getattr(sys,'frozen',False) else __file__),
-                    'logs','bridge.log'),'a'),
-                stderr=subprocess.STDOUT,
-            )
-            import time; time.sleep(1.5)
-            return {'status':'success','message':'Bridge server started on port 7272'}
-        except Exception as e:
-            return {'status':'error','message':str(e)}
-
-    def stop_bridge_server(self):
-        try:
-            import subprocess
-            subprocess.run(['taskkill','/F','/IM','network_bridge.py'],
-                capture_output=True)
-            subprocess.run(['taskkill','/F','/FI','WINDOWTITLE eq network_bridge*'],
-                capture_output=True)
-            return {'status':'success'}
-        except Exception as e:
-            return {'status':'error','message':str(e)}
 
     # ── SHOP NETWORK ──────────────────────────────────────────────────
     # One method for the whole multi-PC feature, on purpose. main.py is the
@@ -5517,30 +5403,6 @@ class AurumAPI:
             return {'status':'success'}
         except Exception as e:
             return {'status':'error','message':str(e)}
-
-    def provision_nexus_identity(self, cfg: dict):
-        """Setup screen: save this PC's network identity (mode/server_ip/is_server)
-        into config.json without clobbering other keys."""
-        import json as _j
-        try:
-            cfg = cfg or {}
-            base = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else __file__)
-            cfg_path = os.path.join(base, 'config.json')
-            data = {}
-            if os.path.exists(cfg_path):
-                try:
-                    data = _j.load(open(cfg_path, 'r')) or {}
-                except Exception:
-                    data = {}
-            data['mode']        = cfg.get('mode', data.get('mode', 'local'))
-            data['server_ip']   = cfg.get('server_ip', data.get('server_ip', ''))
-            data['server_port'] = cfg.get('server_port', data.get('server_port', 7272))
-            data['is_server']   = cfg.get('is_server', data.get('is_server', True))
-            _j.dump(data, open(cfg_path, 'w'), indent=2)
-            return {'status': 'success'}
-        except Exception as e:
-            ERR(f"[PROVISION] {e}")
-            return {'status': 'error', 'message': str(e)}
 
     def get_local_ip(self):
         import socket as _s
@@ -6060,12 +5922,6 @@ def run_aur_os():
             api.bastion.notify_session_active(False)
             api.bastion.stop()
             LOG("[BASTION_AI] Stopped")
-        except Exception:
-            pass
-        try:
-            if getattr(api, 'sync_engine', None):
-                api.sync_engine.stop()
-                LOG("[SYNC] Sync engine stopped on close")
         except Exception:
             pass
         try:

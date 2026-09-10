@@ -416,7 +416,7 @@ a = Analysis(
     hiddenimports=[
         "pythonnet","clr_loader","clr_loader.netfx","clr_loader.hostfxr","clr_loader.ffi", # ── FIXED: CLR host for pywebview winforms
         "requests", "urllib3", "charset_normalizer", "idna", # ── FIXED: FORCE INJECTED REQUESTS BINARIES
-        "updater","subscription_manager","database","database.db_manager","core","core.tag_engine","sync_engine","network_client",
+        "updater","subscription_manager","database","database.db_manager","core","core.tag_engine",
         "serial","serial.tools","serial.tools.list_ports","serial.serialutil",
         "serial.serialwin32","serial.win32","serial.win32con","serial.win32file",
         "serial.win32pipe","serial.urlhandler","serial.urlhandler.protocol_hwgrep",
@@ -445,8 +445,8 @@ a = Analysis(
         # ── FIXED: ALL local project modules (hidden from PyInstaller
         #    because main.py is obfuscated to marshal before the build step) ──
         "sse_listener",
-        "network","network.discovery","network.brain_server","network.brain_client",
-        "network.brain_guard","network.connection_store","network.handshake","network.hardware_map",
+        "network","network.cluster_server","network.cluster_client",
+        "database.cluster_store","core.permissions","core.cluster_api",
         "database.bastion_ai","database.bastion_report","database.aurum_health",
         "core.bastion_sync","core.ai_support","core.io_safety","core.security_lock","core.print_bridge",
     ],

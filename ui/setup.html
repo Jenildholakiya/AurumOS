@@ -923,7 +923,9 @@ async function finishSetup() {
                 address: document.getElementById('inp-address').value.trim()
             });
             if (res && res.status === 'success') {
-                await window.pywebview.api.provision_nexus_identity({ mode: "local", server_ip: "", is_server: true });
+                // Marks this PC as the one holding the shop and starts serving
+                // straight away, so a staff PC can be joined without restarting.
+                await window.pywebview.api.cluster("become_server");
             }
         } catch(e) { res = {status:'error', message:String(e)}; }
         if (res && res.status === 'success') {
