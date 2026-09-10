@@ -90,8 +90,13 @@ lan_scan.arp_table = lambda: {
     '192.168.0.1':  'd8-0d-17-a1-20-10',
     '192.168.0.21': '74-56-3c-33-a4-68',
     '192.168.0.42': 'e0-d5-5e-e0-a1-4c',
+    '192.168.0.77': 'fc-3f-db-03-21-61',
+    '192.168.0.90': 'aa-bb-cc-dd-ee-01',
 }
 lan_scan._probe_aurum = lambda address, port=0: FAKE_NETWORK.get(address, {'aurum': False})
+# .42 and .77 answer on the Windows file-sharing port; the router does not.
+WINDOWS_MACHINES = {'192.168.0.155', '192.168.0.21', '192.168.0.42', '192.168.0.77'}
+lan_scan._looks_like_a_pc = lambda address: address in WINDOWS_MACHINES
 lan_scan._name_of = lambda address: {'192.168.0.21': 'COUNTER-1',
                                      '192.168.0.42': 'BACK-OFFICE'}.get(address, '')
 
@@ -100,7 +105,8 @@ check("the scan succeeds", res['status'], 'success')
 by_ip = {d['ip']: d for d in res['devices']}
 
 check("every device is listed, this PC included", sorted(by_ip), sorted(
-    ['192.168.0.1', '192.168.0.21', '192.168.0.42', '192.168.0.155']))
+    ['192.168.0.1', '192.168.0.21', '192.168.0.42', '192.168.0.77',
+     '192.168.0.90', '192.168.0.155']))
 check("this PC is labelled as such", by_ip['192.168.0.155']['kind'], 'this_pc')
 check("a PC that has joined is a staff PC", by_ip['192.168.0.21']['kind'], 'joined')
 check("and carries its registry entry",
@@ -108,7 +114,23 @@ check("and carries its registry entry",
 check("AurumOS that has not joined is called out separately",
       by_ip['192.168.0.42']['kind'], 'aurum')
 check("and is marked as not joined", by_ip['192.168.0.42']['joined'], False)
-check("anything else is just a device", by_ip['192.168.0.1']['kind'], 'device')
+check("anything else is just a device", by_ip['192.168.0.90']['kind'], 'device')
+check("the router is a device, not a candidate",
+      by_ip['192.168.0.1']['kind'], 'device')
+
+# The question the owner actually has: which of these could become a till.
+check("a Windows PC with no AurumOS is offered as a candidate",
+      by_ip['192.168.0.77']['kind'], 'pc')
+check("and is marked as a PC", by_ip['192.168.0.77']['is_pc'], True)
+check("a phone answering nothing is not offered",
+      by_ip['192.168.0.90']['is_pc'], False)
+check("AurumOS already running outranks the plain-PC label",
+      by_ip['192.168.0.42']['kind'], 'aurum')
+check("a PC that has joined stays a staff PC",
+      by_ip['192.168.0.21']['kind'], 'joined')
+check("the candidates are exactly the two worth walking to",
+      sorted(d['ip'] for d in res['devices'] if d['kind'] in ('pc', 'aurum')),
+      ['192.168.0.42', '192.168.0.77'])
 check("the router is not claimed to be AurumOS",
       by_ip['192.168.0.1']['aurum'], False)
 check("hardware ids come through", by_ip['192.168.0.21']['mac'], '74-56-3c-33-a4-68')
