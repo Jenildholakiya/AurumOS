@@ -110,9 +110,24 @@ def login(api, payload):
 # -- the owner's view of connected PCs ------------------------------------
 
 def _server_only(api):
+    """Managing connected computers is the owner's job, on the main PC.
+
+    Two separate checks, because either one alone leaves a hole.
+
+    The machine has to be the server: a terminal holds no registry to manage.
+
+    The session has to be the owner's. `cluster` is deliberately open to any
+    signed-in user, because a terminal has to reach it to verify an address and
+    sign in. Without this second check a staff member sitting at the main PC
+    could list every computer in the shop, grant their own terminal every
+    module, and remove the others.
+    """
     if client.local_role() != client.ROLE_SERVER:
         return _fail('Only the main PC can manage connected computers.',
                      status='not_server')
+    if str(getattr(api, '_session_role', '') or '').strip().lower() == 'staff':
+        return _fail('Only the owner can change connected computers.',
+                     status='denied')
     return None
 
 
