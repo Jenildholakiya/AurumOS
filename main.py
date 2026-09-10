@@ -311,26 +311,60 @@ _init_log()
 def get_asset_path(relative_path):
     """
     Locate UI/asset files.
-    Priority:
-      1. Project root (parent of dist/) -- updated files live here
-      2. sys._MEIPASS                   -- original bundled files (fallback)
-      3. cwd                            -- dev mode
+
+    Frozen: _internal/ beside the EXE, which is both where the build puts
+    these files and where the updater writes new ones, so a downloaded screen
+    is the screen that opens next.
+
+    This used to climb out of any folder called dist/ or AurumOS/ and prefer a
+    ui/ folder found up there. The updater climbed the same way and the two did
+    not land together. On a PC installed to C:/AurumOS the app read
+    C:/AurumOS/_internal/ui while updates were written to C:/_internal/ui; on
+    the developer's own machine the app read the source ui/ while updates went
+    to dist/_internal/ui. Either way an update downloaded perfectly, recorded
+    itself in version.lock, and changed nothing on screen. One rule now, shared
+    with updater.get_app_root().
     """
     if getattr(sys, 'frozen', False):
-        exe_dir      = os.path.dirname(sys.executable)
-        # Go up to project root if EXE is inside dist/ or dist/AurumOS/
-        parent_name  = os.path.basename(exe_dir).lower()
-        if parent_name in ('dist', 'aurumos'):
-            project_root = os.path.dirname(exe_dir)
-        else:
-            project_root = exe_dir
-        # Check project root first (updated files)
-        root_path = os.path.join(project_root, relative_path)
-        if os.path.exists(root_path):
-            return root_path
-        # Fallback to bundled original
-        return os.path.join(sys._MEIPASS, relative_path)
+        # PyInstaller always sets _MEIPASS in a frozen process, and for this
+        # onedir build it is _internal/ beside the EXE. Trust it rather than
+        # testing whether the folder is there: a missing folder is a broken
+        # install, and quietly reading somewhere else would hide that while
+        # making updates land out of reach again.
+        base = getattr(sys, '_MEIPASS', '')
+        if not base:
+            exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+            internal = os.path.join(exe_dir, '_internal')
+            base = internal if os.path.isdir(internal) else exe_dir
+        return os.path.join(base, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
+
+def _log_ui_paths():
+    """Say where screens are read from and where updates are written.
+
+    These two silently disagreed for months, so an update downloaded, recorded
+    itself in version.lock and changed nothing on screen. MATCH is what a
+    working install looks like; MISMATCH names the fault outright instead of
+    leaving it to be rediscovered.
+    """
+    try:
+        ui_dir = get_asset_path('ui')
+        LOG(f'=== UI from : {ui_dir} ===')
+        if not getattr(sys, 'frozen', False):
+            LOG('=== UI to   : n/a, updates only apply to a built copy ===')
+            return
+        from updater import get_app_root as _gar0
+        upd_dir = os.path.join(str(_gar0()), '_internal', 'ui')
+        same = (os.path.normcase(os.path.normpath(ui_dir))
+                == os.path.normcase(os.path.normpath(upd_dir)))
+        LOG(f'=== UI to   : {upd_dir} '
+            f'({"MATCH" if same else "MISMATCH - updates will not show"}) ===')
+    except Exception as e:
+        LOG(f'=== UI paths: could not resolve ({e}) ===')
+
+
+_log_ui_paths()
+
 
 def get_data_path(relative_path=""):
     if getattr(sys, 'frozen', False):

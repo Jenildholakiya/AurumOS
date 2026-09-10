@@ -163,3 +163,43 @@ repository built for the test.
   highest tag; if the line is genuinely being reset, use `[force]`.
 - **A Python change seems ignored.** It is. See
   [When a rebuild is needed](#when-a-rebuild-is-needed).
+
+---
+
+## The one-time rebuild, and why it is unavoidable
+
+Updates have been running and landing in a folder the application never
+reads. On the machine this was written on, 59 files of v1.0.5 sat in
+`D:\AurumOS_Client\_internal\ui\` while the app served
+`D:\AurumOS_Client\dist\_internal\ui\`. `version.lock` said 1.0.5, so the
+number moved and nothing else did. That is why pushing appeared to do nothing,
+however many times it was done.
+
+Both halves of that bug are fixed, and both live inside `AurumOS.exe`:
+`get_app_root()` in `updater.py` chose where to write, `get_asset_path()` in
+`main.py` chose where to read, and they climbed out of any folder called
+`dist` or `AurumOS` in ways that did not agree.
+
+So **the fix cannot ship through the updater** — the updater is the thing
+being fixed. Every PC needs one rebuild and reinstall:
+
+```bash
+python build.py
+```
+
+then copy `dist\` over as usual. From that point on, `git push origin main` is
+the whole procedure for anything in `ui/`, with no further reinstalls.
+
+To confirm an install is healthy, open its log and look for the two lines
+printed at startup:
+
+```
+=== UI from : C:\AurumOS\_internal\ui ===
+=== UI to   : C:\AurumOS\_internal\ui (MATCH) ===
+```
+
+`MATCH` means downloads land where screens are read from. `MISMATCH` names the
+fault outright rather than leaving it to be found months later.
+
+The stray `_internal\` folder left beside the source tree by the old
+behaviour is dead weight and can be deleted.
