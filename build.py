@@ -456,7 +456,7 @@ a = Analysis(
         # ── FIXED: ALL local project modules (hidden from PyInstaller
         #    because main.py is obfuscated to marshal before the build step) ──
         "sse_listener",
-        "network","network.cluster_server","network.cluster_client",
+        "network","network.cluster_server","network.cluster_client","network.lan_scan",
         "database.cluster_store","core.permissions","core.cluster_api",
         "database.bastion_ai","database.bastion_report","database.aurum_health",
         "core.bastion_sync","core.ai_support","core.io_safety","core.security_lock","core.print_bridge",
