@@ -822,6 +822,12 @@ class AurumAPI:
             LOG(f"[SYNC] Failed to start sync engine: {_syne}")
             self.sync_engine = None
 
+        # ── SHOP NETWORK: this PC serves the shop, or joins one ───────────
+        # The main PC listens so staff PCs can verify its address, enrol, and
+        # have their logins checked here rather than on their own machine.
+        # A staff PC starts nothing; it only ever calls out.
+        self._start_cluster()
+
         # ── HEALTH DASHBOARD: auto-provision, zero manual setup ───────────
         # Runs once per PC, in the background. If already provisioned,
         # this is a no-op. Never blocks startup -- happens silently.
@@ -887,6 +893,7 @@ class AurumAPI:
         _api_db_ref = self.db
         self._session_role     = None
         self._session_username = None
+        self._session_bundles  = []
         self._login_attempts   = 0
         self._lockout_until    = None
         self._MAX_ATTEMPTS     = 3
@@ -5420,6 +5427,58 @@ class AurumAPI:
         except Exception as e:
             return {'status':'error','message':str(e)}
 
+    # ── SHOP NETWORK ──────────────────────────────────────────────────
+    # One method for the whole multi-PC feature, on purpose. main.py is the
+    # one file the auto-updater will never ship, so anything named here is
+    # frozen into the EXE until every shop is reinstalled by hand. Routing
+    # through core/cluster_api.py means new actions arrive with an ordinary
+    # release instead.
+    def cluster(self, action, payload=None):
+        """Every multi-PC call. See core/cluster_api.py for the actions."""
+        try:
+            from core.cluster_api import dispatch
+            return dispatch(self, action, payload or {})
+        except Exception as e:
+            ERR(f"[CLUSTER] {action} failed: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def _software_type(self):
+        """Retail or wholesale, decided by the licence prefix."""
+        try:
+            return 'retail' if str(self._read_license_key() or '').upper().startswith('AR-')                    else 'wholesale'
+        except Exception:
+            return 'wholesale'
+
+    def _start_cluster(self):
+        """Serve the shop network from this PC, unless it is a staff terminal.
+
+        A terminal starts nothing and only ever calls out, so two PCs can never
+        both believe they are the shop server.
+        """
+        try:
+            from network import cluster_client, cluster_server
+        except Exception as e:
+            ERR(f"[CLUSTER] modules unavailable: {e}")
+            return
+        try:
+            if cluster_client.is_terminal():
+                where = cluster_client.load_config().get('server_ip', '?')
+                LOG(f"[CLUSTER] Terminal mode -- shop server is {where}")
+                return
+            started = cluster_server.start_server(self.db, context={
+                'business_name': self.get_business_name,
+                'version':       lambda: CURRENT_VERSION,
+                'plan':          lambda: self.sub.get_state_json().get('effective_plan', 'lite'),
+                'features':      lambda: self.sub.get_state_json().get('features', []),
+                'software_type': self._software_type,
+            })
+            if started:
+                LOG(f"[CLUSTER] Serving the shop on port {cluster_server.CLUSTER_PORT}")
+            else:
+                LOG("[CLUSTER] Port busy -- staff PCs cannot connect to this one")
+        except Exception as e:
+            ERR(f"[CLUSTER] start failed: {e}")
+
     def get_network_config(self):
         import json as _j
         try:
@@ -5989,6 +6048,12 @@ def run_aur_os():
             if getattr(api, 'sync_engine', None):
                 api.sync_engine.stop()
                 LOG("[SYNC] Sync engine stopped on close")
+        except Exception:
+            pass
+        try:
+            from network import cluster_server as _cs
+            _cs.stop_server()
+            LOG("[CLUSTER] Shop server stopped on close")
         except Exception:
             pass
         try:

@@ -287,6 +287,13 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
     <div class="form" id="main-form">
 
+        <!-- Shown only on a staff PC, so whoever sits down can see at a glance
+             which shop this computer answers to. -->
+        <div id="terminal-note" style="display:none;margin-bottom:14px;padding:9px 12px;
+             border-radius:8px;background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.18);
+             color:#2563eb;font-size:0.68rem;font-weight:600;text-align:center;letter-spacing:0.2px;">
+            Staff terminal
+        </div>
 
         <!-- Password -->
         <div id="pass-mode" style="display:none">
@@ -554,6 +561,33 @@ function onReady() {
     })();
 }
 
+// ── STAFF TERMINAL ─────────────────────────────────────────────────
+// On a staff PC the password is checked on the main PC, not here. That is
+// what makes "no server, no access" real: this computer has no way to let
+// anyone in on its own, so an unreachable server is a closed door rather
+// than a screen someone could work around.
+var IS_TERMINAL = false;
+
+(function detectTerminal() {
+    function ask() {
+        try {
+            window.pywebview.api.cluster('identity').then(function (me) {
+                IS_TERMINAL = !!(me && me.role === 'terminal');
+                if (IS_TERMINAL) {
+                    var note = document.getElementById('terminal-note');
+                    if (note) {
+                        note.style.display = 'block';
+                        note.innerText = me.business
+                            ? 'Staff terminal · ' + me.business
+                            : 'Staff terminal';
+                    }
+                }
+            }).catch(function () {});
+        } catch (e) {}
+    }
+    if (window.apiReady) { window.apiReady(ask); } else { setTimeout(ask, 1200); }
+})();
+
 // ── LOGIN ──────────────────────────────────────────────────────────
 function login() {
     if (LOCKED) return;
@@ -565,6 +599,18 @@ function login() {
 
     var btn = document.getElementById('btn');
     btn.disabled=true; btn.innerHTML='<span>⋯</span> Checking…'; hideErr();
+
+    if (IS_TERMINAL) {
+        window.pywebview.api.cluster('login', { password: pass }).then(function (res) {
+            btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In';
+            handleResult(res);
+        }).catch(function () {
+            btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In';
+            showErr('Could not reach the main PC. Check it is switched on.');
+            shake();
+        });
+        return;
+    }
 
     try {
         var result = window.pywebview.api.verify_login(pass);
@@ -616,6 +662,45 @@ function handleResult(res) {
         var b2 = document.getElementById('btn');
         if (b2) { b2.disabled = false; b2.innerHTML = '<span>→</span> Sign In'; }
         show2faView(res.username);
+        return;
+    }
+
+    if (res.status === 'blocked' || res.status === 'not_enrolled' ||
+        res.status === 'wrong_user' || res.status === 'seat_limit') {
+        showErr(res.message || 'This PC cannot sign in.');
+        shake();
+        document.getElementById('inp').value = '';
+        return;
+    }
+
+    if (res.status === 'success' && IS_TERMINAL) {
+        var tbtn = document.getElementById('btn');
+        tbtn.innerHTML='<span>✓</span> Welcome!'; tbtn.style.background='#15803d';
+        var tpages = (res.pages && res.pages.length) ? res.pages : ['billing.html'];
+        var tType  = tpages.indexOf('pos_billing.html') !== -1 ? 'retail' : 'wholesale';
+        var tUser  = res.username || 'Staff';
+        try {
+            localStorage.setItem('aurum_user_role', 'staff');
+            localStorage.setItem('aurum_active_user', tUser);
+            localStorage.setItem('aurum_staff_name', tUser);
+            localStorage.setItem('aurum_staff_pages', JSON.stringify(tpages));
+            localStorage.setItem('aurum_software_type', tType);
+            if (res.business) localStorage.setItem('aurum_biz_name', res.business);
+            localStorage.setItem('aurum_last_login', JSON.stringify({
+                username: tUser, role: 'staff', time: new Date().toISOString()
+            }));
+        } catch(e) {}
+        setTimeout(function () {
+            try {
+                var here = window.location.href;
+                var cut  = Math.max(here.lastIndexOf('/'), here.lastIndexOf('\\'));
+                var base = here.slice(0, cut + 1);
+                window.location.href = base + tpages[0] + '?role=staff&type=' + tType +
+                                       '&user=' + encodeURIComponent(tUser);
+            } catch(e) {
+                try { window.pywebview.api.navigate(tpages[0]); } catch(e2) {}
+            }
+        }, 350);
         return;
     }
 

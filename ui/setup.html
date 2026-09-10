@@ -368,8 +368,14 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
         </div>
 
         <div class="fg" id="network-ip-group" style="display: none; animation: panelIn 0.3s ease;">
-            <label>Host Core Network Address (IP) <span class="req">*</span></label>
-            <input type="text" id="inp-server-ip" placeholder="e.g. 192.168.1.15" onkeydown="if(event.key==='Enter')goToStep3()">
+            <label>Main PC Address (IP) <span class="req">*</span></label>
+            <div style="display:flex;gap:8px;align-items:stretch;">
+                <input type="text" id="inp-server-ip" placeholder="e.g. 192.168.1.15" style="flex:1;min-width:0;"
+                       oninput="resetHostCheck()" onkeydown="if(event.key==='Enter')verifyHostAddress()">
+                <button type="button" class="btn btn-outline" id="btn-verify-host"
+                        style="flex:0 0 auto;white-space:nowrap;" onclick="verifyHostAddress()">Check</button>
+            </div>
+            <div class="status-box" id="host-status" style="margin-top:12px;"></div>
         </div>
 
         <div id="local-details-container">
@@ -772,6 +778,53 @@ function goToStep(n) {
     }, 200);
 }
 
+// The address typed into the client card, once a real server has answered it.
+// Cleared the moment the field changes, so a stale tick can never carry a
+// wrong address through to setup finishing.
+var hostVerified = null;
+
+function resetHostCheck() {
+    hostVerified = null;
+    hideStatus('host-status');
+}
+
+async function verifyHostAddress() {
+    var ip = document.getElementById('inp-server-ip').value.trim();
+    if (!ip) { markErr('inp-server-ip'); shakeCard(); return false; }
+    if (!window.pywebview || !window.pywebview.api) {
+        showStatus('host-status', 'error', '&#9888;', 'Not ready',
+                   'The application is still starting. Try again in a moment.');
+        return false;
+    }
+    var btn = document.getElementById('btn-verify-host');
+    var label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin"></div>';
+    showStatus('host-status', 'checking', '&#8987;', 'Checking ' + ip,
+               'Looking for the main PC on your network.');
+    var res;
+    try {
+        res = await window.pywebview.api.cluster('verify_server', { ip: ip });
+    } catch (e) {
+        res = { status: 'error', message: String(e) };
+    }
+    btn.disabled = false;
+    btn.innerHTML = label;
+
+    if (res && res.status === 'success') {
+        hostVerified = res;
+        showStatus('host-status', 'success', '&#10003;',
+                   'Found ' + (res.business || 'AurumOS'),
+                   'Reached the main PC at ' + res.ip + '. Continue to connect this computer.');
+        return true;
+    }
+    hostVerified = null;
+    showStatus('host-status', 'error', '&#9888;', 'Could not connect',
+               (res && res.message) || 'No answer from that address.');
+    shakeCard();
+    return false;
+}
+
 function goToStep3() {
     if (selectedProvisionMode === 'local') {
         var biz   = document.getElementById('inp-biz').value.trim();
@@ -781,6 +834,10 @@ function goToStep3() {
     } else {
         var ipVal = document.getElementById('inp-server-ip').value.trim();
         if (!ipVal) { markErr('inp-server-ip'); shakeCard(); return; }
+        if (!hostVerified || hostVerified.ip !== ipVal) {
+            verifyHostAddress().then(function(ok) { if (ok) goToStep(3); });
+            return;
+        }
     }
     goToStep(3);
 }
@@ -822,15 +879,15 @@ async function finishSetup() {
     if (selectedProvisionMode === 'network') {
         var ipAddress = document.getElementById('inp-server-ip').value.trim();
         try {
-            res = await window.pywebview.api.provision_nexus_identity({
-                mode: "network", server_ip: ipAddress, is_server: false
-            });
+            res = await window.pywebview.api.cluster('join', { ip: ipAddress });
         } catch(netErr) { res = {status: 'error', message: String(netErr)}; }
         if (res && res.status === 'success') {
-            document.getElementById('success-headline').innerText = "Terminal Provisioned!";
-            document.getElementById('success-subline').innerText = "Handshake complete. Bonding terminal to Host Core network topology loop.";
-            document.getElementById('success-biz-name').innerText = "Client Node Active";
-            document.getElementById('success-plan-pill').innerText = "Linked Network";
+            document.getElementById('success-headline').innerText = "Connected!";
+            document.getElementById('success-subline').innerText =
+                "This computer is now part of " + (res.business || "your shop") +
+                ". Sign in with your staff password to start.";
+            document.getElementById('success-biz-name').innerText = res.business || "Staff Terminal";
+            document.getElementById('success-plan-pill').innerText = "Staff Terminal";
             [1,2,3].forEach(function(i){
                 document.getElementById('panel-'+i).classList.remove('active');
                 document.getElementById('si-'+i).className = 'step-item done';
