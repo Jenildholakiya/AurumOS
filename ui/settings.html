@@ -128,6 +128,18 @@ header{
 .sys-val{font-family:var(--mono);font-size:0.8rem;color:var(--ink);}
 .sys-val.green{color:var(--green);}
 .sys-val.muted{color:var(--muted);font-size:0.72rem;}
+.upd-line{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.upd-btn{font-family:var(--sans);font-size:0.62rem;font-weight:600;color:var(--blue);
+  background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:7px;
+  padding:4px 10px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.upd-btn:hover:not(:disabled){background:var(--blue);color:#fff;}
+.upd-btn:disabled{opacity:0.55;cursor:default;}
+.sys-val.pending{color:var(--blue);font-weight:600;}
+.upd-notes{margin-top:8px;display:flex;flex-direction:column;gap:3px;}
+.upd-notes span{font-family:var(--sans);font-size:0.66rem;color:var(--muted);line-height:1.4;
+  padding-left:10px;position:relative;}
+.upd-notes span::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;
+  border-radius:50%;background:var(--blue);opacity:0.55;}
 
 .right-col{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;}
 .full-width-card{grid-column:1 / -1;}
@@ -348,13 +360,25 @@ body{
         <div class="sys-grid">
           <div class="sys-row">
             <div class="sys-lbl">Version</div>
-            <div class="sys-val" id="sys-ver">—</div>
+            <div class="sys-val" id="sys-ver" data-aurum-version>—</div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-lbl">Latest Released</div>
+            <div class="sys-val" id="sys-latest" data-aurum-latest>—</div>
+          </div>
+          <div class="sys-row" style="grid-column:1/-1;">
+            <div class="sys-lbl">Updates</div>
+            <div class="upd-line">
+              <div class="sys-val" id="sys-upd-state">Checking…</div>
+              <button class="upd-btn" id="sys-upd-btn" onclick="checkVersionNow()">Check now</button>
+            </div>
+            <div class="upd-notes" id="sys-upd-notes"></div>
           </div>
           <div class="sys-row">
             <div class="sys-lbl">License Status</div>
             <div class="sys-val green">● Active</div>
           </div>
-          <div class="sys-row" style="grid-column:1/-1;">
+          <div class="sys-row">
             <div class="sys-lbl">Machine ID</div>
             <div class="sys-val muted" id="sys-mid">—</div>
           </div>
@@ -658,9 +682,10 @@ function loadAll() {
         if (r && r.status === 'success') { DATA = r.data||{}; render(); }
     }).catch(function(){});
 
-    api.get_current_version && api.get_current_version().then(function(v){
-        if (v) el('sys-ver').innerText = 'v' + v;
-    }).catch(function(){});
+    // Version rows paint themselves from the shared module in boot.js
+    // (data-aurum-version / data-aurum-latest). renderVersion below adds the
+    // sentence and the release notes around them.
+    renderVersion();
 
     api.get_machine_id && api.get_machine_id().then(function(m){
         if (m) el('sys-mid').innerText = m;
@@ -669,6 +694,64 @@ function loadAll() {
     tfaLoadStatus();
     loadAlertSettings();
 }
+
+// ── VERSION PANEL ────────────────────────────────────────
+// Says which of three things is true: this copy is current, a newer release
+// is on its way down, or GitHub could not be reached. Updates arrive on their
+// own; the button is here for the shop that wants to see it happen now.
+function renderVersion() {
+    var v = (window.AurumOS && window.AurumOS.version) || {};
+    var state = el('sys-upd-state');
+    var notes = el('sys-upd-notes');
+    if (!state) return;
+    state.className = 'sys-val';
+    if (v.available) {
+        state.classList.add('pending');
+        state.innerText = 'v' + v.latest + ' is downloading in the background'
+            + (v.releaseDate ? ' · released ' + v.releaseDate : '');
+    } else if (v.latest && v.installed) {
+        state.classList.add('green');
+        state.innerText = '● Up to date'
+            + (v.releaseDate ? ' · released ' + v.releaseDate : '');
+    } else if (v.installed) {
+        state.classList.add('muted');
+        state.innerText = 'Could not reach GitHub — this copy still runs v' + v.installed + '.';
+    } else {
+        state.classList.add('muted');
+        state.innerText = 'Checking…';
+    }
+    if (notes) {
+        notes.innerHTML = '';
+        if (v.available && v.changelog && v.changelog.length) {
+            v.changelog.slice(0, 5).forEach(function(line) {
+                var sp = document.createElement('span');
+                sp.textContent = line;
+                notes.appendChild(sp);
+            });
+        }
+    }
+}
+
+function checkVersionNow() {
+    var btn = el('sys-upd-btn');
+    var state = el('sys-upd-state');
+    if (!window.AurumOS || !window.AurumOS.refreshVersion) return;
+    if (btn) { btn.disabled = true; btn.innerText = 'Checking…'; }
+    if (state) { state.className = 'sys-val muted'; state.innerText = 'Checking GitHub…'; }
+    window.AurumOS.refreshVersion(true).then(function(v) {
+        // A waiting update downloads on the next silent pass anyway; asking
+        // for it now is the whole point of pressing the button.
+        var api = window.pywebview && window.pywebview.api;
+        if (v && v.available && api && typeof api.auto_update_silent === 'function') {
+            api.auto_update_silent().catch(function(){});
+        }
+        renderVersion();
+    }).catch(function(){ renderVersion(); }).then(function() {
+        if (btn) { btn.disabled = false; btn.innerText = 'Check now'; }
+    });
+}
+
+window.addEventListener('aurum-version', renderVersion);
 
 function loadAlertSettings() {
     var api = window.pywebview && window.pywebview.api;

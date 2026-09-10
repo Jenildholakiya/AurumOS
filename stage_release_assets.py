@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Stage GitHub release assets from version.json manifest.
+Stage GitHub release assets from version.json.
 Run AFTER gen_version_manifest.py:
     python3 stage_release_assets.py [out_dir]
 
-Reads version.json 'files' entries and copies each source file:
-  _internal/ui/X -> <out>/X            (flat UI name)
-  a/b.py        -> <out>/a__b.py       (flat backend name)
-Prints MISSING lines for absent sources (non-fatal).
+Copies every file the manifest lists, under the flat name its URL ends in:
+  _internal/ui/X -> <out>/X
+  a/b.py         -> <out>/a__b.py
+Exits non-zero if any listed file is missing: the manifest and this checkout
+are the same tree, so a gap here is a bug, and an asset that never uploads
+would 404 on every terminal that tries to update.
 """
 import json
 import os
@@ -22,7 +24,7 @@ def main():
     with open(os.path.join(ROOT, 'version.json'), 'r', encoding='utf-8') as f:
         manifest = json.load(f)
     os.makedirs(OUT, exist_ok=True)
-    staged = 0
+    staged, missing = 0, []
     files = manifest.get('files', [])
     for entry in files:
         rel = str(entry.get('path', '')).replace('\\', '/')
@@ -34,15 +36,15 @@ def main():
         else:
             src = os.path.join(ROOT, rel)
             asset = rel.replace('/', '__')
-        if os.path.isfile(src):
-            if os.path.getsize(src) == 0:
-                print(f"SKIP (empty, GitHub rejects 0-byte assets): {rel}")
-                continue
+        if os.path.isfile(src) and os.path.getsize(src) > 0:
             shutil.copyfile(src, os.path.join(OUT, asset))
             staged += 1
         else:
+            missing.append(rel)
             print(f"MISSING: {rel}")
     print(f"staged: {staged} of {len(files)}")
+    if missing:
+        sys.exit(f"ERROR: {len(missing)} listed file(s) not found -- refusing to publish a manifest that would 404")
 
 
 if __name__ == '__main__':
