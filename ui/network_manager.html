@@ -150,6 +150,60 @@ tbody tr:hover{background:var(--accent-light);}
        background:var(--primary);color:#fff;padding:11px 20px;border-radius:9px;font-size:0.74rem;
        font-weight:600;box-shadow:0 10px 30px rgba(15,23,42,0.3);opacity:0;transition:all .3s;z-index:950;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* -- device list: contained scroll, sticky header, scroll shadows -- */
+.dev-shell{position:relative;}
+.dev-shell::before,.dev-shell::after{content:'';position:absolute;left:0;right:0;height:22px;
+  pointer-events:none;z-index:3;opacity:0;transition:opacity .25s;}
+.dev-shell::before{top:0;background:linear-gradient(to bottom,rgba(15,23,42,.10),transparent);}
+.dev-shell::after{bottom:0;background:linear-gradient(to top,rgba(15,23,42,.10),transparent);}
+.dev-shell.can-up::before{opacity:1;}
+.dev-shell.can-down::after{opacity:1;}
+.dev-scroll{max-height:470px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  overscroll-behavior:contain;scroll-behavior:smooth;}
+.dev-scroll::-webkit-scrollbar{width:6px;}
+.dev-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
+.dev-scroll::-webkit-scrollbar-thumb:hover{background:var(--text-muted2);}
+.dev-scroll thead th{position:sticky;top:0;z-index:2;background:var(--light);
+  box-shadow:0 1px 0 var(--border);}
+
+/* group rows: one heading per kind, the instruction stated once */
+tr.grp td{background:var(--white);padding:14px 16px 7px;border-bottom:none;}
+.grp-ttl{display:flex;align-items:center;gap:8px;font-size:.6rem;text-transform:uppercase;
+  letter-spacing:1px;font-weight:700;color:var(--text-muted2);}
+.grp-ttl .dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted2);}
+.grp-ttl.ok .dot{background:var(--success);}
+.grp-ttl.cand .dot{background:var(--warning);}
+.grp-ttl.cand{color:var(--warning);}
+.grp-cnt{background:var(--light);color:var(--text-muted);padding:1px 8px;border-radius:10px;
+  font-size:.58rem;letter-spacing:0;}
+.grp-hint{font-size:.68rem;color:var(--text-muted);margin-top:4px;line-height:1.5;
+  text-transform:none;letter-spacing:0;font-weight:500;}
+.grp-hint b{color:var(--text-main);}
+
+/* device rows: reveal on arrival, candidates and own machines marked */
+tr.dev{animation:rowIn .38s cubic-bezier(.22,1,.36,1) both;}
+@keyframes rowIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){tr.dev{animation:none;}.dev-scroll{scroll-behavior:auto;}}
+tr.dev td{transition:background .15s;}
+tr.dev.cand td:first-child{box-shadow:inset 3px 0 0 var(--warning);}
+tr.dev.mine td:first-child{box-shadow:inset 3px 0 0 var(--success);}
+tr.dev.cand:hover{background:rgba(180,83,9,.05);}
+tr.dev.other td{color:var(--text-muted2);}
+tr.dev.other .pc-name{color:var(--text-muted);font-weight:600;}
+.addr-copy{cursor:pointer;border-bottom:1px dashed var(--border);transition:color .15s,border-color .15s;}
+.addr-copy:hover{color:var(--accent);border-color:var(--accent);}
+.hw{font-family:var(--mono);font-size:.64rem;color:var(--text-muted2);letter-spacing:.2px;}
+
+/* scanning: a thin sweeping bar under the panel head */
+#devices-panel .panel-head{position:relative;}
+#devices-panel.scanning .panel-head::after{content:'';position:absolute;left:0;right:0;bottom:-1px;
+  height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  background-size:38% 100%;background-repeat:no-repeat;animation:sweep 1.15s linear infinite;}
+@keyframes sweep{from{background-position:-40% 0;}to{background-position:140% 0;}}
+.spin-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);
+  animation:pulse 1s ease-in-out infinite;margin-right:6px;vertical-align:middle;}
+@keyframes pulse{0%,100%{opacity:.25;transform:scale(.8);}50%{opacity:1;transform:scale(1);}}
 </style>
 </head>
 <body>
@@ -608,7 +662,8 @@ function scanNetwork() {
     if (!a) return;
     var btn = document.getElementById('scan-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span style="opacity:.8">Looking…</span>';
+    btn.innerHTML = '<span class="spin-dot"></span>Looking…';
+    document.getElementById('devices-panel').classList.add('scanning');
     document.getElementById('devices-wrap').innerHTML =
         '<div class="empty"><div class="empty-mark">&#128225;</div>' +
         '<div class="empty-ttl">Asking every address on the network</div>' +
@@ -618,10 +673,12 @@ function scanNetwork() {
     a.cluster('scan_network', {}).then(function (res) {
         btn.disabled = false;
         btn.innerText = 'Scan again';
+        document.getElementById('devices-panel').classList.remove('scanning');
         renderDevices(res);
     }).catch(function () {
         btn.disabled = false;
         btn.innerText = 'Scan now';
+        document.getElementById('devices-panel').classList.remove('scanning');
         document.getElementById('devices-wrap').innerHTML =
             '<div class="empty"><div class="empty-ttl">Could not scan</div>' +
             '<div class="empty-sub">Try again in a moment.</div></div>';
@@ -638,8 +695,6 @@ function renderDevices(res) {
     }
 
     var list = res.devices || [];
-    // Lead with the number that answers the question the owner came here with:
-    // which of these could become a till.
     var candidates = list.filter(function (d) {
         return d.kind === 'pc' || d.kind === 'aurum';
     }).length;
@@ -657,20 +712,12 @@ function renderDevices(res) {
         return;
     }
 
-    // Useful order, not address order: what you can act on first, phones last.
-    var RANK = { this_pc: 0, joined: 1, aurum: 2, pc: 3, device: 4 };
-    list = list.slice().sort(function (a, b) {
-        var d = (RANK[a.kind] === undefined ? 9 : RANK[a.kind]) -
-                (RANK[b.kind] === undefined ? 9 : RANK[b.kind]);
-        return d !== 0 ? d : a.ip.localeCompare(b.ip, undefined, { numeric: true });
-    });
-
     // Saying a PC can be connected is misleading when no seat is free, and
     // this is exactly where someone is about to walk off and try it.
     var holding = STATE.terminals.filter(function (t) { return t.status !== 'blocked'; }).length;
     var freeSeats = Math.max(STATE.licensed - holding, 0);
     var seatWarning = (candidates && !freeSeats)
-        ? '<div class="notice notice-amber" style="margin:14px 16px 0;">' +
+        ? '<div class="notice notice-amber" style="margin:14px 16px 4px;">' +
           '<span>&#9888;</span><div><b>No seats free</b>' +
           'Your plan connects ' + STATE.licensed +
           (STATE.licensed === 1 ? ' staff computer' : ' staff computers') +
@@ -678,26 +725,97 @@ function renderDevices(res) {
           'your plan, before setting another up.</div></div>'
         : '';
 
+    // One heading per kind, in the order someone would act on them. The
+    // instruction is stated once here rather than repeated on every row.
+    var me = h(res.this_pc);
+    var GROUPS = [
+        { kind: 'this_pc', cls: 'ok',   title: 'Your computer', hint: '' },
+        { kind: 'joined',  cls: 'ok',   title: 'Staff PCs',
+          hint: 'Already connected to this shop.' },
+        { kind: 'aurum',   cls: 'cand', title: 'Ready to connect',
+          hint: 'AurumOS is already running on these. On that PC pick <b>Client Node</b> ' +
+                'at Step 2 of setup and enter <b>' + me + '</b>.' },
+        { kind: 'pc',      cls: 'cand', title: 'Can be connected',
+          hint: 'Windows PCs with no AurumOS yet. Install it there, pick <b>Client Node</b>, ' +
+                'and enter <b>' + me + '</b>.' },
+        { kind: 'device',  cls: '',     title: 'Other devices',
+          hint: 'Phones, printers and routers. Not something a till runs on.' }
+    ];
+
     var rows = '';
-    list.forEach(function (d) {
-        var kind = DEVICE_KINDS[d.kind] || DEVICE_KINDS.device;
-        rows +=
-            '<tr>' +
-            '<td><div class="pc-name">' + h(d.hostname || 'Unnamed device') + '</div>' +
-            (d.business ? '<div class="pc-id">' + h(d.business) + '</div>' : '') + '</td>' +
-            '<td class="mono">' + h(d.ip) + '</td>' +
-            '<td class="mono" style="color:var(--text-muted2);font-size:0.66rem;">' +
-            h(d.mac || '—') + '</td>' +
-            '<td><span class="' + kind.pill + '">' + kind.label + '</span></td>' +
-            '<td style="font-size:0.68rem;color:var(--text-muted2);">' + kind.note + '</td>' +
-            '</tr>';
+    var index = 0;
+    GROUPS.forEach(function (g) {
+        var members = list.filter(function (d) { return d.kind === g.kind; })
+            .sort(function (a, b) { return a.ip.localeCompare(b.ip, undefined, { numeric: true }); });
+        if (!members.length) return;
+
+        rows += '<tr class="grp"><td colspan="4">' +
+            '<div class="grp-ttl ' + g.cls + '"><span class="dot"></span>' + g.title +
+            '<span class="grp-cnt">' + members.length + '</span></div>' +
+            (g.hint ? '<div class="grp-hint">' + g.hint + '</div>' : '') +
+            '</td></tr>';
+
+        members.forEach(function (d) {
+            var kind = DEVICE_KINDS[d.kind] || DEVICE_KINDS.device;
+            var rowCls = 'dev ' + (g.cls === 'cand' ? 'cand' : (g.cls === 'ok' ? 'mine' : 'other'));
+            // Stagger the reveal, but cap it so a long list does not crawl in.
+            var delay = Math.min(index * 28, 420);
+            index++;
+            rows +=
+                '<tr class="' + rowCls + '" style="animation-delay:' + delay + 'ms">' +
+                '<td><div class="pc-name">' + h(d.hostname || 'Unnamed device') + '</div>' +
+                (d.business ? '<div class="pc-id">' + h(d.business) + '</div>' : '') + '</td>' +
+                '<td><span class="mono addr-copy" title="Click to copy" data-ip="' + h(d.ip) +
+                '" onclick="copyAddr(this.getAttribute(\'data-ip\'))">' + h(d.ip) + '</span></td>' +
+                '<td class="hw">' + h(d.mac || '—') + '</td>' +
+                '<td><span class="' + kind.pill + '">' + kind.label + '</span></td>' +
+                '</tr>';
+        });
     });
 
     wrap.innerHTML = seatWarning +
+        '<div class="dev-shell" id="dev-shell"><div class="dev-scroll" id="dev-scroll">' +
         '<table><thead><tr>' +
-        '<th>Device</th><th>Address</th><th>Hardware ID</th>' +
-        '<th>What it is</th><th>Notes</th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table>';
+        '<th>Device</th><th>Address</th><th>Hardware ID</th><th>What it is</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '</div></div>';
+
+    var scroller = document.getElementById('dev-scroll');
+    scroller.addEventListener('scroll', updateScrollShadows, { passive: true });
+    // Once painted, so the shadows reflect real overflow rather than an empty box.
+    requestAnimationFrame(updateScrollShadows);
+    setTimeout(updateScrollShadows, 500);
+}
+
+// Inner shadows at whichever edge still has content beyond it, so a list that
+// is taller than its box reads as scrollable instead of simply cut off.
+function updateScrollShadows() {
+    var sc = document.getElementById('dev-scroll');
+    var shell = document.getElementById('dev-shell');
+    if (!sc || !shell) return;
+    shell.classList.toggle('can-up', sc.scrollTop > 4);
+    shell.classList.toggle('can-down', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 4);
+}
+
+function copyAddr(ip) {
+    function done() { toast('Copied ' + ip); }
+    function fallbackCopy(text) {
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            done();
+        } catch (e) { toast(ip); }
+    }
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(ip).then(done).catch(function () { fallbackCopy(ip); });
+            return;
+        }
+    } catch (e) {}
+    fallbackCopy(ip);
 }
 
 // ── start ──────────────────────────────────────────────────────────────
