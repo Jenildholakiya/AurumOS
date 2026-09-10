@@ -3621,6 +3621,28 @@ class DBManager:
         except Exception:
             return default
 
+    def get_business_name(self, default='AurumOS'):
+        """The shop's name, from wherever this install happens to keep it.
+
+        Setup writes it to app_config, but business_profile.biz_name is filled
+        by an older path and by some restores. Checking only the first means a
+        shop can end up showing the generic product name, and that name is what
+        a staff member reads to confirm they reached the right computer while
+        joining, so a wrong answer there is worse than cosmetic.
+        """
+        name = (self.get_config('business_name', '') or '').strip()
+        if name:
+            return name
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT biz_name FROM business_profile WHERE id=1").fetchone()
+            if row and (row['biz_name'] or '').strip():
+                return row['biz_name'].strip()
+        except Exception:
+            pass
+        return default
+
     def set_config(self, key, value):
         """Insert or update a single config value."""
         try:
