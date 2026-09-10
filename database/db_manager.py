@@ -379,6 +379,19 @@ class DBManager:
                 # Anomalies found after a merge (e.g. same stock sold twice
                 # independently on both PCs while offline). Never blocks
                 # anything -- purely a log for manual review.
+                # Maps a voucher number that had to be renumbered on arrival to the
+                # number it was given, so this voucher's line items land on it
+                # instead of on a voucher that was never theirs.
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS sync_rekey_map (
+                        table_name     TEXT NOT NULL,
+                        peer_device_id TEXT NOT NULL,
+                        old_value      TEXT NOT NULL,
+                        new_value      TEXT NOT NULL,
+                        created_at     TEXT DEFAULT (datetime('now')),
+                        PRIMARY KEY (table_name, peer_device_id, old_value)
+                    )
+                """)
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS sync_conflicts (
                         id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -667,6 +680,119 @@ class DBManager:
         'uchak_inward_vouchers', 'uchak_inward_items', 'admin_creds',
     ]
 
+    # The human-facing unique key each synced table is numbered by. A clash on
+    # one of these means two PCs invented the same number while apart -- not a
+    # duplicate of the same real event.
+    SYNC_NATURAL_KEY = {
+        'sales_history':         'vch_id',
+        'katti_vouchers':        'vch_id',
+        'uchak_inward_vouchers': 'vch_id',
+        'stock_inventory':       'tag_id',
+        'clients_master':        'name',
+    }
+
+    # Rows that point back at a parent voucher. If a parent gets re-keyed on
+    # arrival, its children must follow or the voucher arrives with no lines.
+    SYNC_CHILD_REF = {
+        'katti_voucher_items':  ('katti_vouchers',        'vch_id'),
+        'uchak_inward_items':   ('uchak_inward_vouchers', 'vch_id'),
+        'credit_ledger':        ('sales_history',         'vch_reference'),
+    }
+
+    # Clashes here are the SAME real-world entity entered on two PCs (one
+    # customer, one tag). Keep the local copy and log it; do not re-key.
+    SYNC_MERGE_ON_CLASH = {'clients_master'}
+
+    @staticmethod
+    def _sync_rekey_value(original, peer_device_id):
+        """Build a collision-free version of a voucher number that still shows
+        plainly which PC it came from, e.g. VCH-001 -> VCH-001~A31F."""
+        tail = (str(peer_device_id or 'PEER').replace('-', '')[-4:] or 'PEER').upper()
+        return f"{original}~{tail}"
+
+    def _sync_record_rekey(self, conn, table_name, peer_device_id, old_value, new_value):
+        conn.execute(
+            "INSERT OR REPLACE INTO sync_rekey_map "
+            "(table_name, peer_device_id, old_value, new_value) VALUES (?,?,?,?)",
+            (table_name, peer_device_id, str(old_value), str(new_value))
+        )
+
+    def _sync_lookup_rekey(self, conn, table_name, peer_device_id, old_value):
+        try:
+            r = conn.execute(
+                "SELECT new_value FROM sync_rekey_map "
+                "WHERE table_name=? AND peer_device_id=? AND old_value=?",
+                (table_name, peer_device_id, str(old_value))
+            ).fetchone()
+            return r['new_value'] if r else None
+        except Exception:
+            return None
+
+    def _sync_log_conflict(self, conn, ctype, description, ref_a='', ref_b=''):
+        """Record a merge anomaly once. Never blocks the merge."""
+        try:
+            already = conn.execute(
+                "SELECT id FROM sync_conflicts WHERE conflict_type=? AND description=? AND resolved=0",
+                (ctype, description)
+            ).fetchone()
+            if not already:
+                conn.execute(
+                    "INSERT INTO sync_conflicts (conflict_type, description, ref_a, ref_b) "
+                    "VALUES (?,?,?,?)", (ctype, description, str(ref_a), str(ref_b))
+                )
+        except Exception as e:
+            _dberr(f"[SYNC] could not log conflict: {e}")
+
+    def _sync_resolve_clash(self, conn, tbl, row, cols, values,
+                            nk_col, peer_device_id, clash):
+        """A row from another PC hit a UNIQUE/PK constraint.
+
+        The old code used INSERT OR IGNORE here, which threw the row away
+        silently while still logging it as received -- a bill could vanish
+        with no trace. Nothing is ever dropped without a conflict record now.
+        Returns True if the row was stored under a new key.
+        """
+        original = row.get(nk_col) if nk_col else None
+
+        if tbl in self.SYNC_MERGE_ON_CLASH:
+            self._sync_log_conflict(
+                conn, 'duplicate_record',
+                f"{tbl} '{original}' was created on two PCs. Kept the copy already on this PC.",
+                str(original), peer_device_id)
+            return False
+
+        if not nk_col or original is None:
+            self._sync_log_conflict(
+                conn, 'merge_rejected',
+                f"A {tbl} row from another PC could not be merged: {clash}",
+                '', peer_device_id)
+            return False
+
+        new_key = self._sync_rekey_value(original, peer_device_id)
+        values = list(values)
+        values[cols.index(nk_col)] = new_key
+        try:
+            conn.execute(
+                f"INSERT INTO {tbl} ({','.join(cols)}) VALUES ({','.join(['?'] * len(cols))})",
+                values)
+        except Exception as e:
+            self._sync_log_conflict(
+                conn, 'merge_rejected',
+                f"A {tbl} row from another PC could not be merged even after "
+                f"renumbering it to '{new_key}': {e}",
+                str(original), peer_device_id)
+            return False
+
+        self._sync_record_rekey(conn, tbl, peer_device_id, original, new_key)
+        self._sync_log_conflict(
+            conn, 'duplicate_voucher_id',
+            f"{tbl} '{original}' was created on two PCs at the same time. The copy "
+            f"from the other PC was saved as '{new_key}' so nothing was lost. "
+            f"Renumber it when convenient.",
+            str(original), str(new_key))
+        _dblog(f"[SYNC] {tbl} '{original}' clashed -- stored as '{new_key}' instead of being dropped")
+        return True
+
     # Add this method to your DBManager class in db_manager.py
     def get_provisioning_payload(self):
         return {
@@ -826,9 +952,16 @@ class DBManager:
                     count = 0
                     for row in rows:
                         try:
-                            # Skip if we already have this exact peer row
+                            # Skip if we already have this exact peer row.
+                            # rowid, not id: katti_vouchers and
+                            # uchak_inward_vouchers are keyed by vch_id and
+                            # have no id column, so asking for one threw and
+                            # sent every voucher of those two kinds down the
+                            # skip path -- they never synced at all, while
+                            # their line items did and attached themselves to
+                            # whichever voucher already held that number here.
                             existing = conn.execute(
-                                f"SELECT id FROM {tbl} WHERE device_id=? AND local_id=?",
+                                f"SELECT rowid FROM {tbl} WHERE device_id=? AND local_id=?",
                                 (peer_device_id, row.get('local_id'))
                             ).fetchone()
                             if existing:
@@ -909,6 +1042,19 @@ class DBManager:
                             if skip_row:
                                 continue
 
+                            # If this row's parent voucher had to be renumbered
+                            # when it arrived, point the row at the number the
+                            # parent actually got.
+                            child_ref = self.SYNC_CHILD_REF.get(tbl)
+                            if child_ref:
+                                parent_tbl, ref_col = child_ref
+                                if row.get(ref_col):
+                                    moved = self._sync_lookup_rekey(
+                                        conn, parent_tbl, peer_device_id, row[ref_col])
+                                    if moved:
+                                        row = dict(row)
+                                        row[ref_col] = moved
+
                             cols = [c for c in row.keys() if c != 'id']
                             placeholders = ','.join(['?'] * len(cols))
                             colnames = ','.join(cols)
@@ -919,10 +1065,21 @@ class DBManager:
                             if tbl == 'admin_creds' and force_is_owner_zero and 'is_owner' in cols:
                                 values[cols.index('is_owner')] = 0
 
-                            conn.execute(
-                                f"INSERT OR IGNORE INTO {tbl} ({colnames}) VALUES ({placeholders})",
-                                values
-                            )
+                            # A plain INSERT, so a clash raises instead of being
+                            # thrown away. _sync_resolve_clash decides whether the
+                            # row is a genuine duplicate or a number two PCs both
+                            # invented, and stores it either way.
+                            try:
+                                conn.execute(
+                                    f"INSERT INTO {tbl} ({colnames}) VALUES ({placeholders})",
+                                    values
+                                )
+                            except sqlite3.IntegrityError as _clash:
+                                if not self._sync_resolve_clash(
+                                        conn, tbl, row, cols, values,
+                                        self.SYNC_NATURAL_KEY.get(tbl),
+                                        peer_device_id, _clash):
+                                    continue
                             count += 1
 
                             # ── DETAILED TRANSFER LOG ──────────────────────
