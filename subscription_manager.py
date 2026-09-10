@@ -78,17 +78,36 @@ ENTERPRISE_ONLY_FEATURES = [f for f in ENTERPRISE_FEATURES if f not in PRO_FEATU
 
 
 def _enforce_plan_tier(plan, features):
-    """Drop Enterprise-only features from any non-Enterprise plan."""
+    """Make the plan tier authoritative in both directions.
+
+    This used to only strip: anything above the tier was removed, but nothing
+    below it was ever added. So a shop on Pro saw a feature only if the admin
+    server happened to list it against that licence, and a single stale record
+    there locked a paid feature with no way to fix it from the client. Editing
+    the dashboard fixed one shop at a time and the next record drifted again.
+
+    The tier now decides. Everything the plan includes is granted, everything
+    above it is dropped, and anything else the server sent that the tier is
+    allowed to have survives -- which is how a purchased extra-seat token rides
+    through without being listed in a plan.
+    """
     if isinstance(features, str):
         features = [f.strip() for f in features.split(',') if f.strip()]
     features = list(features or [])
-    if (plan or 'lite').lower() == 'enterprise':
-        return features
-    stripped = [f for f in features if f not in ENTERPRISE_ONLY_FEATURES]
-    if len(stripped) != len(features):
-        removed = [f for f in features if f in ENTERPRISE_ONLY_FEATURES]
-        _log(f'Plan tier enforcement: stripped {removed} from plan={plan}')
-    return stripped
+
+    tier = str(plan or 'lite').strip().lower()
+    granted = PLAN_FEATURES.get(tier)
+    if granted is None:
+        return features                      # unknown plan: leave it alone
+
+    above = set(ENTERPRISE_FEATURES) - set(granted)
+    out = list(granted)
+    for f in features:
+        if f not in out and f not in above:
+            out.append(f)
+    if len(out) != len(features):
+        _log(f'Plan tier {tier}: {len(features)} feature(s) from server -> {len(out)} after tier rules')
+    return out
 
 # Subscription validity = 365 days
 SUBSCRIPTION_DAYS = 365

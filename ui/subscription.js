@@ -14,20 +14,52 @@
     'scale_weighing', 'sales_report_basic', 'bastion_core'
   ];
 
-  // ── Enterprise-only features (must match Python ENTERPRISE_ONLY_FEATURES) ──
-  // The admin server may still list these under Pro — strip them client-side
-  // so the plan tier stays authoritative.
-  var ENTERPRISE_ONLY_FEATURES = [
-    'lan_multi_pc', 'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai',
+  // ── Plan tiers (must match Python PLAN_FEATURES in subscription_manager) ──
+  // test_plan_tiers.py compares these lists against the Python ones and fails
+  // if they drift, because this file and that one disagreeing is exactly how a
+  // paid feature ends up locked.
+  var PRO_FEATURES = LITE_FEATURES.concat([
+    'karigar_vouchers', 'touch_groups', 'full_accounts',
+    'tag_audit', 'stock_med_reports', 'tsc_network_printing', 'multi_staff',
+    'analytics_dashboard', 'year_close', 'bastion_enhanced',
+    'lan_multi_pc'
+  ]);
+
+  var ENTERPRISE_FEATURES = PRO_FEATURES.concat([
+    'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai',
     'nexus_management', 'bridge_server', 'custom_db_location',
     'priority_support', 'api_integration'
-  ];
+  ]);
 
+  var PLAN_FEATURES = {
+    lite: LITE_FEATURES,
+    pro: PRO_FEATURES,
+    enterprise: ENTERPRISE_FEATURES
+  };
+
+  // The tier decides, in both directions. This used to only strip: anything
+  // above the plan was removed, but nothing the plan includes was ever added,
+  // so a shop saw a feature only if the admin server happened to list it
+  // against that licence. One stale record there locked a paid feature with no
+  // way to fix it from the client.
   function _enforcePlanTier(plan, features) {
     var list = features || [];
     if (typeof list === 'string') list = list.split(',');
-    if (String(plan || 'lite').toLowerCase() === 'enterprise') return list.slice();
-    return list.filter(function (f) { return ENTERPRISE_ONLY_FEATURES.indexOf(f) === -1; });
+
+    var tier = String(plan || 'lite').toLowerCase().trim();
+    var granted = PLAN_FEATURES[tier];
+    if (!granted) return list.slice();          // unknown plan: leave it alone
+
+    var above = ENTERPRISE_FEATURES.filter(function (f) {
+      return granted.indexOf(f) === -1;
+    });
+    var out = granted.slice();
+    list.forEach(function (f) {
+      // Anything else the server sent survives if the tier may have it, which
+      // is how a purchased extra-seat token rides through unlisted.
+      if (out.indexOf(f) === -1 && above.indexOf(f) === -1) out.push(f);
+    });
+    return out;
   }
 
   // ── State ────────────────────────────────────────────────────────────
@@ -261,15 +293,15 @@
 
   function checkFeature(featureId) {
     if (hasFeature(featureId)) return { allowed: true };
-    var required = 'pro';
-    var proFeatures = [
-      'karigar_vouchers','touch_groups','full_accounts',
-      'tag_audit','stock_med_reports','tsc_network_printing','multi_staff',
-      'analytics_dashboard','year_close','bastion_enhanced'
-    ];
-    var entFeatures = ENTERPRISE_ONLY_FEATURES;
-    if (proFeatures.indexOf(featureId) !== -1) required = 'pro';
-    if (entFeatures.indexOf(featureId) !== -1) required = 'enterprise';
+    // The cheapest plan that includes it, read off the tier lists rather than
+    // a second copy of them. The copy that used to live here is why the
+    // upgrade box could name a different plan than the one that unlocks it.
+    // Each tier contains the one below, so walking down and keeping the last
+    // match lands on the cheapest.
+    var required = 'enterprise';
+    ['enterprise', 'pro', 'lite'].forEach(function (tier) {
+      if (PLAN_FEATURES[tier].indexOf(featureId) !== -1) required = tier;
+    });
     return { allowed: false, required_plan: required, plan: _state.effective_plan };
   }
 
