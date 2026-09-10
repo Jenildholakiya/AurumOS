@@ -107,6 +107,10 @@ a = Analysis(
         "pythonnet","clr_loader","clr_loader.netfx","clr_loader.hostfxr","clr_loader.ffi", # ── FIXED: CLR host for pywebview winforms
         "requests", "urllib3", "charset_normalizer", "idna", # ── FIXED: FORCE INJECTED REQUESTS BINARIES
         "updater","subscription_manager","database","database.db_manager","core","core.tag_engine","sync_engine","network_client",
+        # Multi-PC. These are imported lazily inside functions, so the build
+        # analysis cannot see them and would leave them out of the EXE.
+        "database.cluster_store","core.permissions","core.cluster_api",
+        "network","network.cluster_server","network.cluster_client",
         "serial","serial.tools","serial.tools.list_ports","serial.serialutil",
         "serial.serialwin32","serial.win32","serial.win32con","serial.win32file",
         "serial.win32pipe","serial.urlhandler","serial.urlhandler.protocol_hwgrep",
