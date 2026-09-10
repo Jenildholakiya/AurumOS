@@ -1,0 +1,28 @@
+# Binary files must never have their line endings rewritten.
+#
+# core.autocrlf is on for this repository, and without these rules Git guesses
+# per file. It guessed wrong for the setup guide PDF and warned that it would
+# rewrite it, which would have corrupted the file on the next checkout. Fonts,
+# icons and the label images carry the same risk.
+#
+# Deliberately no "* text=auto" line: adding one would renormalise every
+# existing source file in the repository in a single commit.
+
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.icns  binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.exe   binary
+*.dll   binary
+*.pyd   binary
+*.db    binary
+*.zip   binary
+*.pfx   binary
+*.p12   binary
