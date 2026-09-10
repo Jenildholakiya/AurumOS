@@ -193,6 +193,19 @@ def remove_terminal(api, payload):
     return {'status': 'success'}
 
 
+def scan_network(api, payload):
+    """Every device on the shop's network, with what each one is.
+
+    Owner-side, because it is a management view and it names the machines in
+    the shop. Takes a few seconds: it waits for the network to answer.
+    """
+    blocked = _server_only(api)
+    if blocked:
+        return blocked
+    from network import lan_scan
+    return lan_scan.scan(api.db, wake=payload.get('wake', True))
+
+
 def seats(api, payload):
     from database import cluster_store as store
     from core import permissions as perms
@@ -223,6 +236,7 @@ ACTIONS = {
     'assign_terminal': assign_terminal,
     'block_terminal':  block_terminal,
     'remove_terminal': remove_terminal,
+    'scan_network':    scan_network,
     'seats':           seats,
 }
 

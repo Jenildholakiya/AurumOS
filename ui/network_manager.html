@@ -237,6 +237,26 @@ tbody tr:hover{background:var(--accent-light);}
     <div id="list-wrap"></div>
   </div>
 
+  <div class="panel" id="devices-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-ttl">Everything on your network</div>
+        <div class="panel-sub" id="devices-sub">Every device sharing this shop's network,
+          whether or not it runs AurumOS.</div>
+      </div>
+      <button class="btn btn-primary" id="scan-btn" onclick="scanNetwork()">Scan now</button>
+    </div>
+    <div id="devices-wrap">
+      <div class="empty">
+        <div class="empty-mark">&#128269;</div>
+        <div class="empty-ttl">Not looked yet</div>
+        <div class="empty-sub">Press <b>Scan now</b> to list every computer, phone and
+          printer sharing this network. Useful for finding a staff PC's address
+          before it has joined.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 </main>
 </div>
@@ -334,6 +354,9 @@ function loadAll(manual) {
         var isServer = me.role !== 'terminal';
         document.getElementById('not-server-notice').style.display = isServer ? 'none' : 'block';
         document.getElementById('addr-panel').style.display = isServer ? 'block' : 'none';
+        // Scanning is answered by the main PC only, so hide the panel rather
+        // than offer a button that comes back refused.
+        document.getElementById('devices-panel').style.display = isServer ? 'block' : 'none';
         document.getElementById('st-role').innerText = isServer ? 'Main PC' : 'Staff PC';
         document.getElementById('st-role-sub').innerText =
             isServer ? 'Runs the shop server' : ('Connected to ' + (me.server_ip || 'a main PC'));
@@ -562,6 +585,85 @@ function removePc(id) {
     api().cluster('remove_terminal', { terminal_id: id }).then(function () {
         toast('Computer removed'); loadTerminals();
     }).catch(function () {});
+}
+
+// ── everything on the network ──────────────────────────────────────────
+var DEVICE_KINDS = {
+    this_pc: { pill: 'pill ok',   label: 'This PC',
+               note: 'The computer you are sitting at' },
+    joined:  { pill: 'pill ok',   label: 'Staff PC',
+               note: 'Already connected to this shop' },
+    aurum:   { pill: 'pill wait', label: 'Running AurumOS',
+               note: 'Not connected yet. Use this address on that PC.' },
+    device:  { pill: 'pill idle', label: 'Other device',
+               note: 'Phone, printer, router or a PC without AurumOS' }
+};
+
+function scanNetwork() {
+    var a = api();
+    if (!a) return;
+    var btn = document.getElementById('scan-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="opacity:.8">Looking…</span>';
+    document.getElementById('devices-wrap').innerHTML =
+        '<div class="empty"><div class="empty-mark">&#128225;</div>' +
+        '<div class="empty-ttl">Asking every address on the network</div>' +
+        '<div class="empty-sub">This takes a few seconds. Devices that are ' +
+        'switched off or asleep will not answer.</div></div>';
+
+    a.cluster('scan_network', {}).then(function (res) {
+        btn.disabled = false;
+        btn.innerText = 'Scan again';
+        renderDevices(res);
+    }).catch(function () {
+        btn.disabled = false;
+        btn.innerText = 'Scan now';
+        document.getElementById('devices-wrap').innerHTML =
+            '<div class="empty"><div class="empty-ttl">Could not scan</div>' +
+            '<div class="empty-sub">Try again in a moment.</div></div>';
+    });
+}
+
+function renderDevices(res) {
+    var wrap = document.getElementById('devices-wrap');
+    if (!res || res.status !== 'success') {
+        wrap.innerHTML = '<div class="empty"><div class="empty-ttl">Could not scan</div>' +
+            '<div class="empty-sub">' + h((res && res.message) || 'No answer.') +
+            '</div></div>';
+        return;
+    }
+
+    var list = res.devices || [];
+    document.getElementById('devices-sub').innerText =
+        list.length + (list.length === 1 ? ' device' : ' devices') + ' on ' +
+        res.network + ' · took ' + res.took + 's';
+
+    if (!list.length) {
+        wrap.innerHTML = '<div class="empty"><div class="empty-ttl">Nothing answered</div>' +
+            '<div class="empty-sub">Only this PC appears to be on the network.</div></div>';
+        return;
+    }
+
+    var rows = '';
+    list.forEach(function (d) {
+        var kind = DEVICE_KINDS[d.kind] || DEVICE_KINDS.device;
+        rows +=
+            '<tr>' +
+            '<td><div class="pc-name">' + h(d.hostname || 'Unnamed device') + '</div>' +
+            (d.business ? '<div class="pc-id">' + h(d.business) + '</div>' : '') + '</td>' +
+            '<td class="mono">' + h(d.ip) + '</td>' +
+            '<td class="mono" style="color:var(--text-muted2);font-size:0.66rem;">' +
+            h(d.mac || '—') + '</td>' +
+            '<td><span class="' + kind.pill + '">' + kind.label + '</span></td>' +
+            '<td style="font-size:0.68rem;color:var(--text-muted2);">' + kind.note + '</td>' +
+            '</tr>';
+    });
+
+    wrap.innerHTML =
+        '<table><thead><tr>' +
+        '<th>Device</th><th>Address</th><th>Hardware ID</th>' +
+        '<th>What it is</th><th>Notes</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ── start ──────────────────────────────────────────────────────────────

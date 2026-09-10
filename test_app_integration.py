@@ -48,6 +48,11 @@ def check_that(label, ok, detail=''):
 # Keep the database, logs and config this creates away from the project.
 os.makedirs(os.path.join(work, 'database'), exist_ok=True)
 os.environ['AURUM_DB_PATH'] = os.path.join(work, 'database', 'aurum_local.db')
+# Listen somewhere other than the shop port. Without this the test competes
+# with a copy of AurumOS the developer happens to have open, and on Windows
+# both binds succeed, so the test ends up talking to the running application
+# instead of the server it just started.
+os.environ['AURUM_CLUSTER_PORT'] = '58972'
 os.chdir(work)
 
 print("-- main.py still imports after the networking removal --")
@@ -119,11 +124,12 @@ check("an unknown action is handled, not thrown",
       api.cluster('nonsense').get('status'), 'unknown_action')
 
 print("\n-- a staff PC joins it over a real socket --")
-found = client.verify_server('127.0.0.1', cluster_server.CLUSTER_PORT)
+PORT = int(os.environ['AURUM_CLUSTER_PORT'])
+found = client.verify_server('127.0.0.1', PORT)
 check("the address verifies", found.get('status'), 'success')
 check("and names the shop", found.get('business'), 'Dholakiya Jewellers')
 
-joined = client.join_server(db, '127.0.0.1', cluster_server.CLUSTER_PORT)
+joined = client.join_server(db, '127.0.0.1', PORT)
 check("the PC joins", joined.get('status'), 'success')
 
 signed = client.login('staffpass99')

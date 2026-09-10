@@ -23,6 +23,8 @@ Lives under network/ so it reaches customers through the auto-updater.
 """
 
 import json
+import os
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -74,7 +76,6 @@ def _clear_failures(terminal_id):
 class _ClusterHandler(BaseHTTPRequestHandler):
     db = None
     context = None          # supplies plan, features and business name
-    allow_reuse_address = True
     protocol_version = 'HTTP/1.1'
 
     def log_message(self, fmt, *args):
@@ -253,21 +254,45 @@ class _ClusterHandler(BaseHTTPRequestHandler):
         })
 
 
+class _ShopServer(ThreadingHTTPServer):
+    """The shop server, refusing to share its port.
+
+    socketserver turns SO_REUSEADDR on by default. On Unix that only allows
+    reuse of a port left in TIME_WAIT, which is what everyone wants. On Windows
+    it means something else entirely: a second process can bind a port another
+    process is actively listening on, both succeed, and connections are handed
+    to one or the other at random.
+
+    That is worse than a crash. Two copies of AurumOS on one PC, or a stray one
+    left running, would each believe they were the shop server while half the
+    staff PCs talked to the wrong one. Turning it off on Windows makes the
+    second bind fail, which start_server already reports.
+    """
+    daemon_threads = True
+    allow_reuse_address = (sys.platform != 'win32')
+
+
 _server = None
 _thread = None
 
 
-def start_server(db, context=None, host='0.0.0.0', port=CLUSTER_PORT):
+def start_server(db, context=None, host='0.0.0.0', port=None):
     """Start the shop server. Safe to call twice; the second call refreshes
     the database handle rather than trying to bind the port again."""
     global _server, _thread
+    # AURUM_CLUSTER_PORT lets a test, or a second copy on one machine, listen
+    # somewhere other than the shop port instead of fighting over it.
+    if port is None:
+        try:
+            port = int(os.environ.get('AURUM_CLUSTER_PORT') or CLUSTER_PORT)
+        except ValueError:
+            port = CLUSTER_PORT
     _ClusterHandler.db = db
     _ClusterHandler.context = context or {}
     if _server is not None:
         return _server
     try:
-        _server = ThreadingHTTPServer((host, port), _ClusterHandler)
-        _server.daemon_threads = True
+        _server = _ShopServer((host, port), _ClusterHandler)
         _thread = threading.Thread(target=_server.serve_forever, daemon=True,
                                    name='AurumClusterServer')
         _thread.start()
