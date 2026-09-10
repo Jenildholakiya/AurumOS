@@ -590,7 +590,16 @@ def build():
     s += [Callout('good', 'A short network drop is not a problem',
                   'If the network flickers, a staff computer holds what it is '
                   'doing and picks up again by itself once the connection '
-                  'returns. Nobody has to sign in again.'), Spacer(1, 14)]
+                  'returns. Nobody has to sign in again.'), Spacer(1, 12)]
+
+    s += [Callout('warn', 'The main PC needs internet once, at the start',
+                  'Staff computers connect over your own network and do not '
+                  'need the internet. But the main PC has to reach the licence '
+                  'server at least once to know which plan you are on. Until it '
+                  'has, it behaves as the free version, which connects no staff '
+                  'computers at all. After that first check it remembers, and '
+                  'the shop keeps working if the internet goes down.'),
+          Spacer(1, 14)]
 
     s += [Paragraph('Common questions', H2), Spacer(1, 8)]
     s += [table([

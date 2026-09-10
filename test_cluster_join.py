@@ -168,6 +168,15 @@ check_that("and is told how to fix it",
 PLAN['value'] = 'enterprise'   # four connecting PCs
 third = client.join_server(db, '127.0.0.1', PORT)
 check("the same PC is accepted once the plan allows it", third['status'], 'success')
+
+# A main PC that has never reached the licensing server falls back to Lite,
+# and Lite connects nobody. Worth pinning: it means a brand-new install with
+# no internet cannot take staff PCs at all, however the shop has paid. An
+# established shop keeps its plan from cache and is unaffected.
+PLAN['value'] = 'lite'
+lite = client.join_server(db, '127.0.0.1', PORT)
+check("an unlicensed main PC connects nobody", lite['status'], 'seat_limit')
+PLAN['value'] = 'enterprise'
 client.terminal_id = real_terminal_id
 
 print("\n-- an unknown PC gets nowhere --")
