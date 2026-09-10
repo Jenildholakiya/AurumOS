@@ -103,8 +103,7 @@
           var _PAGE_GATE = {
             'karigar.html':'karigar_vouchers','staff.html':'multi_staff',
             'chart_of_accounts.html':'full_accounts','accounting.html':'full_accounts',
-            'ledger.html':'full_accounts','reports.html':'stock_med_reports',
-            'network_manager.html':'lan_multi_pc'
+            'ledger.html':'full_accounts','reports.html':'stock_med_reports'
           };
           var fid = _PAGE_GATE[pageLower];
           if (fid && window.AurumOS && typeof window.AurumOS.hasFeature === 'function') {
@@ -262,8 +261,10 @@
     'chart_of_accounts.html':   'full_accounts',
     'accounting.html':          'full_accounts',
     'ledger.html':              'full_accounts',
-    'reports.html':             'stock_med_reports',
-    'network_manager.html':     'lan_multi_pc'
+    'reports.html':             'stock_med_reports'
+    // network_manager.html is deliberately absent; see sidebar.js. This gate
+    // in particular judged from a cached list in localStorage, so a stale
+    // cache redirected the page away from a shop that had already paid.
   };
 
   // ── SYNCHRONOUS page gate — runs BEFORE any page renders ──────────
