@@ -4,228 +4,394 @@
 <script src="boot.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AurumOS | Customers</title>
+<title>AurumOS | CRM</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="sidebar.css">
 <style>
 :root{
-    --offwhite:#f8fafb;--light:#f1f5f9;--white:#ffffff;
-    --ink:#0f172a;--ink2:#1e293b;--ink3:#475569;
+    --bg-main:#f8fafb;--white:#ffffff;--cream:#f1f5f9;
+    --text-main:#0f172a;--text-muted:#64748b;--muted2:#94a3b8;
+    --primary:#0f172a;
     --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
     --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
-    --rule:#e2e8f0;--rule2:rgba(15,23,42,0.04);
-    --muted:#64748b;--muted2:#94a3b8;
-    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
-    --amber:#d97706;--amber-bg:rgba(217,119,6,0.08);
-    --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+    --border:#e2e8f0;--rule:#e2e8f0;--rule2:rgba(15,23,42,0.05);
+    --success:#16a34a;--success-bg:rgba(22,163,74,0.08);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.09);
+    --danger:#dc2626;--danger-bg:rgba(220,38,38,0.07);
+    --gold:#a87d1e;--gold-bg:rgba(168,125,30,0.1);
     --sans:'DM Sans',system-ui,sans-serif;
     --mono:Arial,sans-serif;
-    --sh:0 1px 3px rgba(15,23,42,0.04),0 1px 2px rgba(15,23,42,0.03);
-    --sh2:0 4px 16px rgba(15,23,42,0.07);
+    --sh:0 1px 2px rgba(15,23,42,0.04);
+    --sh2:0 4px 14px rgba(15,23,42,0.07);
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:var(--sans);background:var(--offwhite);color:var(--ink);font-size:0.82rem;}
-.page{padding:22px 26px 60px;}
 
-.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
-.page-title{font-size:1.15rem;font-weight:700;letter-spacing:-0.3px;}
-.page-sub{font-size:0.72rem;color:var(--muted);margin-top:3px;}
-.head-actions{display:flex;gap:8px;flex-wrap:wrap;}
+/* The shell every page in this app uses: body is the row that holds the
+   sidebar and main side by side, main scrolls on its own. Getting this
+   wrong puts the page underneath the sidebar instead of beside it. */
+body{display:flex!important;height:100vh!important;width:100vw!important;
+     overflow:hidden!important;background:var(--bg-main);
+     color:var(--text-main);font-family:var(--sans);font-size:0.82rem;}
+main{width:100%!important;min-width:0;flex:1;display:flex;
+     flex-direction:column;overflow:hidden;}
 
-.btn{height:36px;padding:0 15px;border:none;border-radius:9px;font-family:inherit;
-     font-size:0.75rem;font-weight:600;cursor:pointer;display:inline-flex;
-     align-items:center;gap:6px;transition:all .15s;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--border);
+       display:flex;align-items:center;justify-content:space-between;
+       padding:0 24px;flex-shrink:0;position:relative;z-index:50;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--blue-ln) 50%,transparent 95%);}
+.header-left h1{font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:9px;}
+.status-dot{width:9px;height:9px;background:var(--success);border-radius:50%;
+    box-shadow:0 0 10px rgba(22,163,74,0.4);}
+.header-sub{font-size:0.66rem;color:var(--text-muted);margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:9px;}
+
+.search{position:relative;}
+.search input{height:34px;width:210px;padding:0 12px 0 32px;border:1px solid var(--border);
+    border-radius:9px;background:var(--bg-main);font-family:inherit;font-size:0.74rem;
+    color:var(--text-main);outline:none;transition:all .15s;}
+.search input:focus{border-color:var(--blue2);background:var(--white);width:250px;}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);}
+
+.btn{height:34px;padding:0 14px;border:none;border-radius:9px;font-family:inherit;
+     font-size:0.73rem;font-weight:600;cursor:pointer;display:inline-flex;
+     align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
 .btn-primary{background:var(--blue);color:#fff;}
 .btn-primary:hover{background:var(--blue3);}
-.btn-ghost{background:var(--white);color:var(--ink3);border:1px solid var(--rule);}
-.btn-ghost:hover{background:var(--light);}
-.btn-sm{height:28px;padding:0 10px;font-size:0.68rem;border-radius:7px;}
+.btn-ghost{background:var(--white);color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--cream);color:var(--text-main);}
+.btn-sm{height:26px;padding:0 9px;font-size:0.66rem;border-radius:7px;}
 
-/* Counters across the top */
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
-.tile{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;box-shadow:var(--sh);}
-.tile-label{font-size:0.56rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);}
-.tile-value{font-size:1.35rem;font-weight:700;margin-top:5px;letter-spacing:-0.5px;}
-.tile-sub{font-size:0.66rem;color:var(--muted);margin-top:3px;}
-.tile.alert .tile-value{color:var(--red);}
-.tile.warn .tile-value{color:var(--amber);}
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;
+        scrollbar-width:thin;scrollbar-color:var(--rule) transparent;}
+.scroll::-webkit-scrollbar{width:5px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}
-.card{background:var(--white);border:1px solid var(--rule);border-radius:14px;
-      box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden;}
-.card-hdr{padding:14px 18px;border-bottom:1px solid var(--rule2);
+/* ── Counters. Each one jumps to what it counts, so a number is a way in. ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));
+       gap:11px;margin-bottom:18px;}
+.tile{background:var(--white);border:1px solid var(--border);border-radius:12px;
+      padding:13px 15px;box-shadow:var(--sh);cursor:pointer;
+      transition:all .15s;border-left:3px solid var(--border);}
+.tile:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.tile-label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+            letter-spacing:1px;color:var(--muted2);}
+.tile-value{font-size:1.4rem;font-weight:700;margin-top:4px;letter-spacing:-0.5px;
+            line-height:1.1;}
+.tile-sub{font-size:0.63rem;color:var(--text-muted);margin-top:3px;}
+.tile.is-today{border-left-color:var(--gold);}
+.tile.is-today .tile-value{color:var(--gold);}
+.tile.is-money{border-left-color:var(--blue);}
+.tile.is-alert{border-left-color:var(--danger);}
+.tile.is-alert .tile-value{color:var(--danger);}
+.tile.is-warn{border-left-color:var(--amber);}
+.tile.is-warn .tile-value{color:var(--amber);}
+.tile.is-ok{border-left-color:var(--success);}
+
+/* ── Two columns: what to do, then who to know. ── */
+.cols{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:16px;align-items:start;}
+@media (max-width:1180px){ .cols{grid-template-columns:1fr;} }
+.col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:13px;
+      box-shadow:var(--sh);overflow:hidden;}
+.card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);
           display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.card-title{font-size:0.82rem;font-weight:700;}
-.card-sub{font-size:0.64rem;color:var(--muted);margin-top:2px;}
-.card-body{padding:6px 0 10px;max-height:330px;overflow-y:auto;}
-.card-body.pad{padding:16px 18px;}
+.card-hdr-left{display:flex;align-items:center;gap:9px;min-width:0;}
+.card-icon{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;
+           justify-content:center;flex-shrink:0;background:var(--blue-bg);color:var(--blue);}
+.card-icon.gold{background:var(--gold-bg);color:var(--gold);}
+.card-icon.danger{background:var(--danger-bg);color:var(--danger);}
+.card-icon.amber{background:var(--amber-bg);color:var(--amber);}
+.card-icon.ok{background:var(--success-bg);color:var(--success);}
+.card-title{font-size:0.79rem;font-weight:700;line-height:1.2;}
+.card-sub{font-size:0.62rem;color:var(--text-muted);margin-top:1px;}
+.count-chip{font-size:0.6rem;font-weight:700;padding:2px 8px;border-radius:99px;
+            background:var(--cream);color:var(--text-muted);}
+.count-chip.hot{background:var(--danger-bg);color:var(--danger);}
+.list{max-height:318px;overflow-y:auto;scrollbar-width:thin;}
+.list::-webkit-scrollbar{width:4px;}
+.list::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
 
-.row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--rule2);}
+.row{display:flex;align-items:center;gap:10px;padding:9px 17px;
+     border-bottom:1px solid var(--rule2);}
 .row:last-child{border-bottom:none;}
-.row:hover{background:var(--offwhite);}
-.row-click{cursor:pointer;}
+.row-click{cursor:pointer;transition:background .12s;}
+.row-click:hover{background:var(--bg-main);}
 .row-main{flex:1;min-width:0;}
-.row-name{font-weight:600;font-size:0.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.row-meta{font-size:0.66rem;color:var(--muted);margin-top:2px;}
-.row-right{text-align:right;font-family:var(--mono);font-size:0.74rem;white-space:nowrap;}
+.row-name{font-weight:600;font-size:0.75rem;white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis;}
+.row-meta{font-size:0.64rem;color:var(--text-muted);margin-top:2px;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-right{text-align:right;font-family:var(--mono);font-size:0.72rem;
+           white-space:nowrap;display:flex;align-items:center;gap:6px;}
 
-.pill{display:inline-block;font-size:0.56rem;font-weight:700;text-transform:uppercase;
-      letter-spacing:0.6px;padding:2px 7px;border-radius:5px;}
-.pill-today{background:var(--red-bg);color:var(--red);}
+.pill{display:inline-block;font-size:0.55rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:0.6px;padding:2px 7px;border-radius:5px;white-space:nowrap;}
+.pill-today{background:var(--danger-bg);color:var(--danger);}
 .pill-soon{background:var(--amber-bg);color:var(--amber);}
-.pill-ok{background:var(--green-bg);color:var(--green);}
-.pill-vip{background:rgba(168,125,30,0.1);color:#a87d1e;}
-.pill-lapsed{background:var(--red-bg);color:var(--red);}
+.pill-ok{background:var(--success-bg);color:var(--success);}
+.pill-vip{background:var(--gold-bg);color:var(--gold);}
+.pill-lapsed{background:var(--danger-bg);color:var(--danger);}
 .pill-repeat{background:var(--blue-bg);color:var(--blue);}
-.pill-new{background:var(--light);color:var(--muted);}
-.pill-active{background:var(--green-bg);color:var(--green);}
+.pill-new{background:var(--cream);color:var(--text-muted);}
+.pill-active{background:var(--success-bg);color:var(--success);}
 
-.empty{padding:26px 18px;text-align:center;color:var(--muted2);font-size:0.72rem;}
+.empty{padding:30px 18px;text-align:center;color:var(--muted2);font-size:0.71rem;}
+.empty strong{display:block;color:var(--text-muted);font-size:0.76rem;
+              font-weight:600;margin-bottom:3px;}
 
-/* Dues ageing */
-.ageing{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px;border-bottom:1px solid var(--rule2);}
-.age-cell{background:var(--offwhite);border:1px solid var(--rule);border-radius:9px;padding:9px;text-align:center;}
-.age-label{font-size:0.54rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;}
-.age-value{font-family:var(--mono);font-size:0.82rem;font-weight:600;margin-top:3px;}
-.age-cell.hot{border-color:rgba(220,38,38,0.3);background:var(--red-bg);}
-.age-cell.hot .age-value{color:var(--red);}
+.ageing{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;
+        padding:13px 17px;border-bottom:1px solid var(--rule2);}
+.age-cell{background:var(--bg-main);border:1px solid var(--border);
+          border-radius:9px;padding:8px 6px;text-align:center;}
+.age-label{font-size:0.52rem;font-weight:700;color:var(--muted2);
+           text-transform:uppercase;letter-spacing:0.7px;}
+.age-value{font-family:var(--mono);font-size:0.78rem;font-weight:600;margin-top:3px;}
+.age-cell.hot{border-color:rgba(220,38,38,0.3);background:var(--danger-bg);}
+.age-cell.hot .age-value{color:var(--danger);}
 
-/* Add-something forms */
-.mini-form{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 18px;border-top:1px solid var(--rule2);background:var(--offwhite);}
-.mini-form input,.mini-form select{height:32px;padding:0 10px;border:1px solid var(--rule);
-    border-radius:7px;font-family:inherit;font-size:0.72rem;background:var(--white);color:var(--ink);}
-.mini-form input:focus,.mini-form select:focus{outline:none;border-color:var(--blue2);}
-.mini-form .wide{grid-column:1/-1;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-column:1/-1;}
+/* ── One place to add a promise, rather than a form per card. ── */
+.add-tabs{display:flex;gap:0;border-bottom:1px solid var(--rule2);}
+.add-tab{flex:1;padding:9px 6px;font-size:0.69rem;font-weight:600;text-align:center;
+         cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;
+         transition:all .15s;}
+.add-tab:hover{background:var(--bg-main);}
+.add-tab.on{color:var(--blue);border-bottom-color:var(--blue);background:var(--blue-bg);}
+.add-body{padding:13px 17px;display:grid;gap:8px;}
+.add-body[hidden]{display:none;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+           letter-spacing:0.8px;color:var(--muted2);}
+.fld input,.fld select{height:32px;padding:0 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;font-size:0.72rem;background:var(--white);
+    color:var(--text-main);outline:none;transition:border-color .15s;}
+.fld input:focus,.fld select:focus{border-color:var(--blue2);}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-.toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;
-       padding:11px 15px;border-radius:9px;font-size:0.74rem;box-shadow:var(--sh2);
-       opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:400;}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
+       padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
+       opacity:0;transform:translateY(8px);transition:all .22s;
+       pointer-events:none;z-index:500;max-width:320px;}
 .toast.show{opacity:1;transform:none;}
-.toast.bad{background:var(--red);}
+.toast.bad{background:var(--danger);}
 </style>
 </head>
 <body>
-<div id="sidebar-root"></div>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
 
-<div class="page">
-    <div class="page-head">
-        <div>
-            <div class="page-title">Customers</div>
-            <div class="page-sub" id="head-sub">Loading…</div>
-        </div>
-        <div class="head-actions">
-            <button class="btn btn-ghost" onclick="goTo('customer_detail.html')">Customer Records</button>
-            <button class="btn btn-ghost" onclick="goTo('crm_schemes.html')">Savings Plans</button>
-            <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
-        </div>
+<main>
+<header>
+    <div class="header-left">
+        <h1><div class="status-dot"></div>CRM</h1>
+        <div class="header-sub" id="head-sub">Loading…</div>
     </div>
+    <div class="header-right">
+        <div class="search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></svg>
+            <input type="text" id="search" placeholder="Find a customer…" oninput="onSearch(this.value)" autocomplete="off">
+        </div>
+        <button class="btn btn-ghost" onclick="goTo('customer_detail.html')">Records</button>
+        <button class="btn btn-ghost" onclick="goTo('crm_schemes.html')">Plans</button>
+        <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
+    </div>
+</header>
+
+<div class="scroll">
 
     <div class="tiles" id="tiles"></div>
 
-    <div class="grid">
+    <div class="cols">
 
-        <!-- Who to call today. The reason this screen exists. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Call today</div>
-                    <div class="card-sub">Birthdays and anniversaries in the next 30 days</div>
+        <!-- What to do, in the order a counter does it. -->
+        <div class="col">
+
+            <div class="card" id="sec-today">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon gold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Call today</div>
+                            <div class="card-sub">Birthdays and anniversaries, next 30 days</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-occasions">0</span>
                 </div>
+                <div class="list" id="occasions"><div class="empty">Loading…</div></div>
             </div>
-            <div class="card-body" id="occasions"><div class="empty">Loading…</div></div>
+
+            <div class="card" id="sec-promises">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon amber">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Promised</div>
+                            <div class="card-sub">Follow-ups still open</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-followups">0</span>
+                </div>
+                <div class="list" id="followups"><div class="empty">Loading…</div></div>
+            </div>
+
+            <div class="card" id="sec-orders">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Orders and repairs</div>
+                            <div class="card-sub">In hand, overdue shown in red</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-orders">0</span>
+                </div>
+                <div class="list" id="orders"><div class="empty">Loading…</div></div>
+            </div>
+
+            <div class="card" id="sec-money">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon danger">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Money owed</div>
+                            <div class="card-sub">Oldest debt first, not biggest</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-dues">0</span>
+                </div>
+                <div class="ageing" id="ageing"></div>
+                <div class="list" id="dues"><div class="empty">Loading…</div></div>
+            </div>
+
+            <div class="card" id="sec-plans">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon ok">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Savings plans</div>
+                            <div class="card-sub">Behind first, so a missed month gets a call</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="goTo('crm_schemes.html')">Manage</button>
+                </div>
+                <div class="list" id="plans"><div class="empty">Loading…</div></div>
+            </div>
+
         </div>
 
-        <!-- Money owed, by age rather than just by amount. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Money owed</div>
-                    <div class="card-sub">Oldest debts first, not biggest</div>
-                </div>
-            </div>
-            <div class="ageing" id="ageing"></div>
-            <div class="card-body" id="dues"><div class="empty">Loading…</div></div>
-        </div>
+        <!-- Who to know, and one place to write something down. -->
+        <div class="col">
 
-        <!-- Savings plans: the ones falling behind are the ones that matter. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Savings plans</div>
-                    <div class="card-sub">Behind first, so a missed month gets a call</div>
+            <div class="card">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Write it down</div>
+                            <div class="card-sub">Before they leave the counter</div>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-ghost btn-sm" onclick="goTo('crm_schemes.html')">Manage</button>
-            </div>
-            <div class="card-body" id="plans"><div class="empty">Loading…</div></div>
-        </div>
+                <div class="add-tabs">
+                    <div class="add-tab on" id="tab-fu" onclick="showAdd('fu')">Follow-up</div>
+                    <div class="add-tab" id="tab-or" onclick="showAdd('or')">Order</div>
+                </div>
 
-        <!-- Promises made at the counter. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Follow-ups</div>
-                    <div class="card-sub">What was promised, and by when</div>
+                <div class="add-body" id="add-fu">
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="fu-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What needs doing</label>
+                        <input type="text" id="fu-task" placeholder="Call about the bangle">
+                    </div>
+                    <div class="fld">
+                        <label>By when</label>
+                        <input type="date" id="fu-date">
+                    </div>
+                    <button class="btn btn-primary" onclick="addFollowup()">Add follow-up</button>
                 </div>
-            </div>
-            <div class="card-body" id="followups"><div class="empty">Loading…</div></div>
-            <div class="mini-form">
-                <input type="text" id="fu-customer" placeholder="Customer" list="customer-names" />
-                <input type="date" id="fu-date" />
-                <input type="text" id="fu-task" class="wide" placeholder="What needs doing" />
-                <button class="btn btn-primary btn-sm wide" onclick="addFollowup()">Add follow-up</button>
-            </div>
-        </div>
 
-        <!-- Orders and repairs with a date attached. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Orders and repairs</div>
-                    <div class="card-sub">Overdue shown in red</div>
+                <div class="add-body" id="add-or" hidden>
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="or-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What is being made or mended</label>
+                        <input type="text" id="or-desc" placeholder="Chain clasp repair">
+                    </div>
+                    <div class="fld-row">
+                        <div class="fld">
+                            <label>Type</label>
+                            <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
+                        </div>
+                        <div class="fld">
+                            <label>Promised</label>
+                            <input type="date" id="or-date">
+                        </div>
+                    </div>
+                    <div class="fld">
+                        <label>Advance taken</label>
+                        <input type="number" id="or-advance" placeholder="0" step="1" min="0">
+                    </div>
+                    <button class="btn btn-primary" onclick="addOrder()">Add order</button>
                 </div>
             </div>
-            <div class="card-body" id="orders"><div class="empty">Loading…</div></div>
-            <div class="mini-form">
-                <input type="text" id="or-customer" placeholder="Customer" list="customer-names" />
-                <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
-                <input type="text" id="or-desc" class="wide" placeholder="What is being made or mended" />
-                <div class="form-row">
-                    <input type="date" id="or-date" />
-                    <input type="number" id="or-advance" placeholder="Advance Rs" step="1" min="0" />
-                </div>
-                <button class="btn btn-primary btn-sm wide" onclick="addOrder()">Add</button>
-            </div>
-        </div>
 
-        <!-- Customers worth keeping, and customers slipping away. -->
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Gone quiet</div>
-                    <div class="card-sub">No purchase in a year, biggest spender first</div>
+            <div class="card" id="sec-lapsed">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon amber">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Gone quiet</div>
+                            <div class="card-sub">Nothing bought in a year</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-lapsed">0</span>
                 </div>
+                <div class="list" id="lapsed"><div class="empty">Loading…</div></div>
             </div>
-            <div class="card-body" id="lapsed"><div class="empty">Loading…</div></div>
-        </div>
 
-        <div class="card">
-            <div class="card-hdr">
-                <div>
-                    <div class="card-title">Best customers</div>
-                    <div class="card-sub">By what they have spent with you</div>
+            <div class="card" id="sec-top">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon gold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 21.5 12 18 5.5 21.5 7 14.5 2 9.5 9 9"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Best customers</div>
+                            <div class="card-sub">By what they have spent</div>
+                        </div>
+                    </div>
                 </div>
+                <div class="list" id="top"><div class="empty">Loading…</div></div>
             </div>
-            <div class="card-body" id="top"><div class="empty">Loading…</div></div>
-        </div>
 
+        </div>
     </div>
 </div>
+</main>
 
 <datalist id="customer-names"></datalist>
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js"></script>
 <script>
 'use strict';
 
@@ -233,6 +399,12 @@ var DATA = null;
 var CUSTOMERS = [];
 
 function el(id){ return document.getElementById(id); }
+
+function esc(s){
+    return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
 
 // For a value dropped inside a single-quoted onclick attribute. Customer
 // names are typed by people, and one apostrophe would otherwise end the
@@ -244,14 +416,8 @@ function escAttr(s){
     return t.split('"').join('&quot;').split('<').join('&lt;');
 }
 
-function esc(s){
-    return String(s === null || s === undefined ? '' : s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
-}
-
-// Indian grouping: 1,23,456 rather than 123,456. Every other money figure in
-// the app is written this way and a CRM screen that disagrees looks wrong.
+// Indian grouping: 1,23,456 rather than 123,456, matching every other money
+// figure in the app.
 function money(n){
     var v = parseFloat(n || 0);
     if (!isFinite(v)) v = 0;
@@ -262,7 +428,7 @@ function toast(msg, bad){
     var t = el('toast');
     t.textContent = msg;
     t.className = 'toast show' + (bad ? ' bad' : '');
-    setTimeout(function(){ t.className = 'toast' + (bad ? ' bad' : ''); }, 2600);
+    setTimeout(function(){ t.className = 'toast' + (bad ? ' bad' : ''); }, 2800);
 }
 
 function api(){
@@ -275,14 +441,10 @@ function goTo(page){
     window.location.href = page;
 }
 
-// A name on this screen should open that person, not a list to search again.
-// customer_detail.html takes ?name=, so the bridge's navigate() is bypassed
-// here: it takes a bare page and would drop the query string.
+// customer_detail.html takes ?name=. The bridge's navigate() takes a bare page
+// and would drop the query string, so this builds the jump itself.
 function openCustomer(name){
     if (!name) return;
-    // Cut back to the folder this page is in. Done by hand rather than with a
-    // regular expression because the separator can be either slash and the
-    // escaping is easy to get quietly wrong.
     var href = window.location.href;
     var q = href.indexOf('?');
     if (q >= 0) href = href.substring(0, q);
@@ -291,25 +453,47 @@ function openCustomer(name){
     window.location.href = base + 'customer_detail.html?name=' + encodeURIComponent(name);
 }
 
+function jumpTo(id){
+    var e = el(id);
+    if (e && e.scrollIntoView) e.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 function today(){
     var d = new Date();
-    return d.getFullYear() + '-' +
-           ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
-           ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + ('0' + (d.getMonth()+1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
 }
 
 function daysBetween(iso){
     var d = new Date(iso);
     if (isNaN(d.getTime())) return null;
-    var now = new Date(today());
-    return Math.round((d - now) / 86400000);
+    return Math.round((d - new Date(today())) / 86400000);
+}
+
+// A due date as something a person reads, not a number to work out.
+function duePill(iso){
+    if (!iso) return '';
+    var d = daysBetween(iso);
+    if (d === null) return '';
+    if (d < 0)  return '<span class="pill pill-today">' + Math.abs(d) + 'd late</span>';
+    if (d === 0) return '<span class="pill pill-soon">Today</span>';
+    if (d === 1) return '<span class="pill pill-soon">Tomorrow</span>';
+    if (d <= 7) return '<span class="pill pill-soon">' + d + ' days</span>';
+    return '<span class="pill pill-ok">' + d + ' days</span>';
+}
+
+function rowOpen(name){
+    return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(name) + '\')">';
+}
+
+function emptyState(title, line){
+    return '<div class="empty"><strong>' + esc(title) + '</strong>' + esc(line) + '</div>';
 }
 
 // ── loading ──────────────────────────────────────────────────────────
 function loadAll(){
     var a = api();
     if (!a || typeof a.crm_dashboard !== 'function') {
-        el('head-sub').textContent = 'The customer service is not available in this build.';
+        el('head-sub').textContent = 'Not available in this build — restart after updating.';
         return;
     }
     a.crm_dashboard(30, 365).then(function(d){
@@ -328,8 +512,8 @@ function loadAll(){
         renderTop(d.top_customers || []);
         var c = d.counts || {};
         el('head-sub').textContent = (c.customers || 0) + ' customers · '
-            + (c.open_followups || 0) + ' follow-ups open · '
-            + (c.open_orders || 0) + ' orders in hand';
+            + (d.occasions || []).length + ' to call · '
+            + (c.open_followups || 0) + ' promised';
     }).catch(function(e){
         el('head-sub').textContent = 'Could not load: ' + e;
     });
@@ -337,8 +521,7 @@ function loadAll(){
     if (typeof a.crm_customers === 'function') {
         a.crm_customers().then(function(rows){
             CUSTOMERS = rows || [];
-            var dl = el('customer-names');
-            dl.innerHTML = CUSTOMERS.map(function(c){
+            el('customer-names').innerHTML = CUSTOMERS.map(function(c){
                 return '<option value="' + esc(c.name) + '"></option>';
             }).join('');
         }).catch(function(){});
@@ -350,16 +533,28 @@ function renderTiles(d){
     var seg = c.segments || {};
     var owed = 0;
     (d.dues || []).forEach(function(x){ owed += parseFloat(x.total || 0); });
+    var overdue = (d.followups || []).filter(function(f){
+        return f.due_date && daysBetween(f.due_date) < 0; }).length;
+
     var tiles = [
-        {label:'Customers', value:(c.customers || 0), sub:(seg.vip || 0) + ' VIP · ' + (seg.lapsed || 0) + ' gone quiet'},
-        {label:'To call', value:(d.occasions || []).length, sub:'Birthdays and anniversaries, 30 days'},
-        {label:'Money owed', value:money(owed), sub:(d.dues || []).length + ' customers'},
-        {label:'Plans behind', value:(c.plans_behind || 0), sub:(c.active_plans || 0) + ' running', cls:(c.plans_behind ? 'alert' : '')},
-        {label:'Follow-ups', value:(c.open_followups || 0), sub:'Open', cls:(c.open_followups ? 'warn' : '')},
-        {label:'Orders', value:(c.open_orders || 0), sub:'In hand'}
+        { label:'To call',    value:(d.occasions || []).length, sub:'Next 30 days',
+          cls:'is-today', go:'sec-today' },
+        { label:'Promised',   value:(c.open_followups || 0),
+          sub:(overdue ? overdue + ' overdue' : 'All on time'),
+          cls:(overdue ? 'is-alert' : 'is-ok'), go:'sec-promises' },
+        { label:'In hand',    value:(c.open_orders || 0), sub:'Orders and repairs',
+          cls:'is-warn', go:'sec-orders' },
+        { label:'Owed',       value:money(owed), sub:(d.dues || []).length + ' customers',
+          cls:'is-money', go:'sec-money' },
+        { label:'Plans behind', value:(c.plans_behind || 0),
+          sub:(c.active_plans || 0) + ' running',
+          cls:(c.plans_behind ? 'is-alert' : 'is-ok'), go:'sec-plans' },
+        { label:'Customers',  value:(c.customers || 0),
+          sub:(seg.vip || 0) + ' VIP · ' + (seg.lapsed || 0) + ' quiet',
+          cls:'', go:'sec-top' }
     ];
     el('tiles').innerHTML = tiles.map(function(t){
-        return '<div class="tile ' + (t.cls || '') + '">'
+        return '<div class="tile ' + t.cls + '" onclick="jumpTo(\'' + t.go + '\')">'
              + '<div class="tile-label">' + esc(t.label) + '</div>'
              + '<div class="tile-value">' + esc(t.value) + '</div>'
              + '<div class="tile-sub">' + esc(t.sub) + '</div></div>';
@@ -367,15 +562,20 @@ function renderTiles(d){
 }
 
 function renderOccasions(list){
-    if (!list.length) { el('occasions').innerHTML = '<div class="empty">Nobody to call in the next 30 days.</div>'; return; }
+    el('chip-occasions').textContent = list.length;
+    if (!list.length) {
+        el('occasions').innerHTML = emptyState('Nobody to call', 'No birthdays or anniversaries in the next 30 days.');
+        return;
+    }
     el('occasions').innerHTML = list.map(function(o){
         var d = o.days_until;
         var pill = d === 0 ? '<span class="pill pill-today">Today</span>'
+                 : d === 1 ? '<span class="pill pill-soon">Tomorrow</span>'
                  : d <= 7  ? '<span class="pill pill-soon">' + d + ' days</span>'
                  : '<span class="pill pill-ok">' + d + ' days</span>';
         var what = o.occasion === 'birthday' ? 'Birthday' : 'Anniversary';
-        var turns = (o.turns && o.turns > 0) ? (' · ' + o.turns + (o.occasion === 'birthday' ? ' years' : ' years married')) : '';
-        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(o.name) + '\')"><div class="row-main">'
+        var turns = (o.turns && o.turns > 0) ? ' · ' + o.turns + ' years' : '';
+        return rowOpen(o.name) + '<div class="row-main">'
              + '<div class="row-name">' + esc(o.name) + '</div>'
              + '<div class="row-meta">' + what + turns + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>'
              + '</div><div class="row-right">' + pill + '</div></div>';
@@ -383,6 +583,8 @@ function renderOccasions(list){
 }
 
 function renderAgeing(totals, dues){
+    el('chip-dues').textContent = dues.length;
+    el('chip-dues').className = 'count-chip' + (dues.length ? ' hot' : '');
     var keys = ['0-30','31-60','61-90','90+'];
     el('ageing').innerHTML = keys.map(function(k){
         var v = parseFloat((totals || {})[k] || 0);
@@ -392,23 +594,29 @@ function renderAgeing(totals, dues){
              + '<div class="age-value">' + money(v) + '</div></div>';
     }).join('');
 
-    if (!dues.length) { el('dues').innerHTML = '<div class="empty">Nothing outstanding.</div>'; return; }
+    if (!dues.length) {
+        el('dues').innerHTML = emptyState('Nothing outstanding', 'Every customer is square with you.');
+        return;
+    }
     el('dues').innerHTML = dues.map(function(d){
         var old = d.oldest_days || 0;
         var cls = old > 90 ? 'pill-lapsed' : old > 30 ? 'pill-soon' : 'pill-ok';
-        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(d.customer) + '\')"><div class="row-main">'
+        return rowOpen(d.customer) + '<div class="row-main">'
              + '<div class="row-name">' + esc(d.customer) + '</div>'
              + '<div class="row-meta">oldest ' + old + ' days</div>'
              + '</div><div class="row-right">' + money(d.total)
-             + ' <span class="pill ' + cls + '">' + old + 'd</span></div></div>';
+             + '<span class="pill ' + cls + '">' + old + 'd</span></div></div>';
     }).join('');
 }
 
 function renderPlans(list){
-    if (!list.length) { el('plans').innerHTML = '<div class="empty">No savings plans yet.</div>'; return; }
-    // Behind first: an on-track plan needs nobody's attention today.
-    var order = { behind: 0, on_track: 1, completed: 2 };
-    list = list.slice().sort(function(a, b){
+    if (!list.length) {
+        el('plans').innerHTML = emptyState('No savings plans yet', 'Set one up from Plans, then enrol a customer.');
+        return;
+    }
+    // Behind first: a plan that is on track needs nobody's attention today.
+    var order = { behind:0, on_track:1, completed:2 };
+    list = list.slice().sort(function(a,b){
         return (order[a.status] === undefined ? 3 : order[a.status])
              - (order[b.status] === undefined ? 3 : order[b.status]);
     });
@@ -417,71 +625,78 @@ function renderPlans(list){
                 : p.status === 'completed' ? 'pill-ok' : 'pill-repeat';
         var label = p.status === 'behind' ? 'Behind ' + money(p.behind_by)
                   : p.status === 'completed' ? 'Complete' : 'On track';
-        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(p.customer) + '\')"><div class="row-main">'
+        return rowOpen(p.customer) + '<div class="row-main">'
              + '<div class="row-name">' + esc(p.customer) + '</div>'
              + '<div class="row-meta">' + esc(p.scheme_name) + ' · '
              + (p.paid_count || 0) + ' of ' + (p.instalments || 0)
-             + (p.next_due_date ? ' · next ' + esc(p.next_due_date) : '')
-             + '</div></div><div class="row-right">'
-             + money(p.paid_total) + ' <span class="pill ' + cls + '">' + label + '</span>'
-             + '</div></div>';
+             + (p.next_due_date ? ' · next ' + esc(p.next_due_date) : '') + '</div>'
+             + '</div><div class="row-right">' + money(p.paid_total)
+             + '<span class="pill ' + cls + '">' + label + '</span></div></div>';
     }).join('');
 }
 
 function renderFollowups(list){
-    if (!list.length) { el('followups').innerHTML = '<div class="empty">Nothing outstanding.</div>'; return; }
+    el('chip-followups').textContent = list.length;
+    var late = list.filter(function(f){ return f.due_date && daysBetween(f.due_date) < 0; }).length;
+    el('chip-followups').className = 'count-chip' + (late ? ' hot' : '');
+    if (!list.length) {
+        el('followups').innerHTML = emptyState('Nothing promised', 'Anything you agree at the counter can go here.');
+        return;
+    }
     el('followups').innerHTML = list.map(function(f){
-        var due = f.due_date ? daysBetween(f.due_date) : null;
-        var pill = due === null ? ''
-                 : due < 0 ? '<span class="pill pill-today">' + Math.abs(due) + 'd late</span>'
-                 : due === 0 ? '<span class="pill pill-soon">Today</span>'
-                 : '<span class="pill pill-ok">' + due + 'd</span>';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row"><div class="row-main row-click" onclick="openCustomer(\'' + escAttr(f.customer) + '\')">'
              + '<div class="row-name">' + esc(f.task) + '</div>'
              + '<div class="row-meta">' + esc(f.customer)
              + (f.due_date ? ' · due ' + esc(f.due_date) : '') + '</div>'
-             + '</div><div class="row-right">' + pill
-             + ' <button class="btn btn-ghost btn-sm" onclick="closeFollowup(' + Number(f.id) + ')">Done</button>'
+             + '</div><div class="row-right">' + duePill(f.due_date)
+             + '<button class="btn btn-ghost btn-sm" onclick="closeFollowup(' + Number(f.id) + ')">Done</button>'
              + '</div></div>';
     }).join('');
 }
 
 function renderOrders(list){
-    if (!list.length) { el('orders').innerHTML = '<div class="empty">Nothing in hand.</div>'; return; }
+    el('chip-orders').textContent = list.length;
+    var late = list.filter(function(o){ return o.promised_date && daysBetween(o.promised_date) < 0; }).length;
+    el('chip-orders').className = 'count-chip' + (late ? ' hot' : '');
+    if (!list.length) {
+        el('orders').innerHTML = emptyState('Nothing in hand', 'Orders and repairs you have taken in show here.');
+        return;
+    }
     el('orders').innerHTML = list.map(function(o){
-        var due = o.promised_date ? daysBetween(o.promised_date) : null;
-        var pill = due === null ? ''
-                 : due < 0 ? '<span class="pill pill-today">' + Math.abs(due) + 'd late</span>'
-                 : due === 0 ? '<span class="pill pill-soon">Today</span>'
-                 : '<span class="pill pill-ok">' + due + 'd</span>';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row"><div class="row-main row-click" onclick="openCustomer(\'' + escAttr(o.customer) + '\')">'
              + '<div class="row-name">' + esc(o.description) + '</div>'
              + '<div class="row-meta">' + esc(o.customer) + ' · ' + esc(o.kind)
              + (o.promised_date ? ' · promised ' + esc(o.promised_date) : '')
-             + (parseFloat(o.advance || 0) > 0 ? ' · advance ' + money(o.advance) : '')
-             + '</div></div><div class="row-right">' + pill
-             + ' <button class="btn btn-ghost btn-sm" onclick="closeOrder(' + Number(o.id) + ')">Done</button>'
+             + (parseFloat(o.advance || 0) > 0 ? ' · advance ' + money(o.advance) : '') + '</div>'
+             + '</div><div class="row-right">' + duePill(o.promised_date)
+             + '<button class="btn btn-ghost btn-sm" onclick="closeOrder(' + Number(o.id) + ')">Done</button>'
              + '</div></div>';
     }).join('');
 }
 
 function renderLapsed(list){
-    if (!list.length) { el('lapsed').innerHTML = '<div class="empty">Nobody has gone quiet.</div>'; return; }
+    el('chip-lapsed').textContent = list.length;
+    if (!list.length) {
+        el('lapsed').innerHTML = emptyState('Nobody has gone quiet', 'Everyone has bought within the year.');
+        return;
+    }
     el('lapsed').innerHTML = list.map(function(c){
-        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
+        return rowOpen(c.name) + '<div class="row-main">'
              + '<div class="row-name">' + esc(c.name) + '</div>'
              + '<div class="row-meta">last bought ' + esc(c.last_purchase || '—')
-             + ' · ' + (c.days_since || 0) + ' days ago'
              + (c.phone ? ' · ' + esc(c.phone) : '') + '</div>'
              + '</div><div class="row-right">' + money(c.lifetime_value) + '</div></div>';
     }).join('');
 }
 
 function renderTop(list){
-    if (!list.length) { el('top').innerHTML = '<div class="empty">No purchases recorded yet.</div>'; return; }
+    if (!list.length) {
+        el('top').innerHTML = emptyState('No purchases yet', 'Customers appear here once they have bought something.');
+        return;
+    }
     el('top').innerHTML = list.map(function(c){
         var seg = c.segment_computed || 'new';
-        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
+        return rowOpen(c.name) + '<div class="row-main">'
              + '<div class="row-name">' + esc(c.name)
              + ' <span class="pill pill-' + esc(seg) + '">' + esc(seg) + '</span></div>'
              + '<div class="row-meta">' + (c.bill_count || 0) + ' bills'
@@ -490,7 +705,31 @@ function renderTop(list){
     }).join('');
 }
 
-// ── adding things ────────────────────────────────────────────────────
+// ── search ───────────────────────────────────────────────────────────
+// Typing a name and pressing nothing should still get you somewhere, so an
+// exact match opens that customer and anything else just filters the lists.
+function onSearch(q){
+    q = String(q || '').trim().toLowerCase();
+    var lists = ['occasions','dues','plans','followups','orders','lapsed','top'];
+    lists.forEach(function(id){
+        var box = el(id);
+        if (!box) return;
+        var rows = box.getElementsByClassName('row');
+        for (var i = 0; i < rows.length; i++) {
+            var text = (rows[i].textContent || '').toLowerCase();
+            rows[i].style.display = (!q || text.indexOf(q) >= 0) ? '' : 'none';
+        }
+    });
+}
+
+// ── one place to write something down ────────────────────────────────
+function showAdd(which){
+    el('add-fu').hidden = (which !== 'fu');
+    el('add-or').hidden = (which !== 'or');
+    el('tab-fu').className = 'add-tab' + (which === 'fu' ? ' on' : '');
+    el('tab-or').className = 'add-tab' + (which === 'or' ? ' on' : '');
+}
+
 function addFollowup(){
     var a = api();
     var cust = (el('fu-customer').value || '').trim();
@@ -500,7 +739,7 @@ function addFollowup(){
     a.crm_add_followup(cust, task, el('fu-date').value || '', '').then(function(r){
         if (r && r.status === 'success') {
             el('fu-task').value = '';
-            toast('Follow-up added.');
+            toast('Saved. It will show under Promised.');
             loadAll();
         } else { toast('Could not save.', true); }
     }).catch(function(e){ toast('Could not save: ' + e, true); });
@@ -509,7 +748,7 @@ function addFollowup(){
 function closeFollowup(id){
     var a = api();
     if (!a || typeof a.crm_close_followup !== 'function') return;
-    a.crm_close_followup(id).then(function(){ loadAll(); }).catch(function(){});
+    a.crm_close_followup(id).then(function(){ toast('Marked done.'); loadAll(); }).catch(function(){});
 }
 
 function addOrder(){
@@ -527,7 +766,7 @@ function addOrder(){
     }).then(function(r){
         if (r && r.status === 'success') {
             el('or-desc').value = ''; el('or-advance').value = '';
-            toast('Added.');
+            toast('Saved. It will show under In hand.');
             loadAll();
         } else { toast((r && r.message) || 'Could not save.', true); }
     }).catch(function(e){ toast('Could not save: ' + e, true); });
@@ -536,7 +775,7 @@ function addOrder(){
 function closeOrder(id){
     var a = api();
     if (!a || typeof a.crm_close_order !== 'function') return;
-    a.crm_close_order(id).then(function(){ loadAll(); }).catch(function(){});
+    a.crm_close_order(id).then(function(){ toast('Marked done.'); loadAll(); }).catch(function(){});
 }
 
 // ── start ────────────────────────────────────────────────────────────
