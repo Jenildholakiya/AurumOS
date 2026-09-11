@@ -93,7 +93,7 @@ tbody tr:hover td{background:rgba(37,99,235,0.04);}
     </div>
     <div class="fld"><label>From Date</label><input type="date" id="from" onchange="reload()"></div>
     <div class="fld"><label>To Date</label><input type="date" id="to" onchange="reload()"></div>
-    <div class="fld"><label>Group / Touch</label>
+    <div class="fld"><label id="grp-label">Group / Touch</label>
         <select id="grp" onchange="reload()">
             <option value="">All Touch</option>
             <option value="99">99.x</option><option value="91">91.x</option>
@@ -112,8 +112,8 @@ tbody tr:hover td{background:rgba(37,99,235,0.04);}
 <div class="stats">
     <div class="stat s1"><div class="l">Sold Pieces</div><div class="v" id="st-pcs">0</div></div>
     <div class="stat s2"><div class="l">Gross Weight</div><div class="v" id="st-gr">0.000g</div></div>
-    <div class="stat s3"><div class="l">Net Weight</div><div class="v" id="st-net">0.000g</div></div>
-    <div class="stat s4"><div class="l">Total Fine</div><div class="v" id="st-fine">0.000g</div></div>
+    <div class="stat s3"><div class="l" id="st-net-l">Net Weight</div><div class="v" id="st-net">0.000g</div></div>
+    <div class="stat s4"><div class="l" id="st-fine-l">Total Fine</div><div class="v" id="st-fine">0.000g</div></div>
 </div>
 
 <div class="wrap">
@@ -122,12 +122,16 @@ tbody tr:hover td{background:rgba(37,99,235,0.04);}
             <tr id="head">
                 <th data-k="tag_id">Tag ID<span class="ar">⇅</span></th>
                 <th data-k="it_name">Item Name<span class="ar">⇅</span></th>
+                <th data-k="huid" data-mode="retail">HUID<span class="ar">⇅</span></th>
                 <th data-k="gr_wt">Gross Wt<span class="ar">⇅</span></th>
-                <th data-k="para">Para/Stone<span class="ar">⇅</span></th>
-                <th data-k="less">Less<span class="ar">⇅</span></th>
+                <th data-k="para" data-mode="wholesale">Para/Stone<span class="ar">⇅</span></th>
+                <th data-k="less" data-mode="wholesale">Less<span class="ar">⇅</span></th>
                 <th data-k="net_wt">Net WT<span class="ar">⇅</span></th>
-                <th data-k="fine">Fine<span class="ar">⇅</span></th>
-                <th data-k="touch">Touch<span class="ar">⇅</span></th>
+                <th data-k="fine" data-mode="wholesale">Fine<span class="ar">⇅</span></th>
+                <th data-k="touch" data-mode="wholesale">Touch<span class="ar">⇅</span></th>
+                <th data-k="making" data-mode="retail">Making<span class="ar">⇅</span></th>
+                <th data-k="amount" data-mode="retail">Amount<span class="ar">⇅</span></th>
+                <th data-k="customer" data-mode="retail">Customer<span class="ar">⇅</span></th>
                 <th data-k="date">Date<span class="ar">⇅</span></th>
                 <th data-k="vch_id">Vch ID<span class="ar">⇅</span></th>
             </tr>
@@ -154,6 +158,39 @@ function goBack(){
 function ls(k){try{return localStorage.getItem(k);}catch(e){return '';}}
 function h(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function f3(v){return parseFloat(v||0).toFixed(3);}
+function money(v){return '₹'+parseFloat(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function isRetailMode() {
+    var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
+    try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; } catch (e) { return q === 'retail'; }
+}
+var RETAIL=isRetailMode();
+
+// The bridge sends gross, less and para but no net weight, so work it out the
+// same way the rest of the app does.
+function netOf(r){return parseFloat(r.gr_wt||0)-parseFloat(r.less||0)-parseFloat(r.para||0);}
+// Net WT is the one column with no matching key in the payload.
+function val(r,k){return k==='net_wt'?netOf(r):r[k];}
+
+// A column carrying data-mode belongs to one mode only. The header cell is
+// hidden and the body cell is never written, so the two can never drift apart.
+function applyMode(){
+    var want=RETAIL?'retail':'wholesale';
+    var ths=document.getElementById('head').querySelectorAll('th[data-mode]');
+    for(var i=0;i<ths.length;i++){
+        if(ths[i].getAttribute('data-mode')!==want) ths[i].style.display='none';
+    }
+    if(!RETAIL) return;
+    // Retail sells pieces for money, so the weight tiles say nothing useful.
+    document.getElementById('st-net-l').innerText='Total Amount';
+    document.getElementById('st-fine-l').innerText='Total Making';
+    document.getElementById('st-net').innerText=money(0);
+    document.getElementById('st-fine').innerText=money(0);
+    // Touch bands are a wholesale idea; the same control filters by category.
+    document.getElementById('grp-label').innerText='Category';
+    document.getElementById('grp').innerHTML='<option value="">All Categories</option>';
+}
+applyMode();
 
 document.getElementById('head').addEventListener('click',function(e){
     var th=e.target.closest('th'); if(!th)return;
@@ -180,11 +217,30 @@ function reload(){
     var grp=document.getElementById('grp').value||'';
     window.pywebview.api.get_sold_tags(from,to,q,grp).then(function(d){
         ROWS=Array.isArray(d)?d:[];
+        fillGroups();
         render();
     }).catch(function(e){
         console.error(e);
         document.getElementById('body').innerHTML='<tr><td colspan="10" class="empty">Failed to load.</td></tr>';
     });
+}
+
+// Retail categories come from the rows themselves. They accumulate across
+// loads, because once a category is picked the server only sends that one back
+// and the rest would drop out of the list.
+var CATS={};
+function fillGroups(){
+    if(!RETAIL) return;
+    ROWS.forEach(function(r){
+        var c=String(r.category||'').trim();
+        if(c) CATS[c.toLowerCase()]=c;
+    });
+    var sel=document.getElementById('grp'), keep=sel.value;
+    var names=Object.keys(CATS).map(function(k){return CATS[k];}).sort();
+    sel.innerHTML='<option value="">All Categories</option>'+names.map(function(c){
+        return '<option value="'+h(c)+'">'+h(c)+'</option>';
+    }).join('');
+    sel.value=keep;
 }
 // Debounce search so we don't hammer the bridge on every keystroke.
 var _st;
@@ -193,36 +249,42 @@ function searchNow(){ clearTimeout(_st); _st=setTimeout(reload,250); }
 function render(){
     var rows=ROWS.slice();
     rows.sort(function(a,b){
-        var x=a[sortK], y=b[sortK];
-        if(sortK==='gr_wt'||sortK==='para'||sortK==='less'||sortK==='net_wt'||sortK==='fine'||sortK==='touch'){x=parseFloat(x||0);y=parseFloat(y||0);}
+        var x=val(a,sortK), y=val(b,sortK);
+        if(sortK==='gr_wt'||sortK==='para'||sortK==='less'||sortK==='net_wt'||sortK==='fine'||sortK==='touch'||sortK==='making'||sortK==='amount'){x=parseFloat(x||0);y=parseFloat(y||0);}
         else{x=String(x||'');y=String(y||'');}
         if(x<y)return sortAsc?-1:1; if(x>y)return sortAsc?1:-1; return 0;
     });
 
     // stats
-    var pcs=rows.length, gr=0, net=0, fine=0;
-    rows.forEach(function(r){gr+=parseFloat(r.gr_wt||0);net+=parseFloat(r.net_wt||0);fine+=parseFloat(r.fine||0);});
+    var pcs=rows.length, gr=0, net=0, fine=0, amt=0, mkg=0;
+    rows.forEach(function(r){
+        gr+=parseFloat(r.gr_wt||0); net+=netOf(r); fine+=parseFloat(r.fine||0);
+        amt+=parseFloat(r.amount||0); mkg+=parseFloat(r.making||0);
+    });
     document.getElementById('st-pcs').innerText=pcs.toLocaleString('en-IN');
     document.getElementById('st-gr').innerText=f3(gr)+'g';
-    document.getElementById('st-net').innerText=f3(net)+'g';
-    document.getElementById('st-fine').innerText=f3(fine)+'g';
+    document.getElementById('st-net').innerText=RETAIL?money(amt):f3(net)+'g';
+    document.getElementById('st-fine').innerText=RETAIL?money(mkg):f3(fine)+'g';
     document.getElementById('cnt').innerText=pcs+' record'+(pcs===1?'':'s');
 
     var b=document.getElementById('body');
     if(!rows.length){ b.innerHTML='<tr><td colspan="10" class="empty">No sold tags match your filters.</td></tr>'; return; }
     b.innerHTML=rows.map(function(r){
-        return '<tr>'
-            +'<td><span class="tag">'+h(r.tag_id)+'</span></td>'
-            +'<td>'+h(r.it_name||'-')+'</td>'
-            +'<td class="num">'+f3(r.gr_wt)+'</td>'
-            +'<td class="num">'+f3(r.para)+'</td>'
-            +'<td class="num">'+f3(r.less)+'</td>'
-            +'<td class="num net">'+f3(r.net_wt)+'</td>'
-            +'<td class="num fine">'+f3(r.fine)+'</td>'
-            +'<td class="num">'+parseFloat(r.touch||0).toFixed(1)+'%</td>'
-            +'<td class="num" style="color:var(--text-muted);font-size:0.72rem;">'+(r.date||'-')+'</td>'
-            +'<td><span class="vch">'+h(r.vch_id)+'</span></td>'
-            +'</tr>';
+        var td='<td><span class="tag">'+h(r.tag_id)+'</span></td>'
+            +'<td>'+h(r.it_name||'-')+'</td>';
+        if(RETAIL) td+='<td class="num">'+h(r.huid||'-')+'</td>';
+        td+='<td class="num">'+f3(r.gr_wt)+'</td>';
+        if(!RETAIL) td+='<td class="num">'+f3(r.para)+'</td>'
+            +'<td class="num">'+f3(r.less)+'</td>';
+        td+='<td class="num net">'+f3(netOf(r))+'</td>';
+        if(!RETAIL) td+='<td class="num fine">'+f3(r.fine)+'</td>'
+            +'<td class="num">'+parseFloat(r.touch||0).toFixed(1)+'%</td>';
+        if(RETAIL) td+='<td class="num">'+money(r.making)+'</td>'
+            +'<td class="num net">'+money(r.amount)+'</td>'
+            +'<td>'+h(r.customer||'-')+'</td>';
+        td+='<td class="num" style="color:var(--text-muted);font-size:0.72rem;">'+(r.date||'-')+'</td>'
+            +'<td><span class="vch">'+h(r.vch_id)+'</span></td>';
+        return '<tr>'+td+'</tr>';
     }).join('');
 }
 

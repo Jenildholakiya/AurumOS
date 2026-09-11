@@ -328,12 +328,12 @@ input[type=number] { -moz-appearance: textfield; }
         <div class="card-head">
           <div>
             <div class="card-title">Physical Count Entry</div>
-            <div class="card-sub">Weigh each touch category and enter actual weight</div>
+            <div class="card-sub" id="phys-sub">Weigh each touch category and enter actual weight</div>
           </div>
           <div id="scale-status" class="badge">Scale: Not connected</div>
         </div>
         <div style="display:grid;grid-template-columns:100px 1.2fr 110px 180px;gap:16px;padding:8px 0 12px;border-bottom:1px solid var(--rule);margin-bottom:4px;">
-          <div style="font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2); font-weight:700;">Touch Group</div>
+          <div id="phys-col-head" style="font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2); font-weight:700;">Touch Group</div>
           <div style="font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2); font-weight:700;">Book Closing</div>
           <div style="font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2); font-weight:700; text-align:center;">Hardware Scale</div>
           <div style="font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted2); font-weight:700; text-align:right;">Actual Metrics</div>
@@ -440,6 +440,49 @@ var snapData = [];
 var physData = {};
 var varData  = [];
 
+function isRetailMode() {
+    var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
+    try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; } catch (e) { return q === 'retail'; }
+}
+var RETAIL = isRetailMode();
+
+/* ── Grouping ─────────────────────────────────────────────────────
+   Wholesale counts stock by touch. A retail shop's pieces need not carry a
+   touch at all, so it counts by category instead. Everything below works off
+   a group's key and label rather than a touch number. */
+function groupLabel(d, tv) {
+    if (!RETAIL) return tv + '%';
+    var name = String(d.category || '').trim()
+            || String(d.it_name  || '').trim()
+            || String(d.it_code  || '').trim();
+    return name || (tv ? tv + '%' : 'Uncategorised');
+}
+function groupKey(d, tv) {
+    // The key doubles as an element id, so keep it to safe characters.
+    return RETAIL ? groupLabel(d, tv).toLowerCase().replace(/[^a-z0-9]+/g, '_') : String(tv);
+}
+// "Touch" is a wholesale word, so retail gets a heading it recognises.
+function groupWord(kind) {
+    if (RETAIL) return kind === 'plural' ? 'Categories' : 'Category';
+    if (kind === 'plural') return 'Touch Groups';
+    if (kind === 'column') return 'Touch Category';
+    if (kind === 'pdf')    return 'Touch %';
+    return 'Touch Group';
+}
+// Katti is a wholesale idea; a retail shop has never heard of it.
+function emptyHint(polite) {
+    return 'No stock data found. ' + (polite ? 'Please add ' : 'Add ')
+        + 'opening stock and ' + (RETAIL ? 'purchase' : 'katti') + ' entries first.';
+}
+function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function applyMode() {
+    if (!RETAIL) return;
+    document.getElementById('phys-sub').innerText      = 'Weigh each category and enter actual weight';
+    document.getElementById('phys-col-head').innerText = groupWord();
+}
+
 /* ── INIT ─────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', function() {
     var today = new Date();
@@ -451,6 +494,7 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('audit-ref').value      = AUDIT_ID;
     document.getElementById('audit-id-display').innerText = AUDIT_ID;
     document.getElementById('decl-date').innerText  = document.getElementById('audit-date').value;
+    applyMode();
     loadSnapshot();
     window.__onScale = function(d) {
         if (d && d.weight && d.stable) {
@@ -482,11 +526,14 @@ function buildSnapshot(data) {
     snapData = [];
     var tWtO=0,tWtI=0,tWtOut=0,tWtC=0;
     var rows_html = '';
+    var index = {};
 
     for (var i = 0; i < data.length; i++) {
         var d   = data[i];
         var tv  = parseFloat(d.touch || 0);
-        if (!tv) continue;
+        // Only wholesale can insist on a touch. Dropping touchless rows left a
+        // retail shop with an empty audit and nothing on screen to explain it.
+        if (!RETAIL && !tv) continue;
 
         var wtO  = parseFloat(d.wt_opening   || d.opening    || 0);
         var wtI  = parseFloat(d.wt_inward    || d.inward     || 0);
@@ -497,37 +544,52 @@ function buildSnapshot(data) {
         var pcOut= parseInt(d.pc_outward  || 0, 10);
         var pcC  = parseInt(d.pc_book_close || (pcO + pcI - pcOut) || 0, 10);
 
-        snapData.push({
-            touch:          tv,
-            wt_opening:     wtO,  wt_inward:  wtI,  wt_outward:  wtOut, wt_book_close: wtC,
-            pc_opening:     pcO,  pc_inward:  pcI,  pc_outward:  pcOut, pc_book_close: pcC,
-            opening: wtO, inward: wtI, outward: wtOut, book_close: wtC
-        });
+        // In wholesale the server already returns one row per touch, so each
+        // row is its own group. In retail several rows can share a category.
+        var key = groupKey(d, tv);
+        var g   = index[key];
+        if (!g) {
+            g = {
+                key: key, label: groupLabel(d, tv), touch: tv,
+                wt_opening: 0, wt_inward: 0, wt_outward: 0, wt_book_close: 0,
+                pc_opening: 0, pc_inward: 0, pc_outward: 0, pc_book_close: 0,
+                opening: 0, inward: 0, outward: 0, book_close: 0
+            };
+            index[key] = g;
+            snapData.push(g);
+        }
+        g.wt_opening += wtO; g.wt_inward += wtI; g.wt_outward += wtOut; g.wt_book_close += wtC;
+        g.pc_opening += pcO; g.pc_inward += pcI; g.pc_outward += pcOut; g.pc_book_close += pcC;
+        g.opening = g.wt_opening; g.inward = g.wt_inward;
+        g.outward = g.wt_outward; g.book_close = g.wt_book_close;
         tWtO+=wtO; tWtI+=wtI; tWtOut+=wtOut; tWtC+=wtC;
-
-        rows_html += '<tr>'
-            + '<td>' + tv + '%</td>'
-            + '<td>' + f3(wtO) + '</td>'
-            + '<td>' + f3(wtI) + '</td>'
-            + '<td>' + f3(wtOut) + '</td>'
-            + '<td style="font-weight:700;color:var(--ink2);">' + f3(wtC) + '</td>'
-            + '<td style="color:var(--muted);">' + pcO + '</td>'
-            + '<td style="color:var(--muted);">' + pcI + '</td>'
-            + '<td style="color:var(--muted);">' + pcOut + '</td>'
-            + '<td style="font-weight:700;color:var(--ink3);">' + pcC + '</td>'
-            + '</tr>';
     }
 
     if (!snapData.length) {
         document.getElementById('snap-loading').innerHTML =
             '<div style="font-size:.82rem;color:var(--muted);text-align:center;padding:24px;">'
-            + 'No stock data found. Add opening stock and katti entries first.</div>';
+            + esc(emptyHint(false)) + '</div>';
         return;
+    }
+
+    for (var r = 0; r < snapData.length; r++) {
+        var s = snapData[r];
+        rows_html += '<tr>'
+            + '<td>' + esc(s.label) + '</td>'
+            + '<td>' + f3(s.wt_opening) + '</td>'
+            + '<td>' + f3(s.wt_inward) + '</td>'
+            + '<td>' + f3(s.wt_outward) + '</td>'
+            + '<td style="font-weight:700;color:var(--ink2);">' + f3(s.wt_book_close) + '</td>'
+            + '<td style="color:var(--muted);">' + s.pc_opening + '</td>'
+            + '<td style="color:var(--muted);">' + s.pc_inward + '</td>'
+            + '<td style="color:var(--muted);">' + s.pc_outward + '</td>'
+            + '<td style="font-weight:700;color:var(--ink3);">' + s.pc_book_close + '</td>'
+            + '</tr>';
     }
 
     var tbl = '<table class="tbl"><thead>'
         + '<tr>'
-        + '<th rowspan="2" style="text-align:left;">Touch Category</th>'
+        + '<th rowspan="2" style="text-align:left;">' + groupWord('column') + '</th>'
         + '<th colspan="4" style="text-align:center;color:var(--gold);border-bottom:1px solid var(--gold-ln);">Weight Balance Metrics (g)</th>'
         + '<th colspan="4" style="text-align:center;color:var(--ink3);border-bottom:1px solid var(--rule);">Pieces Track Index (pcs)</th>'
         + '</tr>'
@@ -555,7 +617,7 @@ function buildPhysical() {
 
     for (var i = 0; i < snapData.length; i++) {
         var s   = snapData[i];
-        var tvk = String(s.touch);
+        var tvk = s.key;
         physData[tvk]          = 0;
         physData[tvk + '_pcs'] = 0;
 
@@ -565,7 +627,7 @@ function buildPhysical() {
         var c1 = document.createElement('div');
         var t1 = document.createElement('div');
         t1.className   = 'prow-touch';
-        t1.textContent = s.touch + '%';
+        t1.textContent = s.label;
         c1.appendChild(t1);
 
         var c2   = document.createElement('div');
@@ -652,7 +714,7 @@ function buildPhysical() {
                     e.preventDefault();
                     physData[key + '_pcs'] = parseInt(this.value, 10) || 0;
                     if (index + 1 < snapData.length) {
-                        var nxt = document.getElementById('pi_' + String(snapData[index + 1].touch));
+                        var nxt = document.getElementById('pi_' + snapData[index + 1].key);
                         if (nxt) { nxt.focus(); nxt.select(); }
                     }
                 }
@@ -669,7 +731,7 @@ function buildPhysical() {
 
     if (snapData.length > 0) {
         setTimeout(function() {
-            var first = document.getElementById('pi_' + String(snapData[0].touch));
+            var first = document.getElementById('pi_' + snapData[0].key);
             if (first) first.focus();
         }, 150);
     }
@@ -693,7 +755,7 @@ function physInput(el, tvk) {
 
 function physKey(e, idx) {
     if (e.key === 'Enter' && idx + 1 < snapData.length) {
-        var next = document.getElementById('pi_' + String(snapData[idx + 1].touch));
+        var next = document.getElementById('pi_' + snapData[idx + 1].key);
         if (next) { next.focus(); next.select(); }
     }
 }
@@ -706,7 +768,7 @@ function buildVariance() {
 
     for (var i = 0; i < snapData.length; i++) {
         var s    = snapData[i];
-        var tvk  = String(s.touch);
+        var tvk  = s.key;
 
         var book = parseFloat(s.wt_book_close || s.book_close || 0);
         var phys = (physData[tvk] !== undefined && physData[tvk] !== null) ? parseFloat(physData[tvk]) : 0;
@@ -729,7 +791,7 @@ function buildVariance() {
         var pcVar  = pcPhys - pcBook;
 
         varData.push({
-            touch: s.touch, book: book, phys: phys,
+            touch: s.touch, label: s.label, book: book, phys: phys,
             variance: va, var_pct: vp, status: st,
             pc_book: pcBook, pc_phys: pcPhys, pc_var: pcVar
         });
@@ -739,7 +801,7 @@ function buildVariance() {
         var pc = avp > 2 ? 'var(--red)' : avp > 0.5 ? 'var(--amber)' : 'var(--green)';
 
         rows += '<tr class="v' + st + '">'
-            + '<td>' + s.touch + '%</td>'
+            + '<td>' + esc(s.label) + '</td>'
             + '<td>' + f3(book) + '</td>'
             + '<td>' + f3(phys) + '</td>'
             + '<td style="color:' + vc + ';font-weight:700;">' + (va >= 0 ? '+' : '') + f3(va) + '</td>'
@@ -758,7 +820,7 @@ function buildVariance() {
     document.getElementById('var-table').innerHTML =
         '<table class="tbl"><thead>'
         + '<tr>'
-        + '<th rowspan="2" style="text-align:left;">Touch Category</th>'
+        + '<th rowspan="2" style="text-align:left;">' + groupWord('column') + '</th>'
         + '<th colspan="5" style="text-align:center;color:var(--gold);border-bottom:1px solid var(--gold-ln);">Weight Matrix Comparison</th>'
         + '<th colspan="3" style="text-align:center;color:var(--ink3);border-bottom:1px solid var(--rule);">Pieces Sync</th>'
         + '</tr><tr>'
@@ -809,12 +871,12 @@ function showPhase(n) {
 
 function nextPhase() {
     if (PHASE === 1) {
-        if (!snapData.length) { showModal('!', 'No Data', 'No stock data found. Please add opening stock and katti entries first.', ['OK']); return; }
+        if (!snapData.length) { showModal('!', 'No Data', emptyHint(true), ['OK']); return; }
         buildPhysical(); showPhase(2);
     } else if (PHASE === 2) {
         var logLines = [];
         for (var i = 0; i < snapData.length; i++) {
-            var tvk = String(snapData[i].touch);
+            var tvk = snapData[i].key;
             var el  = document.getElementById('pi_' + tvk);
             var raw = el ? el.value.trim() : '';
             if (raw === '') {
@@ -866,7 +928,7 @@ function confirmSignOff() {
     }
     var newOpening = [];
     for (var i = 0; i < snapData.length; i++) {
-        var tvk = String(snapData[i].touch);
+        var tvk = snapData[i].key;
         var pw  = physData[tvk] !== undefined ? physData[tvk] : 0;
         newOpening.push({touch: snapData[i].touch, physical_wt: pw});
     }
@@ -984,7 +1046,7 @@ function buildAndOpenPDF(bizName, auditDate, pFrom, pTo, signedBy) {
         var tc=vd.status==='ok'?'#16a34a':vd.status==='minor'?'#d97706':'#dc2626';
         var bd=vd.status==='ok'?'OK':vd.status==='minor'?'Minor':'Alert';
         varRows+='<tr style="background:'+bg+';border-bottom:2px solid #fff;">'
-            +'<td style="padding:9px 12px;font-weight:700;font-size:12px;">'+vd.touch+'%</td>'
+            +'<td style="padding:9px 12px;font-weight:700;font-size:12px;">'+esc(vd.label)+'</td>'
             +'<td style="padding:9px 12px;text-align:right;font-family:Arial,sans-serif;">'+f3(vd.book)+'</td>'
             +'<td style="padding:9px 12px;text-align:right;font-family:Arial,sans-serif;">'+f3(vd.phys)+'</td>'
             +'<td style="padding:9px 12px;text-align:right;font-family:Arial,sans-serif;color:'+vc+';font-weight:700;">'+(vd.variance>=0?'+':'')+f3(vd.variance)+'</td>'
@@ -1072,12 +1134,12 @@ function buildAndOpenPDF(bizName, auditDate, pFrom, pTo, signedBy) {
         +kpi('Net Variance',   (tVar>=0?'+':'')+f3(tVar)+'g', tVar<-0.01?'#dc2626':'#16a34a')
         +kpi('Variance %',     (tvp>=0?'+':'')+tvp.toFixed(2)+'%', Math.abs(tvp)>2?'#dc2626':'#16a34a')
         +kpi('Alert Items',    alerts, alerts>0?'#dc2626':'#16a34a')
-        +kpi('Touch Groups',   snapData.length, '#0e0c09')
+        +kpi(groupWord('plural'), snapData.length, '#0e0c09')
         +'</div>'
 
         +'<div class="sec">Variance Analysis</div>'
         +'<table><thead><tr>'
-        +'<th style="text-align:left;">Touch %</th>'
+        +'<th style="text-align:left;">'+groupWord('pdf')+'</th>'
         +'<th>Book Closing (g)</th><th>Physical (g)</th>'
         +'<th>Variance (g)</th><th>Var %</th><th>Status</th>'
         +'</tr></thead><tbody>'+varRows+'</tbody>'

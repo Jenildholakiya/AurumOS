@@ -160,9 +160,9 @@ tr:hover td{background:var(--accent-light);}
             <span class="table-badge" id="item-badge">0 items</span>
         </div>
         <table>
-            <thead><tr><th>SKU Tag</th><th>Description</th><th>Touch</th><th>Gross Wt</th><th>Net Wt</th><th>Status</th></tr></thead>
+            <thead><tr><th>SKU Tag</th><th>Description</th><th>HUID</th><th id="col-touch">Touch</th><th>Gross Wt</th><th>Net Wt</th><th>Status</th></tr></thead>
             <tbody id="bin-items-body">
-                <tr><td colspan="6">
+                <tr><td colspan="7">
                     <div class="loading-skeleton">
                         <div class="skeleton-row"></div>
                         <div class="skeleton-row"></div>
@@ -182,6 +182,17 @@ tr:hover td{background:var(--accent-light);}
 'use strict';
 function h(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+function isRetailMode() {
+    var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
+    try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; } catch (e) { return q === 'retail'; }
+}
+// Retail sells by the piece, so purity is not a column there.
+var COL_COUNT = isRetailMode() ? 6 : 7;
+if (isRetailMode()) {
+    var retailTouchHead = document.getElementById('col-touch');
+    if (retailTouchHead) retailTouchHead.style.display = 'none';
+}
+
 function getBinId(){
     var params=new URLSearchParams(window.location.search);
     return params.get('bin')||'';
@@ -194,14 +205,14 @@ function loadBinItems(){
     if(!binId){
         document.getElementById('bin-breadcrumb').innerText='Unknown';
         document.getElementById('stat-bin').innerText='--';
-        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#9888;&#65039;</div><div class="empty-title">No Bin Selected</div><div class="empty-desc">Go back to Inventory and click on a bin to view its items.</div></div></td></tr>';
+        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="'+COL_COUNT+'"><div class="empty-state"><div class="empty-icon">&#9888;&#65039;</div><div class="empty-title">No Bin Selected</div><div class="empty-desc">Go back to Inventory and click on a bin to view its items.</div></div></td></tr>';
         document.getElementById('item-badge').innerText='0 items';
         return;
     }
     document.getElementById('bin-breadcrumb').innerText=binId;
     document.getElementById('stat-bin').innerText=binId;
     if(!window.pywebview||!window.pywebview.api){
-        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="6"><div class="error-state">Bridge not ready. Please reload the page.</div></td></tr>';
+        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="'+COL_COUNT+'"><div class="error-state">Bridge not ready. Please reload the page.</div></td></tr>';
         return;
     }
     window.pywebview.api.get_items_by_bin(binId).then(function(items){
@@ -217,7 +228,7 @@ function loadBinItems(){
         document.getElementById('stat-tagged').innerText=tagged;
         document.getElementById('item-badge').innerText=allItems.length+' item'+(allItems.length!==1?'s':'');
     }).catch(function(){
-        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="6"><div class="error-state">&#10007; Failed to load items. Please try again.</div></td></tr>';
+        document.getElementById('bin-items-body').innerHTML='<tr><td colspan="'+COL_COUNT+'"><div class="error-state">&#10007; Failed to load items. Please try again.</div></td></tr>';
     });
 }
 
@@ -227,17 +238,21 @@ function renderTable(items){
         var q=document.getElementById('bin-search').value.toLowerCase().trim();
         var msg=q?'No items match your search':'No items in this bin';
         var icon=q?'&#128269;':'&#128196;';
-        tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">'+icon+'</div><div class="empty-title">'+msg+'</div><div class="empty-desc">'+(!q?'Try adding items to this bin from the Katti Terminal':'Try a different search term')+'</div></div></td></tr>';
+        // Katti is a wholesale concept — retail shops stock a bin from Inventory.
+        var addHint=isRetailMode()?'Try adding items to this bin from Inventory':'Try adding items to this bin from the Katti Terminal';
+        tbody.innerHTML='<tr><td colspan="'+COL_COUNT+'"><div class="empty-state"><div class="empty-icon">'+icon+'</div><div class="empty-title">'+msg+'</div><div class="empty-desc">'+(!q?addHint:'Try a different search term')+'</div></div></td></tr>';
         document.getElementById('search-count').innerText='';
         return;
     }
+    var retail=isRetailMode();
     tbody.innerHTML=items.map(function(it){
         var sc=it.live_status==='TAGGED'?'status-tagged':'status-pending';
         var st=it.live_status==='TAGGED'?'TAGGED':'PENDING';
         return '<tr>'
-            +'<td><span class="tag-id">'+(it.it_code||'---')+'</span></td>'
+            +'<td><span class="tag-id">'+(it.tag_id||it.it_code||'---')+'</span></td>'
             +'<td>'+(it.it_name||'---')+'</td>'
-            +'<td>'+(it.touch||'--')+'%</td>'
+            +'<td>'+(it.huid?it.huid:'<span class="wt-muted">&mdash;</span>')+'</td>'
+            +(retail?'':'<td>'+(it.touch||'--')+'%</td>')
             +'<td>'+parseFloat(it.gr_wt||0).toFixed(3)+'g</td>'
             +'<td class="wt-green">'+parseFloat(it.nt_wt||0).toFixed(3)+'g</td>'
             +'<td><span class="status-tag '+sc+'">'+st+'</span></td>'

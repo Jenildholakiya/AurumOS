@@ -253,12 +253,11 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
             Tag Audit
         </button>
         <button class="btn-lux btn-add-stock"      onclick="sideNavigate('opening_stock.html')">&#128230; Opening Stock</button>
-        <button class="btn-lux btn-katti-gold"     onclick="sideNavigate('katti_entry.html')">Weight Terminal</button>
+        <button class="btn-lux btn-katti-gold" id="btn-weight-terminal" onclick="sideNavigate('katti_entry.html')">Weight Terminal</button>
         <button class="btn-lux" onclick="sideNavigate('sold_tags.html')" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-ln);" title="Sold Tags Ledger — date-wise sale records">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Sold Tags
         </button>
-        <button class="btn-lux btn-uchak-slate"    onclick="sideNavigate('uchak_stock_entry.html')">Piece Entry</button>
         <button class="btn-lux btn-add-stock"      onclick="sideNavigate('stock_ledger.html')">Add Stock</button>
     </div>
 
@@ -321,7 +320,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
                     <div class="alert-subtitle">Items fully exhausted</div>
                     <div class="alert-pills" id="oos-items-list"></div>
                 </div>
-                <button class="alert-action" onclick="sideNavigate('katti_entry.html')">+ Add Stock</button>
+                <button class="alert-action" onclick="goAddStock()">+ Add Stock</button>
             </div>
         </div>
         <div class="alert-card alert-low" id="low-stock-banner" style="display:none;">
@@ -336,7 +335,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
                     <div class="alert-subtitle" id="low-stock-subtitle">Items below threshold</div>
                     <div class="alert-progress-row" id="low-stock-list"></div>
                 </div>
-                <button class="alert-action" onclick="sideNavigate('katti_entry.html')">Add Stock</button>
+                <button class="alert-action" onclick="goAddStock()">Add Stock</button>
             </div>
         </div>
     </div>
@@ -353,7 +352,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
             <div class="metric-value" id="total-pcs">0<span>PCS</span></div></div>
             <div class="metric-sub">Showroom pieces</div>
         </div>
-        <div class="metric-card card-uchak-indicator">
+        <div class="metric-card card-uchak-indicator" id="tile-uchak">
             <div><span class="metric-label">Uchak Pieces</span>
             <div class="metric-value" id="total-uchak-pcs" style="color:#334155;">0<span>PCS</span></div></div>
             <div class="metric-sub">Wholesale stock</div>
@@ -363,7 +362,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
             <div class="metric-value" id="untagged-pcs" style="color:var(--error);">0<span>ITEM</span></div></div>
             <div class="metric-sub">Pending barcode</div>
         </div>
-        <div class="metric-card card-packets-indicator">
+        <div class="metric-card card-packets-indicator" id="tile-packets">
             <div><span class="metric-label">Weight Packets</span>
             <div class="metric-value" id="total-packets" style="color:#d97706;">0<span>PKT</span></div></div>
             <div class="metric-sub">Bulk katti entries</div>
@@ -416,7 +415,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
 
     <div class="table-section">
         <table>
-            <thead><tr><th>SKU Tag</th><th>Description</th><th>Touch</th><th>Gross Wt</th><th>Net Wt</th><th>Storage</th><th>Status</th></tr></thead>
+            <thead><tr><th>SKU Tag</th><th>Description</th><th id="col-touch">Touch</th><th id="col-category">Category</th><th>Gross Wt</th><th>Net Wt</th><th id="col-making">Making</th><th>HUID</th><th>Status</th></tr></thead>
             <tbody id="master-stock-body"></tbody>
         </table>
     </div>
@@ -692,12 +691,15 @@ function renderStockTable(data){
     var tbody=document.getElementById('master-stock-body'); if(!tbody) return;
     if(!data||!data.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;opacity:0.4;">No active inventory</td></tr>'; return; }
     tbody.innerHTML=data.map(function(item){
+        var retail = isRetailMode();
         return '<tr>'
             +'<td><span class="tag-id">'+(item.tag_id||'---')+'</span></td>'
             +'<td>'+(item.it_name||'---')+'</td>'
-            +'<td>'+(item.touch||'--')+'%</td>'
+            +(retail ? '' : '<td>'+(item.touch||'--')+'%</td>')
+            +(retail ? '<td>'+(item.category||'--')+'</td>' : '')
             +'<td>'+parseFloat(item.gr_wt||0).toFixed(3)+'g</td>'
             +'<td style="color:var(--success);">'+parseFloat(item.nt_wt||0).toFixed(3)+'g</td>'
+            +(retail ? '<td>'+_makingLabel(item)+'</td>' : '')
             +'<td style="color:var(--accent);">'+(item.huid||'-')+'</td>'
             +'<td><span style="color:var(--success);font-size:0.68rem;">&#9679; IN-STOCK</span></td>'
             +'</tr>';
@@ -733,6 +735,54 @@ setInterval(function(){
         else if(a<300) setTimeout(_try,50);
     }
     _try();
+})();
+
+// ── RETAIL ───────────────────────────────────────────────────────────
+// This page had no idea which mode it was in, so a retail shop saw the
+// wholesale hub verbatim: tiles counting uchak pieces and katti packets, a
+// Touch column, and an "Add Stock" button that opened a weight-batch
+// terminal. Same helper the other pages use, so there is one rule.
+function isRetailMode() {
+    var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
+    try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; }
+    catch (e) { return q === 'retail'; }
+}
+
+// Where "Add Stock" goes. A retail shop tags finished pieces; a wholesaler
+// books weight batches. Both alert buttons call this so they cannot drift.
+function goAddStock() {
+    sideNavigate(isRetailMode() ? 'stock_ledger.html' : 'katti_entry.html');
+}
+
+// A making charge is stored as a number plus how to read it.
+function _makingLabel(item) {
+    var v = parseFloat(item.making_charge || 0);
+    if (!v) return '--';
+    var t = String(item.making_type || 'percent');
+    if (t === 'per_gram') return 'Rs ' + v + '/g';
+    if (t === 'fixed')    return 'Rs ' + v;
+    return v + '%';
+}
+
+// Hide what only a wholesaler counts. Header and column are hidden together
+// so the table can never shift out of alignment.
+(function applyRetailInventory(){
+    function apply(){
+        var retail = isRetailMode();
+        // Retail columns exist in the markup for both modes; whichever mode
+        // this is, the other mode's columns come out.
+        (retail ? ['tile-uchak','tile-packets','col-touch']
+                : ['col-category','col-making']).forEach(function(id){
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        if (retail) {
+            var chart = document.querySelector('#dist-toggle option[value="uchak"]');
+            if (chart) chart.remove();
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
 })();
 </script>
 </body>
