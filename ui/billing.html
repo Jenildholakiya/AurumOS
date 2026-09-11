@@ -1236,11 +1236,16 @@
                 <div class="radio-dot"></div>
             </div>
         </div>
-        <div class="print-actions">
+        <div style="font-size:0.72rem;color:var(--text-muted);margin:10px 0 4px;">Which bill?</div>
+        <div class="print-actions" style="flex-wrap:wrap;">
             <button class="btn-action-modal btn-action-cancel" onclick="closePrintSelectorModal()">Cancel</button>
-            <button class="btn-action-modal btn-action-confirm" onclick="commitBillingTransactionPipeline()">Confirm
-                &amp; Print
-            </button>
+            <button class="btn-action-modal btn-action-confirm" id="btn-normal-bill"
+                    onclick="commitBillingTransactionPipeline('normal')">Normal Bill</button>
+            <button class="btn-action-modal btn-action-confirm" id="btn-gst-bill"
+                    onclick="commitBillingTransactionPipeline('gst')">GST Bill</button>
+        </div>
+        <div id="gst-bill-hint" style="display:none;font-size:0.66rem;color:var(--text-muted);margin-top:8px;">
+            Add your GSTIN in Settings to print a GST bill.
         </div>
     </div>
 </div>
@@ -3672,7 +3677,11 @@ function handleBilling() {
     openPrintSelectorModal();
 }
 
-async function commitBillingTransactionPipeline() {
+async function commitBillingTransactionPipeline(billMode) {
+    // 'gst' or 'normal'. The same bill is saved either way; this only decides
+    // what gets printed, so a shop can hand over a plain bill and still have
+    // the figures if it needs the tax invoice later.
+    billMode = (billMode === 'gst') ? 'gst' : 'normal';
 
     // ── STOCK AVAILABILITY CHECK ─────────────────────────────────────
     var isUchak = document.getElementById('uchak-toggle').checked;
@@ -3787,7 +3796,10 @@ async function commitBillingTransactionPipeline() {
             if (res.status === 'success') {
                 // Use the REAL saved voucher id (staff role gets an auto-generated id)
                 var savedVch = (res.vch_id && String(res.vch_id).trim()) ? res.vch_id : data.vch_id;
-                if (window.pywebview.api.trigger_print_window) await window.pywebview.api.trigger_print_window(savedVch, printCopiesConfigTarget, data);
+                if (window.pywebview.api.trigger_print_window) {
+                    data._billMode = billMode;
+                    await window.pywebview.api.trigger_print_window(savedVch, printCopiesConfigTarget, data);
+                }
                 try {
                     localStorage.setItem('aurum_stock_dirty', '1');
                 } catch (e) {
@@ -3903,6 +3915,28 @@ startVchSync();
         }).replace(/,/g, ' |');
     }, 1000);
 };
+
+// The GST bill needs a registration behind it. Rather than let someone press
+// a button that silently prints a normal bill, ask once when the page loads
+// and disable it with a line saying where to fix that.
+(function(){
+    function apply(block){
+        var registered = block && block.shop_gst_registered === '1';
+        var btn  = document.getElementById('btn-gst-bill');
+        var hint = document.getElementById('gst-bill-hint');
+        if (!btn) return;
+        btn.disabled = !registered;
+        btn.style.opacity = registered ? '' : '0.45';
+        btn.style.cursor  = registered ? '' : 'not-allowed';
+        if (hint) hint.style.display = registered ? 'none' : 'block';
+    }
+    function ask(){
+        var api = window.pywebview && window.pywebview.api;
+        if (!api || typeof api.get_shop_print_block !== 'function') return;
+        api.get_shop_print_block().then(apply).catch(function(){});
+    }
+    if (window.apiReady) window.apiReady(ask); else setTimeout(ask, 1500);
+})();
 </script>
 </body>
 </html>

@@ -3854,10 +3854,57 @@ class AurumAPI:
                 bill["shop_city"]=self.db.get_config("city","")
                 bill["shop_address"]=self.db.get_config("address","")
             except Exception: pass
+            try:
+                for _k, _v in self._shop_print_block().items():
+                    bill.setdefault(_k, _v)
+            except Exception as _se:
+                ERR(f"[PRINT] shop block on reprint: {_se}")
             return {"status":"success","bill":bill}
         except Exception as e:
             ERR(f"[BILL PRINT] {e}")
             return {"status":"error","message":str(e)}
+
+    def _shop_print_block(self) -> dict:
+        """The shop's own details for the top of a bill, GST included.
+
+        Read here rather than in the template so a reprint months later shows
+        what the shop is registered as, instead of whatever a browser happened
+        to have cached. An unregistered shop returns no GSTIN at all, which is
+        what makes the GST bill unavailable rather than blank.
+        """
+        block = {}
+        try:
+            g = self.db.get_config
+            block = {
+                'shop_name':    g('business_name', ''),
+                'shop_owner':   g('owner_name', ''),
+                'shop_phone':   g('owner_phone', ''),
+                'shop_city':    g('city', ''),
+                'shop_address': g('address', ''),
+            }
+            if str(g('gst_registered', '0')).strip() == '1':
+                from core.gst import DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, DEFAULT_HSN
+                block.update({
+                    'shop_gstin':      g('gstin', ''),
+                    'shop_legal_name': g('gst_legal_name', ''),
+                    'shop_state':      g('gst_state', ''),
+                    'shop_state_code': g('gst_state_code', ''),
+                    'shop_pan':        g('pan', ''),
+                    'shop_hsn':        g('gst_hsn', '') or DEFAULT_HSN,
+                    'shop_cgst_rate':  g('gst_cgst_rate', '') or str(DEFAULT_CGST_RATE),
+                    'shop_sgst_rate':  g('gst_sgst_rate', '') or str(DEFAULT_SGST_RATE),
+                    'shop_gst_registered': '1',
+                })
+            else:
+                block['shop_gst_registered'] = '0'
+        except Exception as e:
+            ERR(f"[PRINT] shop block unavailable: {e}")
+        return block
+
+    def get_shop_print_block(self) -> dict:
+        """Same block, for the billing screens: they use it to decide whether
+        the GST Bill button can be offered at all."""
+        return self._shop_print_block()
 
     def trigger_print_window(self, voucher_id, copies=1, data=None):
         # `data` is accepted for compatibility with the billing UI, which passes
@@ -3880,6 +3927,21 @@ class AurumAPI:
                 if isinstance(data, dict):
                     printer_name = str(data.get('_printer') or '').strip()
                     preview_only = bool(data.get('_previewOnly'))
+                bill_mode = 'normal'
+                if isinstance(data, dict):
+                    bill_mode = str(data.get('_billMode') or data.get('bill_mode') or '').strip().lower()
+                    shop = self._shop_print_block()
+                    # A GST bill needs a registration. Asking for one without
+                    # it would print a tax invoice with no number on it, so it
+                    # falls back rather than printing something unusable.
+                    if bill_mode == 'gst' and shop.get('shop_gst_registered') != '1':
+                        LOG("[PRINT] GST bill asked for, but this shop is not registered -- printing the normal bill")
+                        bill_mode = 'normal'
+                    if bill_mode != 'gst':
+                        bill_mode = 'normal'
+                    for k, v in shop.items():
+                        data.setdefault(k, v)
+                    data['_billMode'] = bill_mode
                 try:
                     payload = json.dumps(data, ensure_ascii=False)
                 except Exception:
@@ -3891,6 +3953,7 @@ class AurumAPI:
                     inject += f"window.__PRINTER__='{safe_printer}';"
                 if preview_only:
                     inject += "window.__PREVIEW_ONLY__=true;"
+                inject += "window.__BILL_MODE__='" + bill_mode + "';"
             inject += '</script>'
             if '<!DOCTYPE html>' in html_content:
                 html_content=html_content.replace('<!DOCTYPE html>','<!DOCTYPE html>'+inject,1)

@@ -677,6 +677,35 @@ function _ls(k, fb) {
     catch(e) { return fb || ''; }
 }
 
+// ── BILL MODE ──────────────────────────────────────────────────────
+// Two bills come off this one template. A GST bill carries the shop's
+// GSTIN, the state it is registered in, the HSN code and the CGST/SGST
+// split. A normal bill carries none of that, even when the figures are
+// sitting in the payload, because a bill that shows tax without a
+// registration behind it is worse than one that shows no tax at all.
+//
+// The mode is injected by main.py, which refuses "gst" for a shop that has
+// not entered a registration, so this side can trust it.
+function _billMode(D) {
+    var m = (window.__BILL_MODE__ || (D && (D._billMode || D.bill_mode)) || '').toString().toLowerCase();
+    if (m !== 'gst') return 'normal';
+    var gstin = (D && (D.shop_gstin || '')) || _ls('aurum_gstin');
+    return gstin ? 'gst' : 'normal';
+}
+
+function _isGstBill(D) { return _billMode(D) === 'gst'; }
+
+// The line that tells the two apart on paper. HSN sits here on a GST bill
+// rather than as a per-item column: one code covers a jeweller's stock, and
+// a column would mean touching all three layouts.
+function buildBanner(D) {
+    if (!_isGstBill(D)) return '<div class="invoice-banner">Invoice</div>';
+    var hsn = D.shop_hsn || '';
+    return '<div class="invoice-banner">Tax Invoice'
+         + (hsn ? ' <span style="font-weight:600;letter-spacing:0.5px;">&middot; HSN ' + h(hsn) + '</span>' : '')
+         + '</div>';
+}
+
 // ── SHOP HEADER BUILDER ────────────────────────────────────────────
 function buildShopHeader(D) {
     var shopName = D.shop_name || _ls('aurum_biz_name', 'Aurum Jewels');
@@ -704,7 +733,11 @@ function buildShopHeader(D) {
     var contactParts = [];
     if (shopPhone) contactParts.push('<span class="contact-icon">&#9742;</span>' + h(shopPhone));
     if (shopCity) contactParts.push('<span class="contact-icon">&#8982;</span>' + h(shopCity));
-    if (shopGstin) contactParts.push('GSTIN: ' + h(shopGstin));
+    if (shopGstin && _isGstBill(D)) {
+        contactParts.push('GSTIN: ' + h(shopGstin));
+        if (shopState) contactParts.push('State: ' + h(shopState)
+            + (shopStateCode ? ' (' + h(shopStateCode) + ')' : ''));
+    }
     if (contactParts.length) {
         header += '<div class="shop-contact">' + contactParts.join('&nbsp;&nbsp;&nbsp;&nbsp;') + '</div>';
     }
@@ -914,8 +947,8 @@ function buildRetailSlip(D, copyLabel) {
         sumRows += '<tr><td>' + h(discLabel) + '</td><td>-' + _money(discount) + '</td></tr>';
     }
 
-    // GST rows
-    if (gstTotal > 0) {
+    // GST rows — a normal bill never shows them, whatever the payload holds.
+    if (gstTotal > 0 && _isGstBill(D)) {
         var totalRate = cgstRate + sgstRate;
         sumRows += '<tr><td>' + (totalRate > 0 ? 'GST @ ' + totalRate + '%' : 'GST') + '</td><td>+' + _money(gstTotal) + '</td></tr>';
         if (cgst > 0) {
@@ -957,7 +990,7 @@ function buildRetailSlip(D, copyLabel) {
 
     return '<div class="slip retail-slip">'
         + shopHtml
-        + '<div class="invoice-banner">Tax Invoice</div>'
+        + buildBanner(D)
         + metaHtml
         + '<table class="bt">' + tableHead
         + '<tbody>' + rows
@@ -1020,7 +1053,7 @@ function buildWeightSlip(D, copyLabel) {
     }
 
     var gstAmt = parseFloat(D.gstAmount)||0;
-    var gstRow = gstAmt>0 ? '<tr class="rd"><td colspan="5">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td></td><td class="cb">+</td><td class="cb price-cell">'+_money(gstAmt)+'</td></tr>' : '';
+    var gstRow = (gstAmt>0 && _isGstBill(D)) ? '<tr class="rd"><td colspan="5">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td></td><td class="cb">+</td><td class="cb price-cell">'+_money(gstAmt)+'</td></tr>' : '';
 
     var extraRows = (colFn>0?1:0) + (f995>0?1:0) + (fDhal>0?1:0) + (discRow?1:0) + 1;
 
@@ -1073,7 +1106,7 @@ function buildWeightSlip(D, copyLabel) {
                 +'<tr class="rr"><td colspan="8" style="font-size:8pt;font-weight:600;text-align:center!important;letter-spacing:1px;">... Continued on next page ...</td></tr>';
             html += '<div class="slip" style="page-break-after:always;">'
                 +shopHtml
-                +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+                +buildBanner(D)+metaHtml
                 +'<table class="bt" style="margin-bottom:0;">'+tableHead+'<tbody>'+wRows+subRow+'</tbody></table>'
                 +'<div class="ft-thanks" style="border-top:1.5px solid #000;margin:0 28px;">'
                 +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
@@ -1099,7 +1132,7 @@ function buildWeightSlip(D, copyLabel) {
             var spacer = buildSpacerLegacy(pageItems.length, extraRows);
             html += '<div class="slip">'
                 +shopHtml
-                +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+                +buildBanner(D)+metaHtml
                 +'<table class="bt">'+tableHead
                 +'<tbody>'+wRows+totRow1+ratRow+deduct+discRow+gstRow+totRow2+spacer+footRow+'</tbody>'
                 +'</table>'
@@ -1141,7 +1174,7 @@ function buildUchakSlip(D, copyLabel) {
         ? '<tr class="rd"><td colspan="3">Discount</td><td class="cb" style="font-weight:700;">-'+_money(discAmt)+'</td></tr>' : '';
 
     var uGstAmt = parseFloat(D.gstAmount)||0;
-    var uGst = uGstAmt>0 ? '<tr class="rd"><td colspan="3">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td class="cb" style="font-weight:700;">+'+_money(uGstAmt)+'</td></tr>' : '';
+    var uGst = (uGstAmt>0 && _isGstBill(D)) ? '<tr class="rd"><td colspan="3">'+(parseFloat(D.gstRate)>0?('GST @ '+D.gstRate+'%'):'GST')+'</td><td class="cb" style="font-weight:700;">+'+_money(uGstAmt)+'</td></tr>' : '';
 
     var extraCount = (uDisc ? 1 : 0) + (uGst ? 1 : 0);
     var spacer = buildSpacer8(4, items.length, extraCount + 1);
@@ -1162,7 +1195,7 @@ function buildUchakSlip(D, copyLabel) {
 
     return '<div class="slip">'
         +shopHtml
-        +'<div class="invoice-banner">Tax Invoice</div>'+metaHtml
+        +buildBanner(D)+metaHtml
         +'<table class="bt">'+tableHead
         +'<tbody>'+uRows+uDisc+uGst+spacer+totalRow+'</tbody></table>'
         +'<div class="ft-thanks">'
