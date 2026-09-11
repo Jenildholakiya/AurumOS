@@ -97,6 +97,24 @@ ctx.renderOrders([{ id: 2, description: 'Clasp', customer: 'Asha', kind: 'repair
 chk('a late order', /d late/.test(els['orders'].innerHTML));
 chk('and an advance taken is shown', /advance Rs 500/.test(els['orders'].innerHTML));
 
+console.log('-- a customer name is typed by a person --');
+// Every name on this screen is clickable, and the name goes inside a
+// single-quoted onclick attribute. One apostrophe would otherwise close the
+// attribute early and take the rest of the row's markup with it.
+ctx.renderTop([{ name: "D'Souza & Co", lifetime_value: 1000, bill_count: 2, segment_computed: 'vip' }]);
+const nameHtml = els['top'].innerHTML;
+// Assert on the click handler specifically. Checking for "D'Souza" anywhere
+// passes against the visible row text whether or not the attribute is safe,
+// which is the bug this is meant to catch.
+const wanted = "openCustomer('D\\'Souza & Co')";
+chk('the whole name reaches the click handler, apostrophe escaped',
+    nameHtml.indexOf(wanted) >= 0);
+chk('and the row is still one row', (nameHtml.match(/class="row /g) || []).length === 1);
+chk('the attribute is not cut short at the apostrophe',
+    nameHtml.indexOf("openCustomer('D')") < 0);
+ctx.renderTop([{ name: '<img src=x>', lifetime_value: 1, bill_count: 1, segment_computed: 'new' }]);
+chk('a tag in a name cannot become markup', els['top'].innerHTML.indexOf('<img') < 0);
+
 console.log('-- the counters across the top --');
 ctx.renderTiles({
   counts: { customers: 2, segments: { vip: 1, lapsed: 1 }, open_followups: 3,
