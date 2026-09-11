@@ -344,10 +344,14 @@ body{display:flex;}
         <span class="print-label">Copies</span>
       </div>
     </div>
-    <div class="print-selector-actions">
+    <div class="print-selector-actions" style="flex-wrap:wrap;">
       <button onclick="closePrintSelectorModal()">Cancel</button>
       <button onclick="commitBillPreview()" style="background:var(--bg-card2);color:var(--text2);border:1px solid var(--border);">Preview</button>
-      <button class="btn-print-go" onclick="commitBill(false)">Print</button>
+      <button class="btn-print-go" id="btn-normal-bill" onclick="commitBill(false,'normal')">Normal Bill</button>
+      <button class="btn-print-go" id="btn-gst-bill" onclick="commitBill(false,'gst')">GST Bill</button>
+    </div>
+    <div id="gst-bill-hint" style="display:none;font-size:0.66rem;color:var(--muted);margin-top:8px;">
+      Add your GSTIN in Settings to print a GST bill.
     </div>
   </div>
 </div>
@@ -1499,7 +1503,10 @@ function selectPrintCopyCount(n){
     _printCopies=n;
     document.querySelectorAll('.print-card').forEach(function(c,i){c.classList.toggle('selected',i+1===n);});
 }
-function commitBill(isEstimate){
+function commitBill(isEstimate, billMode){
+    // 'gst' or 'normal'. The bill saved is the same either way; this decides
+    // only what is printed.
+    billMode = (billMode === 'gst') ? 'gst' : 'normal';
     try{
     if(!window.pywebview||!window.pywebview.api){
         showModal('Offline','Backend not available.');
@@ -1537,6 +1544,7 @@ function commitBill(isEstimate){
                     return;
                 }
                 if(api.trigger_print_window){
+                    inv._billMode = billMode;
                     api.trigger_print_window(inv.vch_id, _printCopies, inv);
                 }
                 hardClearBill();
@@ -1664,6 +1672,27 @@ document.getElementById('btn-hold').addEventListener('click',function(e){
     e.stopPropagation();
     holdBill();
 });
+
+// The GST bill needs a registration behind it, so ask once and disable the
+// button rather than let it quietly print a normal bill instead.
+(function(){
+    function apply(block){
+        var registered = block && block.shop_gst_registered === '1';
+        var btn  = document.getElementById('btn-gst-bill');
+        var hint = document.getElementById('gst-bill-hint');
+        if (!btn) return;
+        btn.disabled = !registered;
+        btn.style.opacity = registered ? '' : '0.45';
+        btn.style.cursor  = registered ? '' : 'not-allowed';
+        if (hint) hint.style.display = registered ? 'none' : 'block';
+    }
+    function ask(){
+        var api = window.pywebview && window.pywebview.api;
+        if (!api || typeof api.get_shop_print_block !== 'function') return;
+        api.get_shop_print_block().then(apply).catch(function(){});
+    }
+    if (window.apiReady) window.apiReady(ask); else setTimeout(ask, 1500);
+})();
 </script>
 </body>
 </html>
