@@ -130,6 +130,19 @@ BUNDLES = {
             'tag_audit_get_available_touches',
         ]),
     },
+    'hallmark': {
+        'label': 'Hallmarking',
+        'pages': {
+            'wholesale': [],
+            'retail':    ['hallmark.html'],
+        },
+        'methods': frozenset([
+            'hallmark_dashboard', 'hallmark_quote', 'hallmark_save_centre',
+            'hallmark_set_registration', 'hallmark_check_pieces',
+            'hallmark_create_lot', 'hallmark_lot', 'hallmark_receive',
+            'hallmark_cancel_lot', 'hallmark_find',
+        ]),
+    },
     'crm': {
         'label': 'Customers',
         'pages': {
