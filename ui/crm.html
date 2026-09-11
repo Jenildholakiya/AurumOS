@@ -169,6 +169,47 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .fld input:focus,.fld select:focus{border-color:var(--blue2);}
 .fld-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
+/* Live indicator, in place of a button nobody should have to press */
+.live{display:flex;align-items:center;gap:6px;font-size:0.64rem;color:var(--text-muted);
+      padding:0 4px;white-space:nowrap;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);
+          box-shadow:0 0 7px rgba(22,163,74,0.5);}
+.live.stale .live-dot{background:var(--muted2);box-shadow:none;}
+.live.busy .live-dot{background:var(--blue);animation:livePulse 1s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.icon-btn{width:34px;height:34px;border:1px solid var(--border);background:var(--white);
+          border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;
+          justify-content:center;color:var(--text-muted);transition:all .15s;}
+.icon-btn:hover{background:var(--cream);color:var(--text-main);}
+
+.btn-wa{background:#25D366;color:#fff;}
+.btn-wa:hover{background:#1da851;}
+
+/* Campaign queue */
+.ov{position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:600;
+    display:flex;align-items:center;justify-content:center;padding:20px;}
+.ov[hidden]{display:none;}
+.ov-card{background:var(--white);border-radius:15px;width:520px;max-width:100%;
+         max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+         box-shadow:0 24px 60px rgba(15,23,42,0.25);}
+.ov-hdr{padding:15px 19px;border-bottom:1px solid var(--rule2);
+        display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ov-body{padding:17px 19px;overflow-y:auto;}
+.ov-foot{padding:13px 19px;border-top:1px solid var(--rule2);display:flex;
+         gap:8px;align-items:center;background:var(--bg-main);}
+.ov-foot .spacer{flex:1;}
+.prog{height:5px;background:var(--cream);border-radius:99px;overflow:hidden;margin-top:10px;}
+.prog-fill{height:100%;background:var(--success);border-radius:99px;transition:width .25s;}
+.preview{background:var(--bg-main);border:1px solid var(--border);border-radius:10px;
+         padding:12px 14px;font-size:0.74rem;line-height:1.55;white-space:pre-wrap;
+         max-height:190px;overflow-y:auto;}
+.who{font-weight:700;font-size:0.85rem;}
+.who-sub{font-size:0.66rem;color:var(--text-muted);margin-top:2px;}
+.warn-note{background:var(--amber-bg);border:1px solid rgba(217,119,6,0.25);
+           border-radius:9px;padding:10px 12px;font-size:0.68rem;color:#8a5a08;
+           line-height:1.5;margin-top:11px;}
+.skip-list{font-size:0.66rem;color:var(--text-muted);margin-top:9px;line-height:1.6;}
+
 .toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
        padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
        opacity:0;transform:translateY(8px);transition:all .22s;
@@ -192,9 +233,14 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></svg>
             <input type="text" id="search" placeholder="Find a customer…" oninput="onSearch(this.value)" autocomplete="off">
         </div>
+        <div class="live" id="live" title="This screen updates itself">
+            <span class="live-dot"></span><span id="live-text">live</span>
+        </div>
         <button class="btn btn-ghost" onclick="goTo('customer_detail.html')">Records</button>
         <button class="btn btn-ghost" onclick="goTo('crm_schemes.html')">Plans</button>
-        <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
+        <button class="icon-btn" onclick="loadAll(true)" title="Refresh now">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
     </div>
 </header>
 
@@ -353,6 +399,52 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon ok">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-1L3 21l2.1-5a8.4 8.4 0 0 1-1-4A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Send a message</div>
+                            <div class="card-sub">New arrival, or a note to everyone</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-body">
+                    <div class="fld">
+                        <label>What kind</label>
+                        <select id="camp-kind" onchange="onCampKind()">
+                            <option value="new_item">New arrival</option>
+                            <option value="broadcast">Announcement</option>
+                            <option value="festival">Festival greeting</option>
+                        </select>
+                    </div>
+                    <div class="fld" id="camp-item-wrap">
+                        <label>The piece</label>
+                        <input type="text" id="camp-item" placeholder="22K temple necklace, 32g">
+                    </div>
+                    <div class="fld" id="camp-note-wrap" hidden>
+                        <label>What to say</label>
+                        <input type="text" id="camp-note" placeholder="We are shut Monday for Diwali">
+                    </div>
+                    <div class="fld" id="camp-greet-wrap" hidden>
+                        <label>Greeting</label>
+                        <input type="text" id="camp-greeting" placeholder="Happy Diwali">
+                    </div>
+                    <div class="fld">
+                        <label>Who</label>
+                        <select id="camp-segment">
+                            <option value="all">Everyone</option>
+                            <option value="vip">VIP only</option>
+                            <option value="repeat">Regulars</option>
+                            <option value="lapsed">Those gone quiet</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-wa" onclick="startCampaign()">Prepare messages</button>
+                </div>
+            </div>
+
             <div class="card" id="sec-lapsed">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -388,6 +480,33 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
     </div>
 </div>
 </main>
+
+<div class="ov" id="camp-ov" hidden>
+    <div class="ov-card">
+        <div class="ov-hdr">
+            <div>
+                <div class="card-title" id="camp-title">Ready to send</div>
+                <div class="card-sub" id="camp-count">—</div>
+            </div>
+            <button class="icon-btn" onclick="closeCampaign()" title="Close">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="ov-body">
+            <div id="camp-who"></div>
+            <div class="preview" id="camp-preview"></div>
+            <div class="prog"><div class="prog-fill" id="camp-prog" style="width:0%"></div></div>
+            <div class="warn-note" id="camp-warn"></div>
+            <div class="skip-list" id="camp-skipped"></div>
+        </div>
+        <div class="ov-foot">
+            <button class="btn btn-ghost" onclick="skipOne()">Skip</button>
+            <div class="spacer"></div>
+            <button class="btn btn-ghost" onclick="closeCampaign()">Stop</button>
+            <button class="btn btn-wa" id="camp-send" onclick="sendOne()">Open WhatsApp</button>
+        </div>
+    </div>
+</div>
 
 <datalist id="customer-names"></datalist>
 <div class="toast" id="toast"></div>
@@ -490,15 +609,18 @@ function emptyState(title, line){
 }
 
 // ── loading ──────────────────────────────────────────────────────────
-function loadAll(){
+function loadAll(manual){
     var a = api();
     if (!a || typeof a.crm_dashboard !== 'function') {
         el('head-sub').textContent = 'Not available in this build — restart after updating.';
+        setLive('stale', 'offline');
         return;
     }
+    setLive('busy', 'checking');
     a.crm_dashboard(30, 365).then(function(d){
         if (!d || d.status !== 'success') {
             el('head-sub').textContent = (d && d.message) || 'Could not load.';
+            setLive('stale', 'not updating');
             return;
         }
         DATA = d;
@@ -514,8 +636,14 @@ function loadAll(){
         el('head-sub').textContent = (c.customers || 0) + ' customers · '
             + (d.occasions || []).length + ' to call · '
             + (c.open_followups || 0) + ' promised';
+        _lastOk = Date.now();
+        setLive('', 'just now');
+        // A search typed before a refresh should still apply after one.
+        var q = el('search').value;
+        if (q) onSearch(q);
     }).catch(function(e){
         el('head-sub').textContent = 'Could not load: ' + e;
+        setLive('stale', 'not updating');
     });
 
     if (typeof a.crm_customers === 'function') {
@@ -575,10 +703,17 @@ function renderOccasions(list){
                  : '<span class="pill pill-ok">' + d + ' days</span>';
         var what = o.occasion === 'birthday' ? 'Birthday' : 'Anniversary';
         var turns = (o.turns && o.turns > 0) ? ' · ' + o.turns + ' years' : '';
-        return rowOpen(o.name) + '<div class="row-main">'
+        // A wish is offered only on the day. Sending one early reads as a
+        // mistake, and this list is meant to be today's work.
+        var wish = (d === 0 && o.phone)
+            ? ' <button class="btn btn-wa btn-sm" onclick="event.stopPropagation();wishOne(\''
+              + escAttr(o.name) + '\',\'' + esc(o.occasion) + '\')">Wish</button>'
+            : '';
+        return '<div class="row"><div class="row-main row-click" onclick="openCustomer(\''
+             + escAttr(o.name) + '\')">'
              + '<div class="row-name">' + esc(o.name) + '</div>'
              + '<div class="row-meta">' + what + turns + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>'
-             + '</div><div class="row-right">' + pill + '</div></div>';
+             + '</div><div class="row-right">' + pill + wish + '</div></div>';
     }).join('');
 }
 
@@ -779,10 +914,177 @@ function closeOrder(id){
 }
 
 // ── start ────────────────────────────────────────────────────────────
+// -- WHATSAPP ---------------------------------------------------------
+// Nothing here sends anything. Each of these opens WhatsApp with the message
+// already written, and a person presses send. A loop that fires at a customer
+// list unattended gets the shop's number banned, and it is the number printed
+// on every bill.
+
+function wishOne(name, kind){
+    var a = api();
+    if (!a || typeof a.wa_message !== 'function') { toast('Not available in this build.', true); return; }
+    a.wa_message(name, kind, {}).then(function(m){
+        if (!m || m.status !== 'success') {
+            toast((m && m.reason) || 'Cannot message this customer.', true);
+            return;
+        }
+        openWhatsApp(m.url);
+        // Recorded on opening, the last moment the app can see. It stops the
+        // same wish being offered again an hour later.
+        if (typeof a.wa_mark_sent === 'function') {
+            a.wa_mark_sent(name, kind, m.phone, m.text)
+             .then(function(){ loadAll(true); }).catch(function(){});
+        }
+    }).catch(function(e){ toast('Could not prepare: ' + e, true); });
+}
+
+function openWhatsApp(url){
+    if (!url) { toast('No WhatsApp link for that customer.', true); return; }
+    var a = api();
+    if (a && typeof a.wa_open === 'function') { a.wa_open(url).catch(function(){}); }
+    else { window.open(url, '_blank'); }
+}
+
+// -- a campaign: a queue to work through, not a blast ------------------
+var CAMP = { queue: [], at: 0, kind: '', skipped: [] };
+
+function onCampKind(){
+    var k = el('camp-kind').value;
+    el('camp-item-wrap').hidden  = (k !== 'new_item');
+    el('camp-note-wrap').hidden  = (k !== 'broadcast' && k !== 'festival');
+    el('camp-greet-wrap').hidden = (k !== 'festival');
+}
+
+function startCampaign(){
+    var a = api();
+    if (!a || typeof a.wa_campaign !== 'function') { toast('Not available in this build.', true); return; }
+    var kind = el('camp-kind').value;
+    var ctx = {};
+    if (kind === 'new_item') {
+        ctx.item = (el('camp-item').value || '').trim();
+        if (!ctx.item) { toast('Say what the piece is first.', true); return; }
+    } else {
+        ctx.note = (el('camp-note').value || '').trim();
+        if (!ctx.note) { toast('Type what you want to say first.', true); return; }
+        if (kind === 'festival') ctx.greeting = (el('camp-greeting').value || '').trim();
+    }
+    a.wa_campaign(kind, ctx, el('camp-segment').value || 'all').then(function(r){
+        if (!r || r.status !== 'success') { toast((r && r.message) || 'Could not prepare.', true); return; }
+        if (!r.queue.length) {
+            toast('Nobody to send to.' + (r.skipped.length ? ' ' + r.skipped.length + ' left out.' : ''), true);
+            return;
+        }
+        CAMP = { queue: r.queue, at: 0, kind: kind, skipped: r.skipped || [] };
+        el('camp-warn').textContent = (r.pacing && r.pacing.note) || '';
+        el('camp-skipped').innerHTML = (r.skipped || []).length
+            ? '<strong>Left out:</strong> ' + r.skipped.map(function(sk){
+                  return esc(sk.name) + ' (' + esc(sk.reason) + ')'; }).join(', ')
+            : '';
+        el('camp-ov').hidden = false;
+        showCurrent();
+    }).catch(function(e){ toast('Could not prepare: ' + e, true); });
+}
+
+function showCurrent(){
+    if (CAMP.at >= CAMP.queue.length) {
+        el('camp-title').textContent = 'All done';
+        el('camp-count').textContent = CAMP.queue.length + ' message(s) worked through';
+        el('camp-who').innerHTML = '';
+        el('camp-preview').textContent = '';
+        el('camp-prog').style.width = '100%';
+        el('camp-send').disabled = true;
+        loadAll(true);
+        return;
+    }
+    var m = CAMP.queue[CAMP.at];
+    el('camp-title').textContent = 'Ready to send';
+    el('camp-count').textContent = (CAMP.at + 1) + ' of ' + CAMP.queue.length;
+    el('camp-who').innerHTML = '<div class="who">' + esc(m.name) + '</div>'
+        + '<div class="who-sub">' + esc(m.phone) + '</div>';
+    el('camp-preview').textContent = m.text;
+    el('camp-prog').style.width = Math.round(CAMP.at / CAMP.queue.length * 100) + '%';
+    el('camp-send').disabled = false;
+}
+
+function sendOne(){
+    var m = CAMP.queue[CAMP.at];
+    if (!m) return;
+    openWhatsApp(m.url);
+    var a = api();
+    if (a && typeof a.wa_mark_sent === 'function') {
+        a.wa_mark_sent(m.name, CAMP.kind, m.phone, m.text).catch(function(){});
+    }
+    CAMP.at++;
+    showCurrent();
+}
+
+function skipOne(){ CAMP.at++; showCurrent(); }
+
+function closeCampaign(){
+    el('camp-ov').hidden = true;
+    el('camp-send').disabled = false;
+    loadAll(true);
+}
+
+// -- auto refresh -----------------------------------------------------
+// The screen keeps itself current so nobody has to remember to press
+// anything. Two rules keep it from being a nuisance: it stops while the
+// window is hidden, and it never refreshes while someone is typing, because
+// rebuilding the lists under a half-written follow-up loses it.
+var REFRESH_SECONDS = 60;
+var _timer = null, _lastOk = 0;
+
+function isBusyTyping(){
+    var e = document.activeElement;
+    if (!e) return false;
+    var tag = (e.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'select' && tag !== 'textarea') return false;
+    // A field with something in it is work in progress; an empty one is not.
+    return !!(e.value && String(e.value).trim());
+}
+
+function setLive(state, text){
+    var box = el('live');
+    if (box) box.className = 'live' + (state ? ' ' + state : '');
+    var t = el('live-text');
+    if (t) t.textContent = text;
+}
+
+function sinceText(){
+    if (!_lastOk) return 'live';
+    var secs = Math.round((Date.now() - _lastOk) / 1000);
+    if (secs < 15) return 'just now';
+    if (secs < 90) return secs + 's ago';
+    return Math.round(secs / 60) + 'm ago';
+}
+
+function tick(){
+    if (document.hidden) return;
+    if (!el('camp-ov').hidden) return;   // never mid-campaign
+    if (isBusyTyping()) return;
+    loadAll();
+}
+
+function startAutoRefresh(){
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(tick, REFRESH_SECONDS * 1000);
+    setInterval(function(){
+        if (!document.hidden) setLive(_lastOk ? '' : 'stale', sinceText());
+    }, 5000);
+    // Coming back to the window should show something current at once, rather
+    // than whatever was true when it was last looked at.
+    document.addEventListener('visibilitychange', function(){
+        if (!document.hidden) loadAll();
+    });
+}
+
+// -- start ------------------------------------------------------------
 try { initSidebar('crm'); } catch (e) {}
 el('fu-date').value = today();
 el('or-date').value = today();
+onCampKind();
 loadAll();
+startAutoRefresh();
 </script>
 </body>
 </html>
