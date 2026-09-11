@@ -121,8 +121,9 @@ ctx.renderTiles({
             open_orders: 1, active_plans: 2, plans_behind: 1 },
   occasions: [{}], dues: [{ total: 9000 }] });
 chk('customers counted', /Customers/.test(els['tiles'].innerHTML));
+chk('a tile is a way in, not just a number', /onclick="jumpTo\('sec-/.test(els['tiles'].innerHTML));
 chk('money owed totalled', /Rs 9,000/.test(els['tiles'].innerHTML));
-chk('plans behind shown in the alert colour', /tile alert/.test(els['tiles'].innerHTML));
+chk('plans behind shown in the alert colour', /tile is-alert/.test(els['tiles'].innerHTML));
 
 console.log('');
 if (fail) { console.log(fail + ' FAILED'); process.exit(1); }
