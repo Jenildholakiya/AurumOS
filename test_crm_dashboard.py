@@ -263,6 +263,28 @@ def check_layout(html):
     return out
 
 
+def check_plans_layout(html):
+    """The Plans screen pairs a list with a form, side by side.
+
+    The two are never the same height, so whichever is shorter used to end
+    early and leave a hole beside the other as tall as the difference. The
+    shorter card fills the row instead, with what little it has to say in
+    the middle of it.
+    """
+    out = []
+    if 'align-items:stretch' not in html:
+        out.append('paired cards do not share a height')
+    if re.search(r'\.pair\{[^}]*align-items:start', html):
+        out.append('a pair is still aligned to the top, which leaves the hole')
+    if not re.search(r'\.empty\{[^}]*justify-content:center', html):
+        out.append('an empty panel does not centre what it says')
+    # Filling the row is only right side by side. Stacked, each card should
+    # be its own height again.
+    if 'max-width:1080px' not in html:
+        out.append('the pair never collapses to one column')
+    return out
+
+
 def node_available():
     try:
         subprocess.run(['node', '--version'], capture_output=True, timeout=20)
@@ -284,10 +306,15 @@ def main():
         html = f.read()
     print('-- the shape of the page --')
     problems = check_layout(html)
+    plans_page = os.path.join(ROOT, 'ui', 'crm_schemes.html')
+    if os.path.isfile(plans_page):
+        with open(plans_page, encoding='utf-8', errors='replace') as f:
+            problems += check_plans_layout(f.read())
     for p in problems:
         print('  [FAIL] ' + p)
     if not problems:
         print('  [PASS] two stacks, the form leads, every counter has a card')
+        print('  [PASS] on the Plans screen a pair of cards shares a height')
     print('')
 
     blocks = re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>', html, re.S)

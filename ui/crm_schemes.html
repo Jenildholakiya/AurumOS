@@ -60,7 +60,7 @@ header{
 .scroll::-webkit-scrollbar-thumb:hover{background:rgba(37,99,235,0.35);}
 
 .layout{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:26px;}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch;}
 @media (max-width:1080px){.pair{grid-template-columns:1fr;}}
 
 .sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:-10px;}
@@ -126,7 +126,7 @@ select.inp{cursor:pointer;}
 .btn.sm{height:34px;padding:0 14px;font-size:0.7rem;border-radius:9px;}
 
 /* ── PLAN LIST ─────────────────────────────────────────────────── */
-.plan-list{display:flex;flex-direction:column;gap:10px;max-height:430px;overflow-y:auto;}
+.plan-list{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;max-height:620px;overflow-y:auto;}
 .plan-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--rule);
   border-radius:12px;background:linear-gradient(160deg,var(--cream),#fff);cursor:pointer;transition:all .15s;}
 .plan-row:hover{border-color:var(--blue-ln);box-shadow:0 3px 12px rgba(37,99,235,0.1);}
@@ -208,7 +208,7 @@ tbody tr:hover{background:rgba(248,250,251,0.75);}
 .pay-form .fld{min-width:130px;}
 .pay-hint{font-size:0.64rem;color:var(--muted);flex:1;min-width:150px;line-height:1.5;}
 
-.empty{padding:30px 16px;text-align:center;color:var(--muted2);font-size:0.76rem;line-height:1.6;}
+.empty{padding:30px 16px;text-align:center;color:var(--muted2);font-size:0.76rem;line-height:1.6;min-height:110px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
 
 body{
   background:
@@ -414,7 +414,7 @@ body{
         </div>
       </div>
       <div class="card-body">
-        <div id="sched-box">
+        <div id="sched-box" style="flex:1;display:flex;flex-direction:column;">
           <div class="empty">Enrol a customer and their dates appear here.</div>
         </div>
       </div>
