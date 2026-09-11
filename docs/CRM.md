@@ -12,15 +12,16 @@ This one answers a different question: *what should I do today?*
 behind, Customers. Each one is a button. Clicking it scrolls to the card it
 counts, so the number is a way in rather than decoration.
 
-**Column 1 — what to do.** In the order a counter actually does it.
+**Left — the one place you type something, then what to do today.**
 
-| Card | What it lists |
+| Card | What it is |
 |---|---|
+| Do something | Four tabs: Follow-up, Order, Announce, Send piece. Everything you might write down or send is here, so it is one card rather than four stacked forms. |
 | Call today | Birthdays and anniversaries in the next 30 days |
 | Promised | Things you said you would do, oldest first |
 | Orders and repairs | Work in hand, overdue in red |
 
-**Column 2 — money and people.**
+**Right — money and people.**
 
 | Card | What it lists |
 |---|---|
@@ -29,9 +30,14 @@ counts, so the number is a way in rather than decoration.
 | Gone quiet | Nobody bought in a year |
 | Best customers | By lifetime spend |
 
-**Column 3 — one card, four tabs.** Follow-up, Order, Announce, Send piece.
-Everything you might write down or send lives here, so the column is one
-card instead of four stacked forms.
+The two sides are split so they end at about the same place. A third column
+was tried and removed: three stacks cannot fill two cells, so on any window
+too narrow for three the last one dropped to a second row with a hole above
+it the height of the tallest column.
+
+Below about 1120 pixels the two sides stack into one. The form goes to the
+bottom there, because on a narrow screen the lists matter more than the
+place you type.
 
 ---
 

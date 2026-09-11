@@ -232,6 +232,37 @@ console.log('ALL PASS');
 """
 
 
+def check_layout(html):
+    """The shape of the page, which no amount of script testing would catch.
+
+    Three stacks cannot fill two cells. On any window too narrow for three,
+    the last one dropped to a second row and sat under a hole the height of
+    the tallest column. Two stacks have no second row to fall to.
+    """
+    out = []
+    cols = re.findall(r'<div class="col">', html)
+    if len(cols) != 2:
+        out.append('expected 2 column stacks, found %d' % len(cols))
+
+    first = re.search(r'<div class="col">\s*<div class="card" id="([\w-]+)"', html)
+    if not first:
+        out.append('could not find the first card of the first column')
+    elif first.group(1) != 'sec-do':
+        out.append('the card you type into should lead the first column, '
+                   'found %s' % first.group(1))
+
+    # Stacked on a narrow window the lists matter more than the form, so the
+    # form is ordered last rather than pushing them all down a screen.
+    if not re.search(r'#sec-do\{order:\s*9', html):
+        out.append('the form is not ordered below the lists when stacked')
+
+    # Every tile is a shortcut to a card; a renamed card would break one.
+    for target in re.findall(r"go:'([\w-]+)'", html):
+        if ('id="%s"' % target) not in html:
+            out.append('a counter points at %s, which is not on the page' % target)
+    return out
+
+
 def node_available():
     try:
         subprocess.run(['node', '--version'], capture_output=True, timeout=20)
@@ -251,6 +282,14 @@ def main():
 
     with open(PAGE, encoding='utf-8', errors='replace') as f:
         html = f.read()
+    print('-- the shape of the page --')
+    problems = check_layout(html)
+    for p in problems:
+        print('  [FAIL] ' + p)
+    if not problems:
+        print('  [PASS] two stacks, the form leads, every counter has a card')
+    print('')
+
     blocks = re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>', html, re.S)
     if not blocks:
         print('FAIL: no inline script found in ui/crm.html')
@@ -268,6 +307,8 @@ def main():
                               text=True, encoding='utf-8', errors='replace',
                               timeout=120)
         sys.stdout.write(done.stdout or '')
+        if problems:
+            return 1
         if done.returncode != 0 and (done.stderr or '').strip():
             sys.stdout.write(done.stderr)
         return done.returncode

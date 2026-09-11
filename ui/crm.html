@@ -90,9 +90,10 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
 /* ── Two columns: what to do, then who to know. ── */
 .cols{display:grid;gap:16px;align-items:start;
-      grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,0.92fr);}
-@media (max-width:1500px){ .cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);} }
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
 @media (max-width:1120px){ .cols{grid-template-columns:1fr;} }
+/* Stacked on a narrow window, the lists matter more than the form. */
+@media (max-width:1120px){ #sec-do{order:9;} }
 .col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 
 .card{background:var(--white);border:1px solid var(--border);border-radius:13px;
@@ -254,8 +255,120 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
     <div class="cols">
 
-        <!-- What to do, in the order a counter does it. -->
+        <!-- The one place you type something, then what to do today. -->
         <div class="col">
+            <div class="card" id="sec-do">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon ok">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-1L3 21l2.1-5a8.4 8.4 0 0 1-1-4A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Do something</div>
+                            <div class="card-sub">Write it down, or send it</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-tabs">
+                    <div class="add-tab on" id="tab-fu"  onclick="showAdd('fu')">Follow-up</div>
+                    <div class="add-tab"    id="tab-or"  onclick="showAdd('or')">Order</div>
+                    <div class="add-tab"    id="tab-camp" onclick="showAdd('camp')">Announce</div>
+                    <div class="add-tab"    id="tab-pic" onclick="showAdd('pic')">Send piece</div>
+                </div>
+                <div class="add-body" id="add-fu">
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="fu-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What needs doing</label>
+                        <input type="text" id="fu-task" placeholder="Call about the bangle">
+                    </div>
+                    <div class="fld">
+                        <label>By when</label>
+                        <input type="date" id="fu-date">
+                    </div>
+                    <button class="btn btn-primary" onclick="addFollowup()">Add follow-up</button>
+                </div>
+                <div class="add-body" id="add-or" hidden>
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="or-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What is being made or mended</label>
+                        <input type="text" id="or-desc" placeholder="Chain clasp repair">
+                    </div>
+                    <div class="fld-row">
+                        <div class="fld">
+                            <label>Type</label>
+                            <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
+                        </div>
+                        <div class="fld">
+                            <label>Promised</label>
+                            <input type="date" id="or-date">
+                        </div>
+                    </div>
+                    <div class="fld">
+                        <label>Advance taken</label>
+                        <input type="number" id="or-advance" placeholder="0" step="1" min="0">
+                    </div>
+                    <button class="btn btn-primary" onclick="addOrder()">Add order</button>
+                </div>
+                <div class="add-body" id="add-camp" hidden>
+                    <div class="fld">
+                        <label>What kind</label>
+                        <select id="camp-kind" onchange="onCampKind()">
+                            <option value="new_item">New arrival</option>
+                            <option value="broadcast">Announcement</option>
+                            <option value="festival">Festival greeting</option>
+                        </select>
+                    </div>
+                    <div class="fld" id="camp-item-wrap">
+                        <label>The piece</label>
+                        <input type="text" id="camp-item" placeholder="22K temple necklace, 32g">
+                    </div>
+                    <div class="fld" id="camp-note-wrap" hidden>
+                        <label>What to say</label>
+                        <input type="text" id="camp-note" placeholder="We are shut Monday for Diwali">
+                    </div>
+                    <div class="fld" id="camp-greet-wrap" hidden>
+                        <label>Greeting</label>
+                        <input type="text" id="camp-greeting" placeholder="Happy Diwali">
+                    </div>
+                    <div class="fld">
+                        <label>Who</label>
+                        <select id="camp-segment">
+                            <option value="all">Everyone</option>
+                            <option value="vip">VIP only</option>
+                            <option value="repeat">Regulars</option>
+                            <option value="lapsed">Those gone quiet</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-wa" onclick="startCampaign()">Prepare messages</button>
+                </div>
+
+                <div class="add-body" id="add-pic" hidden>
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="pic-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>Which piece</label>
+                        <select id="pic-item"><option value="">Loading stock…</option></select>
+                    </div>
+                    <div class="fld">
+                        <label>Anything to add</label>
+                        <input type="text" id="pic-note" placeholder="Can be made to order in 18K">
+                    </div>
+                    <div class="fld-row">
+                        <button class="btn btn-ghost" onclick="attachPhoto()">Add photo</button>
+                        <button class="btn btn-wa" onclick="sendPiece()">Send</button>
+                    </div>
+                    <div class="skip-list" id="pic-state">Pick a piece to see whether it has a picture.</div>
+                </div>
+            </div>
+
             <div class="card" id="sec-today">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -371,125 +484,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
                 <div class="list" id="top"><div class="empty">Loading…</div></div>
             </div>
-
         </div>
-
-        <!-- One card for everything you might write or send, so the column
-             is not three tall forms stacked on top of each other. -->
-        <div class="col">
-            <div class="card" id="sec-do">
-                <div class="card-hdr">
-                    <div class="card-hdr-left">
-                        <div class="card-icon ok">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-1L3 21l2.1-5a8.4 8.4 0 0 1-1-4A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
-                        </div>
-                        <div>
-                            <div class="card-title">Do something</div>
-                            <div class="card-sub">Write it down, or send it</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="add-tabs">
-                    <div class="add-tab on" id="tab-fu"  onclick="showAdd('fu')">Follow-up</div>
-                    <div class="add-tab"    id="tab-or"  onclick="showAdd('or')">Order</div>
-                    <div class="add-tab"    id="tab-camp" onclick="showAdd('camp')">Announce</div>
-                    <div class="add-tab"    id="tab-pic" onclick="showAdd('pic')">Send piece</div>
-                </div>
-                <div class="add-body" id="add-fu">
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="fu-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>What needs doing</label>
-                        <input type="text" id="fu-task" placeholder="Call about the bangle">
-                    </div>
-                    <div class="fld">
-                        <label>By when</label>
-                        <input type="date" id="fu-date">
-                    </div>
-                    <button class="btn btn-primary" onclick="addFollowup()">Add follow-up</button>
-                </div>
-                <div class="add-body" id="add-or" hidden>
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="or-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>What is being made or mended</label>
-                        <input type="text" id="or-desc" placeholder="Chain clasp repair">
-                    </div>
-                    <div class="fld-row">
-                        <div class="fld">
-                            <label>Type</label>
-                            <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
-                        </div>
-                        <div class="fld">
-                            <label>Promised</label>
-                            <input type="date" id="or-date">
-                        </div>
-                    </div>
-                    <div class="fld">
-                        <label>Advance taken</label>
-                        <input type="number" id="or-advance" placeholder="0" step="1" min="0">
-                    </div>
-                    <button class="btn btn-primary" onclick="addOrder()">Add order</button>
-                </div>
-                <div class="add-body" id="add-camp" hidden>
-                    <div class="fld">
-                        <label>What kind</label>
-                        <select id="camp-kind" onchange="onCampKind()">
-                            <option value="new_item">New arrival</option>
-                            <option value="broadcast">Announcement</option>
-                            <option value="festival">Festival greeting</option>
-                        </select>
-                    </div>
-                    <div class="fld" id="camp-item-wrap">
-                        <label>The piece</label>
-                        <input type="text" id="camp-item" placeholder="22K temple necklace, 32g">
-                    </div>
-                    <div class="fld" id="camp-note-wrap" hidden>
-                        <label>What to say</label>
-                        <input type="text" id="camp-note" placeholder="We are shut Monday for Diwali">
-                    </div>
-                    <div class="fld" id="camp-greet-wrap" hidden>
-                        <label>Greeting</label>
-                        <input type="text" id="camp-greeting" placeholder="Happy Diwali">
-                    </div>
-                    <div class="fld">
-                        <label>Who</label>
-                        <select id="camp-segment">
-                            <option value="all">Everyone</option>
-                            <option value="vip">VIP only</option>
-                            <option value="repeat">Regulars</option>
-                            <option value="lapsed">Those gone quiet</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-wa" onclick="startCampaign()">Prepare messages</button>
-                </div>
-
-                <div class="add-body" id="add-pic" hidden>
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="pic-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>Which piece</label>
-                        <select id="pic-item"><option value="">Loading stock…</option></select>
-                    </div>
-                    <div class="fld">
-                        <label>Anything to add</label>
-                        <input type="text" id="pic-note" placeholder="Can be made to order in 18K">
-                    </div>
-                    <div class="fld-row">
-                        <button class="btn btn-ghost" onclick="attachPhoto()">Add photo</button>
-                        <button class="btn btn-wa" onclick="sendPiece()">Send</button>
-                    </div>
-                    <div class="skip-list" id="pic-state">Pick a piece to see whether it has a picture.</div>
-                </div>
-
-            </div><!-- /do -->
-        </div><!-- /col -->
 
     </div><!-- /cols -->
 
