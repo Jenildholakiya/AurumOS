@@ -237,6 +237,95 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
 .item-name{flex:1;font-size:0.76rem;font-weight:600;color:var(--ink);}
 .item-meta{font-family:var(--mono);font-size:0.66rem;color:var(--muted);text-align:right;line-height:1.5;}
 
+/* ── CRM STRIPS ── */
+.crm-strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:0;
+  background:var(--white);border:1px solid var(--rule);border-radius:10px;
+  margin-bottom:18px;overflow:hidden;box-shadow:0 1px 4px rgba(14,12,9,0.04);
+}
+.crm-cell{padding:11px 16px;border-right:1px solid var(--rule2);min-width:0;}
+.crm-cell:last-child{border-right:none;}
+.crm-cell.tot{background:var(--cream2);}
+.crm-k{font-size:0.54rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);margin-bottom:6px;}
+.crm-v{font-family:var(--mono);font-size:0.85rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.crm-v.hot{color:var(--red);}
+.crm-sub{font-family:var(--mono);font-size:0.6rem;color:var(--muted2);margin-top:3px;}
+
+.seg{
+  display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;
+  font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+  border:1px solid var(--rule);background:var(--cream2);color:var(--ink3);
+}
+.seg.vip{background:var(--gold-bg);border-color:var(--gold-ln);color:var(--gold3);}
+.seg.repeat,.seg.active{background:var(--green-bg);border-color:var(--green-ln);color:var(--green);}
+.seg.new{background:var(--blue-bg);border-color:var(--blue-ln);color:var(--blue);}
+.seg.lapsed{background:var(--red-bg);border-color:var(--red-ln);color:var(--red);}
+
+.warn-bar{
+  display:none;align-items:center;gap:10px;padding:11px 16px;margin-bottom:18px;
+  border:1px solid var(--red-ln);background:var(--red-bg);border-radius:10px;
+  color:var(--red);font-size:0.76rem;font-weight:700;
+}
+.warn-bar svg{width:15px;height:15px;flex-shrink:0;}
+.warn-bar .sub{font-weight:500;color:var(--ink3);font-size:0.69rem;font-family:var(--mono);}
+
+/* ── CRM CARD + FORM ── */
+.crm-card{
+  background:var(--white);border:1px solid var(--rule);border-radius:10px;
+  margin-bottom:18px;overflow:hidden;box-shadow:0 1px 4px rgba(14,12,9,0.04);
+}
+.crm-card-head{
+  padding:12px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:14px;border-bottom:1px solid var(--rule);
+}
+.crm-card-body{padding:14px 18px 18px;}
+.crm-sec-t{font-family:var(--serif);font-size:0.88rem;color:var(--ink);margin-bottom:10px;}
+
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(164px,1fr));gap:6px;align-items:start;}
+.fg{padding:9px 11px;border:1px solid transparent;border-radius:8px;min-width:0;}
+.fg.key{background:var(--gold-bg);border-color:var(--gold-ln);}
+.fg.key label{color:var(--gold3);}
+.fg-wide{grid-column:span 2;}
+.fg label{
+  display:block;font-size:0.54rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.8px;color:var(--muted2);margin-bottom:5px;
+}
+.fg input,.fg select,.fg textarea{
+  width:100%;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:6px;
+  font-size:0.76rem;font-weight:500;background:var(--cream2);color:var(--ink);
+  outline:none;font-family:var(--sans);transition:all 0.14s;
+}
+.fg.key input{background:var(--white);border-color:var(--gold-ln);font-weight:600;}
+.fg textarea{height:auto;min-height:62px;padding:8px 10px;resize:vertical;line-height:1.45;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{
+  border-color:var(--gold2);background:var(--white);box-shadow:0 0 0 3px var(--gold-bg);
+}
+.fg-hint{font-family:var(--mono);font-size:0.6rem;color:var(--muted2);margin-top:5px;}
+.fg-hint.due{color:var(--gold3);font-weight:600;}
+
+/* ── NOTES + FOLLOW-UPS ── */
+.crm-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0;}
+.crm-col{padding:16px 18px;border-right:1px solid var(--rule2);min-width:0;}
+.crm-col:last-child{border-right:none;}
+.crm-list{max-height:280px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--cream3) transparent;}
+.crm-list::-webkit-scrollbar{width:3px;}
+.crm-list::-webkit-scrollbar-thumb{background:var(--cream3);}
+.note-item{
+  display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:7px;
+  background:var(--cream);border:1px solid var(--rule2);margin-bottom:6px;
+}
+.note-item:last-child{margin-bottom:0;}
+.note-kind{
+  font-family:var(--mono);font-size:0.56rem;font-weight:700;color:var(--gold3);
+  background:var(--gold-bg);border:1px solid var(--gold-ln);padding:2px 6px;
+  border-radius:3px;flex-shrink:0;letter-spacing:0.4px;
+}
+.note-body{flex:1;min-width:0;}
+.note-txt{font-size:0.76rem;color:var(--ink2);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.note-meta{font-family:var(--mono);font-size:0.6rem;color:var(--muted2);margin-top:4px;}
+.crm-empty{text-align:center;padding:22px;color:var(--muted2);font-size:0.78rem;}
+.crm-actions{display:flex;justify-content:flex-end;margin-top:10px;}
+
 /* ── TOAST ── */
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);
@@ -324,6 +413,40 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
       </div>
     </div>
 
+    <!-- ── CRM HEADER STRIP ── -->
+    <div class="crm-strip" id="crmStrip">
+      <div class="crm-cell">
+        <div class="crm-k">Segment</div>
+        <div><span class="seg" id="crmSeg">&mdash;</span></div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Lifetime Value</div>
+        <div class="crm-v" id="crmLtv">Rs. 0</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Bills</div>
+        <div class="crm-v" id="crmBills">0</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Last Purchase</div>
+        <div class="crm-v" id="crmLast">&mdash;</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Loyalty Points</div>
+        <div class="crm-v" id="crmPts">0 pts</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Birthday</div>
+        <div class="crm-v" id="crmDob">Not set</div>
+        <div class="crm-sub" id="crmDobIn">&nbsp;</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">Anniversary</div>
+        <div class="crm-v" id="crmAnn">Not set</div>
+        <div class="crm-sub" id="crmAnnIn">&nbsp;</div>
+      </div>
+    </div>
+
     <!-- ── STAT CARDS ── -->
     <div class="stat-row">
       <div class="stat-card red-card">
@@ -352,6 +475,117 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
       </div>
     </div>
 
+    <!-- ── DUES AGEING ── -->
+    <div class="crm-strip" id="ageStrip">
+      <div class="crm-cell">
+        <div class="crm-k">Dues 0-30 Days</div>
+        <div class="crm-v" id="age-0">Rs. 0</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">31-60 Days</div>
+        <div class="crm-v" id="age-1">Rs. 0</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">61-90 Days</div>
+        <div class="crm-v" id="age-2">Rs. 0</div>
+      </div>
+      <div class="crm-cell">
+        <div class="crm-k">90+ Days</div>
+        <div class="crm-v" id="age-3">Rs. 0</div>
+      </div>
+      <div class="crm-cell tot">
+        <div class="crm-k">Total Outstanding</div>
+        <div class="crm-v" id="ageTotal">Rs. 0.00</div>
+        <div class="crm-sub" id="ageOldest">&nbsp;</div>
+      </div>
+    </div>
+
+    <!-- ── OVER CREDIT LIMIT ── -->
+    <div class="warn-bar" id="limitWarn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Over the credit limit by <span id="warnAmt">Rs. 0.00</span></span>
+      <span class="sub">Limit <span id="warnLimit">Rs. 0.00</span> &middot; no further credit without approval</span>
+    </div>
+
+    <!-- ── CUSTOMER PROFILE ── -->
+    <div class="crm-card" id="profileCard">
+      <div class="crm-card-head">
+        <div>
+          <div class="panel-title">Customer Profile</div>
+          <div class="crm-sub" id="profHint">Birthday and anniversary drive the follow-up calendar.</div>
+        </div>
+        <div class="panel-acts">
+          <button class="btn" id="btnProfToggle" onclick="toggleProfile()">Hide</button>
+          <button class="btn btn-blue" id="btnSaveProfile" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+      <div class="crm-card-body" id="profileBody">
+        <div class="fgrid">
+          <div class="fg key">
+            <label>Date of Birth</label>
+            <input type="date" id="f_dob" onchange="refreshOccasions()">
+            <div class="fg-hint" id="hintDob">Not set</div>
+          </div>
+          <div class="fg key">
+            <label>Anniversary</label>
+            <input type="date" id="f_anniv" onchange="refreshOccasions()">
+            <div class="fg-hint" id="hintAnniv">Not set</div>
+          </div>
+          <div class="fg">
+            <label>Phone</label>
+            <input type="text" id="f_phone" placeholder="00000 00000">
+          </div>
+          <div class="fg">
+            <label>WhatsApp</label>
+            <input type="text" id="f_whatsapp" placeholder="00000 00000">
+          </div>
+          <div class="fg">
+            <label>Email</label>
+            <input type="text" id="f_email" placeholder="name@example.com">
+          </div>
+        </div>
+        <div class="fgrid" style="margin-top:6px;">
+          <div class="fg fg-wide">
+            <label>Address</label>
+            <input type="text" id="f_address" placeholder="Street, area">
+          </div>
+          <div class="fg">
+            <label>City</label>
+            <input type="text" id="f_city" placeholder="City">
+          </div>
+          <div class="fg">
+            <label>PAN</label>
+            <input type="text" id="f_pan" placeholder="ABCDE1234F">
+          </div>
+          <div class="fg">
+            <label>GSTIN</label>
+            <input type="text" id="f_gstin" placeholder="22ABCDE1234F1Z5">
+          </div>
+        </div>
+        <div class="fgrid" style="margin-top:6px;">
+          <div class="fg">
+            <label>Segment</label>
+            <select id="f_segment">
+              <option value="">Automatic</option>
+              <option value="vip">VIP</option>
+              <option value="repeat">Repeat</option>
+              <option value="active">Active</option>
+              <option value="new">New</option>
+              <option value="lapsed">Lapsed</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Referred By</label>
+            <input type="text" id="f_referred" placeholder="Who sent them">
+          </div>
+          <div class="fg">
+            <label>Household</label>
+            <input type="text" id="f_household" placeholder="Family this account belongs to">
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── TABS ── -->
     <div class="tab-bar">
       <button class="tab active" id="tab-purchases" onclick="switchTab('purchases')">
@@ -359,6 +593,12 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
       </button>
       <button class="tab" id="tab-credit" onclick="switchTab('credit')">
         Credit Ledger
+      </button>
+      <button class="tab" id="tab-plans" onclick="switchTab('plans')">
+        Savings Plans
+      </button>
+      <button class="tab" id="tab-notes" onclick="switchTab('notes')">
+        Notes &amp; Follow-ups
       </button>
     </div>
 
@@ -422,6 +662,85 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
           <tr class="empty-row"><td colspan="7">Loading ledger...</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- ── SAVINGS PLANS PANEL ── -->
+    <div class="panel" id="pane-plans">
+      <div class="panel-head">
+        <div class="panel-title">Savings Plans</div>
+        <div class="panel-acts">
+          <span class="row-count" id="planCount">0 plans</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th class="num" style="width:230px;">Paid of Total</th>
+            <th style="width:170px;">Next Due</th>
+            <th style="width:130px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="planBody">
+          <tr class="empty-row"><td colspan="4">Loading savings plans...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── NOTES + FOLLOW-UPS PANEL ── -->
+    <div class="panel" id="pane-notes">
+      <div class="panel-head">
+        <div class="panel-title">Notes &amp; Follow-ups</div>
+        <div class="panel-acts">
+          <span class="row-count" id="noteCount">0 notes</span>
+        </div>
+      </div>
+      <div class="crm-split">
+        <div class="crm-col">
+          <div class="crm-sec-t">Notes</div>
+          <div class="crm-list" id="noteList">
+            <div class="crm-empty">Loading notes...</div>
+          </div>
+          <div class="fgrid" style="margin-top:12px;">
+            <div class="fg fg-wide">
+              <label>Add a note</label>
+              <textarea id="n_text" placeholder="What was said, promised or asked for..."></textarea>
+            </div>
+            <div class="fg">
+              <label>Kind</label>
+              <select id="n_kind">
+                <option value="note">Note</option>
+                <option value="call">Call</option>
+                <option value="visit">Visit</option>
+                <option value="promise">Promise</option>
+                <option value="complaint">Complaint</option>
+              </select>
+            </div>
+          </div>
+          <div class="crm-actions">
+            <button class="btn btn-blue" id="btnAddNote" onclick="addNote()">Save Note</button>
+          </div>
+        </div>
+        <div class="crm-col">
+          <div class="crm-sec-t">Follow-ups</div>
+          <div class="crm-list" id="fupList">
+            <div class="crm-empty">Loading follow-ups...</div>
+          </div>
+          <div class="fgrid" style="margin-top:12px;">
+            <div class="fg fg-wide">
+              <label>Task</label>
+              <input type="text" id="f_task" placeholder="Call about the bangle order">
+            </div>
+            <div class="fg">
+              <label>Due Date</label>
+              <input type="date" id="f_due">
+            </div>
+          </div>
+          <div class="crm-actions">
+            <button class="btn btn-blue" id="btnAddFup" onclick="addFollowup()">Save Follow-up</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div><!-- end .content -->
@@ -488,11 +807,16 @@ function doNewCustomer(){
 }
 
 // ── Tab Switcher ───────────────────────────────────────────────────────────
+var TABS = ['purchases', 'credit', 'plans', 'notes'];
+
 function switchTab(name) {
-  document.getElementById('tab-purchases').classList.toggle('active', name === 'purchases');
-  document.getElementById('tab-credit').classList.toggle('active', name === 'credit');
-  document.getElementById('pane-purchases').classList.toggle('active', name === 'purchases');
-  document.getElementById('pane-credit').classList.toggle('active', name === 'credit');
+  for (var i = 0; i < TABS.length; i++) {
+    var on  = TABS[i] === name;
+    var tab = document.getElementById('tab-' + TABS[i]);
+    var pan = document.getElementById('pane-' + TABS[i]);
+    if (tab) tab.classList.toggle('active', on);
+    if (pan) pan.classList.toggle('active', on);
+  }
 }
 
 // ── Load Data ──────────────────────────────────────────────────────────────
@@ -531,6 +855,9 @@ async function load() {
   } catch(e){}
 
   if (!CNAME) return;
+
+  // CRM profile, ageing, savings plans and notes (never blocks the rest)
+  loadCrm();
 
   // Balances
   try {
@@ -690,6 +1017,445 @@ function renderLedger() {
   }).join('');
 }
 
+// ── CRM: helpers ───────────────────────────────────────────────────────────
+function rupees(v, exact) {
+  var n = parseFloat(v);
+  if (isNaN(n)) n = 0;
+  return 'Rs. ' + n.toLocaleString('en-IN', exact
+    ? {minimumFractionDigits:2, maximumFractionDigits:2}
+    : {maximumFractionDigits:0});
+}
+
+function val(id) {
+  var el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+function setVal(id, v) {
+  var el = document.getElementById(id);
+  if (el) el.value = (v === null || v === undefined) ? '' : String(v);
+}
+
+function setText(id, v) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+// 'YYYY-MM-DD' (with or without a time after it) -> Date, else null.
+function parseYmd(value) {
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(value || '').trim());
+  if (!m) return null;
+  var d = new Date(parseInt(m[1],10), parseInt(m[2],10) - 1, parseInt(m[3],10));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Days until this day-and-month comes round again. 0 means today.
+// 29 February is greeted on the 28th in a common year, as the backend does.
+function daysUntilOccasion(d) {
+  var now = new Date();
+  now.setHours(0,0,0,0);
+  var month = d.getMonth(), day = d.getDate();
+  function on(year) {
+    var dd = day;
+    if (month === 1 && day === 29) {
+      var leap = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
+      if (!leap) dd = 28;
+    }
+    return new Date(year, month, dd);
+  }
+  var next = on(now.getFullYear());
+  if (next.getTime() < now.getTime()) next = on(now.getFullYear() + 1);
+  return Math.round((next.getTime() - now.getTime()) / 86400000);
+}
+
+function occasionLabel(value) {
+  var d = parseYmd(value);
+  if (!d) return {main: 'Not set', sub: ''};
+  var days = daysUntilOccasion(d);
+  return {
+    main: d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}),
+    sub : days === 0 ? 'Today' : ('in ' + days + ' day' + (days === 1 ? '' : 's'))
+  };
+}
+
+// Keeps the header strip and the two date hints in step with the form.
+function refreshOccasions() {
+  var b = occasionLabel(val('f_dob'));
+  var a = occasionLabel(val('f_anniv'));
+  setText('crmDob',   b.main);
+  setText('crmDobIn', b.sub || ' ');
+  setText('crmAnn',   a.main);
+  setText('crmAnnIn', a.sub || ' ');
+  var hb = document.getElementById('hintDob');
+  var ha = document.getElementById('hintAnniv');
+  if (hb) { hb.textContent = b.sub || 'Not set'; hb.className = 'fg-hint' + (b.sub ? ' due' : ''); }
+  if (ha) { ha.textContent = a.sub || 'Not set'; ha.className = 'fg-hint' + (a.sub ? ' due' : ''); }
+}
+
+// ── CRM: load ──────────────────────────────────────────────────────────────
+async function loadCrm(keepProfile) {
+  try {
+    var api = getApi();
+    if (!api || !CNAME) return;
+    if (typeof api.crm_customer !== 'function') {
+      crmUnavailable('The customer profile needs a newer AurumOS build. Please update.');
+      loadFollowups();
+      return;
+    }
+    var res = await api.crm_customer(CNAME).catch(function(err) {
+      console.error('[CRM CUSTOMER]', err);
+      return null;
+    });
+    if (!res || res.status !== 'success') {
+      if (res && res.status === 'not_found') {
+        crmUnavailable('No profile saved for this customer yet. Fill it in above and save.');
+      } else {
+        crmUnavailable((res && res.message) || 'Customer profile could not be loaded.');
+      }
+      loadFollowups();
+      return;
+    }
+    renderCrmStrip(res);
+    renderAgeing(res);
+    if (!keepProfile) fillProfile(res.customer || {});
+    refreshOccasions();
+    renderPlans(res.plans || []);
+    renderNotes(res.notes || []);
+    loadFollowups();
+  } catch (e) {
+    console.error('[CRM]', e);
+    crmUnavailable('Customer profile could not be loaded.');
+  }
+}
+
+// The page still works without the CRM; it just says so where the data would be.
+function crmUnavailable(message) {
+  setText('profHint', message);
+  var pb = document.getElementById('planBody');
+  if (pb) pb.innerHTML = '<tr class="empty-row"><td colspan="4">' + esc(message) + '</td></tr>';
+  var nl = document.getElementById('noteList');
+  if (nl) nl.innerHTML = '<div class="crm-empty">' + esc(message) + '</div>';
+  refreshOccasions();
+}
+
+// ── CRM: header strip ──────────────────────────────────────────────────────
+function renderCrmStrip(res) {
+  var c   = res.customer || {};
+  var seg = String(c.segment_computed || c.segment || '').toLowerCase();
+  var known = ['vip','repeat','active','new','lapsed'];
+  var segEl = document.getElementById('crmSeg');
+  if (segEl) {
+    segEl.textContent = seg ? seg.replace(/_/g,' ').toUpperCase() : '—';
+    segEl.className   = 'seg' + (known.indexOf(seg) >= 0 ? ' ' + seg : '');
+  }
+  setText('crmLtv',   rupees(c.lifetime_value, false));
+  setText('crmBills', String(parseInt(c.bill_count || 0, 10) || 0));
+  var last = String(c.last_purchase || '').slice(0,10);
+  setText('crmLast',  last || '—');
+  var pts = parseInt((res.loyalty_points !== undefined && res.loyalty_points !== null)
+                     ? res.loyalty_points : (c.loyalty_points || 0), 10) || 0;
+  setText('crmPts', pts.toLocaleString('en-IN') + ' pts');
+}
+
+// ── CRM: dues ageing ───────────────────────────────────────────────────────
+function renderAgeing(res) {
+  var ag = res.ageing || {};
+  var bk = ag.buckets || {};
+  var labels = ['0-30','31-60','61-90','90+'];
+  for (var i = 0; i < labels.length; i++) {
+    var el = document.getElementById('age-' + i);
+    if (!el) continue;
+    var v = parseFloat(bk[labels[i]] || 0);
+    el.textContent = rupees(v, false);
+    el.className   = 'crm-v' + (v > 0.01 && i >= 2 ? ' hot' : '');
+  }
+  var tot = parseFloat(ag.total || 0);
+  var tEl = document.getElementById('ageTotal');
+  if (tEl) {
+    tEl.textContent = rupees(tot, true);
+    tEl.className   = 'crm-v' + (tot > 0.01 ? ' hot' : '');
+  }
+  var oldest = parseInt(ag.oldest_days || 0, 10) || 0;
+  setText('ageOldest', tot > 0.01 ? ('oldest ' + oldest + ' day' + (oldest === 1 ? '' : 's')) : 'nothing outstanding');
+
+  var over = parseFloat(res.over_limit || 0);
+  var warn = document.getElementById('limitWarn');
+  if (warn) {
+    if (over > 0.01) {
+      setText('warnAmt',   rupees(over, true));
+      setText('warnLimit', rupees((res.customer || {}).cash_limit, true));
+      warn.style.display = 'flex';
+    } else {
+      warn.style.display = 'none';
+    }
+  }
+}
+
+// ── CRM: profile form ──────────────────────────────────────────────────────
+function fillProfile(c) {
+  setVal('f_dob',       String(c.dob || '').slice(0,10));
+  setVal('f_anniv',     String(c.anniversary || '').slice(0,10));
+  setVal('f_phone',     c.phone);
+  setVal('f_whatsapp',  c.whatsapp);
+  setVal('f_email',     c.email);
+  setVal('f_address',   c.address);
+  setVal('f_city',      c.city);
+  setVal('f_pan',       c.pan);
+  setVal('f_gstin',     c.gstin);
+  setVal('f_referred',  c.referred_by);
+  setVal('f_household', c.household);
+
+  var seg = String(c.segment || '').toLowerCase();
+  var sel = document.getElementById('f_segment');
+  if (sel) {
+    sel.value = seg;
+    // A segment typed in elsewhere must not vanish just because it is not listed.
+    if (seg && sel.value !== seg) {
+      var opt = document.createElement('option');
+      opt.value = seg;
+      opt.textContent = seg.toUpperCase();
+      sel.appendChild(opt);
+      sel.value = seg;
+    }
+  }
+  setText('profHint', 'Birthday and anniversary drive the follow-up calendar.');
+}
+
+async function saveProfile() {
+  var api = getApi();
+  if (!api || !CNAME) return;
+  if (typeof api.crm_save_customer !== 'function') {
+    toast('Saving the profile needs a newer AurumOS build.');
+    return;
+  }
+  var btn = document.getElementById('btnSaveProfile');
+  if (btn) btn.disabled = true;
+
+  var data = {
+    name        : CNAME,
+    dob         : val('f_dob'),
+    anniversary : val('f_anniv'),
+    phone       : val('f_phone'),
+    whatsapp    : val('f_whatsapp'),
+    email       : val('f_email'),
+    address     : val('f_address'),
+    city        : val('f_city'),
+    pan         : val('f_pan').toUpperCase(),
+    gstin       : val('f_gstin').toUpperCase(),
+    segment     : val('f_segment'),
+    referred_by : val('f_referred'),
+    household   : val('f_household')
+  };
+
+  var res = null;
+  try {
+    res = await api.crm_save_customer(data).catch(function(err) {
+      console.error('[CRM SAVE]', err);
+      return null;
+    });
+  } catch (e) {
+    console.error('[CRM SAVE]', e);
+  }
+  if (btn) btn.disabled = false;
+
+  if (res && res.status === 'success') {
+    setVal('f_pan',   data.pan);
+    setVal('f_gstin', data.gstin);
+    setText('cPhone', data.phone || '—');
+    toast('Profile saved.');
+    loadCrm();
+  } else {
+    toast((res && res.message) || 'Could not save the profile.');
+  }
+}
+
+function toggleProfile() {
+  var body = document.getElementById('profileBody');
+  setProfileOpen(!body || body.style.display === 'none');
+}
+
+function setProfileOpen(open) {
+  var body = document.getElementById('profileBody');
+  var tgl  = document.getElementById('btnProfToggle');
+  var save = document.getElementById('btnSaveProfile');
+  if (body) body.style.display = open ? 'block' : 'none';
+  if (tgl)  tgl.textContent    = open ? 'Hide' : 'Edit';
+  if (save) save.style.display = open ? 'inline-flex' : 'none';
+  try { localStorage.setItem('aurum_cd_profile_open', open ? '1' : '0'); } catch (e) {}
+}
+
+// ── CRM: savings plans ─────────────────────────────────────────────────────
+function renderPlans(plans) {
+  setText('planCount', plans.length + ' plan' + (plans.length === 1 ? '' : 's'));
+  var tb = document.getElementById('planBody');
+  if (!tb) return;
+  if (!plans.length) {
+    tb.innerHTML = '<tr class="empty-row"><td colspan="4">No savings plan for this customer.</td></tr>';
+    return;
+  }
+  tb.innerHTML = plans.map(function(p) {
+    var st    = String(p.status || '').toLowerCase();
+    var cls   = st === 'completed' ? 'paid'
+              : st === 'behind'    ? 'credit'
+              : st === 'on_track'  ? 'uchak' : 'other';
+    var label = st ? st.replace(/_/g,' ').toUpperCase() : '—';
+
+    var paid   = parseFloat(p.paid_total || 0);
+    var total  = parseFloat(p.plan_total || 0);
+    var behind = parseFloat(p.behind_by  || 0);
+    var redeem = parseFloat(p.redeemable_value || 0);
+    var mature = String(p.maturity_date || '').slice(0,10);
+    var next   = String(p.next_due_date || '').slice(0,10);
+
+    return '<tr>'
+      + '<td>'
+        + '<div style="font-weight:600;color:var(--ink);">' + esc(p.scheme_name || 'Plan') + '</div>'
+        + (mature ? '<div style="font-size:0.62rem;color:var(--muted2);margin-top:2px;font-family:var(--mono);">Matures ' + esc(mature) + '</div>' : '')
+      + '</td>'
+      + '<td class="num">'
+        + '<span style="font-family:Arial,sans-serif;font-weight:700;">' + rupees(paid, false) + '</span>'
+        + '<span style="color:var(--muted2);font-family:var(--mono);font-size:0.7rem;"> of ' + rupees(total, false) + '</span>'
+        + (redeem > 0 ? '<div style="font-size:0.62rem;color:var(--muted2);margin-top:2px;font-family:var(--mono);">Redeemable ' + rupees(redeem, false) + '</div>' : '')
+      + '</td>'
+      + '<td class="mono-cell">' + esc(next || '—')
+        + (behind > 0.01 ? '<div style="font-size:0.62rem;color:var(--red);margin-top:2px;font-weight:700;">Behind ' + rupees(behind, false) + '</div>' : '')
+      + '</td>'
+      + '<td><span class="status-pill ' + cls + '">' + esc(label) + '</span></td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ── CRM: notes ─────────────────────────────────────────────────────────────
+function renderNotes(notes) {
+  setText('noteCount', notes.length + ' note' + (notes.length === 1 ? '' : 's'));
+  var box = document.getElementById('noteList');
+  if (!box) return;
+  if (!notes.length) {
+    box.innerHTML = '<div class="crm-empty">No notes on this customer yet.</div>';
+    return;
+  }
+  box.innerHTML = notes.map(function(n) {
+    var when = String(n.created_at || '').slice(0,16);
+    var who  = String(n.created_by || '');
+    var meta = [when, who].filter(Boolean).join('  ·  ');
+    return '<div class="note-item">'
+      + '<span class="note-kind">' + esc(String(n.kind || 'note').toUpperCase()) + '</span>'
+      + '<div class="note-body">'
+        + '<div class="note-txt">' + esc(n.note || '') + '</div>'
+        + (meta ? '<div class="note-meta">' + esc(meta) + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function addNote() {
+  var api = getApi();
+  if (!api || !CNAME) return;
+  if (typeof api.crm_add_note !== 'function') {
+    toast('Notes need a newer AurumOS build.');
+    return;
+  }
+  var text = val('n_text');
+  if (!text) { toast('Type the note first.'); return; }
+  var kind = val('n_kind') || 'note';
+
+  var btn = document.getElementById('btnAddNote');
+  if (btn) btn.disabled = true;
+  var res = null;
+  try {
+    res = await api.crm_add_note(CNAME, text, kind).catch(function(err) {
+      console.error('[CRM NOTE]', err);
+      return null;
+    });
+  } catch (e) {
+    console.error('[CRM NOTE]', e);
+  }
+  if (btn) btn.disabled = false;
+
+  if (res && res.status === 'success') {
+    setVal('n_text', '');
+    toast('Note added.');
+    loadCrm(true);            // keep whatever is half-typed in the profile form
+  } else {
+    toast('Could not add the note.');
+  }
+}
+
+// ── CRM: follow-ups ────────────────────────────────────────────────────────
+async function loadFollowups() {
+  var api = getApi();
+  var box = document.getElementById('fupList');
+  if (!box) return;
+  if (!api || !CNAME || typeof api.crm_followups !== 'function') {
+    box.innerHTML = '<div class="crm-empty">Open follow-ups are not available in this build.</div>';
+    return;
+  }
+  var rows = null;
+  try {
+    rows = await api.crm_followups('open').catch(function(err) {
+      console.error('[CRM FOLLOWUPS]', err);
+      return null;
+    });
+  } catch (e) {
+    console.error('[CRM FOLLOWUPS]', e);
+  }
+  var mine = (rows || []).filter(function(f) {
+    return String(f.customer || '').trim().toLowerCase() === CNAME.trim().toLowerCase();
+  });
+  if (!mine.length) {
+    box.innerHTML = '<div class="crm-empty">No open follow-ups.</div>';
+    return;
+  }
+  var todayStr = new Date().toISOString().slice(0,10);
+  box.innerHTML = mine.map(function(f) {
+    var due  = String(f.due_date || '').slice(0,10);
+    var late = due && due < todayStr;
+    var meta = [due ? ('Due ' + due) : 'No due date', String(f.owner || '')].filter(Boolean).join('  ·  ');
+    return '<div class="note-item">'
+      + '<span class="note-kind"' + (late ? ' style="color:var(--red);background:var(--red-bg);border-color:var(--red-ln);"' : '') + '>'
+        + (late ? 'OVERDUE' : 'OPEN') + '</span>'
+      + '<div class="note-body">'
+        + '<div class="note-txt">' + esc(f.task || '') + '</div>'
+        + '<div class="note-meta">' + esc(meta) + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function addFollowup() {
+  var api = getApi();
+  if (!api || !CNAME) return;
+  if (typeof api.crm_add_followup !== 'function') {
+    toast('Follow-ups need a newer AurumOS build.');
+    return;
+  }
+  var task = val('f_task');
+  if (!task) { toast('Type the task first.'); return; }
+  var due = val('f_due');
+
+  var btn = document.getElementById('btnAddFup');
+  if (btn) btn.disabled = true;
+  var res = null;
+  try {
+    res = await api.crm_add_followup(CNAME, task, due, '').catch(function(err) {
+      console.error('[CRM FOLLOWUP]', err);
+      return null;
+    });
+  } catch (e) {
+    console.error('[CRM FOLLOWUP]', e);
+  }
+  if (btn) btn.disabled = false;
+
+  if (res && res.status === 'success') {
+    setVal('f_task', '');
+    setVal('f_due', '');
+    toast('Follow-up saved.');
+    loadFollowups();
+  } else {
+    toast('Could not save the follow-up.');
+  }
+}
+
 // ── Item Modal ─────────────────────────────────────────────────────────────
 function showItems(e, vchId) {
   e.stopPropagation();
@@ -747,6 +1513,12 @@ document.addEventListener('DOMContentLoaded', function() {
     {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/,/g,' |');
 
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+  // The profile opens by default; the shop can fold it away and it stays folded.
+  var pref = '1';
+  try { pref = localStorage.getItem('aurum_cd_profile_open'); } catch(e){}
+  setProfileOpen(pref !== '0');
+  refreshOccasions();
 
   var t = setInterval(function(){
     if (window.pywebview && window.pywebview.api){ clearInterval(t); load(); }

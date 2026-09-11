@@ -73,6 +73,7 @@ class DBManager:
         self.initialize_tables()
         try:
             self.ensure_retail_columns()
+            self.ensure_crm_tables()
         except Exception:
             pass
         try:
@@ -2453,6 +2454,7 @@ class DBManager:
             if safe_pay not in ('cash', 'upi', 'card'):
                 safe_pay = 'cash'
             self.ensure_retail_columns()
+            self.ensure_crm_tables()
             _dblog(f"[SALE] Recording sale vch_id={safe_vch_id} customer={customer}")
             with self._get_connection() as conn:
                 conn.execute("PRAGMA busy_timeout = 30000")
@@ -3770,6 +3772,460 @@ class DBManager:
         except Exception as e:
             _dberr(f"[MIGRATE] retail columns: {e}")
         self.ensure_retail_pricing_columns()
+
+    # -- CRM ---------------------------------------------------------------
+    # Storage only. Every rule about dates, dues, points and savings plans
+    # lives in core/crm.py so it can be checked without a database.
+
+    def crm_customers(self):
+        """Every customer, with what they are worth and when they last came.
+
+        The spend figures are read from the sale history rather than kept as a
+        running total on the customer, so they cannot drift out of step with
+        the bills they are made of.
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT c.*,
+                           COALESCE(s.bill_count, 0)     AS bill_count,
+                           COALESCE(s.lifetime_value, 0) AS lifetime_value,
+                           s.last_purchase               AS last_purchase,
+                           COALESCE(l.points, 0)         AS loyalty_points
+                    FROM clients_master c
+                    LEFT JOIN (
+                        SELECT TRIM(customer) AS cust,
+                               COUNT(*) AS bill_count,
+                               SUM(COALESCE(total_amount,0)) AS lifetime_value,
+                               MAX(date) AS last_purchase
+                        FROM sales_history
+                        WHERE TRIM(COALESCE(customer,'')) != ''
+                        GROUP BY TRIM(customer)
+                    ) s ON TRIM(c.name) = s.cust
+                    LEFT JOIN (
+                        SELECT TRIM(customer) AS cust,
+                               SUM(COALESCE(earned,0)) - SUM(COALESCE(used,0)) AS points
+                        FROM loyalty_ledger GROUP BY TRIM(customer)
+                    ) l ON TRIM(c.name) = l.cust
+                    ORDER BY c.name
+                """).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[CRM] customers: {e}")
+            return []
+
+    def crm_save_customer(self, data):
+        """Create or update one customer, keyed by name.
+
+        clients_master has a UNIQUE name and the screens have no stable id to
+        hold on to, so the name is the key. Only real columns are written.
+        """
+        try:
+            name = str((data or {}).get('name') or '').strip()
+            if not name:
+                return {'status': 'error', 'message': 'A customer needs a name.'}
+            with self._get_connection() as conn:
+                allowed = {r[1] for r in conn.execute(
+                    "PRAGMA table_info(clients_master)").fetchall()} - {'id', 'created_at'}
+                fields = {k: v for k, v in (data or {}).items() if k in allowed}
+                fields['name'] = name
+                found = conn.execute(
+                    "SELECT id FROM clients_master WHERE TRIM(name)=?", (name,)).fetchone()
+                if found:
+                    rest = [k for k in fields if k != 'name']
+                    if rest:
+                        sets = ", ".join(f"{k}=?" for k in rest)
+                        conn.execute(f"UPDATE clients_master SET {sets} WHERE id=?",
+                                     tuple([fields[k] for k in rest] + [found['id']]))
+                    row_id = found['id']
+                else:
+                    cols = ", ".join(fields)
+                    marks = ", ".join("?" for _ in fields)
+                    conn.execute(f"INSERT INTO clients_master ({cols}) VALUES ({marks})",
+                                 tuple(fields.values()))
+                    row_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': row_id, 'name': name}
+        except Exception as e:
+            _dberr(f"[CRM] save customer: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_dues(self):
+        """Outstanding cash per customer, each entry with the date it arose,
+        so the ageing buckets are built from real movements."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT TRIM(client_name) AS customer, date,
+                           (COALESCE(cash_dr,0) - COALESCE(cash_cr,0)) AS amount
+                    FROM credit_ledger
+                    WHERE TRIM(COALESCE(client_name,'')) != ''
+                    ORDER BY date
+                """).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[CRM] dues: {e}")
+            return []
+
+    def crm_add_note(self, customer, note, kind='note', created_by=''):
+        try:
+            if not str(customer or '').strip() or not str(note or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO customer_notes (customer,note,kind,created_by) VALUES (?,?,?,?)",
+                (str(customer).strip(), str(note).strip(),
+                 str(kind or 'note'), str(created_by or '')))
+        except Exception as e:
+            _dberr(f"[CRM] add note: {e}")
+            return False
+
+    def crm_notes(self, customer):
+        try:
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(
+                    "SELECT * FROM customer_notes WHERE TRIM(customer)=? "
+                    "ORDER BY id DESC LIMIT 200",
+                    (str(customer or '').strip(),)).fetchall()]
+        except Exception:
+            return []
+
+    def crm_add_followup(self, customer, task, due_date='', owner=''):
+        try:
+            if not str(customer or '').strip() or not str(task or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO customer_followups (customer,task,due_date,owner) VALUES (?,?,?,?)",
+                (str(customer).strip(), str(task).strip(),
+                 str(due_date or '') or None, str(owner or '')))
+        except Exception as e:
+            _dberr(f"[CRM] add followup: {e}")
+            return False
+
+    def crm_followups(self, status='open'):
+        try:
+            with self._get_connection() as conn:
+                order = " ORDER BY COALESCE(due_date,'9999-12-31'), id"
+                if status and status != 'all':
+                    rows = conn.execute(
+                        "SELECT * FROM customer_followups WHERE status=?" + order,
+                        (status,)).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM customer_followups" + order).fetchall()
+                return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+    def crm_close_followup(self, followup_id):
+        return self.execute_query(
+            "UPDATE customer_followups SET status='done', closed_at=CURRENT_TIMESTAMP "
+            "WHERE id=?", (followup_id,))
+
+    def crm_add_loyalty(self, customer, earned=0, used=0, vch_id='', note=''):
+        try:
+            if not str(customer or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO loyalty_ledger (customer,vch_id,earned,used,note) "
+                "VALUES (?,?,?,?,?)",
+                (str(customer).strip(), str(vch_id or ''), int(earned or 0),
+                 int(used or 0), str(note or '')))
+        except Exception as e:
+            _dberr(f"[CRM] loyalty: {e}")
+            return False
+
+    def crm_loyalty_balance(self, customer):
+        try:
+            v = self.get_scalar(
+                "SELECT COALESCE(SUM(earned),0) - COALESCE(SUM(used),0) "
+                "FROM loyalty_ledger WHERE TRIM(customer)=?",
+                (str(customer or '').strip(),))
+            return int(v or 0)
+        except Exception:
+            return 0
+
+    # -- savings schemes ---------------------------------------------------
+
+    def crm_schemes(self, active_only=True):
+        try:
+            with self._get_connection() as conn:
+                sql = "SELECT * FROM savings_schemes"
+                if active_only:
+                    sql += " WHERE active=1"
+                return [dict(r) for r in conn.execute(sql + " ORDER BY name").fetchall()]
+        except Exception:
+            return []
+
+    def crm_save_scheme(self, data):
+        try:
+            d = data or {}
+            name = str(d.get('name') or '').strip()
+            months = int(d.get('months') or 0)
+            amount = float(d.get('monthly_amount') or 0)
+            if not name or months <= 0 or amount <= 0:
+                return {'status': 'error',
+                        'message': 'A plan needs a name, a number of months and an amount.'}
+            sid = d.get('id')
+            with self._get_connection() as conn:
+                if sid:
+                    conn.execute(
+                        "UPDATE savings_schemes SET name=?,months=?,monthly_amount=?,"
+                        "bonus_type=?,bonus_value=?,active=? WHERE id=?",
+                        (name, months, amount, str(d.get('bonus_type') or 'month'),
+                         float(d.get('bonus_value') or 0), int(d.get('active', 1)), sid))
+                else:
+                    conn.execute(
+                        "INSERT INTO savings_schemes "
+                        "(name,months,monthly_amount,bonus_type,bonus_value,active) "
+                        "VALUES (?,?,?,?,?,?)",
+                        (name, months, amount, str(d.get('bonus_type') or 'month'),
+                         float(d.get('bonus_value') or 0), int(d.get('active', 1))))
+                    sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': sid}
+        except Exception as e:
+            _dberr(f"[CRM] save scheme: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_enrol(self, scheme_id, customer, start_date=''):
+        try:
+            cust = str(customer or '').strip()
+            if not cust or not scheme_id:
+                return {'status': 'error', 'message': 'Pick a customer and a plan.'}
+            start = str(start_date or '').strip() or date.today().isoformat()
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO scheme_enrolments (scheme_id,customer,start_date) "
+                    "VALUES (?,?,?)", (int(scheme_id), cust, start))
+                eid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': eid}
+        except Exception as e:
+            _dberr(f"[CRM] enrol: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_enrolments(self, customer=''):
+        """Enrolments joined to their plan, each with the payments received,
+        which is what core.crm.scheme_status needs to say where one stands."""
+        try:
+            with self._get_connection() as conn:
+                sql = ("SELECT e.id, e.customer, e.start_date, e.status, e.scheme_id, "
+                       "       s.name AS scheme_name, s.months, s.monthly_amount, "
+                       "       s.bonus_type, s.bonus_value "
+                       "FROM scheme_enrolments e "
+                       "JOIN savings_schemes s ON s.id = e.scheme_id")
+                args = ()
+                if str(customer or '').strip():
+                    sql += " WHERE TRIM(e.customer)=?"
+                    args = (str(customer).strip(),)
+                sql += " ORDER BY e.id DESC"
+                out = []
+                for r in conn.execute(sql, args).fetchall():
+                    row = dict(r)
+                    row['payments'] = [dict(p) for p in conn.execute(
+                        "SELECT amount,paid_date,mode FROM scheme_payments "
+                        "WHERE enrolment_id=? ORDER BY paid_date",
+                        (row['id'],)).fetchall()]
+                    out.append(row)
+                return out
+        except Exception as e:
+            _dberr(f"[CRM] enrolments: {e}")
+            return []
+
+    def crm_add_payment(self, enrolment_id, amount, paid_date='', mode='cash', note=''):
+        try:
+            amt = float(amount or 0)
+            if not enrolment_id or amt <= 0:
+                return {'status': 'error', 'message': 'An instalment needs an amount.'}
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO scheme_payments (enrolment_id,amount,paid_date,mode,note) "
+                    "VALUES (?,?,COALESCE(NULLIF(?,''),date('now')),?,?)",
+                    (int(enrolment_id), amt, str(paid_date or ''),
+                     str(mode or 'cash'), str(note or '')))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            _dberr(f"[CRM] payment: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # -- orders and repairs ------------------------------------------------
+
+    def crm_save_order(self, data):
+        try:
+            d = data or {}
+            cust = str(d.get('customer') or '').strip()
+            desc = str(d.get('description') or '').strip()
+            if not cust or not desc:
+                return {'status': 'error',
+                        'message': 'An order needs a customer and a description.'}
+            status = str(d.get('status') or 'open')
+            with self._get_connection() as conn:
+                if d.get('id'):
+                    conn.execute(
+                        "UPDATE customer_orders SET customer=?,kind=?,description=?,"
+                        "promised_date=?,advance=?,karigar=?,status=?,"
+                        "closed_at=CASE WHEN ?='done' THEN CURRENT_TIMESTAMP ELSE closed_at END "
+                        "WHERE id=?",
+                        (cust, str(d.get('kind') or 'order'), desc,
+                         str(d.get('promised_date') or '') or None,
+                         float(d.get('advance') or 0), str(d.get('karigar') or ''),
+                         status, status, d['id']))
+                    oid = d['id']
+                else:
+                    conn.execute(
+                        "INSERT INTO customer_orders "
+                        "(customer,kind,description,promised_date,advance,karigar,status) "
+                        "VALUES (?,?,?,?,?,?,?)",
+                        (cust, str(d.get('kind') or 'order'), desc,
+                         str(d.get('promised_date') or '') or None,
+                         float(d.get('advance') or 0), str(d.get('karigar') or ''), status))
+                    oid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': oid}
+        except Exception as e:
+            _dberr(f"[CRM] save order: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_close_order(self, order_id):
+        """Mark an order done without touching anything else on it.
+
+        Reusing the save path for this meant sending a whole row back just to
+        change one field, and any value the caller left out would overwrite
+        what was stored.
+        """
+        return self.execute_query(
+            "UPDATE customer_orders SET status='done', closed_at=CURRENT_TIMESTAMP "
+            "WHERE id=?", (order_id,))
+
+    def crm_orders(self, status='open'):
+        try:
+            with self._get_connection() as conn:
+                order = " ORDER BY COALESCE(promised_date,'9999-12-31'), id"
+                if status and status != 'all':
+                    rows = conn.execute(
+                        "SELECT * FROM customer_orders WHERE status=?" + order,
+                        (status,)).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM customer_orders" + order).fetchall()
+                return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+    def ensure_crm_tables(self):
+        """Everything the CRM needs, added in place on an existing shop.
+
+        clients_master held a name, a phone and two credit limits. That is
+        enough to bill someone and not much else: no way to know when their
+        birthday is, whether they are on a savings plan, what was promised to
+        them, or why they stopped coming in.
+
+        Safe on every startup. Columns are added only where missing and every
+        table is IF NOT EXISTS.
+        """
+        try:
+            with self._get_connection() as conn:
+                have = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(clients_master)").fetchall()]
+                for col, ddl in (
+                    ('dob',          "ALTER TABLE clients_master ADD COLUMN dob DATE"),
+                    ('anniversary',  "ALTER TABLE clients_master ADD COLUMN anniversary DATE"),
+                    ('email',        "ALTER TABLE clients_master ADD COLUMN email TEXT"),
+                    ('whatsapp',     "ALTER TABLE clients_master ADD COLUMN whatsapp TEXT"),
+                    ('address',      "ALTER TABLE clients_master ADD COLUMN address TEXT"),
+                    ('city',         "ALTER TABLE clients_master ADD COLUMN city TEXT"),
+                    ('pan',          "ALTER TABLE clients_master ADD COLUMN pan TEXT"),
+                    ('gstin',        "ALTER TABLE clients_master ADD COLUMN gstin TEXT"),
+                    # Set by hand when the shop disagrees with the inferred one.
+                    ('segment',      "ALTER TABLE clients_master ADD COLUMN segment TEXT"),
+                    ('referred_by',  "ALTER TABLE clients_master ADD COLUMN referred_by TEXT"),
+                    # Jewellery is bought by families, so several names are
+                    # often one relationship.
+                    ('household',    "ALTER TABLE clients_master ADD COLUMN household TEXT"),
+                    ('notes',        "ALTER TABLE clients_master ADD COLUMN notes TEXT"),
+                ):
+                    if col not in have:
+                        conn.execute(ddl)
+                        _dblog(f"[MIGRATE] clients_master.{col} added")
+
+                conn.executescript("""
+                CREATE TABLE IF NOT EXISTS customer_notes (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    note        TEXT NOT NULL,
+                    kind        TEXT DEFAULT 'note',
+                    created_by  TEXT DEFAULT '',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_cust_notes ON customer_notes(customer);
+
+                CREATE TABLE IF NOT EXISTS customer_followups (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    task        TEXT NOT NULL,
+                    due_date    DATE,
+                    owner       TEXT DEFAULT '',
+                    status      TEXT DEFAULT 'open',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed_at   DATETIME);
+                CREATE INDEX IF NOT EXISTS idx_followup_due ON customer_followups(status, due_date);
+
+                CREATE TABLE IF NOT EXISTS loyalty_ledger (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    vch_id      TEXT DEFAULT '',
+                    earned      INTEGER DEFAULT 0,
+                    used        INTEGER DEFAULT 0,
+                    note        TEXT DEFAULT '',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_loyalty_cust ON loyalty_ledger(customer);
+
+                CREATE TABLE IF NOT EXISTS savings_schemes (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name           TEXT NOT NULL,
+                    months         INTEGER NOT NULL,
+                    monthly_amount REAL NOT NULL,
+                    bonus_type     TEXT DEFAULT 'month',
+                    bonus_value    REAL DEFAULT 1,
+                    active         INTEGER DEFAULT 1,
+                    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                CREATE TABLE IF NOT EXISTS scheme_enrolments (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scheme_id   INTEGER NOT NULL,
+                    customer    TEXT NOT NULL,
+                    start_date  DATE NOT NULL,
+                    status      TEXT DEFAULT 'active',
+                    closed_at   DATETIME,
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_enrol_cust ON scheme_enrolments(customer);
+
+                CREATE TABLE IF NOT EXISTS scheme_payments (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    enrolment_id INTEGER NOT NULL,
+                    amount       REAL NOT NULL,
+                    paid_date    DATE DEFAULT (date('now')),
+                    mode         TEXT DEFAULT 'cash',
+                    note         TEXT DEFAULT '',
+                    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_pay_enrol ON scheme_payments(enrolment_id);
+
+                CREATE TABLE IF NOT EXISTS customer_orders (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer       TEXT NOT NULL,
+                    kind           TEXT DEFAULT 'order',
+                    description    TEXT NOT NULL,
+                    promised_date  DATE,
+                    advance        REAL DEFAULT 0,
+                    karigar        TEXT DEFAULT '',
+                    status         TEXT DEFAULT 'open',
+                    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed_at      DATETIME);
+                CREATE INDEX IF NOT EXISTS idx_orders_status ON customer_orders(status, promised_date);
+                """)
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[MIGRATE] crm tables: {e}")
 
     def get_item_by_tag(self, tag_id):
         """One tagged piece, by its tag, with everything the till needs.

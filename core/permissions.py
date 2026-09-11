@@ -130,6 +130,25 @@ BUNDLES = {
             'tag_audit_get_available_touches',
         ]),
     },
+    'crm': {
+        'label': 'Customers',
+        'pages': {
+            'wholesale': ['crm.html', 'crm_schemes.html', 'customer_detail.html',
+                          'customer_account.html'],
+            'retail':    ['crm.html', 'crm_schemes.html', 'customer_detail.html',
+                          'customer_account.html'],
+        },
+        'methods': frozenset([
+            'crm_dashboard', 'crm_customers', 'crm_customer', 'crm_save_customer',
+            'crm_add_note', 'crm_notes', 'crm_add_followup', 'crm_followups',
+            'crm_close_followup', 'crm_orders', 'crm_save_order', 'crm_close_order',
+            'crm_schemes', 'crm_save_scheme', 'crm_enrol', 'crm_enrolments',
+            'crm_add_payment', 'crm_scheme_schedule',
+            'crm_loyalty_balance', 'crm_award_loyalty', 'crm_redeem_loyalty',
+            'get_client_list', 'get_client_balances', 'get_customer_purchases',
+            'get_ledger_statement',
+        ]),
+    },
     'inventory': {
         'label': 'Inventory Vault',
         'pages': {
