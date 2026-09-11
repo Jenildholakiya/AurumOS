@@ -3647,6 +3647,175 @@ class AurumAPI:
         except Exception:
             return 'our shop'
 
+    # -- PHOTOS ------------------------------------------------------------
+    # A wa.me link carries text and nothing else, so a picture cannot ride
+    # along with it. The way round that without a paid provider is the
+    # clipboard: put the image on it, open WhatsApp with the caption already
+    # written, and the shopkeeper presses Ctrl+V then send.
+
+    def _photo_dir(self):
+        from core import photos as _ph
+        d = _ph.folder(_get_db_base())
+        try:
+            os.makedirs(d, exist_ok=True)
+        except Exception:
+            pass
+        return d
+
+    def photo_pick(self, tag_id):
+        """Choose a picture for a piece and keep a copy.
+
+        The original is left where it was. A shop moves photos off a phone
+        and deletes them a week later, and a picture that vanishes from the
+        stock list because somebody tidied their Downloads folder is worse
+        than no picture at all.
+        """
+        try:
+            from core import photos as _ph
+            import shutil
+            tag = str(tag_id or '').strip()
+            if not tag:
+                return {'status': 'error', 'message': 'No item chosen.'}
+            if not self._window:
+                return {'status': 'error', 'message': 'No window to open a file dialog from.'}
+
+            try:
+                import webview as _wv
+                picked = self._window.create_file_dialog(
+                    _wv.OPEN_DIALOG, allow_multiple=False,
+                    file_types=('Pictures (*.jpg;*.jpeg;*.png;*.webp)',))
+            except Exception as de:
+                ERR(f"[PHOTO] dialog: {de}")
+                return {'status': 'error', 'message': f'Could not open the file chooser: {de}'}
+            if not picked:
+                return {'status': 'cancelled'}
+            src = picked[0] if isinstance(picked, (list, tuple)) else str(picked)
+
+            try:
+                size = os.path.getsize(src)
+            except Exception:
+                return {'status': 'error', 'message': 'Could not read that file.'}
+            ok, why = _ph.check(src, size)
+            if not ok:
+                return {'status': 'error', 'message': why}
+
+            name = _ph.safe_name(tag, src)
+            dest = os.path.join(self._photo_dir(), name)
+            shutil.copyfile(src, dest)
+            self.db.set_item_photo(tag, name)
+            LOG(f"[PHOTO] {tag} -> {name}")
+            return {'status': 'success', 'photo': name, 'path': dest}
+        except Exception as e:
+            ERR(f"[PHOTO] pick: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def photo_remove(self, tag_id):
+        """Forget the picture for a piece. The file is left on disk, because
+        deleting a shop's only copy of a photograph is not this app's call."""
+        ok = self.db.set_item_photo(tag_id, '')
+        return {'status': 'success' if ok else 'error'}
+
+    def photo_path(self, tag_id):
+        """Where a piece's picture is, for showing it on a screen."""
+        try:
+            from core import photos as _ph
+            row = self.db.get_item_by_tag(tag_id) or {}
+            name = str(row.get('photo') or '')
+            if not name:
+                return {'status': 'none'}
+            p = _ph.path_for(_get_db_base(), name)
+            if not os.path.isfile(p):
+                return {'status': 'missing', 'path': p}
+            return {'status': 'success', 'path': p,
+                    'url': Path(p).as_uri()}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def photo_to_clipboard(self, tag_id):
+        """Put a piece's picture on the Windows clipboard.
+
+        Set-Clipboard with a file path puts the file itself on the clipboard,
+        which WhatsApp pastes as an attachment. Copying the pixels instead
+        would paste a screenshot-quality image and lose the filename.
+        """
+        try:
+            res = self.photo_path(tag_id)
+            if res.get('status') != 'success':
+                return {'status': 'error',
+                        'message': 'That piece has no picture saved.'}
+            p = res['path']
+            import subprocess
+            r = subprocess.run(
+                ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                 'Set-Clipboard -LiteralPath $env:AURUM_PHOTO'],
+                env=dict(os.environ, AURUM_PHOTO=p),
+                capture_output=True, text=True, timeout=30)
+            if r.returncode != 0:
+                return {'status': 'error',
+                        'message': (r.stderr or 'Could not copy the picture.').strip()[:200]}
+            return {'status': 'success', 'path': p}
+        except Exception as e:
+            ERR(f"[PHOTO] clipboard: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def photo_reveal(self, tag_id):
+        """Open the folder with the picture selected, for dragging it in by
+        hand when the clipboard is not wanted."""
+        try:
+            res = self.photo_path(tag_id)
+            if res.get('status') != 'success':
+                return {'status': 'error', 'message': 'That piece has no picture saved.'}
+            import subprocess
+            subprocess.Popen(['explorer', '/select,', os.path.normpath(res['path'])])
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def wa_send_item(self, customer_name, tag_id, note=''):
+        """The whole flow: caption written, picture on the clipboard,
+        WhatsApp open. One paste and one send left to do."""
+        try:
+            from core import photos as _ph
+            from core import whatsapp as _wa
+            item = self.db.get_item_by_tag(tag_id) or {}
+            if not item:
+                return {'status': 'error', 'message': 'That piece is not in stock.'}
+            name = str(customer_name or '').strip()
+            match = [c for c in self.db.crm_customers()
+                     if str(c.get('name') or '').strip() == name]
+            if not match:
+                return {'status': 'not_found', 'name': name}
+            ok, why = _wa.can_message(match[0])
+            if not ok:
+                return {'status': 'blocked', 'reason': why}
+
+            text = _ph.caption(item, self._wa_shop(), note)
+            phone = _wa.normalise_phone(match[0].get('whatsapp') or match[0].get('phone'))
+            clip = self.photo_to_clipboard(tag_id) if item.get('photo') else {'status': 'none'}
+            return {
+                'status': 'success',
+                'name': name,
+                'phone': phone,
+                'text': text,
+                'url': _wa.link(phone, text),
+                'photo_copied': clip.get('status') == 'success',
+                'has_photo': bool(item.get('photo')),
+                'hint': (('The picture is on the clipboard. In WhatsApp press '
+                          'Ctrl+V, then send.') if clip.get('status') == 'success'
+                         else ('This piece has a picture but it could not be '
+                               'copied: ' + str(clip.get('message') or 'unknown')
+                               + '. Use Show file and drag it in.')
+                         if item.get('photo')
+                         else ('No picture saved for this piece — the message '
+                               'will go as text.')),
+            }
+        except Exception as e:
+            ERR(f"[PHOTO] send: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def items_with_photos(self, limit=200):
+        return self.db.items_with_photos(limit)
+
     def wa_message(self, customer_name, kind, context=None):
         """One message for one customer, ready to review."""
         try:

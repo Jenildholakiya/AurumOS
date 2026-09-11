@@ -445,6 +445,39 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
             </div>
 
+            <div class="card" id="sec-photos">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon gold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 15l-5-5L5 19"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Send a piece</div>
+                            <div class="card-sub">Photo and price, to one customer</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-body">
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="pic-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>Which piece</label>
+                        <select id="pic-item"><option value="">Loading stock…</option></select>
+                    </div>
+                    <div class="fld">
+                        <label>Anything to add</label>
+                        <input type="text" id="pic-note" placeholder="Can be made to order in 18K">
+                    </div>
+                    <div class="fld-row">
+                        <button class="btn btn-ghost" onclick="attachPhoto()">Add photo</button>
+                        <button class="btn btn-wa" onclick="sendPiece()">Send</button>
+                    </div>
+                    <div class="skip-list" id="pic-state">Pick a piece to see whether it has a picture.</div>
+                </div>
+            </div>
+
             <div class="card" id="sec-lapsed">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -740,7 +773,9 @@ function renderAgeing(totals, dues){
              + '<div class="row-name">' + esc(d.customer) + '</div>'
              + '<div class="row-meta">oldest ' + old + ' days</div>'
              + '</div><div class="row-right">' + money(d.total)
-             + '<span class="pill ' + cls + '">' + old + 'd</span></div></div>';
+             + '<span class="pill ' + cls + '">' + old + 'd</span>'
+             + ' <button class="btn btn-wa btn-sm" onclick="event.stopPropagation();remind(\'' + escAttr(d.customer) + '\',\'due_reminder\',{amount:\'' + Math.round(d.total) + '\'})">Remind</button>'
+             + '</div></div>';
     }).join('');
 }
 
@@ -766,7 +801,11 @@ function renderPlans(list){
              + (p.paid_count || 0) + ' of ' + (p.instalments || 0)
              + (p.next_due_date ? ' · next ' + esc(p.next_due_date) : '') + '</div>'
              + '</div><div class="row-right">' + money(p.paid_total)
-             + '<span class="pill ' + cls + '">' + label + '</span></div></div>';
+             + '<span class="pill ' + cls + '">' + label + '</span>'
+             + (p.status === 'behind'
+                ? ' <button class="btn btn-wa btn-sm" onclick="event.stopPropagation();remind(\'' + escAttr(p.customer) + '\',\'scheme_due\',{amount:\'' + Math.round(p.next_due_amount || p.monthly_amount || 0) + '\',scheme:\'' + escAttr(p.scheme_name) + '\',due_date:\'' + esc(p.next_due_date || '') + '\'})">Remind</button>'
+                : '')
+             + '</div></div>';
     }).join('');
 }
 
@@ -804,6 +843,7 @@ function renderOrders(list){
              + (o.promised_date ? ' · promised ' + esc(o.promised_date) : '')
              + (parseFloat(o.advance || 0) > 0 ? ' · advance ' + money(o.advance) : '') + '</div>'
              + '</div><div class="row-right">' + duePill(o.promised_date)
+             + '<button class="btn btn-wa btn-sm" onclick="event.stopPropagation();remind(\'' + escAttr(o.customer) + '\',\'order_ready\',{item:\'' + escAttr(o.description) + '\'})">Ready</button>'
              + '<button class="btn btn-ghost btn-sm" onclick="closeOrder(' + Number(o.id) + ')">Done</button>'
              + '</div></div>';
     }).join('');
@@ -1078,12 +1118,104 @@ function startAutoRefresh(){
     });
 }
 
+// -- one-tap reminders -------------------------------------------------
+// The wording for each of these already exists; what was missing was a way
+// to reach it from the row that shows the problem.
+function remind(name, kind, ctx){
+    var a = api();
+    if (!a || typeof a.wa_message !== 'function') { toast('Not available in this build.', true); return; }
+    a.wa_message(name, kind, ctx || {}).then(function(m){
+        if (!m || m.status !== 'success') {
+            toast((m && m.reason) || 'Cannot message this customer.', true);
+            return;
+        }
+        openWhatsApp(m.url);
+        if (typeof a.wa_mark_sent === 'function') {
+            a.wa_mark_sent(name, kind, m.phone, m.text).catch(function(){});
+        }
+    }).catch(function(e){ toast('Could not prepare: ' + e, true); });
+}
+
+// -- a photo of a piece, to one customer -------------------------------
+var STOCK = [];
+
+function loadStock(){
+    var a = api();
+    if (!a || typeof a.get_stock_ledger !== 'function') return;
+    a.get_stock_ledger().then(function(rows){
+        STOCK = (rows || []).slice(0, 300);
+        var sel = el('pic-item');
+        sel.innerHTML = '<option value="">Choose a piece…</option>' + STOCK.map(function(r){
+            var label = (r.it_name || r.it_code || 'Item')
+                      + (r.karat ? ' · ' + r.karat : '')
+                      + (r.gr_wt ? ' · ' + parseFloat(r.gr_wt).toFixed(3) + 'g' : '')
+                      + (r.photo ? '  [photo]' : '');
+            return '<option value="' + esc(r.tag_id) + '">' + esc(label) + '</option>';
+        }).join('');
+    }).catch(function(){});
+}
+
+function pickedItem(){
+    var tag = el('pic-item').value;
+    if (!tag) return null;
+    for (var i = 0; i < STOCK.length; i++) {
+        if (STOCK[i].tag_id === tag) return STOCK[i];
+    }
+    return { tag_id: tag };
+}
+
+function showPicState(){
+    var it = pickedItem();
+    if (!it) { el('pic-state').textContent = 'Pick a piece to see whether it has a picture.'; return; }
+    el('pic-state').textContent = it.photo
+        ? 'This piece has a picture. Sending puts it on the clipboard for you to paste.'
+        : 'No picture yet. Add photo saves one against this piece.';
+}
+
+function attachPhoto(){
+    var it = pickedItem();
+    if (!it) { toast('Choose a piece first.', true); return; }
+    var a = api();
+    if (!a || typeof a.photo_pick !== 'function') { toast('Not available in this build.', true); return; }
+    a.photo_pick(it.tag_id).then(function(r){
+        if (!r) return;
+        if (r.status === 'cancelled') return;
+        if (r.status !== 'success') { toast(r.message || 'Could not save that picture.', true); return; }
+        toast('Picture saved against this piece.');
+        loadStock();
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+
+function sendPiece(){
+    var it = pickedItem();
+    var cust = (el('pic-customer').value || '').trim();
+    if (!cust) { toast('Type the customer name first.', true); return; }
+    if (!it)   { toast('Choose a piece first.', true); return; }
+    var a = api();
+    if (!a || typeof a.wa_send_item !== 'function') { toast('Not available in this build.', true); return; }
+    a.wa_send_item(cust, it.tag_id, (el('pic-note').value || '').trim()).then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && (r.reason || r.message)) || 'Could not prepare that message.', true);
+            return;
+        }
+        openWhatsApp(r.url);
+        el('pic-state').textContent = r.hint;
+        toast(r.photo_copied ? 'Photo copied — press Ctrl+V in WhatsApp' : 'Message opened');
+        if (typeof a.wa_mark_sent === 'function') {
+            a.wa_mark_sent(cust, 'item_photo', r.phone, r.text).catch(function(){});
+        }
+    }).catch(function(e){ toast('Could not prepare: ' + e, true); });
+}
+
 // -- start ------------------------------------------------------------
 try { initSidebar('crm'); } catch (e) {}
 el('fu-date').value = today();
 el('or-date').value = today();
 onCampKind();
+(function(){ var e = el('pic-item');
+  if (e && e.addEventListener) e.addEventListener('change', showPicState); })();
 loadAll();
+loadStock();
 startAutoRefresh();
 </script>
 </body>

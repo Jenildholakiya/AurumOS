@@ -2915,6 +2915,7 @@ class DBManager:
                            COALESCE(making_charge,0)  AS making_charge,
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
+                           COALESCE(photo,'')         AS photo,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE entry_date=?
@@ -4301,6 +4302,33 @@ class DBManager:
         except Exception as e:
             _dberr(f"[MIGRATE] crm tables: {e}")
 
+    def set_item_photo(self, tag_id, filename):
+        """Record which picture belongs to a piece."""
+        try:
+            return self.execute_query(
+                "UPDATE stock_inventory SET photo=? WHERE LOWER(TRIM(tag_id))=LOWER(?)",
+                (str(filename or ''), str(tag_id or '').strip()))
+        except Exception as e:
+            _dberr(f"[PHOTO] set: {e}")
+            return False
+
+    def items_with_photos(self, limit=200):
+        """Tagged stock that has a picture, newest first."""
+        try:
+            sql = (
+                "SELECT id, tag_id, it_code, it_name, gr_wt, nt_wt, "
+                "       COALESCE(category,'') AS category, "
+                "       COALESCE(karat,'')    AS karat, "
+                "       COALESCE(sale_price,0) AS sale_price, "
+                "       COALESCE(photo,'')     AS photo "
+                "FROM stock_inventory "
+                "WHERE COALESCE(photo,'') != '' "
+                "ORDER BY id DESC LIMIT ?")
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(sql, (int(limit),)).fetchall()]
+        except Exception:
+            return []
+
     def get_item_by_tag(self, tag_id):
         """One tagged piece, by its tag, with everything the till needs.
 
@@ -4441,6 +4469,10 @@ class DBManager:
                     # 0 means "work it out from today's rate" rather than "free"
                     ('sale_price',    "ALTER TABLE stock_inventory ADD COLUMN sale_price REAL DEFAULT 0"),
                     ('stone_value',   "ALTER TABLE stock_inventory ADD COLUMN stone_value REAL DEFAULT 0"),
+                    # Filename only. The picture itself lives beside the
+                    # database rather than in it, so the file stays a normal
+                    # file a shopkeeper can open, and the database stays small.
+                    ('photo',         "ALTER TABLE stock_inventory ADD COLUMN photo TEXT"),
                 ))
                 add('product_master', (
                     ('making_type',   "ALTER TABLE product_master ADD COLUMN making_type TEXT DEFAULT 'percent'"),
@@ -4941,6 +4973,7 @@ class DBManager:
                            COALESCE(making_charge,0)  AS making_charge,
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
+                           COALESCE(photo,'')         AS photo,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE UPPER(TRIM(huid)) = ?
@@ -4965,6 +4998,7 @@ class DBManager:
                            COALESCE(making_charge,0)  AS making_charge,
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
+                           COALESCE(photo,'')         AS photo,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE tag_id IS NOT NULL
