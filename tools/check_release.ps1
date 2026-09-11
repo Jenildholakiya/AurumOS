@@ -156,6 +156,33 @@ if (Test-Path $internal) {
     $problems += '_internal missing'
 }
 
+# ── 6. Smart App Control ────────────────────────────────────────────────
+# Not SmartScreen. A separate Windows 11 feature, and a far harder wall: its
+# dialog has no "Run anyway" at all, only Okay and Get apps from the Store.
+$sacState = $null
+$ciKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy'
+if (Test-Path $ciKey) {
+    $sacState = (Get-ItemProperty $ciKey -ErrorAction SilentlyContinue).VerifiedAndReputablePolicyState
+}
+switch ($sacState) {
+    1 {
+        Write-Host '  [!!!!] Smart App Control is ON and enforcing on THIS machine.' -ForegroundColor Red
+        Write-Host '         An unsigned app is blocked outright here. There is no'
+        Write-Host '         Run anyway button, so nobody can click past it.'
+    }
+    2 {
+        Write-Host '  [WARN] Smart App Control is in evaluation mode on this machine.' -ForegroundColor Yellow
+        Write-Host '         Windows is deciding whether to switch it on. If it does,'
+        Write-Host '         an unsigned build stops running here with no way past it.'
+    }
+    0 {
+        Write-Host '  [ OK ] Smart App Control is off on this machine' -ForegroundColor Green
+    }
+    default {
+        Write-Host '  [ OK ] Smart App Control not present on this machine' -ForegroundColor Green
+    }
+}
+
 # ── verdict ─────────────────────────────────────────────────────────────
 Write-Host ''
 Write-Host '  What a customer will see' -ForegroundColor Cyan
@@ -164,6 +191,11 @@ if ($problems -contains 'unsigned') {
     Write-Host '     More info, then Run anyway. Many will not, and will ring you.' -ForegroundColor Yellow
     Write-Host '   - Copying it from a USB stick or a local network share: no prompt,' -ForegroundColor Yellow
     Write-Host '     because the download tag is never applied.' -ForegroundColor Yellow
+    if ($sacState -eq 1 -or $sacState -eq 2) {
+        Write-Host '   - On a PC with Smart App Control on: blocked completely, however' -ForegroundColor Red
+        Write-Host '     it arrived. No prompt to click past, and no per-app exception' -ForegroundColor Red
+        Write-Host '     exists. Only a signature gets an app past that one.' -ForegroundColor Red
+    }
     Write-Host ''
     Write-Host '   The fix is a code-signing certificate issued to your registered'
     Write-Host '   business. An EV certificate clears SmartScreen from the first'
