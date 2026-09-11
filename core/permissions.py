@@ -135,12 +135,19 @@ BUNDLES = {
         'pages': {
             'wholesale': ['inventory.html', 'stock_ledger.html',
                           'uchak_stock_entry.html', 'create_item.html'],
-            'retail':    ['inventory.html', 'create_item.html'],
+            # stock_ledger.html is how a retail shop adds a tagged piece, and
+            # it is the only page that links to create_item.html. Granting
+            # Create Item without it left staff holding a permission for a
+            # screen they had no route to.
+            'retail':    ['inventory.html', 'stock_ledger.html',
+                          'create_item.html', 'sold_tags.html',
+                          'bin_viewer.html'],
         },
         'methods': frozenset([
             'add_stock_entry', 'add_uchak_stock_entry', 'update_stock_entry',
             'get_stock_ledger', 'get_opening_stock', 'get_stock_ledger_by_date',
             'get_ledger_dates', 'get_product_by_tag', 'get_pos_stock',
+            'get_item_by_tag', 'get_sold_tags',
             'get_inventory_stats', 'get_items_by_bin', 'get_untagged_items',
             'get_low_stock_items', 'get_low_stock_uchak_items',
             'get_out_of_stock_items', 'get_velocity_products',

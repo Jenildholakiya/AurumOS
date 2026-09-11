@@ -3479,8 +3479,39 @@ class AurumAPI:
     def get_touch_groups(self):
         return self.db.get_all_touch_groups()
 
-    def add_product_master(self, code, name, category, touch, wastage):
-        return {"status":"success"} if self.db.add_product_master(code,name,category,touch,wastage) else {"status":"error"}
+    def add_product_master(self, code, name, category, touch, wastage,
+                           making_charge=0, making_type='percent', sale_price=0, hsn=''):
+        """Save a product. The retail arguments are optional, so the wholesale
+        screens that pass five arguments are unaffected."""
+        ok = self.db.add_product_master(code, name, category, touch, wastage,
+                                        making_charge, making_type, sale_price, hsn)
+        return {"status": "success"} if ok else {"status": "error"}
+
+    def get_item_by_tag(self, tag_id):
+        """One scanned piece, with its own rate and making charge.
+
+        The till used to read one rate and one making charge out of browser
+        storage and apply them to everything. A piece can now answer for
+        itself, falling back to its product master.
+        """
+        try:
+            row = self.db.get_item_by_tag(tag_id)
+            if not row:
+                return {"status": "not_found", "tag_id": str(tag_id or '')}
+            return {"status": "success", "item": row}
+        except Exception as e:
+            ERR(f"[TAG] lookup {tag_id}: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def get_sold_tags(self, from_date='', to_date='', search='', group=''):
+        """Pieces already sold. The Sold Tags screen has called this since it
+        was written; nothing ever defined it, so the page only ever said
+        'Failed to load'."""
+        try:
+            return self.db.get_sold_tags(from_date, to_date, search, group)
+        except Exception as e:
+            ERR(f"[SOLD TAGS] {e}")
+            return []
 
     def get_products(self):
         return self.db.get_all_products()
@@ -3684,7 +3715,13 @@ class AurumAPI:
                 data['tag_id'] = 'OPENING-'+str(int(_time.time()*1000))[-8:]
             # Strip fields not in DB schema
             DB_FIELDS = {'it_code','it_name','tag_id','pkg_wt','para_stone_wt','size','design',
-                         'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid'}
+                         'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid',
+                         # Retail pricing. Without these listed here the keys
+                         # were dropped one layer above the database, so a
+                         # piece saved with a making charge arrived with none
+                         # and nothing anywhere said so.
+                         'category','karat','making_type','making_charge',
+                         'sale_price','stone_value'}
             clean = {k:v for k,v in data.items() if k in DB_FIELDS}
             success = self.db.add_stock_entry(**clean)
             if success:

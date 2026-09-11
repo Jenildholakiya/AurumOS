@@ -840,6 +840,7 @@ function pickStockItem(code,wt,touch,huid,tag_id,name){
     document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
     document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
     document.getElementById('it-dropdown').classList.remove('open');
+    applyItemPricing(tag_id);
     document.getElementById('it-weight').focus();
 }
 function pickStockRow(row, enteredValue){
@@ -854,7 +855,42 @@ function pickStockRow(row, enteredValue){
     document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
     document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
     document.getElementById('it-dropdown').classList.remove('open');
+    applyItemPricing(tagId);
     document.getElementById('it-weight').focus();
+}
+
+// ── A SCANNED PIECE BRINGS ITS OWN PRICE ─────────────────────────────
+// The making charge used to come from localStorage: one number for the whole
+// shop, remembered across bills. A shop selling rings at 12% and chains at 8%
+// retyped it on every line, and nothing on the piece recorded what it should
+// have been. The piece now answers for itself, falling back to its product
+// master, and only then to whatever is already in the box.
+function applyItemPricing(tagId){
+    if (!tagId) return;
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.get_item_by_tag !== 'function') return;
+    api.get_item_by_tag(tagId).then(function(res){
+        if (!res || res.status !== 'success' || !res.item) return;
+        var it = res.item;
+        var mk = parseFloat(it.eff_making_charge || 0);
+        var mkInput = document.getElementById('it-making');
+        if (mkInput && mk > 0) {
+            mkInput.value = mk;
+            // The till reads a bare number as a percentage, so say what this
+            // one is rather than letting 150 Rs/g be charged as 150%.
+            var type = String(it.eff_making_type || 'percent');
+            mkInput.title = (type === 'per_gram') ? 'Rs per gram from the tag'
+                          : (type === 'fixed')    ? 'Flat Rs from the tag'
+                          :                         'Percent from the tag';
+            mkInput.dataset.makingType = type;
+        }
+        var sale = parseFloat(it.eff_sale_price || 0);
+        if (sale > 0) {
+            var rateInput = document.getElementById('it-rate');
+            if (rateInput) rateInput.dataset.salePrice = String(sale);
+        }
+        try { if (typeof recalcSummary === 'function') recalcSummary(); } catch(e){}
+    }).catch(function(){});
 }
 
 function onCustomerInput(val){
