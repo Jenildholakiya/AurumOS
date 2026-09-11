@@ -3635,6 +3635,117 @@ class AurumAPI:
     def crm_orders(self, status='open'):
         return self.db.crm_orders(status)
 
+    # -- WHATSAPP ----------------------------------------------------------
+    # Every one of these returns a link that opens WhatsApp with the message
+    # already written, for a person to read and send. Nothing here sends
+    # anything by itself: a number that blasts a customer list unattended gets
+    # banned, and it is the number printed on every bill.
+
+    def _wa_shop(self):
+        try:
+            return self.db.get_config('business_name', '') or 'our shop'
+        except Exception:
+            return 'our shop'
+
+    def wa_message(self, customer_name, kind, context=None):
+        """One message for one customer, ready to review."""
+        try:
+            from core import whatsapp as _wa
+            name = str(customer_name or '').strip()
+            match = [c for c in self.db.crm_customers()
+                     if str(c.get('name') or '').strip() == name]
+            if not match:
+                return {'status': 'not_found', 'name': name}
+            msg = _wa.build(match[0], kind, context or {}, self._wa_shop())
+            msg['status'] = 'success' if msg['ok'] else 'blocked'
+            return msg
+        except Exception as e:
+            ERR(f"[WA] message: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def wa_wishes_today(self, within_days=0):
+        """Today's birthdays and anniversaries, each with a message written.
+
+        Defaults to today only. A wish is a thing you send on the day, and a
+        list reaching a month ahead is a list nobody works through.
+        """
+        try:
+            from core import whatsapp as _wa
+            from core import crm as _crm
+            shop = self._wa_shop()
+            customers = self.db.crm_customers()
+            out = []
+            for occ in _crm.upcoming_occasions(customers, int(within_days or 0)):
+                already = self.db.wa_sent_since(occ['occasion'], 300)
+                if occ['name'] in already:
+                    continue
+                match = [c for c in customers
+                         if str(c.get('name') or '').strip() == occ['name']]
+                if not match:
+                    continue
+                msg = _wa.build(match[0], occ['occasion'], {}, shop)
+                msg['days_until'] = occ['days_until']
+                msg['occasion'] = occ['occasion']
+                out.append(msg)
+            return {'status': 'success', 'wishes': out,
+                    'sendable': sum(1 for m in out if m['ok'])}
+        except Exception as e:
+            ERR(f"[WA] wishes: {e}")
+            return {'status': 'error', 'message': str(e), 'wishes': []}
+
+    def wa_campaign(self, kind, context=None, segment='all'):
+        """A queue for a message going to more than one customer.
+
+        Returns the whole queue plus everyone left out and why, so the shop
+        can see who is missing a number and who has opted out before it starts
+        rather than wondering afterwards.
+        """
+        try:
+            from core import whatsapp as _wa
+            from core import crm as _crm
+            customers = self.db.crm_customers()
+            seg = str(segment or 'all').strip().lower()
+            if seg and seg != 'all':
+                customers = [c for c in customers
+                             if _crm.segment_for(c) == seg]
+            already = self.db.wa_sent_since(kind, 1) if kind in (
+                'birthday', 'anniversary') else set()
+            res = _wa.build_many(customers, kind, context or {},
+                                 self._wa_shop(), already)
+            res['status'] = 'success'
+            res['segment'] = seg
+            return res
+        except Exception as e:
+            ERR(f"[WA] campaign: {e}")
+            return {'status': 'error', 'message': str(e), 'queue': [], 'skipped': []}
+
+    def wa_mark_sent(self, customer_name, kind, phone='', body=''):
+        """Record that one message went out. Called after the link is opened,
+        which is the only moment the app can know about."""
+        ok = self.db.wa_log_send(customer_name, kind, phone, body)
+        return {'status': 'success' if ok else 'error'}
+
+    def wa_opt_out(self, customer_name, opted_out=True):
+        ok = self.db.wa_set_opt_out(customer_name, bool(opted_out))
+        return {'status': 'success' if ok else 'error'}
+
+    def wa_history(self, customer_name='', limit=200):
+        return self.db.wa_history(customer_name, limit)
+
+    def wa_open(self, url):
+        """Open a wa.me link in the default browser, which hands it to
+        WhatsApp. The message is written; a person still presses send."""
+        try:
+            u = str(url or '')
+            if not u.startswith('https://wa.me/'):
+                return {'status': 'error', 'message': 'Not a WhatsApp link.'}
+            import webbrowser
+            webbrowser.open(u)
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[WA] open: {e}")
+            return {'status': 'error', 'message': str(e)}
+
     def crm_close_order(self, order_id):
         ok = self.db.crm_close_order(order_id)
         return {'status': 'success'} if ok else {'status': 'error'}

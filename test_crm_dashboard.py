@@ -26,17 +26,25 @@ const fs = require('fs'), vm = require('vm');
 const src = fs.readFileSync(process.argv[2], 'utf8');
 
 const els = {};
-function mk(id) { return { id: id, innerHTML: '', textContent: '', value: '', className: '', style: {} }; }
+const timers = [];
+const listeners = {};
+function mk(id) {
+  return { id: id, innerHTML: '', textContent: '', value: '', className: '',
+           style: {}, hidden: false, disabled: false };
+}
 
 const ctx = {
   window: { addEventListener: function () {} },
   localStorage: { getItem: function () { return null; }, setItem: function () {} },
   document: {
-    addEventListener: function () {}, readyState: 'complete',
+    hidden: false, activeElement: null, readyState: 'complete',
+    addEventListener: function (t, f) { listeners[t] = f; },
     getElementById: function (id) { if (!els[id]) els[id] = mk(id); return els[id]; },
     querySelector: function () { return null; }
   },
   console, setTimeout: function () {},
+  setInterval: function (f, ms) { timers.push(ms); return timers.length; },
+  clearInterval: function () {},
   parseFloat, parseInt, JSON, Math, Date, String, Number, Array, Object, RegExp,
   isNaN, isFinite
 };
@@ -124,6 +132,45 @@ chk('customers counted', /Customers/.test(els['tiles'].innerHTML));
 chk('a tile is a way in, not just a number', /onclick="jumpTo\('sec-/.test(els['tiles'].innerHTML));
 chk('money owed totalled', /Rs 9,000/.test(els['tiles'].innerHTML));
 chk('plans behind shown in the alert colour', /tile is-alert/.test(els['tiles'].innerHTML));
+
+const E = (id) => ctx.document.getElementById(id);
+
+console.log('-- the screen keeps itself current --');
+chk('a refresh interval is set', timers.indexOf(60000) >= 0);
+chk('and a shorter one keeps the label honest', timers.indexOf(5000) >= 0);
+chk('coming back to the window reloads', typeof listeners['visibilitychange'] === 'function');
+
+console.log('-- but never over the top of someone working --');
+// Rebuilding the lists under a half-written follow-up loses what was typed,
+// which is the failure that makes auto-refresh worse than a button.
+ctx.document.activeElement = { tagName: 'INPUT', value: 'half typed note' };
+chk('a part-filled field counts as busy', ctx.isBusyTyping() === true);
+ctx.document.activeElement = { tagName: 'INPUT', value: '' };
+chk('an empty one does not', ctx.isBusyTyping() === false);
+ctx.document.activeElement = null;
+
+console.log('-- a birthday wish is offered on the day and not before --');
+ctx.renderOccasions([
+  { name: 'Asha', occasion: 'birthday', days_until: 0, phone: '99', turns: 36 },
+  { name: 'Later', occasion: 'birthday', days_until: 5, phone: '99', turns: 20 }]);
+const occHtml = E('occasions').innerHTML;
+chk("today's gets a Wish button", occHtml.indexOf("wishOne('Asha','birthday')") >= 0);
+chk('one five days away does not', occHtml.indexOf("wishOne('Later'") < 0);
+chk('and the row still opens the customer', occHtml.indexOf("openCustomer('Asha')") >= 0);
+ctx.renderOccasions([{ name: 'NoPhone', occasion: 'birthday', days_until: 0, phone: '', turns: 1 }]);
+chk('nor does somebody with no number', E('occasions').innerHTML.indexOf('wishOne') < 0);
+
+console.log('-- a campaign is a queue worked through, not a blast --');
+ctx.CAMP = { queue: [{ name: 'A', phone: '91', text: 'hi A', url: 'https://wa.me/91?text=hi' },
+                     { name: 'B', phone: '92', text: 'hi B', url: 'https://wa.me/92?text=hi' }],
+             at: 0, kind: 'new_item', skipped: [] };
+ctx.showCurrent();
+chk('it shows one at a time', E('camp-count').textContent === '1 of 2');
+chk('with the message to read first', E('camp-preview').textContent === 'hi A');
+ctx.skipOne();
+chk('skip moves to the next', E('camp-count').textContent === '2 of 2');
+ctx.skipOne();
+chk('and it ends rather than looping', E('camp-title').textContent === 'All done');
 
 console.log('');
 if (fail) { console.log(fail + ' FAILED'); process.exit(1); }
