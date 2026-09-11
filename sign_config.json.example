@@ -11,6 +11,6 @@
 
   "timestamp_url": "http://timestamp.digicert.com",
 
-  "_needed": "signtool.exe, from the Windows SDK. It is not installed on this machine: https://developer.microsoft.com/windows/downloads/windows-sdk/",
+  "_needed": "Nothing extra. Signing uses Windows' own Set-AuthenticodeSignature when signtool.exe from the Windows SDK is not installed, so the SDK is optional.",
   "_note": "Set COMPANY at the top of build.py to the same legal name the certificate is issued to, or the EXE's Properties tab and the SmartScreen dialog will disagree."
 }

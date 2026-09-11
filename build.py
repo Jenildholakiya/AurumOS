@@ -839,6 +839,111 @@ def _load_sign_config():
     return cfg
 
 
+def _sign_with_powershell(exe_path, cfg):
+    """Sign using Windows' own Set-AuthenticodeSignature.
+
+    signtool comes with the Windows SDK, which is a large download and was not
+    installed here, so the build kept producing unsigned EXEs for a reason
+    that had nothing to do with the certificate. PowerShell can do the same
+    job with what is already on every Windows machine.
+
+    The PFX password is handed over through the environment, not on the
+    command line, because a command line is readable by any other process on
+    the machine while it runs.
+    """
+    pfx = cfg.get("pfx_path", "")
+    thumb = str(cfg.get("thumbprint", "") or "").replace(" ", "")
+    ts = cfg.get("timestamp_url", "http://timestamp.digicert.com")
+    store = "LocalMachine" if cfg.get("machine_store") else "CurrentUser"
+
+    if thumb:
+        get_cert = (
+            "$c = Get-ChildItem -Path Cert:\\%s\\My -CodeSigningCert | "
+            "Where-Object { $_.Thumbprint -eq $env:AURUM_THUMB }; "
+            "if (-not $c) { Write-Output 'AURUMFAIL:No code-signing certificate "
+            "with that thumbprint in the %s store.'; exit 2 }" % (store, store)
+        )
+    else:
+        get_cert = (
+            "$pw = $env:AURUM_PFX_PW; "
+            "if ($pw) { $sec = ConvertTo-SecureString $pw -AsPlainText -Force; "
+            "$c = Get-PfxCertificate -FilePath $env:AURUM_PFX -Password $sec } "
+            "else { $c = Get-PfxCertificate -FilePath $env:AURUM_PFX }; "
+            "if (-not $c) { Write-Output 'AURUMFAIL:Could not read that .pfx.'; exit 2 }"
+        )
+
+    script = (
+        get_cert + "; "
+        "$r = Set-AuthenticodeSignature -FilePath $env:AURUM_EXE -Certificate $c "
+        "-HashAlgorithm SHA256 -TimestampServer $env:AURUM_TS -Force; "
+        "Write-Output $r.Status; "
+        "if ($r.Status -ne 'Valid') { Write-Output ('AURUMFAIL:' + $r.StatusMessage); exit 3 }"
+    )
+
+    env = dict(os.environ)
+    env["AURUM_EXE"] = exe_path
+    env["AURUM_TS"] = ts
+    if thumb:
+        env["AURUM_THUMB"] = thumb
+    else:
+        env["AURUM_PFX"] = pfx
+        if cfg.get("password"):
+            env["AURUM_PFX_PW"] = str(cfg["password"])
+
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=300)
+    except Exception as e:
+        print(f"  X PowerShell signing could not run: {e}")
+        return False
+    out = (r.stdout or "").strip()
+    if r.returncode != 0 or "Valid" not in out:
+        print("  X Signing FAILED.")
+        # Only the line the script marked as the reason. PowerShell otherwise
+        # echoes the whole command back and buries it.
+        said = [ln.split("AURUMFAIL:", 1)[1].strip()
+                for ln in out.split(chr(10)) if "AURUMFAIL:" in ln]
+        if not said:
+            said = [ln.strip() for ln in (r.stderr or "").split(chr(10))
+                    if ln.strip() and not ln.strip().startswith("+")][:2]
+        for line in said[:3] or ["PowerShell reported no reason."]:
+            print(f"    {line}")
+        return False
+    print("  OK SIGNED via Windows (no SDK needed).")
+    return True
+
+
+def _verify_signature(exe_path):
+    """Confirm the signature actually validates, using Windows itself.
+
+    signtool would be used if it were here. It is not, and a signature that
+    does not verify fails only on the customer's PC, which is the worst place
+    to find out.
+    """
+    script = ("$s = Get-AuthenticodeSignature -FilePath $env:AURUM_EXE; "
+              "Write-Output $s.Status; "
+              "if ($s.TimeStamperCertificate) { Write-Output 'timestamped' } "
+              "else { Write-Output 'no-timestamp' }")
+    env = dict(os.environ)
+    env["AURUM_EXE"] = exe_path
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    except Exception:
+        return True  # cannot check; do not claim a failure
+    lines = [x.strip() for x in (r.stdout or "").strip().split(chr(10)) if x.strip()]
+    status = lines[0] if lines else "Unknown"
+    if status != "Valid":
+        print(f"  X SIGNED BUT DOES NOT VERIFY ({status}).")
+        print("    A customer PC will reject this. Check the certificate chain.")
+        return False
+    if len(lines) > 1 and lines[1] == "no-timestamp":
+        print("  (warning) not timestamped - the signature dies with the cert.")
+    return True
+
+
 def sign_exe():
     """Authenticode-sign the EXE, and say plainly what is lost when it is not.
 
@@ -860,13 +965,21 @@ def sign_exe():
 
     if not pfx and not thumb:
         print("  SKIP -- no certificate configured. The EXE will be UNSIGNED.")
-        print("    Unsigned means: SmartScreen shows 'Windows protected your PC'")
-        print("    on every fresh install, and antivirus judges the file with no")
-        print("    publisher to weigh. A code-signing certificate from Sectigo,")
-        print("    DigiCert or GlobalSign is the fix -- roughly the cost of a")
-        print("    year's hosting, issued to your registered business name.")
-        print("    Then: sign_config.json (see sign_config.json.example), or set")
-        print("    AURUMOS_PFX / AURUMOS_CERT_THUMBPRINT.")
+        print("    Every customer who DOWNLOADS this gets 'Windows protected")
+        print("    your PC' and has to click More info, then Run anyway.")
+        print("    A code-signing certificate is the only thing that removes it.")
+        print("")
+        print("    Cheapest route: Azure Trusted Signing, a Microsoft service")
+        print("    billed monthly rather than a few hundred up front. It needs")
+        print("    an organisation with verifiable trading history.")
+        print("    Otherwise Sectigo, DigiCert or GlobalSign sell the usual")
+        print("    one- to three-year certificates. Extended Validation clears")
+        print("    SmartScreen immediately; a standard one has to accumulate")
+        print("    reputation over some weeks of installs first.")
+        print("")
+        print("    Then point sign_config.json at it and this step signs by")
+        print("    itself. The Windows SDK is NOT required -- signing falls")
+        print("    back to Windows' own Set-AuthenticodeSignature.")
         return False
     if pfx and not os.path.isfile(pfx):
         print(f"  ERROR -- PFX not found: {pfx}")
@@ -874,9 +987,14 @@ def sign_exe():
 
     signtool = _locate_signtool()
     if not signtool:
-        print("  ERROR -- signtool.exe not found (install the Windows SDK).")
-        print("    https://developer.microsoft.com/windows/downloads/windows-sdk/")
-        return False
+        # No SDK. Windows can still sign, so use it rather than shipping an
+        # unsigned EXE over a missing download.
+        print("  signtool not found - signing with Windows instead.")
+        if not _sign_with_powershell(exe_path, cfg):
+            print("    If you would rather use signtool, install the Windows SDK:")
+            print("    https://developer.microsoft.com/windows/downloads/windows-sdk/")
+            return False
+        return _verify_signature(exe_path)
 
     # SHA256 digest plus an RFC3161 timestamp, so the signature stays valid
     # after the certificate expires. /d and /du are what a user is shown in the

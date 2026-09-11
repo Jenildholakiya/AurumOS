@@ -68,13 +68,24 @@ certificate issued since June 2023, whose key lives on a hardware token and
 has no `.pfx` — put its thumbprint there instead. See
 `sign_config.json.example`.
 
-You also need `signtool.exe` from the Windows SDK, which is **not currently
-installed on the build machine**:
-<https://developer.microsoft.com/windows/downloads/windows-sdk/>
+**You do not need the Windows SDK.** The build used to require `signtool.exe`
+from it, which is a large download and was not installed, so the build kept
+producing unsigned files for a reason that had nothing to do with the
+certificate. Signing now falls back to Windows' own
+`Set-AuthenticodeSignature`, which is present on every Windows machine.
+`signtool` is still used when it happens to be installed.
 
-With that in place `python build.py` signs and verifies automatically. Without
-it, the build says so in plain words rather than quietly producing an unsigned
-file.
+**The cheapest route is Azure Trusted Signing.** Microsoft runs it as a
+subscription billed monthly rather than a few hundred up front, and the
+certificates it issues are trusted the same as any other. It requires an
+organisation that can show trading history. If that fits, it is the least
+expensive way to stop this problem for good.
+
+Otherwise Sectigo, DigiCert and GlobalSign sell the usual one- to three-year
+certificates.
+
+With any of them configured, `python build.py` signs and verifies
+automatically, and says plainly when it could not.
 
 ---
 
