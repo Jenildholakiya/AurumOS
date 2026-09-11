@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Hallmarking</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+    --bg-main:#f8fafb;--white:#ffffff;--cream:#f1f5f9;
+    --text-main:#0f172a;--text-muted:#64748b;--muted2:#94a3b8;
+    --primary:#0f172a;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --border:#e2e8f0;--rule:#e2e8f0;--rule2:rgba(15,23,42,0.05);
+    --success:#16a34a;--success-bg:rgba(22,163,74,0.08);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.09);
+    --danger:#dc2626;--danger-bg:rgba(220,38,38,0.07);
+    --gold:#a87d1e;--gold-bg:rgba(168,125,30,0.1);
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 2px rgba(15,23,42,0.04);
+    --sh2:0 4px 14px rgba(15,23,42,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+/* The shell every page in this app uses: body is the row that holds the
+   sidebar and main side by side, main scrolls on its own. */
+body{display:flex!important;height:100vh!important;width:100vw!important;
+     overflow:hidden!important;background:var(--bg-main);
+     color:var(--text-main);font-family:var(--sans);font-size:0.82rem;}
+main{width:100%!important;min-width:0;flex:1;display:flex;
+     flex-direction:column;overflow:hidden;}
+
+header{height:58px;background:var(--white);border-bottom:1px solid var(--border);
+       display:flex;align-items:center;justify-content:space-between;
+       padding:0 24px;flex-shrink:0;position:relative;z-index:50;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--blue-ln) 50%,transparent 95%);}
+.header-left h1{font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:9px;}
+.status-dot{width:9px;height:9px;background:var(--gold);border-radius:50%;
+    box-shadow:0 0 10px rgba(168,125,30,0.45);}
+.header-sub{font-size:0.66rem;color:var(--text-muted);margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:9px;}
+
+.search{position:relative;}
+.search input{height:34px;width:210px;padding:0 12px 0 32px;border:1px solid var(--border);
+    border-radius:9px;background:var(--bg-main);font-family:inherit;font-size:0.74rem;
+    color:var(--text-main);outline:none;transition:all .15s;text-transform:uppercase;}
+.search input:focus{border-color:var(--blue2);background:var(--white);width:250px;}
+.search input::placeholder{text-transform:none;}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);}
+
+.btn{height:34px;padding:0 14px;border:none;border-radius:9px;font-family:inherit;
+     font-size:0.73rem;font-weight:600;cursor:pointer;display:inline-flex;
+     align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:var(--blue3);}
+.btn-primary:disabled{background:var(--muted2);cursor:not-allowed;}
+.btn-ghost{background:var(--white);color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--cream);color:var(--text-main);}
+.btn-good{background:var(--success);color:#fff;}
+.btn-good:hover{background:#128038;}
+.btn-sm{height:26px;padding:0 9px;font-size:0.66rem;border-radius:7px;}
+.icon-btn{width:34px;height:34px;border:1px solid var(--border);background:var(--white);
+          border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;
+          justify-content:center;color:var(--text-muted);transition:all .15s;}
+.icon-btn:hover{background:var(--cream);color:var(--text-main);}
+
+.live{display:flex;align-items:center;gap:6px;font-size:0.63rem;color:var(--text-muted);
+      padding:0 4px;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);
+          box-shadow:0 0 7px rgba(22,163,74,0.5);}
+.live.stale .live-dot{background:var(--muted2);box-shadow:none;}
+.live.busy .live-dot{background:var(--blue);animation:livePulse 1s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;
+        scrollbar-width:thin;scrollbar-color:var(--rule) transparent;}
+.scroll::-webkit-scrollbar{width:5px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+
+/* ── Counters. Each one jumps to what it counts. ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));
+       gap:11px;margin-bottom:18px;}
+.tile{background:var(--white);border:1px solid var(--border);border-radius:12px;
+      padding:13px 15px;box-shadow:var(--sh);cursor:pointer;
+      transition:all .15s;border-left:3px solid var(--border);}
+.tile:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.tile-label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+            letter-spacing:1px;color:var(--muted2);}
+.tile-value{font-size:1.4rem;font-weight:700;margin-top:4px;letter-spacing:-0.5px;
+            line-height:1.1;}
+.tile-sub{font-size:0.63rem;color:var(--text-muted);margin-top:3px;}
+.tile.is-gold{border-left-color:var(--gold);}
+.tile.is-gold .tile-value{color:var(--gold);}
+.tile.is-blue{border-left-color:var(--blue);}
+.tile.is-blue .tile-value{color:var(--blue3);}
+.tile.is-alert{border-left-color:var(--danger);}
+.tile.is-alert .tile-value{color:var(--danger);}
+.tile.is-warn{border-left-color:var(--amber);}
+.tile.is-warn .tile-value{color:var(--amber);}
+.tile.is-ok{border-left-color:var(--success);}
+
+/* ── Two columns: the pieces you are choosing, and the lots already out.
+      Two and not three, so no window is ever too narrow to fill a row. ── */
+.cols{display:grid;gap:16px;align-items:start;
+      grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);}
+@media (max-width:1120px){ .cols{grid-template-columns:1fr;} }
+.col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:13px;
+      box-shadow:var(--sh);overflow:hidden;}
+.card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);display:flex;
+          align-items:center;justify-content:space-between;gap:10px;
+          background:rgba(248,250,251,0.55);}
+.card-hdr-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.card-icon{width:28px;height:28px;border-radius:8px;flex-shrink:0;
+           display:flex;align-items:center;justify-content:center;
+           background:var(--blue-bg);color:var(--blue3);border:1px solid var(--blue-ln);}
+.card-icon.gold{background:var(--gold-bg);color:var(--gold);border-color:rgba(168,125,30,0.25);}
+.card-icon.ok{background:var(--success-bg);color:var(--success);border-color:rgba(22,163,74,0.22);}
+.card-icon.warn{background:var(--amber-bg);color:var(--amber);border-color:rgba(217,119,6,0.25);}
+.card-title{font-size:0.79rem;font-weight:700;}
+.card-sub{font-size:0.62rem;color:var(--muted2);margin-top:1px;}
+.count-pill{font-size:0.63rem;font-weight:700;color:var(--text-muted);
+            background:var(--cream);border-radius:99px;padding:3px 9px;}
+
+.list{max-height:none;}
+.row{display:flex;align-items:center;gap:11px;padding:9px 17px;
+     border-bottom:1px solid var(--rule2);font-size:0.74rem;}
+.row:last-child{border-bottom:none;}
+.row-click{cursor:pointer;transition:background .12s;}
+.row-click:hover{background:var(--bg-main);}
+.row-main{flex:1;min-width:0;}
+.row-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-sub{font-size:0.63rem;color:var(--text-muted);margin-top:1px;}
+.row-right{display:flex;align-items:center;gap:7px;flex-shrink:0;
+           font-size:0.73rem;font-weight:600;}
+
+.pill{font-size:0.57rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;
+      border-radius:99px;padding:3px 8px;white-space:nowrap;}
+.pill-late{background:var(--danger-bg);color:var(--danger);}
+.pill-due{background:var(--amber-bg);color:var(--amber);}
+.pill-out{background:var(--blue-bg);color:var(--blue3);}
+.pill-done{background:var(--success-bg);color:var(--success);}
+.pill-void{background:var(--cream);color:var(--muted2);}
+.pill-grade{background:var(--gold-bg);color:var(--gold);font-family:var(--mono);}
+
+.pick{display:flex;align-items:center;gap:11px;padding:8px 17px;
+      border-bottom:1px solid var(--rule2);cursor:pointer;font-size:0.74rem;
+      transition:background .12s;}
+.pick:hover{background:var(--bg-main);}
+.pick.on{background:var(--blue-bg);}
+.pick input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;}
+.pick-list{max-height:44vh;overflow-y:auto;scrollbar-width:thin;}
+.pick-list::-webkit-scrollbar{width:5px;}
+.pick-list::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+
+.bar{padding:12px 17px;border-top:1px solid var(--rule2);background:var(--bg-main);
+     display:flex;flex-direction:column;gap:9px;}
+.bar-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.bar-row .spacer{flex:1;}
+.quote{font-size:0.67rem;color:var(--text-muted);line-height:1.55;}
+.quote b{color:var(--text-main);}
+.quote .free{color:var(--success);font-weight:700;}
+
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld[hidden],.fld-row[hidden]{display:none;}
+.fld label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+           letter-spacing:0.9px;color:var(--muted2);}
+.fld input,.fld select{height:32px;padding:0 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;font-size:0.75rem;color:var(--text-main);
+    background:var(--white);outline:none;width:100%;}
+.fld input:focus,.fld select:focus{border-color:var(--blue2);}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.body-pad{padding:13px 17px;display:grid;gap:9px;}
+
+.empty{padding:26px 18px;text-align:center;color:var(--muted2);font-size:0.71rem;
+       line-height:1.6;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:3px;min-height:104px;}
+.empty strong{display:block;color:var(--text-muted);font-size:0.74rem;}
+
+/* ── Receiving a lot back ── */
+.ov{position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:600;
+    display:flex;align-items:center;justify-content:center;padding:20px;}
+.ov[hidden]{display:none;}
+.ov-card{background:var(--white);border-radius:15px;width:660px;max-width:100%;
+         max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+         box-shadow:0 24px 60px rgba(15,23,42,0.25);}
+.ov-card.narrow{width:430px;}
+.ov-hdr{padding:15px 19px;border-bottom:1px solid var(--rule2);
+        display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ov-body{padding:15px 19px;overflow-y:auto;}
+.ov-foot{padding:13px 19px;border-top:1px solid var(--rule2);display:flex;
+         gap:8px;align-items:center;background:var(--bg-main);}
+.ov-foot .spacer{flex:1;}
+
+.rc{display:grid;grid-template-columns:1fr 132px 78px;gap:9px;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--rule2);}
+.rc:last-child{border-bottom:none;}
+.rc input[type=text]{height:32px;padding:0 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:var(--mono);font-size:0.78rem;letter-spacing:1.5px;
+    text-transform:uppercase;outline:none;width:100%;}
+.rc input[type=text]:focus{border-color:var(--blue2);}
+.rc input[type=text]:disabled{background:var(--cream);color:var(--muted2);}
+.rc-fail{display:flex;align-items:center;gap:5px;font-size:0.64rem;
+         color:var(--text-muted);cursor:pointer;user-select:none;}
+.rc-fail input{width:14px;height:14px;accent-color:var(--danger);cursor:pointer;}
+.rc-note{grid-column:1/-1;font-size:0.62rem;color:var(--amber);margin-top:-3px;}
+
+.hint{background:var(--amber-bg);border:1px solid rgba(217,119,6,0.25);
+      border-radius:9px;padding:10px 12px;font-size:0.67rem;color:#8a5a08;
+      line-height:1.55;margin-bottom:12px;}
+.hint.plain{background:var(--blue-bg);border-color:var(--blue-ln);color:var(--blue3);}
+
+.toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
+       padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
+       opacity:0;transform:translateY(8px);transition:all .22s;
+       pointer-events:none;z-index:700;max-width:340px;}
+.toast.show{opacity:1;transform:none;}
+.toast.bad{background:var(--danger);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div id="sidebar-container"></div>
+
+<main>
+<header>
+    <div class="header-left">
+        <h1><div class="status-dot"></div>Hallmarking</h1>
+        <div class="header-sub" id="head-sub">Loading…</div>
+    </div>
+    <div class="header-right">
+        <div class="search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></svg>
+            <input type="text" id="search" placeholder="Find a HUID or tag…" oninput="onSearch(this.value)" autocomplete="off">
+        </div>
+        <div class="live" id="live" title="This screen updates itself">
+            <span class="live-dot"></span><span id="live-text">live</span>
+        </div>
+        <button class="btn btn-ghost" onclick="showCentres()">Centres</button>
+        <button class="icon-btn" onclick="loadAll(true)" title="Refresh now">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+    </div>
+</header>
+
+<div class="scroll">
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="cols">
+
+        <!-- The pieces you are choosing to send. -->
+        <div class="col">
+            <div class="card" id="sec-waiting">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon gold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Waiting to go</div>
+                            <div class="card-sub">Stock with no number on it yet</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:7px;">
+                        <span class="count-pill" id="wait-count">0</span>
+                        <button class="btn btn-ghost btn-sm" onclick="pickAll()">All</button>
+                        <button class="btn btn-ghost btn-sm" onclick="pickNone()">None</button>
+                    </div>
+                </div>
+                <div class="body-pad" style="padding-bottom:9px;">
+                    <input type="text" id="wait-filter" placeholder="Filter by tag, name or purity" oninput="renderWaiting()"
+                           style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.75rem;outline:none;">
+                </div>
+                <div class="pick-list" id="waiting"><div class="empty">Loading…</div></div>
+                <div class="bar">
+                    <div class="quote" id="quote">Nothing chosen yet.</div>
+                    <div class="bar-row">
+                        <select id="centre" style="height:34px;padding:0 10px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:0.73rem;background:var(--white);flex:1;min-width:140px;">
+                            <option value="">Choose a centre…</option>
+                        </select>
+                        <button class="btn btn-primary" id="send-btn" onclick="sendLot()" disabled>Send lot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lots already gone, and the register behind them. -->
+        <div class="col">
+            <div class="card" id="sec-out">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon warn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.3 7 12 12 20.7 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">At the centre</div>
+                            <div class="card-sub">Late first, because that is the one to ring about</div>
+                        </div>
+                    </div>
+                    <span class="count-pill" id="out-count">0</span>
+                </div>
+                <div class="list" id="out-lots"><div class="empty">Loading…</div></div>
+            </div>
+
+            <div class="card" id="sec-find">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Trace a piece</div>
+                            <div class="card-sub">Which lot it went in, and when it came back</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="list" id="found"><div class="empty"><strong>Nothing searched for</strong>Type a number or a tag in the box at the top.</div></div>
+            </div>
+
+            <div class="card" id="sec-done">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon ok">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Finished lots</div>
+                            <div class="card-sub">Kept for a BIS question years later</div>
+                        </div>
+                    </div>
+                    <span class="count-pill" id="done-count">0</span>
+                </div>
+                <div class="list" id="done-lots"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+    </div><!-- /cols -->
+
+</div><!-- /scroll -->
+</main>
+
+<!-- Booking a lot back in -->
+<div class="ov" id="rc-ov" hidden>
+    <div class="ov-card">
+        <div class="ov-hdr">
+            <div>
+                <div class="card-title" id="rc-title">Lot</div>
+                <div class="card-sub" id="rc-sub"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="closeReceive()">Close</button>
+        </div>
+        <div class="ov-body">
+            <div class="hint plain">
+                Type the six-character number struck on each piece. Tick
+                <b>failed</b> for any piece the centre would not mark: it keeps
+                no number and comes back into the queue. Leave a row blank to
+                deal with it later.
+            </div>
+            <div id="rc-rows"></div>
+        </div>
+        <div class="ov-foot">
+            <div class="quote" id="rc-state"></div>
+            <div class="spacer"></div>
+            <button class="btn btn-ghost" onclick="closeReceive()">Cancel</button>
+            <button class="btn btn-good" id="rc-save" onclick="saveReceive()">Book in</button>
+        </div>
+    </div>
+</div>
+
+<!-- Assaying centres -->
+<div class="ov" id="ct-ov" hidden>
+    <div class="ov-card narrow">
+        <div class="ov-hdr">
+            <div>
+                <div class="card-title">Assaying centres</div>
+                <div class="card-sub">Where lots are sent, and what each charges</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="closeCentres()">Close</button>
+        </div>
+        <div class="ov-body">
+            <div class="list" id="ct-list" style="margin:-15px -19px 14px;"></div>
+            <div class="fld">
+                <label>Our BIS registration</label>
+                <input type="text" id="ct-reg" placeholder="On every challan">
+            </div>
+            <div style="height:9px;"></div>
+            <div class="fld">
+                <label>Centre name</label>
+                <input type="text" id="ct-name" placeholder="Rajkot Assaying Centre">
+            </div>
+            <div class="fld-row" style="margin-top:9px;">
+                <div class="fld">
+                    <label>Per piece</label>
+                    <input type="number" id="ct-rate" placeholder="45" step="1" min="0">
+                </div>
+                <div class="fld">
+                    <label>Minimum a lot</label>
+                    <input type="number" id="ct-min" placeholder="200" step="1" min="0">
+                </div>
+            </div>
+            <div class="fld" style="margin-top:9px;">
+                <label>Days to come back</label>
+                <input type="number" id="ct-days" placeholder="7" step="1" min="0">
+            </div>
+        </div>
+        <div class="ov-foot">
+            <div class="spacer"></div>
+            <button class="btn btn-ghost" onclick="closeCentres()">Close</button>
+            <button class="btn btn-primary" onclick="saveCentre()">Save centre</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── the bridge ───────────────────────────────────────────────────────
+function api(){
+    var a = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+    if (!a) return null;
+    // pywebview puts an empty object there first and fills it a moment
+    // later, so "the object exists" is not the same as "the bridge works".
+    try { return Object.keys(a).length ? a : null; } catch (e) { return a; }
+}
+
+function el(id){ return document.getElementById(id); }
+
+function esc(v){
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Tag numbers are typed by people and go inside single-quoted onclick
+// attributes, where one apostrophe would close the attribute early.
+function escAttr(v){ return esc(v).replace(/'/g, '&#39;'); }
+
+function money(n){
+    var v = parseFloat(n);
+    if (isNaN(v)) v = 0;
+    return 'Rs ' + Math.round(v).toLocaleString('en-IN');
+}
+
+function grams(n){
+    var v = parseFloat(n);
+    if (isNaN(v)) v = 0;
+    return v.toFixed(3) + 'g';
+}
+
+function toast(msg, bad){
+    var t = el('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (bad ? ' bad' : '');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.className = 'toast'; }, bad ? 5200 : 2800);
+}
+
+function emptyState(title, line){
+    return '<div class="empty"><strong>' + esc(title) + '</strong>' + esc(line) + '</div>';
+}
+
+function jumpTo(id){
+    var box = el(id);
+    if (box) box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── state ────────────────────────────────────────────────────────────
+var DATA = null;
+var PICKED = {};          // tag_id -> true
+var CENTRES = [];
+var RC = null;            // the lot open in the receiving window
+
+var LISTS = ['waiting', 'out-lots', 'done-lots'];
+
+function setAllLists(title, line){
+    for (var i = 0; i < LISTS.length; i++) {
+        var box = el(LISTS[i]);
+        if (box) box.innerHTML = emptyState(title, line);
+    }
+}
+
+// ── loading ──────────────────────────────────────────────────────────
+function loadAll(manual){
+    var a = api();
+    // Two different failures that used to read as one. No bridge at all
+    // means the screen never reached the program; a bridge without the
+    // hallmarking methods means it reached an older one.
+    if (!a) {
+        el('head-sub').textContent = 'Could not reach AurumOS.';
+        setLive('stale', 'no connection');
+        setAllLists('Not connected',
+                    'This screen could not reach AurumOS. Close the program and open it again.');
+        return;
+    }
+    if (typeof a.hallmark_dashboard !== 'function') {
+        el('head-sub').textContent = 'Close and reopen AurumOS to finish updating.';
+        setLive('stale', 'needs restart');
+        setAllLists('Waiting for the app to restart',
+                    'Hallmarking arrived in an update. Close AurumOS and open it again.');
+        return;
+    }
+    setLive('busy', 'checking');
+    a.hallmark_dashboard(500).then(function(d){
+        if (!d || d.status !== 'success') {
+            var why = (d && d.message) || 'Could not load.';
+            el('head-sub').textContent = why;
+            setLive('stale', 'not updating');
+            setAllLists('Could not load', why);
+            return;
+        }
+        DATA = d;
+        CENTRES = d.centres || [];
+        renderTiles(d);
+        renderWaiting();
+        renderLots(d.lots || []);
+        renderCentreOptions();
+        var w = d.waiting || {}, o = d.out || {};
+        el('head-sub').textContent =
+            (w.pieces || 0) + ' waiting · ' + (o.pieces || 0) + ' at the centre · '
+            + (d.marked || 0) + ' hallmarked';
+        _lastOk = Date.now();
+        setLive('', 'just now');
+    }).catch(function(e){
+        el('head-sub').textContent = 'Could not load: ' + e;
+        setLive('stale', 'not updating');
+        setAllLists('Could not load', String(e));
+    });
+}
+
+// ── the counters ─────────────────────────────────────────────────────
+function renderTiles(d){
+    var w = d.waiting || {}, o = d.out || {}, l = d.late || {}, f = d.failed || {};
+    var tiles = [
+        { label:'Waiting to go', value:(w.pieces || 0), sub:grams(w.gross_wt),
+          cls:'is-gold', go:'sec-waiting' },
+        { label:'At the centre', value:(o.pieces || 0),
+          sub:(o.lots || 0) + ' lot' + ((o.lots === 1) ? '' : 's') + ' · ' + grams(o.gross_wt),
+          cls:'is-blue', go:'sec-out' },
+        { label:'Overdue', value:(l.lots || 0),
+          sub:(l.lots ? 'Ring the centre' : 'All on time'),
+          cls:(l.lots ? 'is-alert' : 'is-ok'), go:'sec-out' },
+        { label:'Failed assay', value:(f.pieces || 0),
+          sub:(f.pieces ? grams(f.gross_wt) + ' to melt again' : 'None'),
+          cls:(f.pieces ? 'is-warn' : 'is-ok'), go:'sec-done' },
+        { label:'Cannot be sold', value:(d.saleable_gap || 0),
+          sub:'Waiting plus away', cls:'is-alert', go:'sec-waiting' }
+    ];
+    el('tiles').innerHTML = tiles.map(function(t){
+        return '<div class="tile ' + t.cls + '" onclick="jumpTo(\'' + t.go + '\')">'
+             + '<div class="tile-label">' + esc(t.label) + '</div>'
+             + '<div class="tile-value">' + esc(t.value) + '</div>'
+             + '<div class="tile-sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+}
+
+// ── choosing what to send ────────────────────────────────────────────
+function renderWaiting(){
+    var rows = (DATA && DATA.pending) || [];
+    var q = (el('wait-filter').value || '').trim().toLowerCase();
+    if (q) {
+        rows = rows.filter(function(r){
+            return ((r.tag_id || '') + ' ' + (r.it_name || '') + ' '
+                  + (r.karat || '') + ' ' + (r.category || '')).toLowerCase()
+                  .indexOf(q) >= 0;
+        });
+    }
+    el('wait-count').textContent = rows.length;
+    if (!rows.length) {
+        el('waiting').innerHTML = q
+            ? emptyState('Nothing matches', 'No piece here answers to "' + q + '".')
+            : emptyState('Everything is hallmarked',
+                         'Nothing is waiting to go to the centre.');
+        updateQuote();
+        return;
+    }
+    el('waiting').innerHTML = rows.map(function(r){
+        var tag = r.tag_id || '';
+        var on = !!PICKED[tag];
+        return '<label class="pick' + (on ? ' on' : '') + '">'
+             + '<input type="checkbox" ' + (on ? 'checked' : '')
+             + ' onchange="togglePick(\'' + escAttr(tag) + '\', this.checked)">'
+             + '<div class="row-main">'
+             +   '<div class="row-name">' + esc(r.it_name || 'Item') + '</div>'
+             +   '<div class="row-sub">' + esc(tag)
+             +     (r.karat ? ' · ' + esc(r.karat) : '')
+             +     (r.category ? ' · ' + esc(r.category) : '') + '</div>'
+             + '</div>'
+             + '<div class="row-right">' + grams(r.gr_wt) + '</div>'
+             + '</label>';
+    }).join('');
+    updateQuote();
+}
+
+function togglePick(tag, on){
+    if (on) { PICKED[tag] = true; } else { delete PICKED[tag]; }
+    updateQuote();
+    // Repaint only the row's own highlight, so the list does not jump
+    // under a hand that is part way down it.
+    var boxes = document.querySelectorAll('#waiting .pick');
+    for (var i = 0; i < boxes.length; i++) {
+        var input = boxes[i].querySelector('input');
+        if (input) boxes[i].className = 'pick' + (input.checked ? ' on' : '');
+    }
+}
+
+function visibleTags(){
+    var out = [];
+    var boxes = document.querySelectorAll('#waiting .pick input');
+    var rows = (DATA && DATA.pending) || [];
+    var q = (el('wait-filter').value || '').trim().toLowerCase();
+    rows.forEach(function(r){
+        var hay = ((r.tag_id || '') + ' ' + (r.it_name || '') + ' '
+                 + (r.karat || '') + ' ' + (r.category || '')).toLowerCase();
+        if (!q || hay.indexOf(q) >= 0) out.push(r.tag_id);
+    });
+    return out;
+}
+
+function pickAll(){
+    visibleTags().forEach(function(t){ PICKED[t] = true; });
+    renderWaiting();
+}
+
+function pickNone(){
+    PICKED = {};
+    renderWaiting();
+}
+
+function chosen(){
+    return Object.keys(PICKED);
+}
+
+function currentCentre(){
+    var id = parseInt(el('centre').value || '0', 10);
+    for (var i = 0; i < CENTRES.length; i++) {
+        if (parseInt(CENTRES[i].id, 10) === id) return CENTRES[i];
+    }
+    return null;
+}
+
+// The charge is worked out on the Python side, so the shop is never shown
+// one number here and billed by another rule elsewhere.
+var _quoteTimer = null;
+
+function updateQuote(){
+    var n = chosen().length;
+    el('send-btn').disabled = !n;
+    if (!n) { el('quote').textContent = 'Nothing chosen yet.'; return; }
+    clearTimeout(_quoteTimer);
+    _quoteTimer = setTimeout(function(){
+        var a = api();
+        if (!a || typeof a.hallmark_quote !== 'function') {
+            el('quote').textContent = n + ' chosen.';
+            return;
+        }
+        var c = currentCentre() || {};
+        a.hallmark_quote(n, c.per_piece || '', c.min_charge || '').then(function(q){
+            if (!q || q.status !== 'success') { el('quote').textContent = n + ' chosen.'; return; }
+            var line = '<b>' + n + '</b> chosen · ' + money(q.total) + ' to hallmark';
+            if (q.minimum_applied) {
+                line += '<br>Under the ' + money(q.minimum) + ' minimum for a lot.';
+                if (q.free_slots > 0) {
+                    line += ' <span class="free">' + q.free_slots
+                          + ' more would cost nothing.</span>';
+                }
+            }
+            el('quote').innerHTML = line;
+        }).catch(function(){ el('quote').textContent = n + ' chosen.'; });
+    }, 220);
+}
+
+function sendLot(){
+    var a = api();
+    if (!a || typeof a.hallmark_create_lot !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var c = currentCentre();
+    if (!c) { toast('Choose which centre it is going to.', true); return; }
+    var tags = chosen();
+    if (!tags.length) { toast('Choose at least one piece.', true); return; }
+    el('send-btn').disabled = true;
+    a.hallmark_create_lot(c.id, tags, '', '').then(function(r){
+        el('send-btn').disabled = false;
+        if (!r) { toast('No answer from the program.', true); return; }
+        if (r.status === 'refused') {
+            toast(r.message || 'One of those pieces cannot go.', true);
+            return;
+        }
+        if (r.status !== 'success') {
+            toast(r.message || 'Could not send that lot.', true);
+            return;
+        }
+        PICKED = {};
+        toast(r.lot_no + ' sent · ' + r.pieces + ' pieces · back by ' + r.expected_date);
+        loadAll(true);
+    }).catch(function(e){
+        el('send-btn').disabled = false;
+        toast('Could not send: ' + e, true);
+    });
+}
+
+// ── lots ─────────────────────────────────────────────────────────────
+function statePill(state, days){
+    if (state === 'late')      return '<span class="pill pill-late">' + days + 'd late</span>';
+    if (state === 'due')       return '<span class="pill pill-due">Due today</span>';
+    if (state === 'received')  return '<span class="pill pill-done">Back</span>';
+    if (state === 'cancelled') return '<span class="pill pill-void">Cancelled</span>';
+    return '<span class="pill pill-out">' + days + 'd out</span>';
+}
+
+function renderLots(lots){
+    var out = [], done = [];
+    lots.forEach(function(l){
+        if (l.state === 'received' || l.state === 'cancelled') { done.push(l); }
+        else { out.push(l); }
+    });
+
+    el('out-count').textContent = out.length;
+    el('done-count').textContent = done.length;
+
+    el('out-lots').innerHTML = out.length ? out.map(function(l){
+        var still = l.pending || 0;
+        return '<div class="row">'
+             + '<div class="row-main">'
+             +   '<div class="row-name">' + esc(l.lot_no || 'Lot') + ' · '
+             +     esc(l.centre_name || 'centre not named') + '</div>'
+             +   '<div class="row-sub">' + still + ' of ' + (l.pieces || 0)
+             +     ' still there · sent ' + esc(l.sent_date || '')
+             +     ' · due ' + esc(l.expected_date || '') + '</div>'
+             + '</div>'
+             + '<div class="row-right">' + statePill(l.state, l.days_out)
+             +   '<button class="btn btn-good btn-sm" onclick="openReceive(' + Number(l.id) + ')">Book in</button>'
+             +   '<button class="btn btn-ghost btn-sm" onclick="cancelLot(' + Number(l.id) + ')">Cancel</button>'
+             + '</div></div>';
+    }).join('') : emptyState('Nothing at the centre',
+                             'Choose pieces on the left and send a lot.');
+
+    el('done-lots').innerHTML = done.length ? done.map(function(l){
+        return '<div class="row">'
+             + '<div class="row-main">'
+             +   '<div class="row-name">' + esc(l.lot_no || 'Lot') + ' · '
+             +     esc(l.centre_name || '') + '</div>'
+             +   '<div class="row-sub">' + (l.passed || 0) + ' marked'
+             +     ((l.failed || 0) ? ' · ' + l.failed + ' failed' : '')
+             +     (l.received_date ? ' · back ' + esc(l.received_date) : '')
+             +     ((l.charge_total || 0) ? ' · ' + money(l.charge_total) : '') + '</div>'
+             + '</div>'
+             + '<div class="row-right">' + statePill(l.state, l.days_out) + '</div>'
+             + '</div>';
+    }).join('') : emptyState('Nothing finished yet',
+                             'Lots you have booked back in are kept here.');
+}
+
+function cancelLot(id){
+    var a = api();
+    if (!a || typeof a.hallmark_cancel_lot !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hallmark_cancel_lot(id).then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not cancel.', true); return;
+        }
+        toast('Lot cancelled. Its pieces are back in the queue.');
+        loadAll(true);
+    }).catch(function(e){ toast('Could not cancel: ' + e, true); });
+}
+
+// ── booking a lot back in ────────────────────────────────────────────
+function openReceive(id){
+    var a = api();
+    if (!a || typeof a.hallmark_lot !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hallmark_lot(id).then(function(lot){
+        if (!lot || lot.status !== 'success') {
+            toast((lot && lot.message) || 'Could not open that lot.', true); return;
+        }
+        RC = lot;
+        el('rc-title').textContent = lot.lot_no || 'Lot';
+        el('rc-sub').textContent = (lot.centre_name || '') + ' · sent '
+                                 + (lot.sent_date || '') + ' · ' + lot.days_out + ' days out';
+        var rows = (lot.items || []).filter(function(i){
+            return String(i.result || 'pending').toLowerCase() === 'pending';
+        });
+        el('rc-rows').innerHTML = rows.length ? rows.map(function(i, n){
+            var tag = i.tag_id || '';
+            return '<div class="rc">'
+                 + '<div class="row-main">'
+                 +   '<div class="row-name">' + esc(i.it_name || 'Item') + '</div>'
+                 +   '<div class="row-sub">' + esc(tag) + ' · ' + grams(i.gr_wt)
+                 +     (i.grade ? ' · <span class="pill pill-grade">' + esc(i.grade) + '</span>' : '')
+                 +   '</div>'
+                 + '</div>'
+                 + '<input type="text" maxlength="6" id="rc-h' + n + '" data-tag="' + escAttr(tag) + '"'
+                 +   ' placeholder="HUID" oninput="onHuid(' + n + ')">'
+                 + '<label class="rc-fail"><input type="checkbox" id="rc-f' + n + '"'
+                 +   ' onchange="onFail(' + n + ')">failed</label>'
+                 + '<div class="rc-note" id="rc-n' + n + '"></div>'
+                 + '</div>';
+        }).join('') : emptyState('Nothing left to book in',
+                                 'Every piece in this lot has already been dealt with.');
+        el('rc-save').disabled = !rows.length;
+        RC._rows = rows;
+        updateReceiveState();
+        el('rc-ov').hidden = false;
+        var first = el('rc-h0');
+        if (first) first.focus();
+    }).catch(function(e){ toast('Could not open: ' + e, true); });
+}
+
+function onFail(n){
+    var failed = el('rc-f' + n).checked;
+    var box = el('rc-h' + n);
+    // A failed piece was never marked. Letting a number stay in the field
+    // would put an unhallmarked piece into saleable stock.
+    box.disabled = failed;
+    if (failed) box.value = '';
+    el('rc-n' + n).textContent = '';
+    updateReceiveState();
+}
+
+// O against 0 and I against 1 are the whole reason a shop rings the centre
+// a week later. This warns; it never blocks, because a real number may
+// hold any of them.
+function onHuid(n){
+    var box = el('rc-h' + n);
+    var v = (box.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (v !== box.value) box.value = v;
+    var note = '';
+    var hits = [];
+    if (v.indexOf('O') >= 0 || v.indexOf('0') >= 0) hits.push('O and 0');
+    if (v.indexOf('I') >= 0 || v.indexOf('1') >= 0) hits.push('I and 1');
+    if (hits.length) note = 'Check ' + hits.join(', ') + ' against the piece.';
+    el('rc-n' + n).textContent = note;
+    updateReceiveState();
+}
+
+function receiveRows(){
+    var out = [];
+    var rows = (RC && RC._rows) || [];
+    for (var n = 0; n < rows.length; n++) {
+        var box = el('rc-h' + n), fail = el('rc-f' + n);
+        if (!box) continue;
+        var huid = (box.value || '').trim().toUpperCase();
+        var failed = fail && fail.checked;
+        var result = failed ? 'fail' : (huid ? 'pass' : 'pending');
+        out.push({ tag_id: box.getAttribute('data-tag'), huid: failed ? '' : huid,
+                   result: result });
+    }
+    return out;
+}
+
+function updateReceiveState(){
+    var rows = receiveRows();
+    var pass = 0, fail = 0, later = 0;
+    rows.forEach(function(r){
+        if (r.result === 'pass') pass++;
+        else if (r.result === 'fail') fail++;
+        else later++;
+    });
+    el('rc-state').innerHTML = '<b>' + pass + '</b> marked · <b>' + fail
+        + '</b> failed' + (later ? ' · ' + later + ' left for later' : '');
+}
+
+function saveReceive(){
+    var a = api();
+    if (!a || typeof a.hallmark_receive !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var rows = receiveRows();
+    if (!rows.length) { closeReceive(); return; }
+    el('rc-save').disabled = true;
+    a.hallmark_receive(RC.id, rows, '').then(function(r){
+        el('rc-save').disabled = false;
+        if (!r) { toast('No answer from the program.', true); return; }
+        if (r.status === 'refused') {
+            toast(r.message || 'One of those numbers cannot be saved.', true);
+            return;
+        }
+        if (r.status !== 'success') {
+            toast(r.message || 'Could not book that lot in.', true); return;
+        }
+        var msg = r.marked + ' hallmarked';
+        if (r.failed) msg += ', ' + r.failed + ' failed';
+        if (r.still_out) msg += ', ' + r.still_out + ' still at the centre';
+        toast(msg);
+        closeReceive();
+        loadAll(true);
+    }).catch(function(e){
+        el('rc-save').disabled = false;
+        toast('Could not save: ' + e, true);
+    });
+}
+
+function closeReceive(){
+    el('rc-ov').hidden = true;
+    RC = null;
+}
+
+// ── centres ──────────────────────────────────────────────────────────
+function renderCentreOptions(){
+    var sel = el('centre');
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">Choose a centre…</option>'
+        + CENTRES.filter(function(c){ return String(c.active) !== '0'; })
+                 .map(function(c){
+            return '<option value="' + Number(c.id) + '">' + esc(c.name) + '</option>';
+        }).join('');
+    if (keep) sel.value = keep;
+    else if (CENTRES.length === 1) sel.value = String(CENTRES[0].id);
+}
+
+function showCentres(){
+    el('ct-list').innerHTML = CENTRES.length ? CENTRES.map(function(c){
+        return '<div class="row">'
+             + '<div class="row-main">'
+             +   '<div class="row-name">' + esc(c.name) + '</div>'
+             +   '<div class="row-sub">' + money(c.per_piece) + ' a piece · '
+             +     money(c.min_charge) + ' minimum · ' + (c.turnaround_days || 7)
+             +     ' days</div>'
+             + '</div></div>';
+    }).join('') : emptyState('No centre yet', 'Add the one you send to below.');
+    el('ct-reg').value = (DATA && DATA.registration) || '';
+    var d = (DATA && DATA.defaults) || {};
+    el('ct-rate').placeholder = d.per_piece || 45;
+    el('ct-min').placeholder = d.min_charge || 200;
+    el('ct-days').placeholder = d.turnaround_days || 7;
+    el('ct-ov').hidden = false;
+}
+
+function closeCentres(){ el('ct-ov').hidden = true; }
+
+function saveCentre(){
+    var a = api();
+    if (!a || typeof a.hallmark_save_centre !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var reg = (el('ct-reg').value || '').trim();
+    if (reg && typeof a.hallmark_set_registration === 'function') {
+        a.hallmark_set_registration(reg).catch(function(){});
+    }
+    var name = (el('ct-name').value || '').trim();
+    if (!name) {
+        if (reg) { toast('Registration saved.'); closeCentres(); loadAll(true); }
+        else { toast('Give the centre a name.', true); }
+        return;
+    }
+    a.hallmark_save_centre({
+        name: name,
+        per_piece: parseFloat(el('ct-rate').value || '0') || 45,
+        min_charge: parseFloat(el('ct-min').value || '0') || 200,
+        turnaround_days: parseInt(el('ct-days').value || '0', 10) || 7
+    }).then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not save.', true); return;
+        }
+        el('ct-name').value = '';
+        toast('Centre saved.');
+        closeCentres();
+        loadAll(true);
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+
+// ── tracing a piece ──────────────────────────────────────────────────
+var _findTimer = null;
+
+function onSearch(term){
+    clearTimeout(_findTimer);
+    var q = (term || '').trim();
+    if (q.length < 2) {
+        el('found').innerHTML = emptyState('Nothing searched for',
+            'Type a number or a tag in the box at the top.');
+        return;
+    }
+    _findTimer = setTimeout(function(){
+        var a = api();
+        if (!a || typeof a.hallmark_find !== 'function') return;
+        a.hallmark_find(q).then(function(r){
+            if (!r || r.status !== 'success') return;
+            var rows = r.rows || [];
+            if (!rows.length) {
+                el('found').innerHTML = emptyState('No piece found',
+                    'Nothing on the register answers to "' + q + '".');
+                return;
+            }
+            el('found').innerHTML = rows.map(function(i){
+                var res = String(i.result || '').toLowerCase();
+                var pill = res === 'pass' ? '<span class="pill pill-done">Marked</span>'
+                         : res === 'fail' ? '<span class="pill pill-late">Failed</span>'
+                         : '<span class="pill pill-out">At centre</span>';
+                return '<div class="row">'
+                     + '<div class="row-main">'
+                     +   '<div class="row-name">' + esc(i.huid || i.tag_id) + '</div>'
+                     +   '<div class="row-sub">' + esc(i.it_name || '') + ' · '
+                     +     esc(i.tag_id || '') + ' · ' + esc(i.lot_no || '')
+                     +     ' · ' + esc(i.centre_name || '')
+                     +     (i.received_date ? ' · back ' + esc(i.received_date) : '')
+                     +   '</div>'
+                     + '</div><div class="row-right">' + pill + '</div></div>';
+            }).join('');
+            jumpTo('sec-find');
+        }).catch(function(){});
+    }, 260);
+}
+
+// ── keeping itself current ───────────────────────────────────────────
+var REFRESH_SECONDS = 90;
+var _timer = null, _lastOk = 0;
+
+function isBusyTyping(){
+    var e = document.activeElement;
+    if (!e) return false;
+    var tag = (e.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'select' && tag !== 'textarea') return false;
+    return !!(e.value && String(e.value).trim());
+}
+
+function setLive(state, text){
+    var box = el('live');
+    if (box) box.className = 'live' + (state ? ' ' + state : '');
+    var t = el('live-text');
+    if (t) t.textContent = text;
+}
+
+function sinceText(){
+    if (!_lastOk) return 'live';
+    var s = Math.round((Date.now() - _lastOk) / 1000);
+    if (s < 45) return 'just now';
+    if (s < 5400) return Math.round(s / 60) + ' min ago';
+    return 'stale';
+}
+
+function tick(){
+    if (document.hidden) return;
+    // Rebuilding the lists under a half-typed HUID loses what was typed,
+    // which is the failure that makes auto-refresh worse than a button.
+    if (isBusyTyping()) return;
+    if (!el('rc-ov').hidden || !el('ct-ov').hidden) return;
+    loadAll();
+}
+
+function startAutoRefresh(){
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(tick, REFRESH_SECONDS * 1000);
+    setInterval(function(){
+        if (!document.hidden) setLive(_lastOk ? '' : 'stale', sinceText());
+    }, 5000);
+    document.addEventListener('visibilitychange', function(){
+        if (!document.hidden && el('rc-ov').hidden) loadAll();
+    });
+}
+
+// -- start ------------------------------------------------------------
+try { initSidebar('hallmark'); } catch (e) {}
+
+// pywebview injects the bridge a moment AFTER the page is parsed, so asking
+// for it on this line would always find nothing and the screen would open
+// claiming the build was too old. boot.js already knows how to wait.
+function begin(){
+    loadAll();
+    startAutoRefresh();
+}
+setLive('busy', 'connecting');
+if (typeof window.apiReady === 'function') { window.apiReady(begin); } else { begin(); }
+</script>
+</body>
+</html>

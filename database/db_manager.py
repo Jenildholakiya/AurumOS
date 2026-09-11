@@ -74,6 +74,7 @@ class DBManager:
         try:
             self.ensure_retail_columns()
             self.ensure_crm_tables()
+            self.ensure_hallmark_tables()
         except Exception:
             pass
         try:
@@ -7188,3 +7189,339 @@ class DBManager:
         except Exception as e:
             _dberr(f"[BASTION] exe_verify error: {e}")
             return True  # fail open on unexpected error
+
+    # ══════════════════════════════════════════════════════════════════
+    #  HALLMARKING
+    #  Stock cannot be sold until it comes back from the assaying centre
+    #  with a number struck on it. These tables are the register of what
+    #  went, when, and what came home.
+    # ══════════════════════════════════════════════════════════════════
+
+    def ensure_hallmark_tables(self):
+        """Added in place on an existing shop. Safe on every startup."""
+        try:
+            with self._get_connection() as conn:
+                conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS hallmark_centres (
+                        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name           TEXT NOT NULL,
+                        code           TEXT DEFAULT '',
+                        phone          TEXT DEFAULT '',
+                        address        TEXT DEFAULT '',
+                        per_piece      REAL DEFAULT 45.0,
+                        min_charge     REAL DEFAULT 200.0,
+                        turnaround_days INTEGER DEFAULT 7,
+                        active         INTEGER DEFAULT 1,
+                        created_at     DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS hallmark_lots (
+                        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                        lot_no        TEXT UNIQUE,
+                        centre_id     INTEGER,
+                        centre_name   TEXT DEFAULT '',
+                        sent_date     DATE,
+                        expected_date DATE,
+                        received_date DATE,
+                        status        TEXT DEFAULT 'out',
+                        charge_base   REAL DEFAULT 0,
+                        charge_gst    REAL DEFAULT 0,
+                        charge_total  REAL DEFAULT 0,
+                        note          TEXT DEFAULT '',
+                        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS hallmark_lot_items (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        lot_id       INTEGER NOT NULL,
+                        tag_id       TEXT,
+                        it_name      TEXT DEFAULT '',
+                        gr_wt        REAL DEFAULT 0,
+                        nt_wt        REAL DEFAULT 0,
+                        karat        TEXT DEFAULT '',
+                        grade        TEXT DEFAULT '',
+                        huid         TEXT DEFAULT '',
+                        result       TEXT DEFAULT 'pending',
+                        purity_found REAL DEFAULT 0,
+                        note         TEXT DEFAULT '');
+
+                    CREATE INDEX IF NOT EXISTS ix_hm_items_lot
+                        ON hallmark_lot_items(lot_id);
+                    CREATE INDEX IF NOT EXISTS ix_hm_items_tag
+                        ON hallmark_lot_items(tag_id);
+                """)
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[HM] tables: {e}")
+            return False
+
+    # ── centres ──────────────────────────────────────────────────────
+
+    def hm_centres(self, active_only=False):
+        try:
+            with self._get_connection() as conn:
+                sql = "SELECT * FROM hallmark_centres"
+                if active_only:
+                    sql += " WHERE active=1"
+                sql += " ORDER BY active DESC, name"
+                return [dict(r) for r in conn.execute(sql).fetchall()]
+        except Exception as e:
+            _dberr(f"[HM] centres: {e}")
+            return []
+
+    def hm_save_centre(self, data):
+        """Insert or update one centre. Returns its id, or 0."""
+        try:
+            d = dict(data or {})
+            cid = int(d.get('id') or 0)
+            vals = (str(d.get('name') or '').strip(),
+                    str(d.get('code') or '').strip(),
+                    str(d.get('phone') or '').strip(),
+                    str(d.get('address') or '').strip(),
+                    float(d.get('per_piece') or 45.0),
+                    float(d.get('min_charge') or 200.0),
+                    int(d.get('turnaround_days') or 7),
+                    0 if str(d.get('active', 1)) in ('0', 'false', 'False', '') else 1)
+            with self._get_connection() as conn:
+                if cid:
+                    conn.execute(
+                        "UPDATE hallmark_centres SET name=?,code=?,phone=?,"
+                        "address=?,per_piece=?,min_charge=?,turnaround_days=?,"
+                        "active=? WHERE id=?", vals + (cid,))
+                else:
+                    cur = conn.execute(
+                        "INSERT INTO hallmark_centres(name,code,phone,address,"
+                        "per_piece,min_charge,turnaround_days,active) "
+                        "VALUES(?,?,?,?,?,?,?,?)", vals)
+                    cid = int(cur.lastrowid)
+                conn.commit()
+            return cid
+        except Exception as e:
+            _dberr(f"[HM] save centre: {e}")
+            return 0
+
+    # ── stock waiting to go ──────────────────────────────────────────
+
+    def hm_pending_stock(self, limit=500):
+        """Tagged pieces with no number on them that are not already away.
+
+        A piece sitting in an open lot must not be offered again, which is
+        the whole reason this is a query rather than a column: cancelling a
+        lot releases its pieces with nothing left over to clean up.
+        """
+        try:
+            with self._get_connection() as conn:
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(stock_inventory)").fetchall()]
+                karat = "COALESCE(s.karat,'')" if 'karat' in cols else "''"
+                cat = "COALESCE(s.category,'')" if 'category' in cols else "''"
+                rows = conn.execute(
+                    "SELECT s.tag_id, s.it_name, s.it_code, s.gr_wt, s.nt_wt, "
+                    "       s.touch, " + karat + " AS karat, "
+                    + cat + " AS category, s.entry_date "
+                    "FROM stock_inventory s "
+                    "WHERE COALESCE(s.tag_id,'') <> '' "
+                    "  AND COALESCE(s.huid,'') = '' "
+                    "  AND s.tag_id NOT IN ("
+                    "      SELECT i.tag_id FROM hallmark_lot_items i "
+                    "      JOIN hallmark_lots l ON l.id = i.lot_id "
+                    "      WHERE l.status <> 'cancelled' "
+                    "        AND COALESCE(l.received_date,'') = '') "
+                    "ORDER BY s.entry_date, s.tag_id LIMIT ?",
+                    (int(limit or 500),)).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[HM] pending stock: {e}")
+            return []
+
+    # ── lots ─────────────────────────────────────────────────────────
+
+    def hm_lot_numbers(self):
+        try:
+            with self._get_connection() as conn:
+                return [r[0] for r in conn.execute(
+                    "SELECT lot_no FROM hallmark_lots").fetchall()]
+        except Exception as e:
+            _dberr(f"[HM] lot numbers: {e}")
+            return []
+
+    def hm_lots(self, with_items=True, limit=200):
+        try:
+            with self._get_connection() as conn:
+                lots = [dict(r) for r in conn.execute(
+                    "SELECT * FROM hallmark_lots ORDER BY id DESC LIMIT ?",
+                    (int(limit or 200),)).fetchall()]
+                if with_items and lots:
+                    ids = tuple(l['id'] for l in lots)
+                    marks = '(' + ','.join('?' * len(ids)) + ')'
+                    by_lot = {}
+                    for r in conn.execute(
+                            "SELECT * FROM hallmark_lot_items WHERE lot_id IN "
+                            + marks + " ORDER BY id", ids).fetchall():
+                        by_lot.setdefault(r['lot_id'], []).append(dict(r))
+                    for l in lots:
+                        l['items'] = by_lot.get(l['id'], [])
+                return lots
+        except Exception as e:
+            _dberr(f"[HM] lots: {e}")
+            return []
+
+    def hm_create_lot(self, lot_no, centre, tag_ids, sent_date, expected_date,
+                      charge, note=''):
+        """Pack a lot. Each piece is copied in as it stands, so a later edit
+        to the stock record cannot rewrite what was sent."""
+        try:
+            tags = [str(t).strip() for t in (tag_ids or []) if str(t).strip()]
+            if not tags:
+                return {'status': 'error', 'message': 'No pieces chosen.'}
+            c = dict(centre or {})
+            ch = dict(charge or {})
+            with self._get_connection() as conn:
+                cur = conn.execute(
+                    "INSERT INTO hallmark_lots(lot_no,centre_id,centre_name,"
+                    "sent_date,expected_date,status,charge_base,charge_gst,"
+                    "charge_total,note) VALUES(?,?,?,?,?,'out',?,?,?,?)",
+                    (str(lot_no), int(c.get('id') or 0),
+                     str(c.get('name') or ''), str(sent_date),
+                     str(expected_date), float(ch.get('base') or 0),
+                     float(ch.get('gst') or 0), float(ch.get('total') or 0),
+                     str(note or '')))
+                lot_id = int(cur.lastrowid)
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(stock_inventory)").fetchall()]
+                karat = "COALESCE(karat,'')" if 'karat' in cols else "''"
+                added = 0
+                for tag in tags:
+                    row = conn.execute(
+                        "SELECT it_name, gr_wt, nt_wt, " + karat + " AS karat "
+                        "FROM stock_inventory WHERE tag_id=?",
+                        (tag,)).fetchone()
+                    if not row:
+                        continue
+                    conn.execute(
+                        "INSERT INTO hallmark_lot_items(lot_id,tag_id,it_name,"
+                        "gr_wt,nt_wt,karat,result) "
+                        "VALUES(?,?,?,?,?,?,'pending')",
+                        (lot_id, tag, row['it_name'] or '',
+                         float(row['gr_wt'] or 0), float(row['nt_wt'] or 0),
+                         str(row['karat'] or '')))
+                    added += 1
+                conn.commit()
+            return {'status': 'success', 'lot_id': lot_id, 'lot_no': lot_no,
+                    'pieces': added}
+        except Exception as e:
+            _dberr(f"[HM] create lot: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_lot(self, lot_id):
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute("SELECT * FROM hallmark_lots WHERE id=?",
+                                   (int(lot_id),)).fetchone()
+                if not row:
+                    return None
+                lot = dict(row)
+                lot['items'] = [dict(r) for r in conn.execute(
+                    "SELECT * FROM hallmark_lot_items WHERE lot_id=? "
+                    "ORDER BY id", (int(lot_id),)).fetchall()]
+                return lot
+        except Exception as e:
+            _dberr(f"[HM] lot: {e}")
+            return None
+
+    def hm_huids_in_use(self, exclude_lot=0):
+        """Every number already recorded, so one cannot land twice."""
+        out = set()
+        try:
+            with self._get_connection() as conn:
+                for r in conn.execute(
+                        "SELECT huid FROM stock_inventory "
+                        "WHERE COALESCE(huid,'') <> ''").fetchall():
+                    out.add(str(r[0]).strip().upper())
+                for r in conn.execute(
+                        "SELECT huid FROM hallmark_lot_items "
+                        "WHERE COALESCE(huid,'') <> '' AND lot_id <> ?",
+                        (int(exclude_lot or 0),)).fetchall():
+                    out.add(str(r[0]).strip().upper())
+        except Exception as e:
+            _dberr(f"[HM] huids in use: {e}")
+        return out
+
+    def hm_receive(self, lot_id, rows, received_date):
+        """Book a lot back in.
+
+        A passed piece gets its number written onto the stock record, which
+        is what makes it saleable. A failed piece gets nothing and stays
+        unsaleable, where the panel can still see it.
+        """
+        try:
+            marked = failed = 0
+            still = 0
+            with self._get_connection() as conn:
+                for r in (rows or []):
+                    tag = str(r.get('tag_id') or '').strip()
+                    res = str(r.get('result') or 'pending').lower()
+                    huid = str(r.get('huid') or '').strip().upper()
+                    if res == 'fail':
+                        huid = ''
+                    conn.execute(
+                        "UPDATE hallmark_lot_items SET huid=?,result=?,"
+                        "purity_found=?,note=? WHERE lot_id=? AND tag_id=?",
+                        (huid, res, float(r.get('purity_found') or 0),
+                         str(r.get('note') or ''), int(lot_id), tag))
+                    if res == 'pass' and huid:
+                        conn.execute(
+                            "UPDATE stock_inventory SET huid=? WHERE tag_id=?",
+                            (huid, tag))
+                        marked += 1
+                    elif res == 'fail':
+                        failed += 1
+                still = conn.execute(
+                    "SELECT COUNT(*) FROM hallmark_lot_items WHERE lot_id=? "
+                    "AND LOWER(COALESCE(result,'pending'))='pending'",
+                    (int(lot_id),)).fetchone()[0]
+                if not still:
+                    conn.execute(
+                        "UPDATE hallmark_lots SET received_date=?,"
+                        "status='received' WHERE id=?",
+                        (str(received_date), int(lot_id)))
+                else:
+                    conn.execute(
+                        "UPDATE hallmark_lots SET status='part' WHERE id=?",
+                        (int(lot_id),))
+                conn.commit()
+            return {'status': 'success', 'marked': marked, 'failed': failed,
+                    'still_out': int(still)}
+        except Exception as e:
+            _dberr(f"[HM] receive: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_cancel_lot(self, lot_id):
+        """A lot that never went. The pieces are released; nothing is
+        deleted, so the register still shows it was packed."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "UPDATE hallmark_lots SET status='cancelled' WHERE id=? "
+                    "AND COALESCE(received_date,'') = ''", (int(lot_id),))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            _dberr(f"[HM] cancel: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_find(self, term):
+        """Look a piece up by its number or its tag, for a BIS question."""
+        try:
+            t = '%' + str(term or '').strip().upper() + '%'
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(
+                    "SELECT i.*, l.lot_no, l.centre_name, l.sent_date, "
+                    "       l.received_date "
+                    "FROM hallmark_lot_items i "
+                    "JOIN hallmark_lots l ON l.id = i.lot_id "
+                    "WHERE UPPER(COALESCE(i.huid,'')) LIKE ? "
+                    "   OR UPPER(COALESCE(i.tag_id,'')) LIKE ? "
+                    "ORDER BY i.id DESC LIMIT 50", (t, t)).fetchall()]
+        except Exception as e:
+            _dberr(f"[HM] find: {e}")
+            return []

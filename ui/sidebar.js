@@ -29,6 +29,7 @@ var NAV_RETAIL = [
     { id:'gold-rate', label:'Gold Rate',    icon:'trending',  page:'gold_rate.html',       section:'Main'     },
     { id:'billing',   label:'POS / Billing',icon:'pos',       page:'pos_billing.html',     section:'Main'     },
     { id:'inventory', label:'Inventory',    icon:'box',       page:'inventory.html',       section:'Main'     },
+    { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  page:'hallmark.html',        section:'Main'     },
     { id:'karigar',   label:'Karigar',      icon:'orders',    page:'karigar.html',         section:'Business' },
     { id:'customers', label:'Customers',    icon:'users',     page:'customer_account.html',section:'Business' },
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Business' },
@@ -54,6 +55,7 @@ var PAGE_META = {
     'voucher_history.html': { id:'vouchers',  label:'Voucher History', icon:'receipt', section:'Main'    },
     'party.html':           { id:'party',     label:'Party',        icon:'users',     section:'Finance' },
     'crm.html':             { id:'crm',       label:'CRM',          icon:'crm',       section:'Business' },
+    'hallmark.html':        { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  section:'Main'     },
     'crm_schemes.html':     { id:'crm',       label:'Savings Plans', icon:'wallet',   section:'Business' },
     'accounting.html':      { id:'accounting',label:'Accounting',   icon:'book',      section:'Finance' },
     'cash_bank.html':       { id:'cashbank',  label:'Cash & Bank',  icon:'wallet',    section:'Finance' },
@@ -88,6 +90,7 @@ var ICONS = {
     'receipt':   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>',
     'wallet':    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5z"/><path d="M16 12h.01"/><path d="M3 8h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3"/></svg>',
     'list':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    'hallmark':  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.6 1.9 3.2-.3 1 3 2.6 1.9-1.3 3 .6 3.2-3 1-2 2.5-3.1-.8-3.1.8-2-2.5-3-1 .6-3.2L2 8.5 4.6 6.6l1-3 3.2.3z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6"/></svg>',
     'crm':       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5 17c0-1.8 1.8-3 4-3s4 1.2 4 3"/><line x1="16" y1="10" x2="19" y2="10"/><line x1="16" y1="14" x2="19" y2="14"/></svg>',
     'tag':       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
 };
