@@ -158,6 +158,7 @@ def _boot_clr():
     #    only fall back to coreclr. NEVER set PYTHONNET_RUNTIME=coreclr up front
     #    because that forces coreclr which can't load System.Windows.Forms.
     clr_ok = False
+    why = []
     try:
         import pythonnet
         os.environ.pop("PYTHONNET_RUNTIME", None)
@@ -167,14 +168,20 @@ def _boot_clr():
                 os.environ["PYTHONNET_RUNTIME"] = runtime
                 clr_ok = True
                 return
-            except Exception:
+            except Exception as e:
+                # Keep the reason. Without it main.py could only say the CLR
+                # did not start, which is how every failure ended up being
+                # reported to the customer as a missing download.
+                why.append(runtime + ": " + repr(e)[:200])
                 continue
-    except Exception:
-        pass
+    except Exception as e:
+        why.append("pythonnet import: " + repr(e)[:200])
 
-    # 6) no .NET runtime found - set flag for friendly error in main.py
+    # 6) could not start a runtime - record the flag AND the reason, so main.py
+    #    can tell a missing install apart from a broken one.
     if not clr_ok:
         os.environ["AURUM_CLR_FAILED"] = "1"
+        os.environ["AURUM_CLR_ERROR"] = " | ".join(why)[:500]
 
 _boot_clr()
 '''

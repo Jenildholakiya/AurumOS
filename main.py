@@ -6438,25 +6438,55 @@ def run_aur_os():
     except Exception:
         _wv_store = None
 
-    # Check if CLR failed to load (no .NET installed on this PC)
-    # The rthook in build.py sets AURUM_CLR_FAILED=1 when pythonnet.load() fails.
+    # Did the CLR start? The rthook sets AURUM_CLR_FAILED=1 when it could not,
+    # and AURUM_CLR_ERROR to whatever was actually raised.
+    #
+    # This used to show one message for every failure: "install .NET Desktop
+    # Runtime 8.0". The hook asks for the .NET Framework backend FIRST, and
+    # .NET Framework 4.x ships inside Windows, so on nearly every shop PC that
+    # message named something already installed. The customer went away,
+    # installed .NET 8, came back, and got the identical dialog. Look at what
+    # is genuinely on the machine before saying anything about it.
     clr_failed = os.environ.get("AURUM_CLR_FAILED") == "1"
+    clr_error = os.environ.get("AURUM_CLR_ERROR", "")
+    try:
+        from core import dotnet as _dotnet
+        verdict = _dotnet.diagnose(clr_error if clr_failed else "")
+        LOG(_dotnet.summary_line(verdict.get('facts')))
+    except Exception as _de:
+        ERR(f"[.NET] could not check what is installed: {_de}")
+        verdict = None
+
     if clr_failed:
+        if verdict is None:
+            # The check itself is unavailable, so word it for both cases rather
+            # than asserting one of them.
+            title = "AurumOS — Cannot Start"
+            body = ("AurumOS could not start the Microsoft .NET runtime.\n\n"
+                    "If .NET Desktop Runtime 8.0 is not installed, get it from:\n"
+                    "https://dotnet.microsoft.com/download/dotnet/8.0\n\n"
+                    "If it is already installed, reinstall AurumOS keeping the "
+                    "_internal folder next to AurumOS.exe.")
+        else:
+            title = verdict['title']
+            body = verdict['message']
+            LOG(f"[.NET] refusing to start: {verdict['reason']} :: {verdict.get('detail', '')}")
+        if clr_error:
+            ERR(f"[.NET] runtime load error: {clr_error}")
         try:
             import ctypes
             MB_OK = 0x00000000
             MB_ICONERROR = 0x00000010
-            ctypes.windll.user32.MessageBoxW(
-                0,
-                "AurumOS requires Microsoft .NET Desktop Runtime 8.0 or later.\n\n"
-                "Please install it from:\nhttps://dotnet.microsoft.com/download/dotnet/8.0\n\n"
-                "After installing, restart AurumOS.",
-                "AurumOS — Missing Component",
-                MB_OK | MB_ICONERROR
-            )
+            ctypes.windll.user32.MessageBoxW(0, body, title, MB_OK | MB_ICONERROR)
         except Exception:
             pass
         sys.exit(1)
+
+    # The runtime did start, even though the check found nothing it recognises.
+    # Note it and carry on: blocking a machine the app is about to work fine on
+    # is the worse mistake of the two.
+    if verdict is not None and not verdict.get('ok'):
+        LOG(f"[.NET] {verdict.get('reason')} by inspection, but the runtime loaded; continuing")
 
     # CLR is available — now safely import pywebview and apply monkey-patch
     _ensure_webview()
