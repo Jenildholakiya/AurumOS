@@ -3832,6 +3832,240 @@ class AurumAPI:
             ERR(f"[WA] message: {e}")
             return {'status': 'error', 'message': str(e)}
 
+    # ══════════════════════════════════════════════════════════════════
+    #  HALLMARKING
+    #  Gold jewellery may not be sold in India without a hallmark. Stock
+    #  goes to an assaying centre, comes back struck with a six-character
+    #  number, and only then can be billed. The money sitting in the gap
+    #  is what this panel measures.
+    # ══════════════════════════════════════════════════════════════════
+
+    def hallmark_dashboard(self, limit=500):
+        """Everything the panel shows, in one call.
+
+        One call rather than five because the page opens on a shop counter
+        over a bridge that is not free, and because five separate answers
+        can disagree with each other about what is still at the centre.
+        """
+        try:
+            from core import hallmark as _hm
+            self.db.ensure_hallmark_tables()
+            pending = self.db.hm_pending_stock(limit)
+            lots = self.db.hm_lots(True, 200)
+            out = _hm.dashboard(pending, lots)
+            out['status'] = 'success'
+            out['pending'] = pending
+            out['centres'] = self.db.hm_centres()
+            out['registration'] = self.db.get_config('bis_registration', '')
+            out['next_lot_no'] = _hm.next_lot_no(self.db.hm_lot_numbers())
+            out['defaults'] = {
+                'per_piece': _hm.DEFAULT_PER_PIECE,
+                'min_charge': _hm.DEFAULT_MIN_CHARGE,
+                'turnaround_days': _hm.DEFAULT_TURNAROUND_DAYS,
+                'gst_rate': _hm.GST_RATE,
+            }
+            return out
+        except Exception as e:
+            ERR(f"[HM] dashboard: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_quote(self, pieces, per_piece='', min_charge=''):
+        """What a lot of this size would cost, and how many more pieces
+        would ride along inside the minimum for nothing."""
+        try:
+            from core import hallmark as _hm
+            q = _hm.charge_for(pieces, per_piece, min_charge)
+            q['free_slots'] = _hm.worth_sending(pieces, per_piece, min_charge)
+            q['status'] = 'success'
+            return q
+        except Exception as e:
+            ERR(f"[HM] quote: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_save_centre(self, data):
+        """Add or edit an assaying centre."""
+        try:
+            d = dict(data or {})
+            if not str(d.get('name') or '').strip():
+                return {'status': 'error', 'message': 'Give the centre a name.'}
+            cid = self.db.hm_save_centre(d)
+            if not cid:
+                return {'status': 'error', 'message': 'Could not save.'}
+            return {'status': 'success', 'id': cid}
+        except Exception as e:
+            ERR(f"[HM] save centre: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_set_registration(self, number):
+        """The shop's own BIS registration, which goes on the challan."""
+        try:
+            self.db.set_config('bis_registration',
+                               str(number or '').strip().upper())
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[HM] registration: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_check_pieces(self, tag_ids):
+        """Which of these may go, and why the rest may not.
+
+        Answered before the lot is packed, because a centre that refuses a
+        piece sends the whole lot back and charges for the trip.
+        """
+        try:
+            from core import hallmark as _hm
+            wanted = {str(t).strip() for t in (tag_ids or []) if str(t).strip()}
+            ok, refused = [], []
+            for it in self.db.hm_pending_stock(2000):
+                if it.get('tag_id') not in wanted:
+                    continue
+                fine, why = _hm.can_send(it)
+                row = dict(it)
+                row['grade'] = _hm.grade_mark(it.get('karat'))
+                if fine:
+                    ok.append(row)
+                else:
+                    row['reason'] = why
+                    refused.append(row)
+            found = {r['tag_id'] for r in ok} | {r['tag_id'] for r in refused}
+            for missing in sorted(wanted - found):
+                refused.append({'tag_id': missing,
+                                'reason': 'Not in stock, or already away.'})
+            return {'status': 'success', 'ok': ok, 'refused': refused}
+        except Exception as e:
+            ERR(f"[HM] check pieces: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_create_lot(self, centre_id, tag_ids, sent_date='', note=''):
+        """Pack a lot and send it. Refuses rather than sending a piece the
+        centre would reject."""
+        try:
+            from core import hallmark as _hm
+            checked = self.hallmark_check_pieces(tag_ids)
+            if checked.get('status') != 'success':
+                return checked
+            if checked['refused']:
+                first = checked['refused'][0]
+                return {'status': 'refused', 'refused': checked['refused'],
+                        'message': '%s: %s' % (first.get('tag_id'),
+                                               first.get('reason'))}
+            if not checked['ok']:
+                return {'status': 'error', 'message': 'No pieces chosen.'}
+
+            centre = {}
+            for c in self.db.hm_centres():
+                if int(c.get('id') or 0) == int(centre_id or 0):
+                    centre = c
+                    break
+            if not centre:
+                return {'status': 'error',
+                        'message': 'Choose which centre it is going to.'}
+
+            sent = str(sent_date or '').strip() or _hm.today().isoformat()
+            days = int(centre.get('turnaround_days')
+                       or _hm.DEFAULT_TURNAROUND_DAYS)
+            charge = _hm.charge_for(len(checked['ok']), centre.get('per_piece'),
+                                    centre.get('min_charge'))
+            lot_no = _hm.next_lot_no(self.db.hm_lot_numbers(), sent)
+            made = self.db.hm_create_lot(
+                lot_no, centre, [r['tag_id'] for r in checked['ok']],
+                sent, _hm.due_date(sent, days), charge, note)
+            if made.get('status') == 'success':
+                made['charge'] = charge
+                made['expected_date'] = _hm.due_date(sent, days)
+                made['centre'] = centre.get('name', '')
+            return made
+        except Exception as e:
+            ERR(f"[HM] create lot: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_lot(self, lot_id):
+        """One lot with its pieces, for the receiving screen."""
+        try:
+            from core import hallmark as _hm
+            lot = self.db.hm_lot(lot_id)
+            if not lot:
+                return {'status': 'not_found'}
+            lot['state'] = _hm.lot_state(lot)
+            lot['days_out'] = _hm.days_out(lot.get('sent_date'), None,
+                                           lot.get('received_date'))
+            for it in lot['items']:
+                it['grade'] = _hm.grade_mark(it.get('karat'))
+            lot['summary'] = _hm.summarise(lot['items'])
+            lot['status_code'] = lot.get('status')
+            lot['status'] = 'success'
+            return lot
+        except Exception as e:
+            ERR(f"[HM] lot: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_receive(self, lot_id, rows, received_date=''):
+        """Book a lot back in.
+
+        Every row is checked before any of them is written, so a single
+        mistyped number cannot leave half a lot recorded and half not.
+        """
+        try:
+            from core import hallmark as _hm
+            lot = self.db.hm_lot(lot_id)
+            if not lot:
+                return {'status': 'not_found'}
+            if str(lot.get('status') or '') == 'cancelled':
+                return {'status': 'error',
+                        'message': 'That lot was cancelled.'}
+
+            rows = list(rows or [])
+            dupes = _hm.duplicate_huids(rows)
+            if dupes:
+                return {'status': 'error',
+                        'message': 'The same number is on more than one '
+                                   'piece: ' + ', '.join(dupes)}
+            seen = self.db.hm_huids_in_use(int(lot_id))
+            problems = []
+            clean = []
+            for r in rows:
+                row = dict(r)
+                row['huid'] = _hm.normalise_huid(row.get('huid'))
+                fine, why = _hm.check_receipt(row, seen)
+                if not fine:
+                    problems.append({'tag_id': row.get('tag_id'),
+                                     'reason': why})
+                clean.append(row)
+            if problems:
+                return {'status': 'refused', 'refused': problems,
+                        'message': '%s: %s' % (problems[0]['tag_id'],
+                                               problems[0]['reason'])}
+
+            when = str(received_date or '').strip() or _hm.today().isoformat()
+            got = self.db.hm_receive(lot_id, clean, when)
+            if got.get('status') == 'success':
+                got['warnings'] = [
+                    {'tag_id': r.get('tag_id'),
+                     'note': _hm.huid_warning(r.get('huid'))}
+                    for r in clean if _hm.huid_warning(r.get('huid'))]
+            return got
+        except Exception as e:
+            ERR(f"[HM] receive: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_cancel_lot(self, lot_id):
+        """A lot that never left. Its pieces go back in the queue."""
+        try:
+            return self.db.hm_cancel_lot(lot_id)
+        except Exception as e:
+            ERR(f"[HM] cancel: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hallmark_find(self, term):
+        """Trace a piece by its number or its tag, which is the question
+        a BIS inspector asks."""
+        try:
+            rows = self.db.hm_find(term)
+            return {'status': 'success', 'rows': rows, 'count': len(rows)}
+        except Exception as e:
+            ERR(f"[HM] find: {e}")
+            return {'status': 'error', 'message': str(e)}
+
     def wa_wishes_today(self, within_days=0):
         """Today's birthdays and anniversaries, each with a message written.
 
