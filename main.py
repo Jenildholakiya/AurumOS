@@ -3487,6 +3487,236 @@ class AurumAPI:
                                         making_charge, making_type, sale_price, hsn)
         return {"status": "success"} if ok else {"status": "error"}
 
+    # -- CRM ---------------------------------------------------------------
+    # The screens call these. Storage is in db_manager, the rules are in
+    # core/crm.py; this joins the two and hands back something a page can
+    # render without doing arithmetic of its own.
+
+    def crm_dashboard(self, within_days=30, lapsed_days=365):
+        """Everything the CRM screen shows, in one call.
+
+        One call rather than eight because the page opens on a shop counter
+        over a bridge that is not free, and eight round trips is the
+        difference between a screen that appears and one that assembles
+        itself while somebody waits.
+        """
+        try:
+            from core import crm
+        except Exception as e:
+            ERR(f"[CRM] rules unavailable: {e}")
+            return {'status': 'error', 'message': str(e)}
+        try:
+            customers = self.db.crm_customers()
+            for c in customers:
+                c['segment_computed'] = crm.segment_for(c)
+
+            dues_rows = self.db.crm_dues()
+            by_customer = {}
+            for row in dues_rows:
+                by_customer.setdefault(row['customer'], []).append(row)
+            dues = []
+            for name, rows in by_customer.items():
+                aged = crm.age_dues(rows)
+                if aged['total'] <= 0:
+                    continue
+                aged['customer'] = name
+                dues.append(aged)
+            dues.sort(key=lambda d: -d['total'])
+
+            overall = {'0-30': 0.0, '31-60': 0.0, '61-90': 0.0, '90+': 0.0}
+            for d in dues:
+                for k in overall:
+                    overall[k] = round(overall[k] + d['buckets'][k], 2)
+
+            enrolments = []
+            for e in self.db.crm_enrolments():
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                e.pop('payments', None)
+                enrolments.append(e)
+
+            spend = sorted(customers, key=lambda c: -float(c.get('lifetime_value') or 0))
+            counts = {}
+            for c in customers:
+                counts[c['segment_computed']] = counts.get(c['segment_computed'], 0) + 1
+
+            return {
+                'status': 'success',
+                'counts': {
+                    'customers': len(customers),
+                    'segments': counts,
+                    'open_followups': len(self.db.crm_followups('open')),
+                    'open_orders': len(self.db.crm_orders('open')),
+                    'active_plans': sum(1 for e in enrolments if e.get('status') != 'completed'),
+                    'plans_behind': sum(1 for e in enrolments if e.get('status') == 'behind'),
+                },
+                'occasions': crm.upcoming_occasions(customers, int(within_days or 30)),
+                'lapsed': crm.lapsed(customers, int(lapsed_days or 365))[:50],
+                'dues': dues[:50],
+                'dues_total': overall,
+                'followups': self.db.crm_followups('open')[:50],
+                'orders': self.db.crm_orders('open')[:50],
+                'enrolments': enrolments[:50],
+                'top_customers': spend[:10],
+            }
+        except Exception as e:
+            ERR(f"[CRM] dashboard: {e}")
+            import traceback as _tb
+            _tb.print_exc()
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_customers(self):
+        try:
+            from core import crm
+            rows = self.db.crm_customers()
+            for c in rows:
+                c['segment_computed'] = crm.segment_for(c)
+            return rows
+        except Exception as e:
+            ERR(f"[CRM] customers: {e}")
+            return []
+
+    def crm_customer(self, name):
+        """One customer with everything attached to them."""
+        try:
+            from core import crm
+            name = str(name or '').strip()
+            match = [c for c in self.db.crm_customers()
+                     if str(c.get('name') or '').strip() == name]
+            if not match:
+                return {'status': 'not_found', 'name': name}
+            c = match[0]
+            c['segment_computed'] = crm.segment_for(c)
+            rows = [r for r in self.db.crm_dues() if r['customer'] == name]
+            plans = []
+            for e in self.db.crm_enrolments(name):
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                plans.append(e)
+            return {
+                'status': 'success',
+                'customer': c,
+                'ageing': crm.age_dues(rows),
+                'over_limit': crm.over_limit(
+                    crm.age_dues(rows)['total'], c.get('cash_limit')),
+                'purchases': self.db.get_customer_purchases(name, c.get('phone') or ''),
+                'notes': self.db.crm_notes(name),
+                'plans': plans,
+                'loyalty_points': self.db.crm_loyalty_balance(name),
+            }
+        except Exception as e:
+            ERR(f"[CRM] customer {name}: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_save_customer(self, data):
+        return self.db.crm_save_customer(data or {})
+
+    def crm_add_note(self, customer, note, kind='note'):
+        who = getattr(self, '_session_username', '') or ''
+        ok = self.db.crm_add_note(customer, note, kind, who)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_notes(self, customer):
+        return self.db.crm_notes(customer)
+
+    def crm_add_followup(self, customer, task, due_date='', owner=''):
+        ok = self.db.crm_add_followup(customer, task, due_date, owner)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_close_followup(self, followup_id):
+        ok = self.db.crm_close_followup(followup_id)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_followups(self, status='open'):
+        return self.db.crm_followups(status)
+
+    def crm_orders(self, status='open'):
+        return self.db.crm_orders(status)
+
+    def crm_close_order(self, order_id):
+        ok = self.db.crm_close_order(order_id)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_save_order(self, data):
+        return self.db.crm_save_order(data or {})
+
+    def crm_schemes(self, active_only=True):
+        return self.db.crm_schemes(bool(active_only))
+
+    def crm_save_scheme(self, data):
+        return self.db.crm_save_scheme(data or {})
+
+    def crm_enrol(self, scheme_id, customer, start_date=''):
+        return self.db.crm_enrol(scheme_id, customer, start_date)
+
+    def crm_enrolments(self, customer=''):
+        try:
+            from core import crm
+            out = []
+            for e in self.db.crm_enrolments(customer):
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                out.append(e)
+            return out
+        except Exception as e:
+            ERR(f"[CRM] enrolments: {e}")
+            return []
+
+    def crm_add_payment(self, enrolment_id, amount, paid_date='', mode='cash'):
+        return self.db.crm_add_payment(enrolment_id, amount, paid_date, mode)
+
+    def crm_scheme_schedule(self, start_date, months, monthly_amount):
+        """The instalment dates for a plan, so the screen can show them before
+        anyone is enrolled."""
+        try:
+            from core import crm
+            return crm.scheme_schedule(start_date, months, monthly_amount)
+        except Exception:
+            return []
+
+    def crm_loyalty_balance(self, customer):
+        return self.db.crm_loyalty_balance(customer)
+
+    def crm_award_loyalty(self, customer, amount, vch_id=''):
+        """Award points for a sale. Returns the new balance.
+
+        The till has shown and redeemed points since it was written and
+        nothing ever recorded them, so a balance never accumulated and
+        redeemed points were never taken off anything.
+        """
+        try:
+            from core import crm
+            pts = crm.points_for_sale(amount)
+            if pts > 0:
+                self.db.crm_add_loyalty(customer, earned=pts, vch_id=vch_id,
+                                        note='sale')
+            return {'status': 'success', 'earned': pts,
+                    'balance': self.db.crm_loyalty_balance(customer)}
+        except Exception as e:
+            ERR(f"[CRM] award loyalty: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_redeem_loyalty(self, customer, points, bill_amount, vch_id=''):
+        """Spend points against a bill, capped by balance and by the bill."""
+        try:
+            from core import crm
+            balance = self.db.crm_loyalty_balance(customer)
+            allowed, rupees = crm.redeemable(balance, bill_amount)
+            use = min(int(points or 0), allowed)
+            if use <= 0:
+                return {'status': 'error', 'message': 'Nothing to redeem.',
+                        'balance': balance}
+            self.db.crm_add_loyalty(customer, used=use, vch_id=vch_id, note='redeemed')
+            return {'status': 'success', 'used': use,
+                    'value': round(use * crm.DEFAULT_RUPEES_PER_POINT, 2),
+                    'balance': self.db.crm_loyalty_balance(customer)}
+        except Exception as e:
+            ERR(f"[CRM] redeem: {e}")
+            return {'status': 'error', 'message': str(e)}
+
     def get_item_by_tag(self, tag_id):
         """One scanned piece, with its own rate and making charge.
 
@@ -4335,10 +4565,26 @@ class AurumAPI:
             if status != 'ESTIMATE':
                 if not self.db.deduct_stock_after_sale(items_json):
                     return {"status":"error","message":"Sale was not completed because inventory could not be updated."}
+            # Loyalty, recorded rather than displayed. The till has shown and
+            # redeemed points since it was written and nothing ever stored
+            # them, so a balance never grew and redeemed points came off
+            # nothing. A walk-in with no name earns nothing, because there is
+            # nobody to credit.
+            loyalty = {}
+            if status != 'ESTIMATE' and customer and customer.lower() != 'walk-in':
+                try:
+                    used = int(float(inv.get('loyalty_used') or 0))
+                    if used > 0:
+                        self.crm_redeem_loyalty(customer, used, total_amount, vch_id)
+                    loyalty = self.crm_award_loyalty(customer, total_amount, vch_id)
+                except Exception as _le:
+                    ERR(f"[RETAIL BILL] loyalty skipped: {_le}")
             self._audit(f"Retail Bill: {vch_id}", f"Customer: {customer} | Status: {status}", "billing")
             self._notify_staff_bill(vch_id, customer, total_amount)
             LOG(f"[RETAIL BILL] generate_retail_bill returning vch_id={vch_id!r}")
-            return {"status":"success","vch_id":vch_id}
+            return {"status":"success","vch_id":vch_id,
+                    "loyalty_earned": loyalty.get('earned', 0),
+                    "loyalty_balance": loyalty.get('balance', 0)}
         except Exception as e:
             ERR(f"[RETAIL BILL] {e}")
             return {"status":"error","message":str(e)}
