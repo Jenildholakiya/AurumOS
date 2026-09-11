@@ -143,13 +143,30 @@ whoever is at the counter clicks Cancel, Windows records a **block** rule that
 persists, and a later allow rule does not override it. Staff PCs then fail to
 connect, with nothing in the log, because the packets never arrive.
 
-Run this once on the main PC, as Administrator:
+Run this once on the main PC, as Administrator.
+
+An Administrator prompt opens in `C:\Windows\System32`, not in the AurumOS
+folder, so a relative path finds nothing. Change directory first:
 
 ```powershell
+cd "C:\AurumOS"
 powershell -ExecutionPolicy Bypass -File .\tools\allow_through_firewall.ps1
 ```
 
-It ships in `dist\tools\`. It clears any stale block rule first, then adds an
+Or give the full path, and name the EXE the rule should be tied to:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "C:\AurumOS\tools\allow_through_firewall.ps1" -ExePath "C:\AurumOS\AurumOS.exe"
+```
+
+Substitute wherever AurumOS is actually installed.
+
+It ships in `dist\tools\`, which means it only exists in a folder produced by
+a build that included it. A copy installed before then has no `tools` folder,
+and the command reports that the file does not exist — which is what that
+error means, rather than anything being wrong with the firewall.
+
+It clears any stale block rule first, then adds an
 inbound TCP allow rule for that port, tied to `AurumOS.exe`, on **Private and
 Domain networks only**. Never Public: Windows treats any unfamiliar network as
 Public, and a till should not be reachable from a hotel or airport network.
