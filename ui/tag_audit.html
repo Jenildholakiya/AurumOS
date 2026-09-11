@@ -133,14 +133,14 @@ main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;overflow:hidde
 .ls:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(37,99,235,.10);}
 .lf{height:38px;background:var(--c);border:1px solid var(--r);border-radius:9px;font-size:.74rem;padding:0 12px;cursor:pointer;outline:none;color:var(--ink);transition:all .15s;}
 .lf:hover{border-color:var(--gl);background:var(--w);}
-.lh{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;gap:0;padding:0 16px;background:var(--c2);border-bottom:2px solid var(--r);flex-shrink:0;}
+.lh{display:grid;grid-template-columns:28px 100px 1fr 92px 52px 62px 64px;gap:0;padding:0 16px;background:var(--c2);border-bottom:2px solid var(--r);flex-shrink:0;}
 .lhc{font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);font-weight:700;padding:9px 5px;}
 .lhc.r{text-align:right;}
 .lhc.c{text-align:center;}
 .tl{flex:1;overflow-y:auto;padding:6px 0;}
 .tl::-webkit-scrollbar{width:6px;}
 .tl::-webkit-scrollbar-thumb{background:var(--c3);border-radius:3px;}
-.ti{display:grid;grid-template-columns:28px 100px 1fr 52px 62px 64px;align-items:center;gap:0;padding:0 16px;height:46px;margin:0 8px;border-bottom:1px solid var(--r2);border-radius:8px;cursor:pointer;transition:all .14s;position:relative;}
+.ti{display:grid;grid-template-columns:28px 100px 1fr 92px 52px 62px 64px;align-items:center;gap:0;padding:0 16px;height:46px;margin:0 8px;border-bottom:1px solid var(--r2);border-radius:8px;cursor:pointer;transition:all .14s;position:relative;}
 .ti::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;}
 .ti:hover{background:var(--c);transform:translateX(2px);}
 .ti.f::before{background:var(--gr);}
@@ -377,7 +377,8 @@ main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;overflow:hidde
         <div class="lhc"></div>
         <div class="lhc">Tag ID</div>
         <div class="lhc">Item Name</div>
-        <div class="lhc c">Touch</div>
+        <div class="lhc">HUID</div>
+        <div class="lhc c" id="lh-touch">Touch</div>
         <div class="lhc r">Gr. Wt</div>
         <div class="lhc c">Status</div>
       </div>
@@ -552,6 +553,18 @@ var PENDING_SESSION = null;
 var AUDIT_BY        = 'Admin';
 var AUDIT_TOUCH     = 'ALL';
 var LAST_CLOSED     = null;
+
+// ── MODE ──────────────────────────────────────────────────────────
+function isRetailMode() {
+    var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
+    try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; } catch (e) { return q === 'retail'; }
+}
+// Retail audits by piece, not purity — drop the Touch column head so it stays
+// in step with the row cells renderList() leaves out.
+if (isRetailMode()) {
+    var retailTouchHead = document.getElementById('lh-touch');
+    if (retailTouchHead) retailTouchHead.style.display = 'none';
+}
 
 // ── DIALOG HELPERS ────────────────────────────────────────────────
 function openDlg(id) {
@@ -1110,6 +1123,7 @@ function renderList() {
         allTags.push({
             tag_id:  tid,
             it_name: t.it_name,
+            huid:    t.huid,
             touch:   t.touch,
             gr_wt:   t.gr_wt,
             status:  st
@@ -1124,6 +1138,7 @@ function renderList() {
             allTags.push({
                 tag_id:  ekeys[j],
                 it_name: inf.it_name || '',
+                huid:    inf.huid || '',
                 touch:   inf.touch || 0,
                 gr_wt:   inf.gr_wt || 0,
                 status:  'extra'
@@ -1162,6 +1177,10 @@ function renderList() {
     var txtM = { found: 'FOUND', missing: 'MISSING', extra: 'EXTRA', absent: 'ABSENT' };
     var scM  = { found: 'f', missing: 'm', extra: 'e', absent: 'a' };
 
+    var retail = isRetailMode();
+    // A piece with no hallmark gets a dash, never a blank cell.
+    var noHuid = '<span style="font-weight:400;color:var(--ink3);">\u2014</span>';
+
     var html = '';
     for (var n = 0; n < visible.length; n++) {
         var v   = visible[n];
@@ -1170,7 +1189,8 @@ function renderList() {
             + '<div class="ti-ico">' + (icoM[v.status] || icoa) + '</div>'
             + '<div class="ti-id">' + vid + '</div>'
             + '<div class="ti-nm">' + (v.it_name || '\u2014') + '</div>'
-            + '<div class="ti-tc">' + (v.touch ? v.touch + '%' : '\u2014') + '</div>'
+            + '<div class="ti-id">' + (v.huid || noHuid) + '</div>'
+            + (retail ? '' : '<div class="ti-tc">' + (v.touch ? v.touch + '%' : '\u2014') + '</div>')
             + '<div class="ti-wt">' + (v.gr_wt ? parseFloat(v.gr_wt).toFixed(3) + 'g' : '\u2014') + '</div>'
             + '<div><span class="' + (pilM[v.status] || 'ti-st sm') + '">' + (txtM[v.status] || 'MISSING') + '</span></div>'
             + '</div>';
@@ -1374,6 +1394,8 @@ function printAuditReport() {
     var now = new Date();
     var dt = now.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
     var tm = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    var retail   = isRetailMode();
+    var missCols = retail ? 5 : 6;   // #, Tag ID, Item Name, HUID, [Touch], Gr Wt
 
     function build(biz) {
         biz = biz || 'Jewellery Business Management';
@@ -1382,11 +1404,12 @@ function printAuditReport() {
                 + '<td style="padding:7px 10px;font-size:8pt;color:#1d4ed8;font-family:Arial,sans-serif;text-align:center;">' + (i + 1) + '</td>'
                 + '<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:8.5pt;color:#1d4ed8;">' + x.tag_id + '</td>'
                 + '<td style="padding:7px 10px;font-size:9pt;">' + (x.it_name || '—') + '</td>'
-                + '<td style="padding:7px 10px;text-align:center;font-family:Arial,sans-serif;font-size:8.5pt;">' + (x.touch ? x.touch + '%' : '—') + '</td>'
+                + '<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:8.5pt;">' + (x.huid ? x.huid : '<span style="color:#9e9890;">—</span>') + '</td>'
+                + (retail ? '' : '<td style="padding:7px 10px;text-align:center;font-family:Arial,sans-serif;font-size:8.5pt;">' + (x.touch ? x.touch + '%' : '—') + '</td>')
                 + '<td style="padding:7px 10px;text-align:right;font-family:Arial,sans-serif;font-size:8.5pt;color:#5c5a52;">' + (x.gr_wt ? parseFloat(x.gr_wt).toFixed(3) + 'g' : '—') + '</td>'
                 + '</tr>';
         }).join('');
-        if (!missRows) missRows = '<tr><td colspan="5" style="padding:18px;text-align:center;font-size:9pt;color:#15803d;font-style:italic;">All booked tags accounted for — no missing pieces. ✓</td></tr>';
+        if (!missRows) missRows = '<tr><td colspan="' + missCols + '" style="padding:18px;text-align:center;font-size:9pt;color:#15803d;font-style:italic;">All booked tags accounted for — no missing pieces. ✓</td></tr>';
 
         return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AurumOS Tag Audit ' + lc.ref + '</title>'
             + '<style>'
@@ -1448,7 +1471,7 @@ function printAuditReport() {
                 + '<div class="sc g"><label>Booked</label><span>' + (lc.found + lc.missing + lc.extra) + '</span></div>'
             + '</div>'
             + '<div class="sec"><div class="sec-h">Missing Pieces (' + lc.missing + ')</div>'
-                + '<table class="tbl"><thead><tr><th class="c" style="width:26px;">#</th><th>Tag ID</th><th>Item Name</th><th class="c">Touch</th><th class="r">Gr Wt</th></tr></thead><tbody>' + missRows + '</tbody></table></div>'
+                + '<table class="tbl"><thead><tr><th class="c" style="width:26px;">#</th><th>Tag ID</th><th>Item Name</th><th>HUID</th>' + (retail ? '' : '<th class="c">Touch</th>') + '<th class="r">Gr Wt</th></tr></thead><tbody>' + missRows + '</tbody></table></div>'
             + '<div class="foot">'
                 + '<div class="sigs"><div class="sig"><div class="sigline">Prepared By</div></div><div class="sig"><div class="sigline">Verified By</div></div><div class="sig"><div class="sigline">Authorised Signatory</div></div></div>'
                 + '<div class="fbar"><div>Generated ' + dt + ' at ' + tm + '. System report from AurumOS.</div><div><div class="fbrand">Aurum<em>OS</em></div><div class="fbsub">Jewellery Business Management</div></div></div>'
@@ -1495,6 +1518,7 @@ function getMissingTags() {
         miss.push({
             tag_id:  k,
             it_name: t.it_name || '',
+            huid:    t.huid || '',
             touch:   t.touch || 0,
             gr_wt:   t.gr_wt || 0
         });

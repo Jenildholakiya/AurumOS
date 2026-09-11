@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Savings Schemes</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0f172a;--ink2:#1e293b;--ink3:#64748b;
+  --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+  --blue-ln:rgba(37,99,235,0.18);--blue-bg:rgba(37,99,235,0.06);
+  --rule:rgba(15,23,42,0.08);--rule2:rgba(15,23,42,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+  --sh:0 1px 3px rgba(15,23,42,0.04),0 4px 16px rgba(15,23,42,0.06);
+  --sh-hover:0 8px 28px rgba(37,99,235,0.12),0 2px 8px rgba(15,23,42,0.04);
+  --sans:"DM Sans",system-ui,sans-serif;
+  --mono:Arial,sans-serif;
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;}
+.wrap{display:flex;height:100vh;overflow:hidden;width:100vw;}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;width:100%;}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+header{
+  height:58px;flex-shrink:0;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:16px;
+  padding:0 36px;
+  position:relative;
+}
+.h-back{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;
+  border:1px solid var(--rule);background:var(--cream);font-size:0.75rem;color:var(--muted);
+  cursor:pointer;font-family:inherit;transition:all 0.15s;text-decoration:none;font-weight:500;}
+.h-back:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.h-div{width:1px;height:24px;background:var(--rule);}
+.h-title{font-family:var(--sans);font-size:1.05rem;color:var(--ink);letter-spacing:-0.3px;font-weight:700;}
+.h-title em{color:var(--blue);font-style:normal;font-weight:700;}
+.h-eyebrow{font-size:0.52rem;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;color:var(--muted2);margin-bottom:1px;}
+.h-spacer{flex:1;}
+.h-owner-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:99px;
+  background:var(--blue-bg);border:1px solid var(--blue-ln);font-size:0.65rem;font-weight:600;color:var(--blue3);}
+.h-owner-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.14);}
+
+.scroll{flex:1;overflow-y:auto;padding:34px 44px 64px;scroll-behavior:smooth;}
+.scroll::-webkit-scrollbar{width:11px;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(37,99,235,0.18);border-radius:99px;border:3px solid var(--cream);}
+.scroll::-webkit-scrollbar-thumb:hover{background:rgba(37,99,235,0.35);}
+
+.layout{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:26px;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+@media (max-width:1080px){.pair{grid-template-columns:1fr;}}
+
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:-10px;}
+.sec-dot{width:7px;height:7px;border-radius:50%;background:var(--blue-bg);border:2px solid var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.sec-ttl{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.7px;color:var(--blue3);}
+.sec-note{font-size:0.66rem;color:var(--muted2);margin-left:2px;}
+
+.card{
+  background:var(--white);
+  border:1px solid var(--rule);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:var(--sh);
+  transition:transform .2s cubic-bezier(.34,1.4,.64,1),box-shadow .2s;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.card:hover{transform:translateY(-2px);box-shadow:var(--sh-hover);}
+.card-hdr{padding:17px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule2);background:rgba(248,250,251,0.5);}
+.card-hdr-left{display:flex;align-items:center;gap:11px;}
+.card-icon{width:36px;height:36px;border-radius:10px;color:var(--blue3);
+  background:linear-gradient(150deg,var(--blue-bg),rgba(37,99,235,0.17));border:1px solid var(--blue-ln);
+  box-shadow:0 3px 10px rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.card-title{font-size:0.92rem;font-weight:600;color:var(--ink);}
+.card-sub{font-size:0.63rem;color:var(--muted2);margin-top:1px;}
+.card-body{padding:22px;flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld.full{grid-column:1/-1;}
+.fld label{font-size:0.54rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
+.inp{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:10px;
+  font-size:0.86rem;font-family:inherit;color:var(--ink);background:var(--cream);
+  outline:none;transition:border-color .14s,box-shadow .14s,background .14s;}
+.inp:focus{border-color:var(--blue2);background:var(--white);box-shadow:0 0 0 3px rgba(37,99,235,0.13);}
+select.inp{cursor:pointer;}
+.inp.sm{height:36px;font-size:0.78rem;border-radius:9px;}
+
+.sw-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--cream);}
+.sw-txt{font-size:0.74rem;font-weight:600;color:var(--ink);}
+.sw-sub{font-size:0.62rem;color:var(--muted);margin-top:2px;font-weight:400;}
+.sw{position:relative;width:42px;height:24px;flex-shrink:0;}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2;}
+.sw span{position:absolute;inset:0;background:var(--rule);border-radius:99px;transition:background .2s;}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(15,23,42,0.2);}
+.sw input:checked + span{background:var(--blue);}
+.sw input:checked + span::after{transform:translateX(18px);}
+
+.alert{
+  font-size:0.72rem;padding:9px 13px;border-radius:8px;display:none;
+  align-items:center;gap:8px;line-height:1.5;margin-top:10px;opacity:1;
+  transition:opacity 0.3s ease;
+}
+.alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,0.15);display:flex;}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);display:flex;}
+
+.btn-row{display:flex;gap:10px;margin-top:18px;}
+.btn{height:44px;padding:0 22px;border:none;border-radius:11px;font-family:inherit;font-size:0.8rem;font-weight:600;letter-spacing:0.2px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .16s cubic-bezier(.34,1.4,.64,1);}
+.btn-primary{background:linear-gradient(180deg,var(--blue2),var(--blue3));color:#fff;box-shadow:0 4px 14px rgba(37,99,235,0.22);}
+.btn-primary:hover:not(:disabled){background:linear-gradient(180deg,var(--blue),#1e40af);box-shadow:0 6px 18px rgba(37,99,235,0.35);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+.btn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);border-radius:11px;}
+.btn-ghost:hover{background:var(--cream3);}
+.btn.sm{height:34px;padding:0 14px;font-size:0.7rem;border-radius:9px;}
+
+/* ── PLAN LIST ─────────────────────────────────────────────────── */
+.plan-list{display:flex;flex-direction:column;gap:10px;max-height:430px;overflow-y:auto;}
+.plan-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--rule);
+  border-radius:12px;background:linear-gradient(160deg,var(--cream),#fff);cursor:pointer;transition:all .15s;}
+.plan-row:hover{border-color:var(--blue-ln);box-shadow:0 3px 12px rgba(37,99,235,0.1);}
+.plan-row.on{border-color:var(--blue);background:var(--blue-bg);}
+.plan-main{flex:1;min-width:0;}
+.plan-name{font-size:0.82rem;font-weight:600;color:var(--ink);}
+.plan-terms{font-size:0.64rem;color:var(--muted);margin-top:2px;}
+.plan-worth{text-align:right;flex-shrink:0;}
+.plan-worth b{display:block;font-family:var(--mono);font-size:0.8rem;color:var(--blue3);font-weight:600;}
+.plan-worth span{font-size:0.55rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;
+  font-size:0.53rem;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;flex-shrink:0;}
+.badge.on{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
+.badge.off{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
+
+/* ── PREVIEW ───────────────────────────────────────────────────── */
+.preview{margin-top:16px;padding-top:16px;border-top:1px solid var(--rule2);}
+.pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.pv-box{padding:12px 14px;border-radius:12px;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,var(--cream),#fff);border:1px solid var(--rule);}
+.pv-box::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--blue),var(--blue3));opacity:0.5;}
+.pv-box.gain::before{background:linear-gradient(180deg,var(--green),#15803d);opacity:0.6;}
+.pv-lbl{font-size:0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted2);}
+.pv-val{font-family:var(--mono);font-size:0.92rem;color:var(--ink);font-weight:600;margin-top:2px;}
+.pv-val.green{color:var(--green);}
+.pv-val.blue{color:var(--blue3);}
+.pv-note{font-size:0.6rem;color:var(--muted);margin-top:3px;}
+.pv-empty{font-size:0.7rem;color:var(--muted2);line-height:1.5;}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;
+  background:var(--blue-bg);border:1px solid var(--blue-ln);font-family:var(--mono);
+  font-size:0.66rem;color:var(--blue3);}
+.chip i{font-style:normal;font-size:0.55rem;color:var(--muted2);font-weight:700;}
+.chip.more{background:var(--cream2);border-color:var(--rule);color:var(--muted);}
+
+/* ── CUSTOMER PICKER ───────────────────────────────────────────── */
+.cust-list{margin-top:8px;max-height:210px;overflow-y:auto;border:1px solid var(--rule);
+  border-radius:11px;background:var(--cream);}
+.cust-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--rule2);transition:background .12s;}
+.cust-item:last-child{border-bottom:none;}
+.cust-item:hover{background:var(--blue-bg);}
+.cust-item.on{background:var(--blue-bg);box-shadow:inset 3px 0 0 var(--blue);}
+.cust-nm{font-size:0.78rem;font-weight:500;color:var(--ink);}
+.cust-ph{font-family:var(--mono);font-size:0.68rem;color:var(--muted2);}
+.cust-empty{padding:16px 13px;font-size:0.7rem;color:var(--muted2);text-align:center;}
+.picked{margin-top:10px;font-size:0.7rem;color:var(--muted);}
+.picked b{color:var(--ink);font-weight:600;}
+
+/* ── TABLE ─────────────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--cream2);padding:11px 16px;text-align:left;font-size:0.58rem;font-weight:700;
+  color:var(--muted2);text-transform:uppercase;border-bottom:1px solid var(--rule);
+  letter-spacing:0.7px;white-space:nowrap;}
+td{padding:12px 16px;border-bottom:1px solid var(--rule2);font-size:0.78rem;font-weight:500;vertical-align:middle;}
+tbody tr:hover{background:rgba(248,250,251,0.75);}
+.t-sub{font-size:0.62rem;color:var(--muted2);margin-top:2px;font-weight:400;}
+.t-num{font-family:var(--mono);font-weight:600;}
+.bar{height:4px;background:var(--cream3);border-radius:99px;overflow:hidden;margin-top:5px;width:130px;}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue2),var(--blue3));}
+.bar.behind i{background:linear-gradient(90deg,#f87171,var(--red));}
+.bar.done i{background:linear-gradient(90deg,#4ade80,var(--green));}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;
+  font-size:0.56rem;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap;}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.pill.on-track{background:var(--blue-bg);color:var(--blue3);border:1px solid var(--blue-ln);}
+.pill.behind{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,0.18);}
+.pill.completed{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
+
+.pay-row{display:none;}
+.pay-row.open{display:table-row;}
+.pay-row td{background:var(--cream);border-bottom:1px solid var(--rule);}
+.pay-form{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+.pay-form .fld{min-width:130px;}
+.pay-hint{font-size:0.64rem;color:var(--muted);flex:1;min-width:150px;line-height:1.5;}
+
+.empty{padding:30px 16px;text-align:center;color:var(--muted2);font-size:0.76rem;line-height:1.6;}
+
+body{
+  background:
+    radial-gradient(1200px 520px at 80% -12%, rgba(37,99,235,0.07), transparent 60%),
+    radial-gradient(900px 520px at -10% 112%, rgba(37,99,235,0.04), transparent 55%),
+    var(--cream);
+}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=2"></script>
+<div class="wrap">
+<div id="sidebar-container"></div>
+<main>
+
+<header>
+  <a class="h-back" onclick="history.back()" href="#">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Back
+  </a>
+  <div class="h-div"></div>
+  <div>
+    <div class="h-eyebrow">AurumOS CRM</div>
+    <div class="h-title">Savings <em>Schemes</em></div>
+  </div>
+  <div class="h-spacer"></div>
+  <div class="h-owner-chip"><span class="dot"></span><span id="h-count">0 enrolments</span></div>
+</header>
+
+<div class="scroll">
+<div class="layout">
+
+  <!-- ── 1. PLANS ──────────────────────────────────────────────── -->
+  <div class="sec-hdr">
+    <div class="sec-dot"></div>
+    <div class="sec-ttl">Plans</div>
+    <div class="sec-note">The monthly gold plans this shop offers</div>
+  </div>
+
+  <div class="pair">
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="4" x2="8" y2="20"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Existing Plans</div>
+            <div class="card-sub">Click one to edit it</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost sm" onclick="newScheme()">New Plan</button>
+      </div>
+      <div class="card-body">
+        <div class="plan-list" id="plan-list">
+          <div class="empty">Loading plans…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          </div>
+          <div>
+            <div class="card-title" id="sch-form-title">New Plan</div>
+            <div class="card-sub" id="sch-form-sub">Months, instalment and the bonus the shop adds</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <input type="hidden" id="s-id" value="">
+        <div class="form-grid">
+          <div class="fld full">
+            <label>Plan Name</label>
+            <input class="inp" id="s-name" type="text" placeholder="e.g. Swarna Nidhi 11+1" oninput="previewScheme()">
+          </div>
+          <div class="fld">
+            <label>Months</label>
+            <input class="inp" id="s-months" type="number" min="1" step="1" placeholder="11" oninput="previewScheme()">
+          </div>
+          <div class="fld">
+            <label>Monthly Amount (&#8377;)</label>
+            <input class="inp" id="s-amount" type="number" min="1" step="1" placeholder="5000" oninput="previewScheme()">
+          </div>
+          <div class="fld">
+            <label>Bonus Type</label>
+            <select class="inp" id="s-bonus-type" onchange="previewScheme()">
+              <option value="month">Shop adds instalments</option>
+              <option value="percent">Percent of what is paid</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label id="s-bonus-label">Bonus Value (months)</label>
+            <input class="inp" id="s-bonus-value" type="number" min="0" step="0.5" placeholder="1" oninput="previewScheme()">
+          </div>
+          <div class="fld full">
+            <div class="sw-row">
+              <div>
+                <div class="sw-txt">Offering this plan</div>
+                <div class="sw-sub">Turn off to retire a plan without losing its enrolments</div>
+              </div>
+              <label class="sw"><input type="checkbox" id="s-active" checked><span></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview">
+          <div class="pv-grid">
+            <div class="pv-box">
+              <div class="pv-lbl">Customer Pays</div>
+              <div class="pv-val" id="pv-pays">&#8377;0</div>
+              <div class="pv-note" id="pv-pays-note">&mdash;</div>
+            </div>
+            <div class="pv-box gain">
+              <div class="pv-lbl">Shop Adds</div>
+              <div class="pv-val green" id="pv-bonus">&#8377;0</div>
+              <div class="pv-note" id="pv-bonus-note">&mdash;</div>
+            </div>
+            <div class="pv-box">
+              <div class="pv-lbl">Worth at Maturity</div>
+              <div class="pv-val blue" id="pv-total">&#8377;0</div>
+              <div class="pv-note" id="pv-total-note">&mdash;</div>
+            </div>
+          </div>
+          <div class="chips" id="pv-dates"></div>
+          <div class="pv-empty" id="pv-empty" style="margin-top:10px;">Fill in the months and the monthly amount to see what the plan is worth.</div>
+        </div>
+
+        <div class="alert" id="sch-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="sch-save" onclick="saveScheme()">Save Plan</button>
+          <button class="btn btn-ghost" onclick="newScheme()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 2. ENROL A CUSTOMER ───────────────────────────────────── -->
+  <div class="sec-hdr">
+    <div class="sec-dot"></div>
+    <div class="sec-ttl">Enrol a Customer</div>
+    <div class="sec-note">Put someone on a plan and print them their dates</div>
+  </div>
+
+  <div class="pair">
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          </div>
+          <div>
+            <div class="card-title">New Enrolment</div>
+            <div class="card-sub">Plan, customer and the month it starts</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld full">
+            <label>Plan</label>
+            <select class="inp" id="e-scheme">
+              <option value="">Loading plans…</option>
+            </select>
+          </div>
+          <div class="fld full">
+            <label>Customer</label>
+            <input class="inp" id="e-cust-search" type="text" placeholder="Type a name or phone number to search" oninput="renderCustomers()">
+            <div class="cust-list" id="cust-list">
+              <div class="cust-empty">Loading customers…</div>
+            </div>
+            <div class="picked" id="e-picked">No customer picked yet.</div>
+          </div>
+          <div class="fld">
+            <label>Start Date</label>
+            <input class="inp" id="e-start" type="date">
+          </div>
+          <div class="fld">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" id="e-save" onclick="enrol()" style="width:100%;">Enrol Customer</button>
+          </div>
+        </div>
+        <div class="alert" id="enr-alert"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Instalment Schedule</div>
+            <div class="card-sub" id="sched-sub">Every date this customer owes</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="sched-box">
+          <div class="empty">Enrol a customer and their dates appear here.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 3. ENROLMENTS ─────────────────────────────────────────── -->
+  <div class="sec-hdr">
+    <div class="sec-dot"></div>
+    <div class="sec-ttl">Enrolments</div>
+    <div class="sec-note">Who is on a plan, what they have paid and what is due next</div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-hdr-left">
+        <div class="card-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+        </div>
+        <div>
+          <div class="card-title">Running Plans</div>
+          <div class="card-sub" id="enl-sub">Loading…</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input class="inp sm" id="enl-search" type="text" placeholder="Search customer or plan" oninput="renderEnrolments()" style="width:230px;">
+        <button class="btn btn-ghost sm" onclick="loadEnrolments()">Refresh</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="alert" id="enl-alert" style="margin:14px 22px 0;"></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Plan</th>
+              <th>Paid So Far</th>
+              <th>Next Instalment</th>
+              <th>Status</th>
+              <th style="text-align:right;">Instalment</th>
+            </tr>
+          </thead>
+          <tbody id="enl-body">
+            <tr><td colspan="6"><div class="empty">Loading enrolments…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ── AurumOS · Savings Schemes ────────────────────────────────────────────────
+// The monthly gold plan: a customer pays a fixed amount for N months, the shop
+// adds a bonus at the end, and the total is redeemed against jewellery. Three
+// sections on one page — the plans a shop offers, putting a customer on one,
+// and the ledger of everyone running one.
+//
+// Every arithmetic answer on this page comes from Python (core.crm), not from
+// here, so a screen and a receipt can never disagree. The one exception is the
+// plan preview, which has nothing saved yet to ask about.
+
+var RS = '₹';
+var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+var SCHEMES     = [];   // every plan, active or retired
+var CUSTOMERS   = [];   // crm_customers()
+var ENROLMENTS  = [];   // crm_enrolments('') — each already carries its status
+var PICKED      = '';   // the customer name chosen in section 2
+var _pvTimer    = null;
+var _alertTimers = {};
+
+function el(id){ return document.getElementById(id); }
+
+function h(s){
+    return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// The bridge is injected asynchronously, and a missing method is normal on an
+// older build, so nothing here assumes either is there.
+function api(){ return (window.pywebview && window.pywebview.api) || null; }
+function has(name){ var a = api(); return !!(a && typeof a[name] === 'function'); }
+
+function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+// Indian rupees, whole rupees, Indian digit grouping.
+function money(v){ return RS + Math.round(num(v)).toLocaleString('en-IN'); }
+
+function todayISO(){
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+}
+
+// Built by hand rather than through Date, because new Date('2026-04-15') is
+// read as UTC and lands on the 14th in half the world.
+function fmtDate(iso){
+    var s = String(iso || '');
+    var p = s.split('-');
+    if (p.length !== 3) return s || '—';
+    var mi = parseInt(p[1], 10) - 1;
+    if (mi < 0 || mi > 11) return s;
+    return parseInt(p[2], 10) + ' ' + MONTHS[mi] + ' ' + p[0];
+}
+
+function setAlert(id, msg, type){
+    var a = el(id);
+    if (!a) return;
+    if (_alertTimers[id]) { clearTimeout(_alertTimers[id]); delete _alertTimers[id]; }
+    if (!msg) { a.className = 'alert'; a.innerHTML = ''; a.style.display = 'none'; return; }
+    a.className = 'alert' + (type ? ' ' + type : '');
+    a.style.display = 'flex';
+    a.style.opacity = '1';
+    a.innerHTML = (type === 'ok' ? '<span>&#10003;</span>' : type === 'err' ? '<span>&#9888;</span>' : '') + h(msg);
+    _alertTimers[id] = setTimeout(function(){
+        a.style.opacity = '0';
+        setTimeout(function(){ a.className = 'alert'; a.innerHTML = ''; a.style.display = 'none'; }, 300);
+    }, 4000);
+}
+
+function setBtn(id, label, disabled){
+    var b = el(id);
+    if (!b) return;
+    b.innerText = label;
+    b.disabled = !!disabled;
+}
+
+// ── 1. PLANS ────────────────────────────────────────────────────────────────
+
+function loadSchemes(){
+    if (!has('crm_schemes')) {
+        el('plan-list').innerHTML = '<div class="empty">This build does not include savings schemes yet. Restart the updated app.</div>';
+        el('e-scheme').innerHTML = '<option value="">Unavailable</option>';
+        return;
+    }
+    // false: retired plans too, so one can be edited back into service.
+    api().crm_schemes(false).then(function(rows){
+        SCHEMES = rows || [];
+        renderSchemes();
+        fillSchemeSelect();
+    }).catch(function(){
+        el('plan-list').innerHTML = '<div class="empty">Could not read the plans.</div>';
+    });
+}
+
+function renderSchemes(){
+    var box = el('plan-list');
+    if (!SCHEMES.length) {
+        box.innerHTML = '<div class="empty">No plans yet.<br>Build the first one on the right.</div>';
+        return;
+    }
+    var current = el('s-id').value;
+    box.innerHTML = SCHEMES.map(function(s){
+        var months = num(s.months), amount = num(s.monthly_amount);
+        var pays   = months * amount;
+        var worth  = pays + bonusFor(s.bonus_type, s.bonus_value, months, amount);
+        var active = String(s.active) === '1' || s.active === true || s.active === 1;
+        return '<div class="plan-row' + (String(s.id) === String(current) ? ' on' : '') + '" onclick="editScheme(' + s.id + ')">'
+             + '<div class="plan-main">'
+             +   '<div class="plan-name">' + h(s.name) + '</div>'
+             +   '<div class="plan-terms">' + months + ' &times; ' + money(amount)
+             +     ' &middot; ' + h(bonusPhrase(s.bonus_type, s.bonus_value)) + '</div>'
+             + '</div>'
+             + '<span class="badge ' + (active ? 'on' : 'off') + '">' + (active ? 'Offering' : 'Retired') + '</span>'
+             + '<div class="plan-worth"><b>' + money(worth) + '</b><span>at maturity</span></div>'
+             + '</div>';
+    }).join('');
+}
+
+// Mirrors core.crm.scheme_status: 'month' is the shop adding that many
+// instalments, 'percent' is that share of everything paid in.
+function bonusFor(type, value, months, amount){
+    var v = num(value);
+    var kind = String(type || '').toLowerCase();
+    if (kind === 'month')   return num(amount) * v;
+    if (kind === 'percent') return num(months) * num(amount) * v / 100;
+    return 0;
+}
+
+function bonusPhrase(type, value){
+    var v = num(value);
+    var kind = String(type || '').toLowerCase();
+    if (!v) return 'no bonus';
+    if (kind === 'month')   return 'shop adds ' + (v === 1 ? '1 month' : v + ' months');
+    if (kind === 'percent') return 'shop adds ' + v + '%';
+    return 'no bonus';
+}
+
+function newScheme(){
+    el('s-id').value = '';
+    el('s-name').value = '';
+    el('s-months').value = '';
+    el('s-amount').value = '';
+    el('s-bonus-type').value = 'month';
+    el('s-bonus-value').value = '';
+    el('s-active').checked = true;
+    el('sch-form-title').innerText = 'New Plan';
+    el('sch-form-sub').innerText = 'Months, instalment and the bonus the shop adds';
+    setBtn('sch-save', 'Save Plan', false);
+    setAlert('sch-alert', '');
+    renderSchemes();
+    previewScheme();
+}
+
+function editScheme(id){
+    var s = null, i;
+    for (i = 0; i < SCHEMES.length; i++) {
+        if (String(SCHEMES[i].id) === String(id)) { s = SCHEMES[i]; break; }
+    }
+    if (!s) return;
+    el('s-id').value = s.id;
+    el('s-name').value = s.name || '';
+    el('s-months').value = s.months || '';
+    el('s-amount').value = s.monthly_amount || '';
+    el('s-bonus-type').value = (String(s.bonus_type || 'month').toLowerCase() === 'percent') ? 'percent' : 'month';
+    el('s-bonus-value').value = s.bonus_value || '';
+    el('s-active').checked = (String(s.active) === '1' || s.active === true || s.active === 1);
+    el('sch-form-title').innerText = 'Editing ' + (s.name || 'plan');
+    el('sch-form-sub').innerText = 'Changes apply to new enrolments and to what running plans are worth';
+    setAlert('sch-alert', '');
+    renderSchemes();
+    previewScheme();
+}
+
+// What the plan is worth, recomputed on every keystroke. The dates come from
+// Python so the preview counts months the same way the real schedule does.
+function previewScheme(){
+    var kind   = el('s-bonus-type').value;
+    var months = num(el('s-months').value);
+    var amount = num(el('s-amount').value);
+    var value  = num(el('s-bonus-value').value);
+
+    el('s-bonus-label').innerText = (kind === 'percent') ? 'Bonus Value (%)' : 'Bonus Value (months)';
+    el('s-bonus-value').placeholder = (kind === 'percent') ? '5' : '1';
+
+    if (!(months > 0) || !(amount > 0)) {
+        el('pv-pays').innerHTML = money(0);
+        el('pv-bonus').innerHTML = money(0);
+        el('pv-total').innerHTML = money(0);
+        el('pv-pays-note').innerHTML = '&mdash;';
+        el('pv-bonus-note').innerHTML = '&mdash;';
+        el('pv-total-note').innerHTML = '&mdash;';
+        el('pv-dates').innerHTML = '';
+        el('pv-empty').style.display = 'block';
+        return;
+    }
+
+    var pays  = months * amount;
+    var bonus = bonusFor(kind, value, months, amount);
+
+    el('pv-empty').style.display = 'none';
+    el('pv-pays').innerHTML = money(pays);
+    el('pv-pays-note').innerText = months + ' instalments of ' + money(amount);
+    el('pv-bonus').innerHTML = money(bonus);
+    el('pv-bonus-note').innerText = value > 0
+        ? (kind === 'percent' ? value + '% of what is paid in'
+                              : 'The shop pays the last ' + (value === 1 ? 'instalment' : value + ' instalments'))
+        : 'No bonus on this plan';
+    el('pv-total').innerHTML = money(pays + bonus);
+    el('pv-total-note').innerText = 'Redeemable against jewellery';
+
+    // Debounced: this crosses the bridge, and the fields are being typed into.
+    if (_pvTimer) clearTimeout(_pvTimer);
+    _pvTimer = setTimeout(function(){ previewDates(months, amount); }, 260);
+}
+
+function previewDates(months, amount){
+    var box = el('pv-dates');
+    if (!has('crm_scheme_schedule')) { box.innerHTML = ''; return; }
+    api().crm_scheme_schedule(todayISO(), months, amount).then(function(rows){
+        rows = rows || [];
+        if (!rows.length) { box.innerHTML = ''; return; }
+        var shown = rows.slice(0, 4);
+        var html = shown.map(function(r){
+            return '<span class="chip"><i>#' + r.instalment + '</i>' + h(fmtDate(r.due_date)) + '</span>';
+        }).join('');
+        if (rows.length > shown.length) {
+            html += '<span class="chip more">+ ' + (rows.length - shown.length)
+                 +  ' more, last on ' + h(fmtDate(rows[rows.length - 1].due_date)) + '</span>';
+        }
+        box.innerHTML = html;
+    }).catch(function(){ box.innerHTML = ''; });
+}
+
+function saveScheme(){
+    if (!has('crm_save_scheme')) {
+        setAlert('sch-alert', 'This build does not include savings schemes yet. Restart the updated app.', 'err');
+        return;
+    }
+    var name   = el('s-name').value.trim();
+    var months = num(el('s-months').value);
+    var amount = num(el('s-amount').value);
+    if (!name)          { setAlert('sch-alert', 'Give the plan a name.', 'err'); return; }
+    if (!(months > 0))  { setAlert('sch-alert', 'A plan needs a number of months.', 'err'); return; }
+    if (!(amount > 0))  { setAlert('sch-alert', 'A plan needs a monthly amount.', 'err'); return; }
+
+    var payload = {
+        name: name,
+        months: months,
+        monthly_amount: amount,
+        bonus_type: el('s-bonus-type').value,
+        bonus_value: num(el('s-bonus-value').value),
+        active: el('s-active').checked ? 1 : 0
+    };
+    var id = el('s-id').value;
+    if (id) payload.id = parseInt(id, 10);
+
+    setBtn('sch-save', 'Saving…', true);
+    api().crm_save_scheme(payload).then(function(r){
+        setBtn('sch-save', 'Save Plan', false);
+        if (r && r.status === 'success') {
+            setAlert('sch-alert', id ? 'Plan updated.' : 'Plan saved.', 'ok');
+            el('s-id').value = r.id || id || '';
+            loadSchemes();
+        } else {
+            setAlert('sch-alert', (r && r.message) || 'Could not save the plan.', 'err');
+        }
+    }).catch(function(e){
+        setBtn('sch-save', 'Save Plan', false);
+        setAlert('sch-alert', 'Error: ' + e, 'err');
+    });
+}
+
+// ── 2. ENROL A CUSTOMER ─────────────────────────────────────────────────────
+
+function fillSchemeSelect(){
+    var sel = el('e-scheme');
+    var keep = sel.value;
+    var live = SCHEMES.filter(function(s){
+        return String(s.active) === '1' || s.active === true || s.active === 1;
+    });
+    if (!live.length) {
+        sel.innerHTML = '<option value="">No plan is being offered</option>';
+        return;
+    }
+    sel.innerHTML = '<option value="">Pick a plan…</option>' + live.map(function(s){
+        return '<option value="' + s.id + '">' + h(s.name) + ' &mdash; ' + num(s.months)
+             + ' &times; ' + money(s.monthly_amount) + '</option>';
+    }).join('');
+    if (keep) sel.value = keep;
+}
+
+function loadCustomers(){
+    if (!has('crm_customers')) {
+        el('cust-list').innerHTML = '<div class="cust-empty">Customer list unavailable on this build.</div>';
+        return;
+    }
+    api().crm_customers().then(function(rows){
+        CUSTOMERS = rows || [];
+        renderCustomers();
+    }).catch(function(){
+        el('cust-list').innerHTML = '<div class="cust-empty">Could not read the customer list.</div>';
+    });
+}
+
+function renderCustomers(){
+    var q = el('e-cust-search').value.toLowerCase().trim();
+    var box = el('cust-list');
+    var list = CUSTOMERS.filter(function(c){
+        if (!q) return true;
+        return String(c.name || '').toLowerCase().indexOf(q) >= 0
+            || String(c.phone || '').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!list.length) {
+        box.innerHTML = '<div class="cust-empty">' + (q ? 'No customer matches that.' : 'No customers on file yet.') + '</div>';
+        return;
+    }
+    box.innerHTML = list.slice(0, 60).map(function(c){
+        var nm = String(c.name || '').trim();
+        return '<div class="cust-item' + (nm && nm === PICKED ? ' on' : '') + '" data-name="' + h(nm) + '">'
+             + '<span class="cust-nm">' + h(nm || '(unnamed)') + '</span>'
+             + '<span class="cust-ph">' + h(c.phone || '—') + '</span>'
+             + '</div>';
+    }).join('');
+    if (list.length > 60) {
+        box.innerHTML += '<div class="cust-empty">' + (list.length - 60) + ' more — keep typing to narrow it down.</div>';
+    }
+}
+
+// One listener on the container rather than an onclick per row, so a name with
+// a quote in it cannot break the markup.
+function wireCustomerPicker(){
+    var box = el('cust-list');
+    if (!box) return;
+    box.addEventListener('click', function(ev){
+        var node = ev.target;
+        while (node && node !== box && !(node.className && String(node.className).indexOf('cust-item') >= 0)) {
+            node = node.parentNode;
+        }
+        if (!node || node === box) return;
+        PICKED = node.getAttribute('data-name') || '';
+        el('e-picked').innerHTML = PICKED
+            ? 'Enrolling <b>' + h(PICKED) + '</b>'
+            : 'No customer picked yet.';
+        renderCustomers();
+    });
+}
+
+function enrol(){
+    if (!has('crm_enrol')) {
+        setAlert('enr-alert', 'This build does not include savings schemes yet. Restart the updated app.', 'err');
+        return;
+    }
+    var sid   = el('e-scheme').value;
+    var start = el('e-start').value || todayISO();
+    if (!sid)    { setAlert('enr-alert', 'Pick a plan first.', 'err'); return; }
+    if (!PICKED) { setAlert('enr-alert', 'Pick a customer from the list.', 'err'); return; }
+
+    setBtn('e-save', 'Enrolling…', true);
+    api().crm_enrol(parseInt(sid, 10), PICKED, start).then(function(r){
+        setBtn('e-save', 'Enrol Customer', false);
+        if (r && r.status === 'success') {
+            setAlert('enr-alert', PICKED + ' is enrolled.', 'ok');
+            showSchedule(sid, PICKED, start);
+            loadEnrolments();
+        } else {
+            setAlert('enr-alert', (r && r.message) || 'Could not enrol this customer.', 'err');
+        }
+    }).catch(function(e){
+        setBtn('e-save', 'Enrol Customer', false);
+        setAlert('enr-alert', 'Error: ' + e, 'err');
+    });
+}
+
+function showSchedule(schemeId, customer, start){
+    var s = null, i;
+    for (i = 0; i < SCHEMES.length; i++) {
+        if (String(SCHEMES[i].id) === String(schemeId)) { s = SCHEMES[i]; break; }
+    }
+    if (!s || !has('crm_scheme_schedule')) return;
+    var box = el('sched-box');
+    el('sched-sub').innerText = customer + ' · ' + s.name;
+    box.innerHTML = '<div class="empty">Working out the dates…</div>';
+
+    api().crm_scheme_schedule(start, num(s.months), num(s.monthly_amount)).then(function(rows){
+        rows = rows || [];
+        if (!rows.length) { box.innerHTML = '<div class="empty">This plan has no schedule to show.</div>'; return; }
+        var total = 0;
+        var body = rows.map(function(r){
+            total += num(r.amount);
+            return '<tr><td class="t-num" style="width:70px;">#' + r.instalment + '</td>'
+                 + '<td>' + h(fmtDate(r.due_date)) + '</td>'
+                 + '<td class="t-num" style="text-align:right;">' + money(r.amount) + '</td></tr>';
+        }).join('');
+        var bonus = bonusFor(s.bonus_type, s.bonus_value, num(s.months), num(s.monthly_amount));
+        box.innerHTML =
+            '<div class="tbl-wrap" style="max-height:280px;overflow-y:auto;">'
+          +   '<table><tbody>' + body + '</tbody></table>'
+          + '</div>'
+          + '<div class="pv-grid" style="margin-top:14px;">'
+          +   '<div class="pv-box"><div class="pv-lbl">Customer Pays</div><div class="pv-val">' + money(total) + '</div></div>'
+          +   '<div class="pv-box gain"><div class="pv-lbl">Shop Adds</div><div class="pv-val green">' + money(bonus) + '</div></div>'
+          +   '<div class="pv-box"><div class="pv-lbl">Worth at Maturity</div><div class="pv-val blue">' + money(total + bonus) + '</div></div>'
+          + '</div>';
+    }).catch(function(){
+        box.innerHTML = '<div class="empty">Could not work out the dates.</div>';
+    });
+}
+
+// ── 3. ENROLMENTS ───────────────────────────────────────────────────────────
+
+function loadEnrolments(){
+    if (!has('crm_enrolments')) {
+        el('enl-body').innerHTML = '<tr><td colspan="6"><div class="empty">This build does not include savings schemes yet. Restart the updated app.</div></td></tr>';
+        el('enl-sub').innerText = 'Unavailable on this build';
+        return;
+    }
+    api().crm_enrolments('').then(function(rows){
+        ENROLMENTS = rows || [];
+        renderEnrolments();
+    }).catch(function(){
+        el('enl-body').innerHTML = '<tr><td colspan="6"><div class="empty">Could not read the enrolments.</div></td></tr>';
+        el('enl-sub').innerText = 'Could not load';
+    });
+}
+
+function statusLabel(st){
+    if (st === 'behind')    return 'Behind';
+    if (st === 'completed') return 'Completed';
+    return 'On track';
+}
+
+function renderEnrolments(){
+    var q = el('enl-search').value.toLowerCase().trim();
+    var list = ENROLMENTS.filter(function(e){
+        if (!q) return true;
+        return String(e.customer || '').toLowerCase().indexOf(q) >= 0
+            || String(e.scheme_name || '').toLowerCase().indexOf(q) >= 0;
+    });
+
+    var behind = 0, done = 0, i;
+    for (i = 0; i < ENROLMENTS.length; i++) {
+        if (ENROLMENTS[i].status === 'behind')    behind++;
+        if (ENROLMENTS[i].status === 'completed') done++;
+    }
+    el('h-count').innerText = ENROLMENTS.length + (ENROLMENTS.length === 1 ? ' enrolment' : ' enrolments');
+    el('enl-sub').innerText = ENROLMENTS.length
+        ? (ENROLMENTS.length + ' running · ' + behind + ' behind · ' + done + ' completed')
+        : 'Nobody is on a plan yet';
+
+    var body = el('enl-body');
+    if (!list.length) {
+        body.innerHTML = '<tr><td colspan="6"><div class="empty">'
+            + (q ? 'No enrolment matches that.' : 'Nobody is on a plan yet.<br>Enrol someone above.')
+            + '</div></td></tr>';
+        return;
+    }
+
+    body.innerHTML = list.map(function(e){
+        var st       = String(e.status || 'on_track');
+        var cls      = st === 'behind' ? 'behind' : st === 'completed' ? 'completed' : 'on-track';
+        var barCls   = st === 'behind' ? 'bar behind' : st === 'completed' ? 'bar done' : 'bar';
+        var planTot  = num(e.plan_total);
+        var paid     = num(e.paid_total);
+        var pct      = planTot > 0 ? Math.min(100, Math.round(paid / planTot * 100)) : 0;
+        var monthly  = num(e.monthly_amount);
+
+        var next;
+        if (e.next_due_date) {
+            next = '<div>' + h(fmtDate(e.next_due_date)) + '</div>'
+                 + '<div class="t-sub">' + money(e.next_due_amount) + '</div>';
+        } else if (st === 'completed') {
+            next = '<div style="color:var(--green);">All paid</div>'
+                 + '<div class="t-sub">Matures ' + h(fmtDate(e.maturity_date)) + '</div>';
+        } else {
+            next = '<div>&mdash;</div><div class="t-sub">Last date has passed</div>';
+        }
+
+        var note = '';
+        if (st === 'behind') {
+            note = '<div class="t-sub" style="color:var(--red);">'
+                 + num(e.missed_instalments) + ' missed · ' + money(e.behind_by) + ' behind</div>';
+        } else if (st === 'completed') {
+            note = '<div class="t-sub" style="color:var(--green);">Worth ' + money(e.redeemable_value) + '</div>';
+        }
+
+        return '<tr>'
+             + '<td><div style="font-weight:600;">' + h(e.customer) + '</div>'
+             +   '<div class="t-sub">Started ' + h(fmtDate(e.start_date)) + '</div></td>'
+             + '<td><div>' + h(e.scheme_name) + '</div>'
+             +   '<div class="t-sub">' + num(e.months) + ' &times; ' + money(monthly)
+             +   ' · ' + h(bonusPhrase(e.bonus_type, e.bonus_value)) + '</div></td>'
+             + '<td><span class="t-num">' + money(paid) + '</span>'
+             +   '<span class="t-sub" style="display:inline;"> of ' + money(planTot) + '</span>'
+             +   '<div class="' + barCls + '"><i style="width:' + pct + '%;"></i></div>'
+             +   '<div class="t-sub">' + num(e.paid_count) + ' of ' + num(e.instalments) + ' instalments</div></td>'
+             + '<td>' + next + '</td>'
+             + '<td><span class="pill ' + cls + '"><span class="dot"></span>' + statusLabel(st) + '</span>' + note + '</td>'
+             + '<td style="text-align:right;">'
+             +   '<button class="btn btn-ghost sm" onclick="togglePay(' + e.id + ')">Record</button></td>'
+             + '</tr>'
+             + '<tr class="pay-row" id="pay-' + e.id + '"><td colspan="6">'
+             +   '<div class="pay-form">'
+             +     '<div class="fld"><label>Amount (' + RS + ')</label>'
+             +       '<input class="inp sm" id="pa-amt-' + e.id + '" type="number" min="1" step="1" value="' + Math.round(monthly) + '"></div>'
+             +     '<div class="fld"><label>Paid On</label>'
+             +       '<input class="inp sm" id="pa-date-' + e.id + '" type="date" value="' + todayISO() + '"></div>'
+             +     '<div class="fld"><label>Mode</label>'
+             +       '<select class="inp sm" id="pa-mode-' + e.id + '">'
+             +         '<option value="cash">Cash</option>'
+             +         '<option value="upi">UPI</option>'
+             +         '<option value="card">Card</option>'
+             +       '</select></div>'
+             +     '<button class="btn btn-primary sm" id="pa-save-' + e.id + '" onclick="addPayment(' + e.id + ')">Save Instalment</button>'
+             +     '<button class="btn btn-ghost sm" onclick="togglePay(' + e.id + ')">Cancel</button>'
+             +     '<div class="pay-hint">Instalment ' + (num(e.paid_count) + 1) + ' of ' + num(e.instalments)
+             +       ' for ' + h(e.customer) + '.</div>'
+             +   '</div>'
+             + '</td></tr>';
+    }).join('');
+}
+
+function togglePay(id){
+    var row = el('pay-' + id);
+    if (!row) return;
+    var opening = String(row.className).indexOf('open') < 0;
+    // Only one instalment form open at a time — this table gets long.
+    var rows = document.querySelectorAll('.pay-row');
+    for (var i = 0; i < rows.length; i++) rows[i].className = 'pay-row';
+    if (opening) {
+        row.className = 'pay-row open';
+        var amt = el('pa-amt-' + id);
+        if (amt) amt.focus();
+    }
+}
+
+function addPayment(id){
+    if (!has('crm_add_payment')) {
+        setAlert('enl-alert', 'This build does not include savings schemes yet. Restart the updated app.', 'err');
+        return;
+    }
+    var amount = num(el('pa-amt-' + id).value);
+    var paid   = el('pa-date-' + id).value || todayISO();
+    var mode   = el('pa-mode-' + id).value;
+    if (!(amount > 0)) { setAlert('enl-alert', 'An instalment needs an amount.', 'err'); return; }
+
+    setBtn('pa-save-' + id, 'Saving…', true);
+    api().crm_add_payment(id, amount, paid, mode).then(function(r){
+        if (r && r.status === 'success') {
+            setAlert('enl-alert', 'Instalment of ' + money(amount) + ' recorded.', 'ok');
+            loadEnrolments();
+        } else {
+            setBtn('pa-save-' + id, 'Save Instalment', false);
+            setAlert('enl-alert', (r && r.message) || 'Could not record the instalment.', 'err');
+        }
+    }).catch(function(e){
+        setBtn('pa-save-' + id, 'Save Instalment', false);
+        setAlert('enl-alert', 'Error: ' + e, 'err');
+    });
+}
+
+// ── BOOT ────────────────────────────────────────────────────────────────────
+
+// 'crm' is this page's id in sidebar.js PAGE_META, so the Customers entry
+// stays lit while the savings plans are on screen.
+if (typeof initSidebar === 'function') initSidebar('crm');
+
+function bootPage(){
+    el('e-start').value = todayISO();
+    wireCustomerPicker();
+    previewScheme();
+    loadSchemes();
+    loadCustomers();
+    loadEnrolments();
+}
+
+// boot.js holds this back until the Python bridge is actually populated.
+if (window.apiReady) window.apiReady(bootPage);
+else setTimeout(bootPage, 1200);
+</script>
+</body>
+</html>

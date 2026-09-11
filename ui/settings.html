@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="boot.js"></script>
+<script src="gst.js"></script>
 <meta charset="UTF-8">
 <title>AurumOS | Settings</title>
 <link rel="stylesheet" href="fonts.css">
@@ -128,6 +129,18 @@ header{
 .sys-val{font-family:var(--mono);font-size:0.8rem;color:var(--ink);}
 .sys-val.green{color:var(--green);}
 .sys-val.muted{color:var(--muted);font-size:0.72rem;}
+.upd-line{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.upd-btn{font-family:var(--sans);font-size:0.62rem;font-weight:600;color:var(--blue);
+  background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:7px;
+  padding:4px 10px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.upd-btn:hover:not(:disabled){background:var(--blue);color:#fff;}
+.upd-btn:disabled{opacity:0.55;cursor:default;}
+.sys-val.pending{color:var(--blue);font-weight:600;}
+.upd-notes{margin-top:8px;display:flex;flex-direction:column;gap:3px;}
+.upd-notes span{font-family:var(--sans);font-size:0.66rem;color:var(--muted);line-height:1.4;
+  padding-left:10px;position:relative;}
+.upd-notes span::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;
+  border-radius:50%;background:var(--blue);opacity:0.55;}
 
 .right-col{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;}
 .full-width-card{grid-column:1 / -1;}
@@ -158,6 +171,26 @@ header{
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .fld{display:flex;flex-direction:column;gap:5px;}
 .fld.full{grid-column:1/-1;}
+/* ── GST ─────────────────────────────────────────────────────────── */
+.gst-note{min-height:14px;font-size:0.6rem;color:var(--muted2);}
+.gst-note.ok{color:var(--green);}
+.gst-note.bad{color:var(--red);}
+.inp.gst-ok{border-color:rgba(22,163,74,0.35);}
+.inp.gst-bad{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg);}
+#g-gstin{font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;}
+.gst-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--cream);margin-bottom:16px;}
+.gst-toggle-txt{font-size:0.74rem;font-weight:600;color:var(--ink);}
+.gst-toggle-sub{font-size:0.62rem;color:var(--muted);margin-top:2px;font-weight:400;}
+.gst-sw{position:relative;width:42px;height:24px;flex-shrink:0;}
+.gst-sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2;}
+.gst-sw span{position:absolute;inset:0;background:var(--rule);border-radius:99px;transition:background .2s;}
+.gst-sw span::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(15,23,42,0.2);}
+.gst-sw input:checked + span{background:var(--blue);}
+.gst-sw input:checked + span::after{transform:translateX(18px);}
+.gst-body[hidden]{display:none;}
+.gst-read{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule2);}
+.gst-read div{font-size:0.62rem;color:var(--muted);}
+.gst-read b{display:block;font-family:var(--mono);font-size:0.74rem;color:var(--ink);font-weight:500;margin-top:2px;}
 .fld label{font-size:0.54rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
 .inp-wrap{position:relative;}
 .inp{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:10px;
@@ -348,13 +381,25 @@ body{
         <div class="sys-grid">
           <div class="sys-row">
             <div class="sys-lbl">Version</div>
-            <div class="sys-val" id="sys-ver">—</div>
+            <div class="sys-val" id="sys-ver" data-aurum-version>—</div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-lbl">Latest Released</div>
+            <div class="sys-val" id="sys-latest" data-aurum-latest>—</div>
+          </div>
+          <div class="sys-row" style="grid-column:1/-1;">
+            <div class="sys-lbl">Updates</div>
+            <div class="upd-line">
+              <div class="sys-val" id="sys-upd-state">Checking…</div>
+              <button class="upd-btn" id="sys-upd-btn" onclick="checkVersionNow()">Check now</button>
+            </div>
+            <div class="upd-notes" id="sys-upd-notes"></div>
           </div>
           <div class="sys-row">
             <div class="sys-lbl">License Status</div>
             <div class="sys-val green">● Active</div>
           </div>
-          <div class="sys-row" style="grid-column:1/-1;">
+          <div class="sys-row">
             <div class="sys-lbl">Machine ID</div>
             <div class="sys-val muted" id="sys-mid">—</div>
           </div>
@@ -407,6 +452,74 @@ body{
         <div class="alert" id="edit-alert"></div>
         <div class="btn-row">
           <button class="btn btn-primary" id="save-btn" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GST Registration. One card for both retail and wholesale: the two
+         modes bill on different screens but file the same returns. -->
+    <div class="card full-width-card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="12" y2="11"/></svg>
+          </div>
+          <div>
+            <div class="card-title">GST Registration</div>
+            <div class="card-sub">Printed on every invoice and used for the tax split</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="gst-toggle-row">
+          <div>
+            <div class="gst-toggle-txt">This business is GST registered</div>
+            <div class="gst-toggle-sub">Turn off if you bill without GST</div>
+          </div>
+          <label class="gst-sw">
+            <input type="checkbox" id="g-registered" onchange="toggleGstCard()">
+            <span></span>
+          </label>
+        </div>
+
+        <div class="gst-body" id="g-body" hidden>
+          <div class="grid">
+            <div class="fld full">
+              <label>GSTIN</label>
+              <input class="inp" id="g-gstin" type="text" placeholder="24AAACC1206D1ZM">
+              <div class="gst-note" id="g-note"></div>
+            </div>
+            <div class="fld full">
+              <label>Legal Name (as on the GST certificate)</label>
+              <input class="inp" id="g-legal" type="text" placeholder="Leave blank to use the shop name">
+            </div>
+            <div class="fld">
+              <label>CGST %</label>
+              <input class="inp" id="g-cgst" type="number" step="0.01" min="0" max="100" placeholder="1.5">
+            </div>
+            <div class="fld">
+              <label>SGST %</label>
+              <input class="inp" id="g-sgst" type="number" step="0.01" min="0" max="100" placeholder="1.5">
+            </div>
+            <div class="fld">
+              <label>HSN Code</label>
+              <input class="inp" id="g-hsn" type="text" placeholder="7113">
+            </div>
+            <div class="fld">
+              <label>PAN</label>
+              <input class="inp" id="g-pan" type="text" placeholder="Filled in from the GSTIN">
+            </div>
+          </div>
+          <div class="gst-read">
+            <div>State<b id="g-state-out">—</b></div>
+            <div>State Code<b id="g-code-out">—</b></div>
+            <div>Total GST<b id="g-total-out">—</b></div>
+          </div>
+        </div>
+
+        <div class="alert" id="gst-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="gst-btn" onclick="saveGst()">Save GST Details</button>
         </div>
       </div>
     </div>
@@ -655,12 +768,13 @@ var _alertTimers = {};
 function loadAll() {
     var api = window.pywebview.api;
     api.get_settings && api.get_settings().then(function(r) {
-        if (r && r.status === 'success') { DATA = r.data||{}; render(); }
+        if (r && r.status === 'success') { DATA = r.data||{}; render(); fillGst(DATA); }
     }).catch(function(){});
 
-    api.get_current_version && api.get_current_version().then(function(v){
-        if (v) el('sys-ver').innerText = 'v' + v;
-    }).catch(function(){});
+    // Version rows paint themselves from the shared module in boot.js
+    // (data-aurum-version / data-aurum-latest). renderVersion below adds the
+    // sentence and the release notes around them.
+    renderVersion();
 
     api.get_machine_id && api.get_machine_id().then(function(m){
         if (m) el('sys-mid').innerText = m;
@@ -669,6 +783,64 @@ function loadAll() {
     tfaLoadStatus();
     loadAlertSettings();
 }
+
+// ── VERSION PANEL ────────────────────────────────────────
+// Says which of three things is true: this copy is current, a newer release
+// is on its way down, or GitHub could not be reached. Updates arrive on their
+// own; the button is here for the shop that wants to see it happen now.
+function renderVersion() {
+    var v = (window.AurumOS && window.AurumOS.version) || {};
+    var state = el('sys-upd-state');
+    var notes = el('sys-upd-notes');
+    if (!state) return;
+    state.className = 'sys-val';
+    if (v.available) {
+        state.classList.add('pending');
+        state.innerText = 'v' + v.latest + ' is downloading in the background'
+            + (v.releaseDate ? ' · released ' + v.releaseDate : '');
+    } else if (v.latest && v.installed) {
+        state.classList.add('green');
+        state.innerText = '● Up to date'
+            + (v.releaseDate ? ' · released ' + v.releaseDate : '');
+    } else if (v.installed) {
+        state.classList.add('muted');
+        state.innerText = 'Could not reach GitHub — this copy still runs v' + v.installed + '.';
+    } else {
+        state.classList.add('muted');
+        state.innerText = 'Checking…';
+    }
+    if (notes) {
+        notes.innerHTML = '';
+        if (v.available && v.changelog && v.changelog.length) {
+            v.changelog.slice(0, 5).forEach(function(line) {
+                var sp = document.createElement('span');
+                sp.textContent = line;
+                notes.appendChild(sp);
+            });
+        }
+    }
+}
+
+function checkVersionNow() {
+    var btn = el('sys-upd-btn');
+    var state = el('sys-upd-state');
+    if (!window.AurumOS || !window.AurumOS.refreshVersion) return;
+    if (btn) { btn.disabled = true; btn.innerText = 'Checking…'; }
+    if (state) { state.className = 'sys-val muted'; state.innerText = 'Checking GitHub…'; }
+    window.AurumOS.refreshVersion(true).then(function(v) {
+        // A waiting update downloads on the next silent pass anyway; asking
+        // for it now is the whole point of pressing the button.
+        var api = window.pywebview && window.pywebview.api;
+        if (v && v.available && api && typeof api.auto_update_silent === 'function') {
+            api.auto_update_silent().catch(function(){});
+        }
+        renderVersion();
+    }).catch(function(){ renderVersion(); }).then(function() {
+        if (btn) { btn.disabled = false; btn.innerText = 'Check now'; }
+    });
+}
+
+window.addEventListener('aurum-version', renderVersion);
 
 function loadAlertSettings() {
     var api = window.pywebview && window.pywebview.api;
@@ -1067,6 +1239,94 @@ document.addEventListener('keydown',function(e){
     if(['e-fine-limit','e-fine-discount-pct'].includes(a.id)){e.preventDefault();saveBillingRules();}
     if(['cur-pw','new-pw','conf-pw'].includes(a.id)){e.preventDefault();changePassword();}
 });
+
+// ── GST ──────────────────────────────────────────────────────────────
+// One card for retail and wholesale alike: the two modes bill on different
+// screens but file the same returns. The number is checked here as it is
+// typed and again in Python on save, because it ends up on a tax invoice and
+// in a return, where a transposed character is caught by nobody.
+function toggleGstCard(){
+    var on = el('g-registered').checked;
+    el('g-body').hidden = !on;
+    if (on) setTimeout(function(){ el('g-gstin').focus(); }, 60);
+}
+
+function _gstReadout(){
+    var G = window.AurumGST;
+    if (!G) return;
+    var r = G.validate(el('g-gstin').value);
+    el('g-state-out').innerText = r.ok ? r.state : '—';
+    el('g-code-out').innerText  = r.ok ? r.state_code : '—';
+    var tot = Math.round((G.cleanRate(el('g-cgst').value, 0) + G.cleanRate(el('g-sgst').value, 0)) * 1000) / 1000;
+    el('g-total-out').innerText = tot ? tot + '%' : '—';
+    if (r.ok && !el('g-pan').value) el('g-pan').value = r.pan;
+}
+
+function fillGst(d){
+    d = d || {};
+    var G = window.AurumGST;
+    el('g-registered').checked = String(d.gst_registered) === '1';
+    el('g-gstin').value = d.gstin || '';
+    el('g-legal').value = d.gst_legal_name || '';
+    el('g-cgst').value  = d.gst_cgst_rate || (G ? G.DEFAULT_CGST : 1.5);
+    el('g-sgst').value  = d.gst_sgst_rate || (G ? G.DEFAULT_SGST : 1.5);
+    el('g-hsn').value   = d.gst_hsn || (G ? G.DEFAULT_HSN : '7113');
+    el('g-pan').value   = d.pan || '';
+    toggleGstCard();
+    _gstReadout();
+}
+
+function saveGst(){
+    var G  = window.AurumGST;
+    var on = el('g-registered').checked;
+    var payload = {
+        gst_registered: on ? '1' : '0',
+        gstin:          G ? G.normalise(el('g-gstin').value) : el('g-gstin').value,
+        gst_legal_name: el('g-legal').value.trim(),
+        gst_cgst_rate:  el('g-cgst').value,
+        gst_sgst_rate:  el('g-sgst').value,
+        gst_hsn:        el('g-hsn').value,
+        pan:            G ? G.normalise(el('g-pan').value) : el('g-pan').value
+    };
+    if (on && G) {
+        var r = G.validate(payload.gstin);
+        if (!r.ok) {
+            setAlert('gst-alert', r.error, 'err');
+            el('g-gstin').classList.add('gst-bad');
+            return;
+        }
+        payload.gst_state = r.state;
+        payload.gst_state_code = r.state_code;
+    }
+    setBtn('gst-btn', 'Saving...', true);
+    window.pywebview.api.update_settings(payload).then(function(res){
+        if (res && res.status === 'success') {
+            Object.assign(DATA, payload);
+            setAlert('gst-alert', on ? 'GST details saved.' : 'Saved. Invoices will not show GST.', 'ok');
+            _gstReadout();
+        } else {
+            setAlert('gst-alert', (res && res.message) || 'Failed to save.', 'err');
+        }
+        setBtn('gst-btn', 'Save GST Details', false);
+    }).catch(function(e){
+        setAlert('gst-alert', 'Error: ' + e, 'err');
+        setBtn('gst-btn', 'Save GST Details', false);
+    });
+}
+
+(function(){
+    function wire(){
+        if (!window.AurumGST) return;
+        window.AurumGST.attach({ input: 'g-gstin', note: 'g-note', pan: 'g-pan',
+                                 onChange: _gstReadout });
+        ['g-cgst','g-sgst'].forEach(function(id){
+            var e = document.getElementById(id);
+            if (e) e.addEventListener('input', _gstReadout);
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+    else wire();
+})();
 </script>
 </body>
 </html>

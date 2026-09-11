@@ -191,12 +191,19 @@ except ImportError:
         def notify_session_active(self, *a): pass
         def get_weekly_report(self): return {}
 
+# The version is not typed in here: build.py stamps the highest git tag into
+# build_version.txt inside the bundle and updater reads it, so every build
+# reports the number its release was published under.
+# This import used to also ask for download_and_install, which was deleted from
+# updater.py in June. The missing name made the whole import fail, so the app
+# silently fell back to the stub below: it called itself 1.0.6 and every update
+# check returned None. Import only what exists.
 try:
-    from updater import check_for_update, download_and_install, CURRENT_VERSION
-except ImportError:
-    CURRENT_VERSION = '1.0.6'
+    from updater import check_for_update, CURRENT_VERSION
+except ImportError as _upd_err:
+    CURRENT_VERSION = '0.0.0'
     def check_for_update(**kw): return None
-    def download_and_install(*a, **kw): pass
+    print(f'[UPDATE] updater unavailable, update checks disabled: {_upd_err}')
 # noinspection PyUnresolvedReferences
 from core.tag_engine import TagFactory  # obfuscated module — resolved at runtime
 
@@ -304,26 +311,60 @@ _init_log()
 def get_asset_path(relative_path):
     """
     Locate UI/asset files.
-    Priority:
-      1. Project root (parent of dist/) -- updated files live here
-      2. sys._MEIPASS                   -- original bundled files (fallback)
-      3. cwd                            -- dev mode
+
+    Frozen: _internal/ beside the EXE, which is both where the build puts
+    these files and where the updater writes new ones, so a downloaded screen
+    is the screen that opens next.
+
+    This used to climb out of any folder called dist/ or AurumOS/ and prefer a
+    ui/ folder found up there. The updater climbed the same way and the two did
+    not land together. On a PC installed to C:/AurumOS the app read
+    C:/AurumOS/_internal/ui while updates were written to C:/_internal/ui; on
+    the developer's own machine the app read the source ui/ while updates went
+    to dist/_internal/ui. Either way an update downloaded perfectly, recorded
+    itself in version.lock, and changed nothing on screen. One rule now, shared
+    with updater.get_app_root().
     """
     if getattr(sys, 'frozen', False):
-        exe_dir      = os.path.dirname(sys.executable)
-        # Go up to project root if EXE is inside dist/ or dist/AurumOS/
-        parent_name  = os.path.basename(exe_dir).lower()
-        if parent_name in ('dist', 'aurumos'):
-            project_root = os.path.dirname(exe_dir)
-        else:
-            project_root = exe_dir
-        # Check project root first (updated files)
-        root_path = os.path.join(project_root, relative_path)
-        if os.path.exists(root_path):
-            return root_path
-        # Fallback to bundled original
-        return os.path.join(sys._MEIPASS, relative_path)
+        # PyInstaller always sets _MEIPASS in a frozen process, and for this
+        # onedir build it is _internal/ beside the EXE. Trust it rather than
+        # testing whether the folder is there: a missing folder is a broken
+        # install, and quietly reading somewhere else would hide that while
+        # making updates land out of reach again.
+        base = getattr(sys, '_MEIPASS', '')
+        if not base:
+            exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+            internal = os.path.join(exe_dir, '_internal')
+            base = internal if os.path.isdir(internal) else exe_dir
+        return os.path.join(base, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
+
+def _log_ui_paths():
+    """Say where screens are read from and where updates are written.
+
+    These two silently disagreed for months, so an update downloaded, recorded
+    itself in version.lock and changed nothing on screen. MATCH is what a
+    working install looks like; MISMATCH names the fault outright instead of
+    leaving it to be rediscovered.
+    """
+    try:
+        ui_dir = get_asset_path('ui')
+        LOG(f'=== UI from : {ui_dir} ===')
+        if not getattr(sys, 'frozen', False):
+            LOG('=== UI to   : n/a, updates only apply to a built copy ===')
+            return
+        from updater import get_app_root as _gar0
+        upd_dir = os.path.join(str(_gar0()), '_internal', 'ui')
+        same = (os.path.normcase(os.path.normpath(ui_dir))
+                == os.path.normcase(os.path.normpath(upd_dir)))
+        LOG(f'=== UI to   : {upd_dir} '
+            f'({"MATCH" if same else "MISMATCH - updates will not show"}) ===')
+    except Exception as e:
+        LOG(f'=== UI paths: could not resolve ({e}) ===')
+
+
+_log_ui_paths()
+
 
 def get_data_path(relative_path=""):
     if getattr(sys, 'frozen', False):
@@ -3183,8 +3224,33 @@ class AurumAPI:
                 return {"status":"error","message":"Invalid setup data"}
             if not biz_name or not owner_name:
                 return {"status":"error","message":"Business name and owner name are required"}
+            # GST from the wizard, checked before anything is written. The shop
+            # types its registration once, here, instead of discovering the
+            # field later in Settings after it has already billed a customer.
+            gst_fields = {}
+            try:
+                from core.gst import build as _gst_build
+                gst_fields, gst_err = _gst_build(data)
+                if gst_err:
+                    return {"status": "error", "message": gst_err, "field": "gstin"}
+            except Exception as ge:
+                ERR(f"[SETUP] GST block skipped: {ge}")
+                gst_fields = {}
             ok = self.db.save_setup(biz_name, owner_name, phone, city, admin_pass, license_key=license_key, address=address)
             if ok:
+                # db.save_setup has a fixed signature, so these go in beside it
+                # rather than changing a call used elsewhere.
+                if gst_fields:
+                    try:
+                        with self.db._get_connection() as _c:
+                            for _k, _v in gst_fields.items():
+                                _c.execute(
+                                    "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                                    (_k, str(_v).strip()))
+                            _c.commit()
+                        LOG(f"[SETUP] GST saved (registered={gst_fields.get('gst_registered')})")
+                    except Exception as ge2:
+                        ERR(f"[SETUP] GST save failed: {ge2}")
                 base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
                 # ── Clear old state on new setup ─────────────────────────────
                 # Remove .revoked flag so the app doesn't stay locked
@@ -3240,16 +3306,53 @@ class AurumAPI:
             result = {}
             for k in keys:
                 result[k] = self.db.get_config(k, '')
+            # GST registration. Defaults fill in for a shop set up before these
+            # fields existed, so the screen never renders blank boxes with no
+            # rates in them.
+            try:
+                from core.gst import defaults as _gst_defaults
+                for k, dflt in _gst_defaults().items():
+                    result[k] = self.db.get_config(k, '') or dflt
+            except Exception as ge:
+                ERR(f"[SETTINGS] GST block unavailable: {ge}")
             return {'status':'success', 'data': result}
         except Exception as e:
             ERR(f"[SETTINGS] get_settings: {e}")
             return {'status':'error', 'message': str(e)}
+
+    def validate_gstin(self, gstin: str) -> dict:
+        """Check a GSTIN for the setup and settings screens.
+
+        Offline and instant: the number carries its own check character, plus
+        the state and the PAN, so nothing needs to be looked up.
+        """
+        try:
+            from core.gst import validate as _v
+            return _v(gstin)
+        except Exception as e:
+            ERR(f"[GST] validate failed: {e}")
+            return {'ok': False, 'error': str(e), 'gstin': str(gstin or ''),
+                    'state': '', 'state_code': '', 'pan': '', 'entity_code': ''}
 
     def update_settings(self, data: dict) -> dict:
         """Update business profile fields."""
         try:
             allowed = ['business_name','owner_name','owner_phone','city','address',
                        'discount_percent','discount_threshold']
+            # GST is validated as a block, not field by field: the state and
+            # the PAN are read out of the GSTIN, so a number that does not
+            # check out must not be stored at all rather than half-stored.
+            gst_fields = {}
+            if any(k.startswith('gst') or k == 'pan' for k in (data or {})):
+                try:
+                    from core.gst import build as _gst_build
+                    existing = (self.get_settings() or {}).get('data', {})
+                    gst_fields, gst_err = _gst_build(data, existing)
+                    if gst_err:
+                        return {'status':'error','message':gst_err,'field':'gstin'}
+                except Exception as ge:
+                    ERR(f"[SETTINGS] GST validate failed: {ge}")
+                    return {'status':'error','message':f'Could not check the GST details: {ge}'}
             with self.db._get_connection() as conn:
                 for k in allowed:
                     if k in data:
@@ -3257,6 +3360,11 @@ class AurumAPI:
                             "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
                             (k, str(data[k]).strip())
                         )
+                for k, v in gst_fields.items():
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                        (k, str(v).strip())
+                    )
                 conn.commit()
             LOG(f"[SETTINGS] Updated: {list(data.keys())}")
             return {'status':'success'}
@@ -3371,8 +3479,269 @@ class AurumAPI:
     def get_touch_groups(self):
         return self.db.get_all_touch_groups()
 
-    def add_product_master(self, code, name, category, touch, wastage):
-        return {"status":"success"} if self.db.add_product_master(code,name,category,touch,wastage) else {"status":"error"}
+    def add_product_master(self, code, name, category, touch, wastage,
+                           making_charge=0, making_type='percent', sale_price=0, hsn=''):
+        """Save a product. The retail arguments are optional, so the wholesale
+        screens that pass five arguments are unaffected."""
+        ok = self.db.add_product_master(code, name, category, touch, wastage,
+                                        making_charge, making_type, sale_price, hsn)
+        return {"status": "success"} if ok else {"status": "error"}
+
+    # -- CRM ---------------------------------------------------------------
+    # The screens call these. Storage is in db_manager, the rules are in
+    # core/crm.py; this joins the two and hands back something a page can
+    # render without doing arithmetic of its own.
+
+    def crm_dashboard(self, within_days=30, lapsed_days=365):
+        """Everything the CRM screen shows, in one call.
+
+        One call rather than eight because the page opens on a shop counter
+        over a bridge that is not free, and eight round trips is the
+        difference between a screen that appears and one that assembles
+        itself while somebody waits.
+        """
+        try:
+            from core import crm
+        except Exception as e:
+            ERR(f"[CRM] rules unavailable: {e}")
+            return {'status': 'error', 'message': str(e)}
+        try:
+            customers = self.db.crm_customers()
+            for c in customers:
+                c['segment_computed'] = crm.segment_for(c)
+
+            dues_rows = self.db.crm_dues()
+            by_customer = {}
+            for row in dues_rows:
+                by_customer.setdefault(row['customer'], []).append(row)
+            dues = []
+            for name, rows in by_customer.items():
+                aged = crm.age_dues(rows)
+                if aged['total'] <= 0:
+                    continue
+                aged['customer'] = name
+                dues.append(aged)
+            dues.sort(key=lambda d: -d['total'])
+
+            overall = {'0-30': 0.0, '31-60': 0.0, '61-90': 0.0, '90+': 0.0}
+            for d in dues:
+                for k in overall:
+                    overall[k] = round(overall[k] + d['buckets'][k], 2)
+
+            enrolments = []
+            for e in self.db.crm_enrolments():
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                e.pop('payments', None)
+                enrolments.append(e)
+
+            spend = sorted(customers, key=lambda c: -float(c.get('lifetime_value') or 0))
+            counts = {}
+            for c in customers:
+                counts[c['segment_computed']] = counts.get(c['segment_computed'], 0) + 1
+
+            return {
+                'status': 'success',
+                'counts': {
+                    'customers': len(customers),
+                    'segments': counts,
+                    'open_followups': len(self.db.crm_followups('open')),
+                    'open_orders': len(self.db.crm_orders('open')),
+                    'active_plans': sum(1 for e in enrolments if e.get('status') != 'completed'),
+                    'plans_behind': sum(1 for e in enrolments if e.get('status') == 'behind'),
+                },
+                'occasions': crm.upcoming_occasions(customers, int(within_days or 30)),
+                'lapsed': crm.lapsed(customers, int(lapsed_days or 365))[:50],
+                'dues': dues[:50],
+                'dues_total': overall,
+                'followups': self.db.crm_followups('open')[:50],
+                'orders': self.db.crm_orders('open')[:50],
+                'enrolments': enrolments[:50],
+                'top_customers': spend[:10],
+            }
+        except Exception as e:
+            ERR(f"[CRM] dashboard: {e}")
+            import traceback as _tb
+            _tb.print_exc()
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_customers(self):
+        try:
+            from core import crm
+            rows = self.db.crm_customers()
+            for c in rows:
+                c['segment_computed'] = crm.segment_for(c)
+            return rows
+        except Exception as e:
+            ERR(f"[CRM] customers: {e}")
+            return []
+
+    def crm_customer(self, name):
+        """One customer with everything attached to them."""
+        try:
+            from core import crm
+            name = str(name or '').strip()
+            match = [c for c in self.db.crm_customers()
+                     if str(c.get('name') or '').strip() == name]
+            if not match:
+                return {'status': 'not_found', 'name': name}
+            c = match[0]
+            c['segment_computed'] = crm.segment_for(c)
+            rows = [r for r in self.db.crm_dues() if r['customer'] == name]
+            plans = []
+            for e in self.db.crm_enrolments(name):
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                plans.append(e)
+            return {
+                'status': 'success',
+                'customer': c,
+                'ageing': crm.age_dues(rows),
+                'over_limit': crm.over_limit(
+                    crm.age_dues(rows)['total'], c.get('cash_limit')),
+                'purchases': self.db.get_customer_purchases(name, c.get('phone') or ''),
+                'notes': self.db.crm_notes(name),
+                'plans': plans,
+                'loyalty_points': self.db.crm_loyalty_balance(name),
+            }
+        except Exception as e:
+            ERR(f"[CRM] customer {name}: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_save_customer(self, data):
+        return self.db.crm_save_customer(data or {})
+
+    def crm_add_note(self, customer, note, kind='note'):
+        who = getattr(self, '_session_username', '') or ''
+        ok = self.db.crm_add_note(customer, note, kind, who)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_notes(self, customer):
+        return self.db.crm_notes(customer)
+
+    def crm_add_followup(self, customer, task, due_date='', owner=''):
+        ok = self.db.crm_add_followup(customer, task, due_date, owner)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_close_followup(self, followup_id):
+        ok = self.db.crm_close_followup(followup_id)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_followups(self, status='open'):
+        return self.db.crm_followups(status)
+
+    def crm_orders(self, status='open'):
+        return self.db.crm_orders(status)
+
+    def crm_close_order(self, order_id):
+        ok = self.db.crm_close_order(order_id)
+        return {'status': 'success'} if ok else {'status': 'error'}
+
+    def crm_save_order(self, data):
+        return self.db.crm_save_order(data or {})
+
+    def crm_schemes(self, active_only=True):
+        return self.db.crm_schemes(bool(active_only))
+
+    def crm_save_scheme(self, data):
+        return self.db.crm_save_scheme(data or {})
+
+    def crm_enrol(self, scheme_id, customer, start_date=''):
+        return self.db.crm_enrol(scheme_id, customer, start_date)
+
+    def crm_enrolments(self, customer=''):
+        try:
+            from core import crm
+            out = []
+            for e in self.db.crm_enrolments(customer):
+                st = crm.scheme_status(e, e.get('payments') or [])
+                if st.get('valid'):
+                    e.update(st)
+                out.append(e)
+            return out
+        except Exception as e:
+            ERR(f"[CRM] enrolments: {e}")
+            return []
+
+    def crm_add_payment(self, enrolment_id, amount, paid_date='', mode='cash'):
+        return self.db.crm_add_payment(enrolment_id, amount, paid_date, mode)
+
+    def crm_scheme_schedule(self, start_date, months, monthly_amount):
+        """The instalment dates for a plan, so the screen can show them before
+        anyone is enrolled."""
+        try:
+            from core import crm
+            return crm.scheme_schedule(start_date, months, monthly_amount)
+        except Exception:
+            return []
+
+    def crm_loyalty_balance(self, customer):
+        return self.db.crm_loyalty_balance(customer)
+
+    def crm_award_loyalty(self, customer, amount, vch_id=''):
+        """Award points for a sale. Returns the new balance.
+
+        The till has shown and redeemed points since it was written and
+        nothing ever recorded them, so a balance never accumulated and
+        redeemed points were never taken off anything.
+        """
+        try:
+            from core import crm
+            pts = crm.points_for_sale(amount)
+            if pts > 0:
+                self.db.crm_add_loyalty(customer, earned=pts, vch_id=vch_id,
+                                        note='sale')
+            return {'status': 'success', 'earned': pts,
+                    'balance': self.db.crm_loyalty_balance(customer)}
+        except Exception as e:
+            ERR(f"[CRM] award loyalty: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_redeem_loyalty(self, customer, points, bill_amount, vch_id=''):
+        """Spend points against a bill, capped by balance and by the bill."""
+        try:
+            from core import crm
+            balance = self.db.crm_loyalty_balance(customer)
+            allowed, rupees = crm.redeemable(balance, bill_amount)
+            use = min(int(points or 0), allowed)
+            if use <= 0:
+                return {'status': 'error', 'message': 'Nothing to redeem.',
+                        'balance': balance}
+            self.db.crm_add_loyalty(customer, used=use, vch_id=vch_id, note='redeemed')
+            return {'status': 'success', 'used': use,
+                    'value': round(use * crm.DEFAULT_RUPEES_PER_POINT, 2),
+                    'balance': self.db.crm_loyalty_balance(customer)}
+        except Exception as e:
+            ERR(f"[CRM] redeem: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def get_item_by_tag(self, tag_id):
+        """One scanned piece, with its own rate and making charge.
+
+        The till used to read one rate and one making charge out of browser
+        storage and apply them to everything. A piece can now answer for
+        itself, falling back to its product master.
+        """
+        try:
+            row = self.db.get_item_by_tag(tag_id)
+            if not row:
+                return {"status": "not_found", "tag_id": str(tag_id or '')}
+            return {"status": "success", "item": row}
+        except Exception as e:
+            ERR(f"[TAG] lookup {tag_id}: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def get_sold_tags(self, from_date='', to_date='', search='', group=''):
+        """Pieces already sold. The Sold Tags screen has called this since it
+        was written; nothing ever defined it, so the page only ever said
+        'Failed to load'."""
+        try:
+            return self.db.get_sold_tags(from_date, to_date, search, group)
+        except Exception as e:
+            ERR(f"[SOLD TAGS] {e}")
+            return []
 
     def get_products(self):
         return self.db.get_all_products()
@@ -3576,7 +3945,13 @@ class AurumAPI:
                 data['tag_id'] = 'OPENING-'+str(int(_time.time()*1000))[-8:]
             # Strip fields not in DB schema
             DB_FIELDS = {'it_code','it_name','tag_id','pkg_wt','para_stone_wt','size','design',
-                         'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid'}
+                         'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid',
+                         # Retail pricing. Without these listed here the keys
+                         # were dropped one layer above the database, so a
+                         # piece saved with a making charge arrived with none
+                         # and nothing anywhere said so.
+                         'category','karat','making_type','making_charge',
+                         'sale_price','stone_value'}
             clean = {k:v for k,v in data.items() if k in DB_FIELDS}
             success = self.db.add_stock_entry(**clean)
             if success:
@@ -3746,10 +4121,57 @@ class AurumAPI:
                 bill["shop_city"]=self.db.get_config("city","")
                 bill["shop_address"]=self.db.get_config("address","")
             except Exception: pass
+            try:
+                for _k, _v in self._shop_print_block().items():
+                    bill.setdefault(_k, _v)
+            except Exception as _se:
+                ERR(f"[PRINT] shop block on reprint: {_se}")
             return {"status":"success","bill":bill}
         except Exception as e:
             ERR(f"[BILL PRINT] {e}")
             return {"status":"error","message":str(e)}
+
+    def _shop_print_block(self) -> dict:
+        """The shop's own details for the top of a bill, GST included.
+
+        Read here rather than in the template so a reprint months later shows
+        what the shop is registered as, instead of whatever a browser happened
+        to have cached. An unregistered shop returns no GSTIN at all, which is
+        what makes the GST bill unavailable rather than blank.
+        """
+        block = {}
+        try:
+            g = self.db.get_config
+            block = {
+                'shop_name':    g('business_name', ''),
+                'shop_owner':   g('owner_name', ''),
+                'shop_phone':   g('owner_phone', ''),
+                'shop_city':    g('city', ''),
+                'shop_address': g('address', ''),
+            }
+            if str(g('gst_registered', '0')).strip() == '1':
+                from core.gst import DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, DEFAULT_HSN
+                block.update({
+                    'shop_gstin':      g('gstin', ''),
+                    'shop_legal_name': g('gst_legal_name', ''),
+                    'shop_state':      g('gst_state', ''),
+                    'shop_state_code': g('gst_state_code', ''),
+                    'shop_pan':        g('pan', ''),
+                    'shop_hsn':        g('gst_hsn', '') or DEFAULT_HSN,
+                    'shop_cgst_rate':  g('gst_cgst_rate', '') or str(DEFAULT_CGST_RATE),
+                    'shop_sgst_rate':  g('gst_sgst_rate', '') or str(DEFAULT_SGST_RATE),
+                    'shop_gst_registered': '1',
+                })
+            else:
+                block['shop_gst_registered'] = '0'
+        except Exception as e:
+            ERR(f"[PRINT] shop block unavailable: {e}")
+        return block
+
+    def get_shop_print_block(self) -> dict:
+        """Same block, for the billing screens: they use it to decide whether
+        the GST Bill button can be offered at all."""
+        return self._shop_print_block()
 
     def trigger_print_window(self, voucher_id, copies=1, data=None):
         # `data` is accepted for compatibility with the billing UI, which passes
@@ -3772,6 +4194,21 @@ class AurumAPI:
                 if isinstance(data, dict):
                     printer_name = str(data.get('_printer') or '').strip()
                     preview_only = bool(data.get('_previewOnly'))
+                bill_mode = 'normal'
+                if isinstance(data, dict):
+                    bill_mode = str(data.get('_billMode') or data.get('bill_mode') or '').strip().lower()
+                    shop = self._shop_print_block()
+                    # A GST bill needs a registration. Asking for one without
+                    # it would print a tax invoice with no number on it, so it
+                    # falls back rather than printing something unusable.
+                    if bill_mode == 'gst' and shop.get('shop_gst_registered') != '1':
+                        LOG("[PRINT] GST bill asked for, but this shop is not registered -- printing the normal bill")
+                        bill_mode = 'normal'
+                    if bill_mode != 'gst':
+                        bill_mode = 'normal'
+                    for k, v in shop.items():
+                        data.setdefault(k, v)
+                    data['_billMode'] = bill_mode
                 try:
                     payload = json.dumps(data, ensure_ascii=False)
                 except Exception:
@@ -3783,6 +4220,7 @@ class AurumAPI:
                     inject += f"window.__PRINTER__='{safe_printer}';"
                 if preview_only:
                     inject += "window.__PREVIEW_ONLY__=true;"
+                inject += "window.__BILL_MODE__='" + bill_mode + "';"
             inject += '</script>'
             if '<!DOCTYPE html>' in html_content:
                 html_content=html_content.replace('<!DOCTYPE html>','<!DOCTYPE html>'+inject,1)
@@ -4127,10 +4565,26 @@ class AurumAPI:
             if status != 'ESTIMATE':
                 if not self.db.deduct_stock_after_sale(items_json):
                     return {"status":"error","message":"Sale was not completed because inventory could not be updated."}
+            # Loyalty, recorded rather than displayed. The till has shown and
+            # redeemed points since it was written and nothing ever stored
+            # them, so a balance never grew and redeemed points came off
+            # nothing. A walk-in with no name earns nothing, because there is
+            # nobody to credit.
+            loyalty = {}
+            if status != 'ESTIMATE' and customer and customer.lower() != 'walk-in':
+                try:
+                    used = int(float(inv.get('loyalty_used') or 0))
+                    if used > 0:
+                        self.crm_redeem_loyalty(customer, used, total_amount, vch_id)
+                    loyalty = self.crm_award_loyalty(customer, total_amount, vch_id)
+                except Exception as _le:
+                    ERR(f"[RETAIL BILL] loyalty skipped: {_le}")
             self._audit(f"Retail Bill: {vch_id}", f"Customer: {customer} | Status: {status}", "billing")
             self._notify_staff_bill(vch_id, customer, total_amount)
             LOG(f"[RETAIL BILL] generate_retail_bill returning vch_id={vch_id!r}")
-            return {"status":"success","vch_id":vch_id}
+            return {"status":"success","vch_id":vch_id,
+                    "loyalty_earned": loyalty.get('earned', 0),
+                    "loyalty_balance": loyalty.get('balance', 0)}
         except Exception as e:
             ERR(f"[RETAIL BILL] {e}")
             return {"status":"error","message":str(e)}
@@ -4973,6 +5427,40 @@ class AurumAPI:
             return get_installed_version()
         except Exception:
             return CURRENT_VERSION
+
+    def get_version_info(self):
+        """Everything the screens show about versions, in one call.
+
+        installed  the number this copy runs and displays
+        built      the number frozen into the EXE, for support questions
+        latest     the newest published release, when it could be reached
+        available  true when latest is newer and a download is waiting
+
+        The pages do not depend on this method existing: boot.js asks GitHub
+        directly when the bridge cannot answer, so the version on screen is
+        right on copies built before this method was added.
+        """
+        info = {'installed': CURRENT_VERSION, 'built': CURRENT_VERSION,
+                'latest': '', 'available': False, 'release_date': '',
+                'changelog': [], 'checked': False}
+        try:
+            from updater import get_installed_version, fetch_latest_manifest, is_newer
+            info['installed'] = get_installed_version()
+        except Exception as e:
+            LOG(f"[VERSION] local read failed: {e}")
+            return info
+        try:
+            manifest = fetch_latest_manifest(timeout=6)
+            if manifest:
+                info['checked'] = True
+                info['latest'] = str(manifest.get('version', '') or '')
+                info['release_date'] = str(manifest.get('release_date', '') or '')
+                info['changelog'] = list(manifest.get('changelog') or [])[:8]
+                info['available'] = bool(
+                    is_newer(info['latest'], info['installed']) or manifest.get('force'))
+        except Exception as e:
+            LOG(f"[VERSION] remote check failed: {e}")
+        return info
 
     def restart_app(self):
         import subprocess
@@ -5955,25 +6443,55 @@ def run_aur_os():
     except Exception:
         _wv_store = None
 
-    # Check if CLR failed to load (no .NET installed on this PC)
-    # The rthook in build.py sets AURUM_CLR_FAILED=1 when pythonnet.load() fails.
+    # Did the CLR start? The rthook sets AURUM_CLR_FAILED=1 when it could not,
+    # and AURUM_CLR_ERROR to whatever was actually raised.
+    #
+    # This used to show one message for every failure: "install .NET Desktop
+    # Runtime 8.0". The hook asks for the .NET Framework backend FIRST, and
+    # .NET Framework 4.x ships inside Windows, so on nearly every shop PC that
+    # message named something already installed. The customer went away,
+    # installed .NET 8, came back, and got the identical dialog. Look at what
+    # is genuinely on the machine before saying anything about it.
     clr_failed = os.environ.get("AURUM_CLR_FAILED") == "1"
+    clr_error = os.environ.get("AURUM_CLR_ERROR", "")
+    try:
+        from core import dotnet as _dotnet
+        verdict = _dotnet.diagnose(clr_error if clr_failed else "")
+        LOG(_dotnet.summary_line(verdict.get('facts')))
+    except Exception as _de:
+        ERR(f"[.NET] could not check what is installed: {_de}")
+        verdict = None
+
     if clr_failed:
+        if verdict is None:
+            # The check itself is unavailable, so word it for both cases rather
+            # than asserting one of them.
+            title = "AurumOS — Cannot Start"
+            body = ("AurumOS could not start the Microsoft .NET runtime.\n\n"
+                    "If .NET Desktop Runtime 8.0 is not installed, get it from:\n"
+                    "https://dotnet.microsoft.com/download/dotnet/8.0\n\n"
+                    "If it is already installed, reinstall AurumOS keeping the "
+                    "_internal folder next to AurumOS.exe.")
+        else:
+            title = verdict['title']
+            body = verdict['message']
+            LOG(f"[.NET] refusing to start: {verdict['reason']} :: {verdict.get('detail', '')}")
+        if clr_error:
+            ERR(f"[.NET] runtime load error: {clr_error}")
         try:
             import ctypes
             MB_OK = 0x00000000
             MB_ICONERROR = 0x00000010
-            ctypes.windll.user32.MessageBoxW(
-                0,
-                "AurumOS requires Microsoft .NET Desktop Runtime 8.0 or later.\n\n"
-                "Please install it from:\nhttps://dotnet.microsoft.com/download/dotnet/8.0\n\n"
-                "After installing, restart AurumOS.",
-                "AurumOS — Missing Component",
-                MB_OK | MB_ICONERROR
-            )
+            ctypes.windll.user32.MessageBoxW(0, body, title, MB_OK | MB_ICONERROR)
         except Exception:
             pass
         sys.exit(1)
+
+    # The runtime did start, even though the check found nothing it recognises.
+    # Note it and carry on: blocking a machine the app is about to work fine on
+    # is the worse mistake of the two.
+    if verdict is not None and not verdict.get('ok'):
+        LOG(f"[.NET] {verdict.get('reason')} by inspection, but the runtime loaded; continuing")
 
     # CLR is available — now safely import pywebview and apply monkey-patch
     _ensure_webview()

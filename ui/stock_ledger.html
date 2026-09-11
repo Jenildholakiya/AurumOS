@@ -166,8 +166,8 @@ tbody tr.row-enter{animation:rowEnter 0.22s cubic-bezier(0.16,1,0.3,1) both;}
 .cal-yr-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
 #ep-label{display:block;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted2);margin-bottom:3px;}
-#entryPanel input:not([type="hidden"]){width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--cream);font-family:var(--mono);font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;min-height:32px;}
-#entryPanel input:not([type="hidden"]):focus{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-bg);}
+#entryPanel input:not([type="hidden"]),#entryPanel select{width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--cream);font-family:var(--mono);font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;min-height:32px;}
+#entryPanel input:not([type="hidden"]):focus,#entryPanel select:focus{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-bg);}
 #entryPanel input[readonly]{background:var(--cream2);color:var(--gold3);font-weight:600;}
 #entryPanel .calc-out{background:var(--green-bg)!important;border-color:rgba(22,163,74,0.2)!important;color:var(--green)!important;font-weight:600;}
 #panelFormGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px;align-content:start;}
@@ -442,7 +442,7 @@ function scInsertToGrWt() {
                     <th style="width:85px;color:var(--gold3);">Para WT</th>
                     <th style="width:75px;color:var(--red);">Less</th>
                     <th style="width:85px;color:var(--green);">NT WT</th>
-                    <th style="width:85px;">Ghat WT</th>
+                    <th class="wholesale-col" style="width:85px;">Ghat WT</th>
                     <th style="width:110px;">HU ID</th>
                     <th style="width:95px;">Status</th>
                     <th style="width:65px;">Var.</th>
@@ -479,12 +479,18 @@ function scInsertToGrWt() {
         <div><label id="ep-label">Para Wt</label><input type="number" id="panel-para-stone-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
         <div><label id="ep-label">Less WT</label><input type="number" id="panel-ls-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
         <div><label id="ep-label">Pkg WT</label><input type="number" id="panel-pkg-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-        <div><label id="ep-label">HU ID</label><input type="text" id="panel-entry-huid" class="panel-entry-input nav-target" placeholder="HUID"></div>
+        <div id="panel-huid-field"><label id="ep-label">HU ID</label><input type="text" id="panel-entry-huid" class="panel-entry-input nav-target" oninput="validatePanelForm()" placeholder="HUID"></div>
         <div><label id="ep-label">Touch %</label><input type="text" id="panel-entry-touch" readonly placeholder="-" style="background:var(--cream2);color:var(--gold3);font-weight:600;text-align:center;"></div>
         <div id="panel-wastage-field"><label id="ep-label">Wast %</label><input type="number" id="panel-entry-wastage" class="panel-entry-input nav-target calc-trigger" placeholder="0"></div>
-        <div><label id="ep-label">Ghat WT</label><input type="number" id="panel-entry-ghat" class="panel-entry-input nav-target" step="0.001" placeholder="0.000"></div>
+        <div id="panel-ghat-field"><label id="ep-label">Ghat WT</label><input type="number" id="panel-entry-ghat" class="panel-entry-input nav-target" step="0.001" placeholder="0.000"></div>
         <div><label id="ep-label">Net Wt</label><input type="text" id="panel-nt-wt" readonly class="calc-out" placeholder="0.000" style="background:var(--green-bg);border-color:rgba(22,163,74,0.2);color:var(--green);font-weight:600;"></div>
-        <div><label id="ep-label">Fine Gold</label><input type="text" id="panel-entry-fine-wt" readonly placeholder="0.000" style="background:var(--green-bg);border-color:rgba(22,163,74,0.2);color:var(--green);font-weight:600;"></div>
+        <div id="panel-fine-wt-field"><label id="ep-label">Fine Gold</label><input type="text" id="panel-entry-fine-wt" readonly placeholder="0.000" style="background:var(--green-bg);border-color:rgba(22,163,74,0.2);color:var(--green);font-weight:600;"></div>
+        <div id="panel-making-charge-field"><label id="ep-label">Making Charge</label><input type="number" id="panel-entry-making-charge" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
+        <div id="panel-making-type-field"><label id="ep-label">Making Type</label><select id="panel-entry-making-type"><option value="percent">% of metal value</option><option value="per_gram">Rs per gram</option><option value="fixed">Flat Rs</option></select></div>
+        <div id="panel-sale-price-field"><label id="ep-label">Sale Price / MRP</label><input type="number" id="panel-entry-sale-price" class="panel-entry-input nav-target" step="0.01" placeholder="0 = use today's rate" title="Leave 0 to work the price out from today's rate"></div>
+        <div id="panel-karat-field"><label id="ep-label">Karat</label><input type="text" id="panel-entry-karat" class="panel-entry-input nav-target" placeholder="22K"></div>
+        <div id="panel-category-field"><label id="ep-label">Category</label><input type="text" id="panel-entry-category" class="panel-entry-input nav-target" placeholder="Ring, chain..."></div>
+        <div id="panel-stone-value-field"><label id="ep-label">Stone Value</label><input type="number" id="panel-entry-stone-value" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
         <div style="display:flex;align-items:flex-end;"><button id="panelSaveBtn" onclick="savePanelEntry()" disabled>Save</button></div>
     </div>
 </div>
@@ -617,9 +623,34 @@ function isRetailMode() {
     var q = (location.search.match(/[?&]type=([^&]+)/) || [])[1] || '';
     try { return q === 'retail' || localStorage.getItem('aurum_software_type') === 'retail'; } catch (e) { return q === 'retail'; }
 }
+// A retail counter never settles in metal, so the fine-gold side of the panel is
+// noise there; a wholesale desk never prices a piece, so the pricing side is noise here.
+var WHOLESALE_ONLY_FIELDS = ['panel-wastage-field', 'panel-ghat-field', 'panel-fine-wt-field'];
+var RETAIL_ONLY_FIELDS    = ['panel-making-charge-field', 'panel-making-type-field', 'panel-sale-price-field',
+                             'panel-karat-field', 'panel-category-field', 'panel-stone-value-field'];
+
+function hidePanelFields(ids) {
+    ids.forEach(function(id) {
+        var f = document.getElementById(id);
+        if (!f) return;
+        f.style.display = 'none';
+        // Drop hidden inputs out of the Enter-key run, or it dead-ends on one
+        // and the last visible field loses its save-on-Enter.
+        var navs = f.querySelectorAll('.nav-target');
+        for (var n = 0; n < navs.length; n++) navs[n].classList.remove('nav-target');
+    });
+}
+
 if (isRetailMode()) {
-    var retailWastageField = document.getElementById('panel-wastage-field');
-    if (retailWastageField) retailWastageField.style.display = 'none';
+    hidePanelFields(WHOLESALE_ONLY_FIELDS);
+    // Header and cell of the Ghat WT column go together, or every column after
+    // it sits under the wrong heading. Rows added later are handled at render.
+    var wholesaleCols = document.querySelectorAll('.wholesale-col');
+    for (var wc = 0; wc < wholesaleCols.length; wc++) wholesaleCols[wc].style.display = 'none';
+    var retailHuidLabel = document.querySelector('#panel-huid-field label');
+    if (retailHuidLabel) retailHuidLabel.innerText = 'HU ID *';
+} else {
+    hidePanelFields(RETAIL_ONLY_FIELDS);
 }
 
 // Clock
@@ -912,6 +943,10 @@ function renderLedgerRows() {
         updateSelectionState(); return;
     }
 
+    // Matches the Ghat WT header hidden at load. The cell stays in the row (hidden,
+    // not removed) because getSelectedItemsBatch() reads cells by index.
+    var wholesaleCellCss = isRetailMode() ? 'display:none;' : '';
+
     tbody.innerHTML = list.map(function(e, i) {
         var dLess    = (parseFloat(e.ls_wt||0) + parseFloat(e.pkg_wt||0)).toFixed(3);
         var tagId    = (e.tag_id  || '-').trim();
@@ -934,7 +969,7 @@ function renderLedgerRows() {
             + '<td style="font-family:var(--mono);color:var(--gold3);">'                          + parseFloat(e.para_stone_wt||0).toFixed(3)  + '</td>'
             + '<td style="font-family:var(--mono);color:var(--red);">'                            + dLess                        + '</td>'
             + '<td style="font-family:var(--mono);color:var(--green);">'                          + parseFloat(e.nt_wt||0).toFixed(3)          + '</td>'
-            + '<td style="font-family:var(--mono);">'                                              + parseFloat(e.ghat_wt||0).toFixed(3)        + '</td>'
+            + '<td class="wholesale-col" style="' + wholesaleCellCss + 'font-family:var(--mono);">' + parseFloat(e.ghat_wt||0).toFixed(3)        + '</td>'
             + '<td style="font-family:var(--mono);font-size:0.7rem;color:var(--muted2);">'        + h(e.huid || '-')             + '</td>'
             + '<td>' + badge + '</td>'
             + '<td style="font-size:0.6rem;color:var(--muted2);">'                                + h((e.tag_variation||'RING').toUpperCase()) + '</td>'
@@ -972,6 +1007,14 @@ function openEditById(id) {
     document.getElementById('panel-entry-huid').value     = (item.huid && item.huid !== 'undefined' && item.huid !== '-') ? item.huid : '';
     document.getElementById('panel-entry-touch').value    = item.touch || 0;
     document.getElementById('panel-entry-wastage').value  = item.wastage || 0;
+
+    // Retail pricing. Blank unless the ledger query hands these columns back.
+    document.getElementById('panel-entry-making-charge').value = item.making_charge || '';
+    document.getElementById('panel-entry-making-type').value   = item.making_type || 'percent';
+    document.getElementById('panel-entry-sale-price').value    = item.sale_price || '';
+    document.getElementById('panel-entry-karat').value         = (item.karat    && item.karat    !== 'undefined') ? item.karat    : '';
+    document.getElementById('panel-entry-category').value      = (item.category && item.category !== 'undefined') ? item.category : '';
+    document.getElementById('panel-entry-stone-value').value   = item.stone_value || '';
 
     calculatePanelNetWeight();
     document.getElementById('panelSaveBtn').innerText = 'Update Entry';
@@ -1186,6 +1229,8 @@ function showToast(msg, type) {
 
 function savePanelEntry() {
     if (!validatePanelForm()) return;
+    var retail = isRetailMode();
+    var huid   = document.getElementById('panel-entry-huid').value.trim();
     var data = {
         it_code:       document.getElementById('panel-entry-it-code').value,
         it_name:       document.getElementById('panel-entry-it-name').value,
@@ -1199,9 +1244,17 @@ function savePanelEntry() {
         ls_wt:         parseFloat(document.getElementById('panel-ls-wt').value)          || 0,
         nt_wt:         parseFloat(document.getElementById('panel-nt-wt').value)          || 0,
         ghat_wt:       parseFloat(document.getElementById('panel-entry-ghat').value)     || 0,
-        huid:          document.getElementById('panel-entry-huid').value  || '-',
+        // Retail pieces must carry a real HUID -- never stand in a dash for one.
+        huid:          retail ? huid : (huid || '-'),
         touch:         document.getElementById('panel-entry-touch').value || '0',
         wastage:       document.getElementById('panel-entry-wastage').value || '0',
+        // Retail pricing. Wholesale sends the column defaults, so nothing moves there.
+        making_charge: retail ? (parseFloat(document.getElementById('panel-entry-making-charge').value) || 0) : 0,
+        making_type:   retail ? (document.getElementById('panel-entry-making-type').value || 'percent')      : 'percent',
+        sale_price:    retail ? (parseFloat(document.getElementById('panel-entry-sale-price').value) || 0)   : 0,
+        karat:         retail ? document.getElementById('panel-entry-karat').value.trim()                    : '',
+        category:      retail ? document.getElementById('panel-entry-category').value.trim()                 : '',
+        stone_value:   retail ? (parseFloat(document.getElementById('panel-entry-stone-value').value) || 0)  : 0,
     };
     if (!window.pywebview || !window.pywebview.api) return;
     var prom = editingPanelEntryId
@@ -1303,12 +1356,16 @@ function calculatePanelNetWeight() {
 }
 
 function validatePanelForm() {
-    var pcs  = parseInt(document.getElementById('panel-entry-pcs').value) || 0;
-    var gr   = parseFloat(document.getElementById('panel-gr-wt').value)   || 0;
-    var name = document.getElementById('panel-entry-it-name').value.trim();
-    var ok   = name !== '' && pcs > 0 && gr > 0;
+    var pcs    = parseInt(document.getElementById('panel-entry-pcs').value) || 0;
+    var gr     = parseFloat(document.getElementById('panel-gr-wt').value)   || 0;
+    var name   = document.getElementById('panel-entry-it-name').value.trim();
+    var huidEl = document.getElementById('panel-entry-huid');
+    // Hallmarking is compulsory on a retail piece, so an untagged one cannot be saved.
+    var huidOk = !isRetailMode() || huidEl.value.trim() !== '';
+    var ok     = name !== '' && pcs > 0 && gr > 0 && huidOk;
     document.getElementById('panel-entry-pcs').style.borderColor = pcs > 0 ? '' : 'var(--red)';
     document.getElementById('panel-gr-wt').style.borderColor     = gr  > 0 ? '' : 'var(--red)';
+    huidEl.style.borderColor                                     = huidOk   ? '' : 'var(--red)';
     document.getElementById('panelSaveBtn').disabled = !ok;
     return ok;
 }

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Customers</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+    --offwhite:#f8fafb;--light:#f1f5f9;--white:#ffffff;
+    --ink:#0f172a;--ink2:#1e293b;--ink3:#475569;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --rule:#e2e8f0;--rule2:rgba(15,23,42,0.04);
+    --muted:#64748b;--muted2:#94a3b8;
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.08);
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 3px rgba(15,23,42,0.04),0 1px 2px rgba(15,23,42,0.03);
+    --sh2:0 4px 16px rgba(15,23,42,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--offwhite);color:var(--ink);font-size:0.82rem;}
+.page{padding:22px 26px 60px;}
+
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+.page-title{font-size:1.15rem;font-weight:700;letter-spacing:-0.3px;}
+.page-sub{font-size:0.72rem;color:var(--muted);margin-top:3px;}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+.btn{height:36px;padding:0 15px;border:none;border-radius:9px;font-family:inherit;
+     font-size:0.75rem;font-weight:600;cursor:pointer;display:inline-flex;
+     align-items:center;gap:6px;transition:all .15s;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:var(--blue3);}
+.btn-ghost{background:var(--white);color:var(--ink3);border:1px solid var(--rule);}
+.btn-ghost:hover{background:var(--light);}
+.btn-sm{height:28px;padding:0 10px;font-size:0.68rem;border-radius:7px;}
+
+/* Counters across the top */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.tile{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;box-shadow:var(--sh);}
+.tile-label{font-size:0.56rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);}
+.tile-value{font-size:1.35rem;font-weight:700;margin-top:5px;letter-spacing:-0.5px;}
+.tile-sub{font-size:0.66rem;color:var(--muted);margin-top:3px;}
+.tile.alert .tile-value{color:var(--red);}
+.tile.warn .tile-value{color:var(--amber);}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:14px;
+      box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--rule2);
+          display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-title{font-size:0.82rem;font-weight:700;}
+.card-sub{font-size:0.64rem;color:var(--muted);margin-top:2px;}
+.card-body{padding:6px 0 10px;max-height:330px;overflow-y:auto;}
+.card-body.pad{padding:16px 18px;}
+
+.row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--rule2);}
+.row:last-child{border-bottom:none;}
+.row:hover{background:var(--offwhite);}
+.row-click{cursor:pointer;}
+.row-main{flex:1;min-width:0;}
+.row-name{font-weight:600;font-size:0.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-meta{font-size:0.66rem;color:var(--muted);margin-top:2px;}
+.row-right{text-align:right;font-family:var(--mono);font-size:0.74rem;white-space:nowrap;}
+
+.pill{display:inline-block;font-size:0.56rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:0.6px;padding:2px 7px;border-radius:5px;}
+.pill-today{background:var(--red-bg);color:var(--red);}
+.pill-soon{background:var(--amber-bg);color:var(--amber);}
+.pill-ok{background:var(--green-bg);color:var(--green);}
+.pill-vip{background:rgba(168,125,30,0.1);color:#a87d1e;}
+.pill-lapsed{background:var(--red-bg);color:var(--red);}
+.pill-repeat{background:var(--blue-bg);color:var(--blue);}
+.pill-new{background:var(--light);color:var(--muted);}
+.pill-active{background:var(--green-bg);color:var(--green);}
+
+.empty{padding:26px 18px;text-align:center;color:var(--muted2);font-size:0.72rem;}
+
+/* Dues ageing */
+.ageing{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px;border-bottom:1px solid var(--rule2);}
+.age-cell{background:var(--offwhite);border:1px solid var(--rule);border-radius:9px;padding:9px;text-align:center;}
+.age-label{font-size:0.54rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.7px;}
+.age-value{font-family:var(--mono);font-size:0.82rem;font-weight:600;margin-top:3px;}
+.age-cell.hot{border-color:rgba(220,38,38,0.3);background:var(--red-bg);}
+.age-cell.hot .age-value{color:var(--red);}
+
+/* Add-something forms */
+.mini-form{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 18px;border-top:1px solid var(--rule2);background:var(--offwhite);}
+.mini-form input,.mini-form select{height:32px;padding:0 10px;border:1px solid var(--rule);
+    border-radius:7px;font-family:inherit;font-size:0.72rem;background:var(--white);color:var(--ink);}
+.mini-form input:focus,.mini-form select:focus{outline:none;border-color:var(--blue2);}
+.mini-form .wide{grid-column:1/-1;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;grid-column:1/-1;}
+
+.toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;
+       padding:11px 15px;border-radius:9px;font-size:0.74rem;box-shadow:var(--sh2);
+       opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:400;}
+.toast.show{opacity:1;transform:none;}
+.toast.bad{background:var(--red);}
+</style>
+</head>
+<body>
+<div id="sidebar-root"></div>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <div class="page-title">Customers</div>
+            <div class="page-sub" id="head-sub">Loading…</div>
+        </div>
+        <div class="head-actions">
+            <button class="btn btn-ghost" onclick="goTo('customer_detail.html')">Customer Records</button>
+            <button class="btn btn-ghost" onclick="goTo('crm_schemes.html')">Savings Plans</button>
+            <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
+        </div>
+    </div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="grid">
+
+        <!-- Who to call today. The reason this screen exists. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Call today</div>
+                    <div class="card-sub">Birthdays and anniversaries in the next 30 days</div>
+                </div>
+            </div>
+            <div class="card-body" id="occasions"><div class="empty">Loading…</div></div>
+        </div>
+
+        <!-- Money owed, by age rather than just by amount. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Money owed</div>
+                    <div class="card-sub">Oldest debts first, not biggest</div>
+                </div>
+            </div>
+            <div class="ageing" id="ageing"></div>
+            <div class="card-body" id="dues"><div class="empty">Loading…</div></div>
+        </div>
+
+        <!-- Savings plans: the ones falling behind are the ones that matter. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Savings plans</div>
+                    <div class="card-sub">Behind first, so a missed month gets a call</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="goTo('crm_schemes.html')">Manage</button>
+            </div>
+            <div class="card-body" id="plans"><div class="empty">Loading…</div></div>
+        </div>
+
+        <!-- Promises made at the counter. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Follow-ups</div>
+                    <div class="card-sub">What was promised, and by when</div>
+                </div>
+            </div>
+            <div class="card-body" id="followups"><div class="empty">Loading…</div></div>
+            <div class="mini-form">
+                <input type="text" id="fu-customer" placeholder="Customer" list="customer-names" />
+                <input type="date" id="fu-date" />
+                <input type="text" id="fu-task" class="wide" placeholder="What needs doing" />
+                <button class="btn btn-primary btn-sm wide" onclick="addFollowup()">Add follow-up</button>
+            </div>
+        </div>
+
+        <!-- Orders and repairs with a date attached. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Orders and repairs</div>
+                    <div class="card-sub">Overdue shown in red</div>
+                </div>
+            </div>
+            <div class="card-body" id="orders"><div class="empty">Loading…</div></div>
+            <div class="mini-form">
+                <input type="text" id="or-customer" placeholder="Customer" list="customer-names" />
+                <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
+                <input type="text" id="or-desc" class="wide" placeholder="What is being made or mended" />
+                <div class="form-row">
+                    <input type="date" id="or-date" />
+                    <input type="number" id="or-advance" placeholder="Advance Rs" step="1" min="0" />
+                </div>
+                <button class="btn btn-primary btn-sm wide" onclick="addOrder()">Add</button>
+            </div>
+        </div>
+
+        <!-- Customers worth keeping, and customers slipping away. -->
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Gone quiet</div>
+                    <div class="card-sub">No purchase in a year, biggest spender first</div>
+                </div>
+            </div>
+            <div class="card-body" id="lapsed"><div class="empty">Loading…</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-title">Best customers</div>
+                    <div class="card-sub">By what they have spent with you</div>
+                </div>
+            </div>
+            <div class="card-body" id="top"><div class="empty">Loading…</div></div>
+        </div>
+
+    </div>
+</div>
+
+<datalist id="customer-names"></datalist>
+<div class="toast" id="toast"></div>
+
+<script src="sidebar.js"></script>
+<script>
+'use strict';
+
+var DATA = null;
+var CUSTOMERS = [];
+
+function el(id){ return document.getElementById(id); }
+
+// For a value dropped inside a single-quoted onclick attribute. Customer
+// names are typed by people, and one apostrophe would otherwise end the
+// attribute early and take the row's markup with it.
+function escAttr(s){
+    var t = String(s === null || s === undefined ? '' : s);
+    t = t.split('\\').join('\\\\');
+    t = t.split("'").join("\\'");
+    return t.split('"').join('&quot;').split('<').join('&lt;');
+}
+
+function esc(s){
+    return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+// Indian grouping: 1,23,456 rather than 123,456. Every other money figure in
+// the app is written this way and a CRM screen that disagrees looks wrong.
+function money(n){
+    var v = parseFloat(n || 0);
+    if (!isFinite(v)) v = 0;
+    return 'Rs ' + Math.round(v).toLocaleString('en-IN');
+}
+
+function toast(msg, bad){
+    var t = el('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (bad ? ' bad' : '');
+    setTimeout(function(){ t.className = 'toast' + (bad ? ' bad' : ''); }, 2600);
+}
+
+function api(){
+    return (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+}
+
+function goTo(page){
+    var a = api();
+    if (a && typeof a.navigate === 'function') { a.navigate(page); return; }
+    window.location.href = page;
+}
+
+// A name on this screen should open that person, not a list to search again.
+// customer_detail.html takes ?name=, so the bridge's navigate() is bypassed
+// here: it takes a bare page and would drop the query string.
+function openCustomer(name){
+    if (!name) return;
+    // Cut back to the folder this page is in. Done by hand rather than with a
+    // regular expression because the separator can be either slash and the
+    // escaping is easy to get quietly wrong.
+    var href = window.location.href;
+    var q = href.indexOf('?');
+    if (q >= 0) href = href.substring(0, q);
+    var cut = Math.max(href.lastIndexOf('/'), href.lastIndexOf('\\'));
+    var base = cut >= 0 ? href.substring(0, cut + 1) : '';
+    window.location.href = base + 'customer_detail.html?name=' + encodeURIComponent(name);
+}
+
+function today(){
+    var d = new Date();
+    return d.getFullYear() + '-' +
+           ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+           ('0' + d.getDate()).slice(-2);
+}
+
+function daysBetween(iso){
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    var now = new Date(today());
+    return Math.round((d - now) / 86400000);
+}
+
+// ── loading ──────────────────────────────────────────────────────────
+function loadAll(){
+    var a = api();
+    if (!a || typeof a.crm_dashboard !== 'function') {
+        el('head-sub').textContent = 'The customer service is not available in this build.';
+        return;
+    }
+    a.crm_dashboard(30, 365).then(function(d){
+        if (!d || d.status !== 'success') {
+            el('head-sub').textContent = (d && d.message) || 'Could not load.';
+            return;
+        }
+        DATA = d;
+        renderTiles(d);
+        renderOccasions(d.occasions || []);
+        renderAgeing(d.dues_total || {}, d.dues || []);
+        renderPlans(d.enrolments || []);
+        renderFollowups(d.followups || []);
+        renderOrders(d.orders || []);
+        renderLapsed(d.lapsed || []);
+        renderTop(d.top_customers || []);
+        var c = d.counts || {};
+        el('head-sub').textContent = (c.customers || 0) + ' customers · '
+            + (c.open_followups || 0) + ' follow-ups open · '
+            + (c.open_orders || 0) + ' orders in hand';
+    }).catch(function(e){
+        el('head-sub').textContent = 'Could not load: ' + e;
+    });
+
+    if (typeof a.crm_customers === 'function') {
+        a.crm_customers().then(function(rows){
+            CUSTOMERS = rows || [];
+            var dl = el('customer-names');
+            dl.innerHTML = CUSTOMERS.map(function(c){
+                return '<option value="' + esc(c.name) + '"></option>';
+            }).join('');
+        }).catch(function(){});
+    }
+}
+
+function renderTiles(d){
+    var c = d.counts || {};
+    var seg = c.segments || {};
+    var owed = 0;
+    (d.dues || []).forEach(function(x){ owed += parseFloat(x.total || 0); });
+    var tiles = [
+        {label:'Customers', value:(c.customers || 0), sub:(seg.vip || 0) + ' VIP · ' + (seg.lapsed || 0) + ' gone quiet'},
+        {label:'To call', value:(d.occasions || []).length, sub:'Birthdays and anniversaries, 30 days'},
+        {label:'Money owed', value:money(owed), sub:(d.dues || []).length + ' customers'},
+        {label:'Plans behind', value:(c.plans_behind || 0), sub:(c.active_plans || 0) + ' running', cls:(c.plans_behind ? 'alert' : '')},
+        {label:'Follow-ups', value:(c.open_followups || 0), sub:'Open', cls:(c.open_followups ? 'warn' : '')},
+        {label:'Orders', value:(c.open_orders || 0), sub:'In hand'}
+    ];
+    el('tiles').innerHTML = tiles.map(function(t){
+        return '<div class="tile ' + (t.cls || '') + '">'
+             + '<div class="tile-label">' + esc(t.label) + '</div>'
+             + '<div class="tile-value">' + esc(t.value) + '</div>'
+             + '<div class="tile-sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+}
+
+function renderOccasions(list){
+    if (!list.length) { el('occasions').innerHTML = '<div class="empty">Nobody to call in the next 30 days.</div>'; return; }
+    el('occasions').innerHTML = list.map(function(o){
+        var d = o.days_until;
+        var pill = d === 0 ? '<span class="pill pill-today">Today</span>'
+                 : d <= 7  ? '<span class="pill pill-soon">' + d + ' days</span>'
+                 : '<span class="pill pill-ok">' + d + ' days</span>';
+        var what = o.occasion === 'birthday' ? 'Birthday' : 'Anniversary';
+        var turns = (o.turns && o.turns > 0) ? (' · ' + o.turns + (o.occasion === 'birthday' ? ' years' : ' years married')) : '';
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(o.name) + '\')"><div class="row-main">'
+             + '<div class="row-name">' + esc(o.name) + '</div>'
+             + '<div class="row-meta">' + what + turns + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>'
+             + '</div><div class="row-right">' + pill + '</div></div>';
+    }).join('');
+}
+
+function renderAgeing(totals, dues){
+    var keys = ['0-30','31-60','61-90','90+'];
+    el('ageing').innerHTML = keys.map(function(k){
+        var v = parseFloat((totals || {})[k] || 0);
+        var hot = (k === '90+' && v > 0) ? ' hot' : '';
+        return '<div class="age-cell' + hot + '">'
+             + '<div class="age-label">' + k + ' days</div>'
+             + '<div class="age-value">' + money(v) + '</div></div>';
+    }).join('');
+
+    if (!dues.length) { el('dues').innerHTML = '<div class="empty">Nothing outstanding.</div>'; return; }
+    el('dues').innerHTML = dues.map(function(d){
+        var old = d.oldest_days || 0;
+        var cls = old > 90 ? 'pill-lapsed' : old > 30 ? 'pill-soon' : 'pill-ok';
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(d.customer) + '\')"><div class="row-main">'
+             + '<div class="row-name">' + esc(d.customer) + '</div>'
+             + '<div class="row-meta">oldest ' + old + ' days</div>'
+             + '</div><div class="row-right">' + money(d.total)
+             + ' <span class="pill ' + cls + '">' + old + 'd</span></div></div>';
+    }).join('');
+}
+
+function renderPlans(list){
+    if (!list.length) { el('plans').innerHTML = '<div class="empty">No savings plans yet.</div>'; return; }
+    // Behind first: an on-track plan needs nobody's attention today.
+    var order = { behind: 0, on_track: 1, completed: 2 };
+    list = list.slice().sort(function(a, b){
+        return (order[a.status] === undefined ? 3 : order[a.status])
+             - (order[b.status] === undefined ? 3 : order[b.status]);
+    });
+    el('plans').innerHTML = list.map(function(p){
+        var cls = p.status === 'behind' ? 'pill-lapsed'
+                : p.status === 'completed' ? 'pill-ok' : 'pill-repeat';
+        var label = p.status === 'behind' ? 'Behind ' + money(p.behind_by)
+                  : p.status === 'completed' ? 'Complete' : 'On track';
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(p.customer) + '\')"><div class="row-main">'
+             + '<div class="row-name">' + esc(p.customer) + '</div>'
+             + '<div class="row-meta">' + esc(p.scheme_name) + ' · '
+             + (p.paid_count || 0) + ' of ' + (p.instalments || 0)
+             + (p.next_due_date ? ' · next ' + esc(p.next_due_date) : '')
+             + '</div></div><div class="row-right">'
+             + money(p.paid_total) + ' <span class="pill ' + cls + '">' + label + '</span>'
+             + '</div></div>';
+    }).join('');
+}
+
+function renderFollowups(list){
+    if (!list.length) { el('followups').innerHTML = '<div class="empty">Nothing outstanding.</div>'; return; }
+    el('followups').innerHTML = list.map(function(f){
+        var due = f.due_date ? daysBetween(f.due_date) : null;
+        var pill = due === null ? ''
+                 : due < 0 ? '<span class="pill pill-today">' + Math.abs(due) + 'd late</span>'
+                 : due === 0 ? '<span class="pill pill-soon">Today</span>'
+                 : '<span class="pill pill-ok">' + due + 'd</span>';
+        return '<div class="row"><div class="row-main">'
+             + '<div class="row-name">' + esc(f.task) + '</div>'
+             + '<div class="row-meta">' + esc(f.customer)
+             + (f.due_date ? ' · due ' + esc(f.due_date) : '') + '</div>'
+             + '</div><div class="row-right">' + pill
+             + ' <button class="btn btn-ghost btn-sm" onclick="closeFollowup(' + Number(f.id) + ')">Done</button>'
+             + '</div></div>';
+    }).join('');
+}
+
+function renderOrders(list){
+    if (!list.length) { el('orders').innerHTML = '<div class="empty">Nothing in hand.</div>'; return; }
+    el('orders').innerHTML = list.map(function(o){
+        var due = o.promised_date ? daysBetween(o.promised_date) : null;
+        var pill = due === null ? ''
+                 : due < 0 ? '<span class="pill pill-today">' + Math.abs(due) + 'd late</span>'
+                 : due === 0 ? '<span class="pill pill-soon">Today</span>'
+                 : '<span class="pill pill-ok">' + due + 'd</span>';
+        return '<div class="row"><div class="row-main">'
+             + '<div class="row-name">' + esc(o.description) + '</div>'
+             + '<div class="row-meta">' + esc(o.customer) + ' · ' + esc(o.kind)
+             + (o.promised_date ? ' · promised ' + esc(o.promised_date) : '')
+             + (parseFloat(o.advance || 0) > 0 ? ' · advance ' + money(o.advance) : '')
+             + '</div></div><div class="row-right">' + pill
+             + ' <button class="btn btn-ghost btn-sm" onclick="closeOrder(' + Number(o.id) + ')">Done</button>'
+             + '</div></div>';
+    }).join('');
+}
+
+function renderLapsed(list){
+    if (!list.length) { el('lapsed').innerHTML = '<div class="empty">Nobody has gone quiet.</div>'; return; }
+    el('lapsed').innerHTML = list.map(function(c){
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
+             + '<div class="row-name">' + esc(c.name) + '</div>'
+             + '<div class="row-meta">last bought ' + esc(c.last_purchase || '—')
+             + ' · ' + (c.days_since || 0) + ' days ago'
+             + (c.phone ? ' · ' + esc(c.phone) : '') + '</div>'
+             + '</div><div class="row-right">' + money(c.lifetime_value) + '</div></div>';
+    }).join('');
+}
+
+function renderTop(list){
+    if (!list.length) { el('top').innerHTML = '<div class="empty">No purchases recorded yet.</div>'; return; }
+    el('top').innerHTML = list.map(function(c){
+        var seg = c.segment_computed || 'new';
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
+             + '<div class="row-name">' + esc(c.name)
+             + ' <span class="pill pill-' + esc(seg) + '">' + esc(seg) + '</span></div>'
+             + '<div class="row-meta">' + (c.bill_count || 0) + ' bills'
+             + (c.loyalty_points ? ' · ' + c.loyalty_points + ' points' : '') + '</div>'
+             + '</div><div class="row-right">' + money(c.lifetime_value) + '</div></div>';
+    }).join('');
+}
+
+// ── adding things ────────────────────────────────────────────────────
+function addFollowup(){
+    var a = api();
+    var cust = (el('fu-customer').value || '').trim();
+    var task = (el('fu-task').value || '').trim();
+    if (!cust || !task) { toast('A follow-up needs a customer and a task.', true); return; }
+    if (!a || typeof a.crm_add_followup !== 'function') { toast('Not available in this build.', true); return; }
+    a.crm_add_followup(cust, task, el('fu-date').value || '', '').then(function(r){
+        if (r && r.status === 'success') {
+            el('fu-task').value = '';
+            toast('Follow-up added.');
+            loadAll();
+        } else { toast('Could not save.', true); }
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+
+function closeFollowup(id){
+    var a = api();
+    if (!a || typeof a.crm_close_followup !== 'function') return;
+    a.crm_close_followup(id).then(function(){ loadAll(); }).catch(function(){});
+}
+
+function addOrder(){
+    var a = api();
+    var cust = (el('or-customer').value || '').trim();
+    var desc = (el('or-desc').value || '').trim();
+    if (!cust || !desc) { toast('An order needs a customer and a description.', true); return; }
+    if (!a || typeof a.crm_save_order !== 'function') { toast('Not available in this build.', true); return; }
+    a.crm_save_order({
+        customer: cust,
+        kind: el('or-kind').value || 'order',
+        description: desc,
+        promised_date: el('or-date').value || '',
+        advance: parseFloat(el('or-advance').value || 0) || 0
+    }).then(function(r){
+        if (r && r.status === 'success') {
+            el('or-desc').value = ''; el('or-advance').value = '';
+            toast('Added.');
+            loadAll();
+        } else { toast((r && r.message) || 'Could not save.', true); }
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+
+function closeOrder(id){
+    var a = api();
+    if (!a || typeof a.crm_close_order !== 'function') return;
+    a.crm_close_order(id).then(function(){ loadAll(); }).catch(function(){});
+}
+
+// ── start ────────────────────────────────────────────────────────────
+try { initSidebar('crm'); } catch (e) {}
+el('fu-date').value = today();
+el('or-date').value = today();
+loadAll();
+</script>
+</body>
+</html>
