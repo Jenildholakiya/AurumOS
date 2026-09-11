@@ -152,9 +152,16 @@ the file so you can drag it in instead.
 
 | What it says | What it means |
 |---|---|
+| connecting, cards on Loading | Normal, for about a second after opening. The screen is waiting to be handed the program. |
 | Waiting for the app to restart | The screen updated but AurumOS is still running the older program underneath. Close it and open it again. |
+| Not connected | The screen never reached AurumOS at all. Close the program and open it again. |
 | Could not load, with a reason | The database refused the request. The reason is the database's own. |
 | Nobody to call, Nothing outstanding, and so on | Genuinely empty. Nothing is wrong. |
+
+The first line matters. pywebview hands a page its connection to the program
+a moment **after** the page has been drawn, so a screen that asks for data on
+its first line always finds nothing there. This one waits to be handed the
+connection before it decides anything is wrong.
 
 The first one is the common one, and it is worth understanding why.
 Screen files update themselves when you push. The Python underneath is

@@ -35,7 +35,8 @@ function mk(id) {
 }
 
 const ctx = {
-  window: { addEventListener: function () {} },
+  window: { addEventListener: function () {},
+            apiReady: function (cb) { ctx.__booted = cb; } },
   localStorage: { getItem: function () { return null; }, setItem: function () {} },
   document: {
     hidden: false, activeElement: null, readyState: 'complete',
@@ -58,8 +59,19 @@ if (typeof ctx.renderOccasions !== 'function') {
   process.exit(1);
 }
 
+const E = (id) => ctx.document.getElementById(id);
 let fail = 0;
 const chk = (label, cond) => { if (!cond) fail++; console.log('  [' + (cond ? 'PASS' : 'FAIL') + '] ' + label); };
+
+console.log('-- it waits for the program before judging it --');
+// pywebview hands the page its bridge a moment after the page is parsed.
+// Asking on the first line always finds nothing, so the screen used to open
+// claiming the build was too old, and only a reload made it look right.
+chk('the page hands its start to the waiter', typeof ctx.__booted === 'function');
+chk('and asks for nothing before then', E('head-sub').textContent === '');
+chk('while it says it is connecting', E('live-text').textContent === 'connecting');
+
+ctx.__booted();   // let the page start, as pywebview would
 
 console.log('-- money is grouped the Indian way --');
 chk('a lakh reads 1,23,456', ctx.money(123456) === 'Rs 1,23,456');
@@ -134,8 +146,6 @@ chk('a tile is a way in, not just a number', /onclick="jumpTo\('sec-/.test(els['
 chk('money owed totalled', /Rs 9,000/.test(els['tiles'].innerHTML));
 chk('plans behind shown in the alert colour', /tile is-alert/.test(els['tiles'].innerHTML));
 
-const E = (id) => ctx.document.getElementById(id);
-
 console.log('-- the screen keeps itself current --');
 chk('a refresh interval is set', timers.indexOf(60000) >= 0);
 chk('and a shorter one keeps the label honest', timers.indexOf(5000) >= 0);
@@ -191,14 +201,30 @@ console.log('-- a screen that cannot load says so on every card --');
 // files on disk. Only the header used to mention it; every card sat on
 // "Loading..." for ever, which reads as a hang rather than a restart.
 LISTS = ['occasions', 'followups', 'orders', 'dues', 'plans', 'lapsed', 'top'];
+const saysOnEveryCard = (word) => {
+  let n = 0;
+  for (const id of LISTS) { if (new RegExp(word, 'i').test(E(id).innerHTML)) n++; }
+  return n === LISTS.length;
+};
+
+// No bridge at all: the screen never reached the program.
+ctx.window.pywebview = undefined;
 ctx.loadAll(true);
-chk('the header explains the restart', /reopen/i.test(E('head-sub').textContent));
-let told = 0;
-for (const id of LISTS) { if (/restart/i.test(E(id).innerHTML)) told++; }
-chk('and so does every list (' + told + ' of ' + LISTS.length + ')', told === LISTS.length);
+chk('no bridge is reported as no connection', /could not reach/i.test(E('head-sub').textContent));
+chk('and every card says the same', saysOnEveryCard('could not reach'));
+
+// A bridge without the customer methods: it reached an older program.
+ctx.window.pywebview = { api: { something_else: function () {} } };
+ctx.loadAll(true);
+chk('an older program is reported as a restart', /reopen/i.test(E('head-sub').textContent));
+chk('and every card says the same', saysOnEveryCard('restart'));
+// The two are different problems and must not share one message.
+chk('the two failures do not read alike', !/could not reach/i.test(E('top').innerHTML));
+
 let stillLoading = 0;
 for (const id of LISTS) { if (/Loading/.test(E(id).innerHTML)) stillLoading++; }
-chk('none is left on Loading', stillLoading === 0);
+chk('neither leaves a card on Loading', stillLoading === 0);
+ctx.window.pywebview = undefined;
 
 console.log('');
 if (fail) { console.log(fail + ' FAILED'); process.exit(1); }
