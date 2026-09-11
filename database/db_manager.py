@@ -4087,6 +4087,66 @@ class DBManager:
             _dberr(f"[CRM] save order: {e}")
             return {'status': 'error', 'message': str(e)}
 
+    def wa_log_send(self, customer, kind, phone='', body=''):
+        """Record that a message went out, so it does not go out again.
+
+        A birthday wish should reach someone once a year, not once per time
+        the screen is opened.
+        """
+        try:
+            if not str(customer or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO whatsapp_log (customer,phone,kind,body) VALUES (?,?,?,?)",
+                (str(customer).strip(), str(phone or ''), str(kind or ''),
+                 str(body or '')[:1000]))
+        except Exception as e:
+            _dberr(f"[WA] log: {e}")
+            return False
+
+    def wa_sent_since(self, kind, days=300):
+        """Names this kind has already gone to recently.
+
+        The default window is under a year on purpose: a birthday wish sent
+        last year should not stop this year's.
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT DISTINCT TRIM(customer) AS c FROM whatsapp_log "
+                    "WHERE kind=? AND date(sent_on) >= date('now', ?)",
+                    (str(kind or ''), '-%d days' % int(days))).fetchall()
+                return {r['c'] for r in rows if r['c']}
+        except Exception as e:
+            _dberr(f"[WA] sent_since: {e}")
+            return set()
+
+    def wa_history(self, customer='', limit=200):
+        try:
+            with self._get_connection() as conn:
+                if str(customer or '').strip():
+                    rows = conn.execute(
+                        "SELECT * FROM whatsapp_log WHERE TRIM(customer)=? "
+                        "ORDER BY id DESC LIMIT ?",
+                        (str(customer).strip(), int(limit))).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM whatsapp_log ORDER BY id DESC LIMIT ?",
+                        (int(limit),)).fetchall()
+                return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+    def wa_set_opt_out(self, customer, opted_out=True):
+        """Stop messaging this customer, or start again."""
+        try:
+            return self.execute_query(
+                "UPDATE clients_master SET wa_opt_out=? WHERE TRIM(name)=?",
+                ('1' if opted_out else '0', str(customer or '').strip()))
+        except Exception as e:
+            _dberr(f"[WA] opt out: {e}")
+            return False
+
     def crm_close_order(self, order_id):
         """Mark an order done without touching anything else on it.
 
@@ -4144,6 +4204,10 @@ class DBManager:
                     # often one relationship.
                     ('household',    "ALTER TABLE clients_master ADD COLUMN household TEXT"),
                     ('notes',        "ALTER TABLE clients_master ADD COLUMN notes TEXT"),
+                    # A customer who asks not to be messaged is kept out of
+                    # every route, including the bulk ones where nobody is
+                    # reading the list.
+                    ('wa_opt_out',   "ALTER TABLE clients_master ADD COLUMN wa_opt_out TEXT DEFAULT '0'"),
                 ):
                     if col not in have:
                         conn.execute(ddl)
@@ -4209,6 +4273,16 @@ class DBManager:
                     note         TEXT DEFAULT '',
                     created_at   DATETIME DEFAULT CURRENT_TIMESTAMP);
                 CREATE INDEX IF NOT EXISTS idx_pay_enrol ON scheme_payments(enrolment_id);
+
+                CREATE TABLE IF NOT EXISTS whatsapp_log (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    phone       TEXT DEFAULT '',
+                    kind        TEXT NOT NULL,
+                    body        TEXT DEFAULT '',
+                    sent_on     DATE DEFAULT (date('now')),
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_wa_cust ON whatsapp_log(customer, kind, sent_on);
 
                 CREATE TABLE IF NOT EXISTS customer_orders (
                     id             INTEGER PRIMARY KEY AUTOINCREMENT,
