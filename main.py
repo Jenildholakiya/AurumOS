@@ -3224,8 +3224,33 @@ class AurumAPI:
                 return {"status":"error","message":"Invalid setup data"}
             if not biz_name or not owner_name:
                 return {"status":"error","message":"Business name and owner name are required"}
+            # GST from the wizard, checked before anything is written. The shop
+            # types its registration once, here, instead of discovering the
+            # field later in Settings after it has already billed a customer.
+            gst_fields = {}
+            try:
+                from core.gst import build as _gst_build
+                gst_fields, gst_err = _gst_build(data)
+                if gst_err:
+                    return {"status": "error", "message": gst_err, "field": "gstin"}
+            except Exception as ge:
+                ERR(f"[SETUP] GST block skipped: {ge}")
+                gst_fields = {}
             ok = self.db.save_setup(biz_name, owner_name, phone, city, admin_pass, license_key=license_key, address=address)
             if ok:
+                # db.save_setup has a fixed signature, so these go in beside it
+                # rather than changing a call used elsewhere.
+                if gst_fields:
+                    try:
+                        with self.db._get_connection() as _c:
+                            for _k, _v in gst_fields.items():
+                                _c.execute(
+                                    "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                                    (_k, str(_v).strip()))
+                            _c.commit()
+                        LOG(f"[SETUP] GST saved (registered={gst_fields.get('gst_registered')})")
+                    except Exception as ge2:
+                        ERR(f"[SETUP] GST save failed: {ge2}")
                 base = os.path.dirname(sys.executable) if getattr(sys,'frozen',False) else os.path.abspath(".")
                 # ── Clear old state on new setup ─────────────────────────────
                 # Remove .revoked flag so the app doesn't stay locked
@@ -3281,16 +3306,53 @@ class AurumAPI:
             result = {}
             for k in keys:
                 result[k] = self.db.get_config(k, '')
+            # GST registration. Defaults fill in for a shop set up before these
+            # fields existed, so the screen never renders blank boxes with no
+            # rates in them.
+            try:
+                from core.gst import defaults as _gst_defaults
+                for k, dflt in _gst_defaults().items():
+                    result[k] = self.db.get_config(k, '') or dflt
+            except Exception as ge:
+                ERR(f"[SETTINGS] GST block unavailable: {ge}")
             return {'status':'success', 'data': result}
         except Exception as e:
             ERR(f"[SETTINGS] get_settings: {e}")
             return {'status':'error', 'message': str(e)}
+
+    def validate_gstin(self, gstin: str) -> dict:
+        """Check a GSTIN for the setup and settings screens.
+
+        Offline and instant: the number carries its own check character, plus
+        the state and the PAN, so nothing needs to be looked up.
+        """
+        try:
+            from core.gst import validate as _v
+            return _v(gstin)
+        except Exception as e:
+            ERR(f"[GST] validate failed: {e}")
+            return {'ok': False, 'error': str(e), 'gstin': str(gstin or ''),
+                    'state': '', 'state_code': '', 'pan': '', 'entity_code': ''}
 
     def update_settings(self, data: dict) -> dict:
         """Update business profile fields."""
         try:
             allowed = ['business_name','owner_name','owner_phone','city','address',
                        'discount_percent','discount_threshold']
+            # GST is validated as a block, not field by field: the state and
+            # the PAN are read out of the GSTIN, so a number that does not
+            # check out must not be stored at all rather than half-stored.
+            gst_fields = {}
+            if any(k.startswith('gst') or k == 'pan' for k in (data or {})):
+                try:
+                    from core.gst import build as _gst_build
+                    existing = (self.get_settings() or {}).get('data', {})
+                    gst_fields, gst_err = _gst_build(data, existing)
+                    if gst_err:
+                        return {'status':'error','message':gst_err,'field':'gstin'}
+                except Exception as ge:
+                    ERR(f"[SETTINGS] GST validate failed: {ge}")
+                    return {'status':'error','message':f'Could not check the GST details: {ge}'}
             with self.db._get_connection() as conn:
                 for k in allowed:
                     if k in data:
@@ -3298,6 +3360,11 @@ class AurumAPI:
                             "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
                             (k, str(data[k]).strip())
                         )
+                for k, v in gst_fields.items():
+                    conn.execute(
+                        "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                        (k, str(v).strip())
+                    )
                 conn.commit()
             LOG(f"[SETTINGS] Updated: {list(data.keys())}")
             return {'status':'success'}
