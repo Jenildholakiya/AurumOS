@@ -170,3 +170,73 @@ Get-NetConnectionProfile
 
 A third-party security suite may also run its own firewall, separate from
 Windows, which needs the same rule.
+
+---
+
+## SmartScreen: the red box on first run
+
+This is the one customers ring you about. It is not antivirus and it is not a
+detection. SmartScreen checks whether Windows has seen this exact file before
+and whether a trusted publisher signed it. An unsigned file nobody has run
+before gets **"Windows protected your PC"**, and the button that runs it is
+hidden behind **More info**.
+
+### What decides whether it appears
+
+Three things, checked before every release by:
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\check_release.ps1
+```
+
+**Signature.** A certificate from a trusted CA is the only thing that removes
+the box outright. The build signs automatically once one is configured, and
+the build report now says plainly when it did not.
+
+**Reputation.** A standard (OV) certificate does not clear SmartScreen on day
+one. Microsoft accrues reputation as installs happen, typically over a few
+weeks. An EV certificate skips that wait and clears it from the first
+download. If you are handing the file to customers yourself, EV is worth the
+difference precisely because there is no early grace period to survive.
+
+**Mark of the Web.** Windows tags anything that arrives from the internet with
+a hidden stream, and that tag is what raises the box. This is why the same
+build behaves differently depending on how it reaches the shop:
+
+| How the shop gets it | What happens |
+|---|---|
+| Downloaded from a website or a cloud link | Tagged, and every file inside a downloaded ZIP inherits the tag. Red box. |
+| Copied from a USB stick | Not tagged. No box. |
+| Copied from a local network share | Not tagged. No box. |
+
+Checked on the current build: seven files in `dist\` already carry that tag
+from having been extracted out of `AurumOS_Client.zip`. A customer extracting
+a downloaded ZIP gets it on `AurumOS.exe` too, which is exactly the case that
+produces the red box.
+
+So until a certificate is in place, **how you deliver the file changes what
+the customer sees more than anything else you can do**. Handing over a USB
+stick, or copying from a share during installation, avoids the prompt
+entirely.
+
+### Clearing the tag on a copy you are installing
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\check_release.ps1 -Unblock
+```
+
+This is the same action as ticking **Unblock** on the file's Properties tab.
+It removes the "came from the internet" tag from a folder you have just
+downloaded and are about to install. It disables no scanning: antivirus still
+inspects every file. It only clears the tag that drives the prompt, on that
+one copy, on that one machine.
+
+Do this as part of your own installation routine. It is not something to talk
+a shopkeeper through over the phone, and it is not a substitute for signing.
+
+### What to tell a customer who is looking at the box right now
+
+Click **More info**, then **Run anyway**. It appears once per machine for a
+given file. If the person is unwilling, and they are right to be careful, the
+honest answer is that the software is not yet signed, which is a thing for you
+to fix rather than something for them to work around.

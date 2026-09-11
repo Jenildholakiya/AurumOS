@@ -938,6 +938,53 @@ def write_trusted_hash():
     print(f"  OK -- {digest[:16]}... written to dist\\exe_trusted_hash.txt")
 
 # ── STEP 6: Report ────────────────────────────────────────────────────────────
+def _report_smartscreen(exe):
+    """Say plainly what a customer's PC will do with this file.
+
+    A build that finishes with a tick and no mention of signing gets shipped,
+    and the first anyone hears about SmartScreen is a phone call from a shop
+    that will not click past a red box. Say it here, while there is still
+    something to do about it.
+    """
+    print("")
+    print("  What a customer will see")
+    try:
+        with open(exe, 'rb') as f:
+            head = f.read(4096)
+        packed = b'UPX0' in head or b'UPX1' in head or b'UPX!' in head
+        data = open(exe, 'rb').read()
+        # 'CompanyName' as UTF-16, which is how the version resource
+        # stores it. Built with chr() so no literal nulls sit in this file.
+        needle = ''.join(c + chr(0) for c in 'CompanyName').encode('latin1')
+        named = needle in data
+        import struct
+        pe = struct.unpack_from('<I', data, 0x3C)[0]
+        opt = struct.unpack_from('<H', data, pe + 20)[0]
+        sec = struct.unpack_from('<II', data, pe + 24 + (144 if opt >= 240 else 128))
+        signed = bool(sec[1])
+    except Exception as e:
+        print(f"  (could not inspect the EXE: {e})")
+        return
+
+    print(f"  Signed          : {'yes' if signed else 'NO'}")
+    print(f"  Publisher shown : {'yes' if named else 'NO'}")
+    print(f"  Packed          : {'YES' if packed else 'no'}")
+    if not signed:
+        print("")
+        print("  This build is UNSIGNED. Anyone who DOWNLOADS it gets")
+        print("  \"Windows protected your PC\" and has to click More info,")
+        print("  then Run anyway. Copied from a USB stick or a network")
+        print("  share it runs without the prompt, because Windows only")
+        print("  tags files that came from the internet.")
+        print("")
+        print("  Only a code-signing certificate removes it. Set one up in")
+        print("  sign_config.json and this step signs automatically.")
+        print(r"  See docs\ANTIVIRUS.md.")
+    print("")
+    print("  Check any built folder before shipping it:")
+    print(r"    powershell -ExecutionPolicy Bypass -File tools\check_release.ps1")
+
+
 def report(built_version='?'):
     print("\n[7/7] Build report...")
     exe = os.path.join(DIST, 'AurumOS.exe')
@@ -963,6 +1010,7 @@ def report(built_version='?'):
         print(f"  dist\\config.json  dist\\exe_trusted_hash.txt")
         print(f"  (the hash file tells Bastion AI this exact build is legitimate --")
         print(f"   without it next to the EXE, tamper-detection can't run)")
+        _report_smartscreen(exe)
     else:
         print(f"\n  �- EXE not found at {exe}")
         print(f"  Check build output above for errors")
