@@ -566,7 +566,9 @@ function toast(msg, bad){
 }
 
 function api(){
-    return (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+    var a = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+    if (!a) return null;
+    try { return Object.keys(a).length ? a : null; } catch (e) { return a; }
 }
 
 function goTo(page){
@@ -636,7 +638,17 @@ function setAllLists(title, line){
 
 function loadAll(manual){
     var a = api();
-    if (!a || typeof a.crm_dashboard !== 'function') {
+    // Two different failures that used to read as one. No bridge at all means
+    // the screen never reached the program; a bridge without the customer
+    // methods means it reached an older one.
+    if (!a) {
+        el('head-sub').textContent = 'Could not reach AurumOS.';
+        setLive('stale', 'no connection');
+        setAllLists('Not connected',
+                    'This screen could not reach AurumOS. Close the program and open it again.');
+        return;
+    }
+    if (typeof a.crm_dashboard !== 'function') {
         el('head-sub').textContent = 'Close and reopen AurumOS to finish updating.';
         setLive('stale', 'needs restart');
         // Without this every card sat on "Loading…" for ever while only the
@@ -1218,9 +1230,18 @@ el('or-date').value = today();
 onCampKind();
 (function(){ var e = el('pic-item');
   if (e && e.addEventListener) e.addEventListener('change', showPicState); })();
-loadAll();
-loadStock();
-startAutoRefresh();
+
+// pywebview injects the bridge a moment AFTER the page is parsed, so asking
+// for it on this line always found nothing. Every card then announced that
+// the build was too old, and only a manual reload made the screen look
+// right. boot.js already knows how to wait; this asks it to.
+function begin(){
+    loadAll();
+    loadStock();
+    startAutoRefresh();
+}
+setLive('busy', 'connecting');
+if (typeof window.apiReady === 'function') { window.apiReady(begin); } else { begin(); }
 </script>
 </body>
 </html>
