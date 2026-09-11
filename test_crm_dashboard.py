@@ -173,6 +173,33 @@ chk('skip moves to the next', E('camp-count').textContent === '2 of 2');
 ctx.skipOne();
 chk('and it ends rather than looping', E('camp-title').textContent === 'All done');
 
+console.log('-- one card, four things you might do --');
+// Four tabs share one card. A switch that only knows about two leaves the
+// other two open underneath, which is what a half-updated toggle looks like.
+ctx.showAdd('camp');
+chk('the chosen tab opens', E('add-camp').hidden === false);
+chk('and the others close',
+    E('add-fu').hidden && E('add-or').hidden && E('add-pic').hidden);
+chk('the tab is marked as current', E('tab-camp').className.indexOf(' on') >= 0);
+chk('and only that one is', E('tab-fu').className.indexOf(' on') < 0);
+ctx.showAdd('pic');
+chk('switching again closes the last one', E('add-camp').hidden === true);
+chk('and opens the new one', E('add-pic').hidden === false);
+
+console.log('-- a screen that cannot load says so on every card --');
+// The bridge is missing when the app is running an older process than the
+// files on disk. Only the header used to mention it; every card sat on
+// "Loading..." for ever, which reads as a hang rather than a restart.
+LISTS = ['occasions', 'followups', 'orders', 'dues', 'plans', 'lapsed', 'top'];
+ctx.loadAll(true);
+chk('the header explains the restart', /reopen/i.test(E('head-sub').textContent));
+let told = 0;
+for (const id of LISTS) { if (/restart/i.test(E(id).innerHTML)) told++; }
+chk('and so does every list (' + told + ' of ' + LISTS.length + ')', told === LISTS.length);
+let stillLoading = 0;
+for (const id of LISTS) { if (/Loading/.test(E(id).innerHTML)) stillLoading++; }
+chk('none is left on Loading', stillLoading === 0);
+
 console.log('');
 if (fail) { console.log(fail + ' FAILED'); process.exit(1); }
 console.log('ALL PASS');
