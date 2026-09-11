@@ -145,6 +145,8 @@ BUNDLES = {
             'crm_schemes', 'crm_save_scheme', 'crm_enrol', 'crm_enrolments',
             'crm_add_payment', 'crm_scheme_schedule',
             'crm_loyalty_balance', 'crm_award_loyalty', 'crm_redeem_loyalty',
+            'photo_pick', 'photo_remove', 'photo_path', 'photo_to_clipboard',
+            'photo_reveal', 'wa_send_item', 'items_with_photos',
             'wa_message', 'wa_wishes_today', 'wa_campaign', 'wa_mark_sent',
             'wa_opt_out', 'wa_history', 'wa_open',
             'get_client_list', 'get_client_balances', 'get_customer_purchases',

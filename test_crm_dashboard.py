@@ -30,7 +30,8 @@ const timers = [];
 const listeners = {};
 function mk(id) {
   return { id: id, innerHTML: '', textContent: '', value: '', className: '',
-           style: {}, hidden: false, disabled: false };
+           style: {}, hidden: false, disabled: false,
+           addEventListener: function () {} };
 }
 
 const ctx = {
