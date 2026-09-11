@@ -1,6 +1,6 @@
 # When Windows blocks AurumOS
 
-Two different things get blamed on "the antivirus", and they have different
+Several different things get blamed on "the antivirus", and they have different
 causes and different fixes. Work out which one you are looking at first.
 
 | What the customer sees | What it is | Fixed by |
@@ -8,6 +8,7 @@ causes and different fixes. Work out which one you are looking at first.
 | "Windows protected your PC", blue box, **Don't run** | SmartScreen. The file is unsigned or too new to have a reputation. | [A code-signing certificate](#the-certificate) |
 | The file vanishes, or "Threat found", "Trojan:Win32/Wacatac" | Antivirus heuristics. Nothing is actually wrong; the file simply looks like the kind of thing they stop. | [Everything under Reducing suspicion](#reducing-suspicion), then [report the false positive](#reporting-a-false-positive) |
 | Staff PCs cannot connect to the main PC | Windows Firewall. Not antivirus at all. | [The firewall rule](#the-firewall-rule) |
+| "Smart App Control blocked an app that may be unsafe", with no Run anyway | Smart App Control. A different feature from SmartScreen, and a harder one. | [Smart App Control](#smart-app-control) |
 
 ---
 
@@ -198,6 +199,62 @@ Get-NetConnectionProfile
 
 A third-party security suite may also run its own firewall, separate from
 Windows, which needs the same rule.
+
+---
+
+## Smart App Control
+
+This is **not** SmartScreen, and the difference matters. SmartScreen shows a
+box with **More info → Run anyway** behind it. Smart App Control shows a box
+whose only buttons are **Okay** and **Get apps from the Store**. There is no
+way past it, for you or for a customer, and there is no per-app exception list
+to add anything to.
+
+It blocks anything it cannot attribute to a publisher it trusts. An unsigned
+executable never runs on a machine where it is enforcing, however that file
+arrived. Copying it from a USB stick does not help, because this is not driven
+by the download tag.
+
+### Who has it on
+
+Only Windows 11, and only where Windows decided to enable it. It is switched
+on during a **clean install**, after a period in evaluation mode where Windows
+watches what the machine runs and decides. A PC upgraded from Windows 10, or
+one that has been used for a while, usually ends up with it off.
+
+So most shop PCs will not have it. New ones increasingly will, and that share
+only grows.
+
+Check any machine:
+
+```powershell
+(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy').VerifiedAndReputablePolicyState
+```
+
+| Value | Meaning |
+|---|---|
+| 0 | Off |
+| 1 | On and enforcing. An unsigned build cannot run |
+| 2 | Evaluation. Windows is still deciding |
+
+`tools\check_release.ps1` reports this along with everything else.
+
+### Turning it off on your own machine
+
+Windows Security → App & browser control → Smart App Control settings → Off.
+
+**This is one-way.** Once off, it cannot be switched back on without
+reinstalling Windows. On a machine you build and test software on that is the
+right call, because you will otherwise be blocked from running your own
+unsigned builds forever. Make that decision deliberately, and not on a
+customer's PC.
+
+### What actually fixes it
+
+A code-signing certificate, and nothing else. Smart App Control honours a
+valid signature from a trusted CA, so a signed build runs. This is the reason
+signing stops being optional: SmartScreen can be clicked past by a determined
+customer, and Smart App Control cannot be.
 
 ---
 
