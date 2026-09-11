@@ -89,8 +89,10 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .tile.is-ok{border-left-color:var(--success);}
 
 /* ── Two columns: what to do, then who to know. ── */
-.cols{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:16px;align-items:start;}
-@media (max-width:1180px){ .cols{grid-template-columns:1fr;} }
+.cols{display:grid;gap:16px;align-items:start;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,0.92fr);}
+@media (max-width:1500px){ .cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);} }
+@media (max-width:1120px){ .cols{grid-template-columns:1fr;} }
 .col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 
 .card{background:var(--white);border:1px solid var(--border);border-radius:13px;
@@ -153,14 +155,16 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
 /* ── One place to add a promise, rather than a form per card. ── */
 .add-tabs{display:flex;gap:0;border-bottom:1px solid var(--rule2);}
-.add-tab{flex:1;padding:9px 6px;font-size:0.69rem;font-weight:600;text-align:center;
-         cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;
-         transition:all .15s;}
+/* Four tabs share the width two used to have. */
+.add-tab{flex:1;padding:9px 4px;font-size:0.66rem;font-weight:600;text-align:center;
+         white-space:nowrap;cursor:pointer;color:var(--text-muted);
+         border-bottom:2px solid transparent;transition:all .15s;}
 .add-tab:hover{background:var(--bg-main);}
 .add-tab.on{color:var(--blue);border-bottom-color:var(--blue);background:var(--blue-bg);}
 .add-body{padding:13px 17px;display:grid;gap:8px;}
 .add-body[hidden]{display:none;}
 .fld{display:flex;flex-direction:column;gap:4px;}
+.fld[hidden],.fld-row[hidden]{display:none;}
 .fld label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
            letter-spacing:0.8px;color:var(--muted2);}
 .fld input,.fld select{height:32px;padding:0 10px;border:1px solid var(--border);
@@ -252,7 +256,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
         <!-- What to do, in the order a counter does it. -->
         <div class="col">
-
             <div class="card" id="sec-today">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -300,7 +303,10 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
                 <div class="list" id="orders"><div class="empty">Loading…</div></div>
             </div>
+        </div>
 
+        <!-- Money: what is owed, what is being saved, and who has gone quiet. -->
+        <div class="col">
             <div class="card" id="sec-money">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -334,149 +340,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 <div class="list" id="plans"><div class="empty">Loading…</div></div>
             </div>
 
-        </div>
-
-        <!-- Who to know, and one place to write something down. -->
-        <div class="col">
-
-            <div class="card">
-                <div class="card-hdr">
-                    <div class="card-hdr-left">
-                        <div class="card-icon">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        </div>
-                        <div>
-                            <div class="card-title">Write it down</div>
-                            <div class="card-sub">Before they leave the counter</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="add-tabs">
-                    <div class="add-tab on" id="tab-fu" onclick="showAdd('fu')">Follow-up</div>
-                    <div class="add-tab" id="tab-or" onclick="showAdd('or')">Order</div>
-                </div>
-
-                <div class="add-body" id="add-fu">
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="fu-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>What needs doing</label>
-                        <input type="text" id="fu-task" placeholder="Call about the bangle">
-                    </div>
-                    <div class="fld">
-                        <label>By when</label>
-                        <input type="date" id="fu-date">
-                    </div>
-                    <button class="btn btn-primary" onclick="addFollowup()">Add follow-up</button>
-                </div>
-
-                <div class="add-body" id="add-or" hidden>
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="or-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>What is being made or mended</label>
-                        <input type="text" id="or-desc" placeholder="Chain clasp repair">
-                    </div>
-                    <div class="fld-row">
-                        <div class="fld">
-                            <label>Type</label>
-                            <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
-                        </div>
-                        <div class="fld">
-                            <label>Promised</label>
-                            <input type="date" id="or-date">
-                        </div>
-                    </div>
-                    <div class="fld">
-                        <label>Advance taken</label>
-                        <input type="number" id="or-advance" placeholder="0" step="1" min="0">
-                    </div>
-                    <button class="btn btn-primary" onclick="addOrder()">Add order</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-hdr">
-                    <div class="card-hdr-left">
-                        <div class="card-icon ok">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-1L3 21l2.1-5a8.4 8.4 0 0 1-1-4A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
-                        </div>
-                        <div>
-                            <div class="card-title">Send a message</div>
-                            <div class="card-sub">New arrival, or a note to everyone</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="add-body">
-                    <div class="fld">
-                        <label>What kind</label>
-                        <select id="camp-kind" onchange="onCampKind()">
-                            <option value="new_item">New arrival</option>
-                            <option value="broadcast">Announcement</option>
-                            <option value="festival">Festival greeting</option>
-                        </select>
-                    </div>
-                    <div class="fld" id="camp-item-wrap">
-                        <label>The piece</label>
-                        <input type="text" id="camp-item" placeholder="22K temple necklace, 32g">
-                    </div>
-                    <div class="fld" id="camp-note-wrap" hidden>
-                        <label>What to say</label>
-                        <input type="text" id="camp-note" placeholder="We are shut Monday for Diwali">
-                    </div>
-                    <div class="fld" id="camp-greet-wrap" hidden>
-                        <label>Greeting</label>
-                        <input type="text" id="camp-greeting" placeholder="Happy Diwali">
-                    </div>
-                    <div class="fld">
-                        <label>Who</label>
-                        <select id="camp-segment">
-                            <option value="all">Everyone</option>
-                            <option value="vip">VIP only</option>
-                            <option value="repeat">Regulars</option>
-                            <option value="lapsed">Those gone quiet</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-wa" onclick="startCampaign()">Prepare messages</button>
-                </div>
-            </div>
-
-            <div class="card" id="sec-photos">
-                <div class="card-hdr">
-                    <div class="card-hdr-left">
-                        <div class="card-icon gold">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 15l-5-5L5 19"/></svg>
-                        </div>
-                        <div>
-                            <div class="card-title">Send a piece</div>
-                            <div class="card-sub">Photo and price, to one customer</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="add-body">
-                    <div class="fld">
-                        <label>Customer</label>
-                        <input type="text" id="pic-customer" list="customer-names" placeholder="Name">
-                    </div>
-                    <div class="fld">
-                        <label>Which piece</label>
-                        <select id="pic-item"><option value="">Loading stock…</option></select>
-                    </div>
-                    <div class="fld">
-                        <label>Anything to add</label>
-                        <input type="text" id="pic-note" placeholder="Can be made to order in 18K">
-                    </div>
-                    <div class="fld-row">
-                        <button class="btn btn-ghost" onclick="attachPhoto()">Add photo</button>
-                        <button class="btn btn-wa" onclick="sendPiece()">Send</button>
-                    </div>
-                    <div class="skip-list" id="pic-state">Pick a piece to see whether it has a picture.</div>
-                </div>
-            </div>
 
             <div class="card" id="sec-lapsed">
                 <div class="card-hdr">
@@ -510,8 +373,127 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
             </div>
 
         </div>
-    </div>
-</div>
+
+        <!-- One card for everything you might write or send, so the column
+             is not three tall forms stacked on top of each other. -->
+        <div class="col">
+            <div class="card" id="sec-do">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon ok">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-1L3 21l2.1-5a8.4 8.4 0 0 1-1-4A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Do something</div>
+                            <div class="card-sub">Write it down, or send it</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-tabs">
+                    <div class="add-tab on" id="tab-fu"  onclick="showAdd('fu')">Follow-up</div>
+                    <div class="add-tab"    id="tab-or"  onclick="showAdd('or')">Order</div>
+                    <div class="add-tab"    id="tab-camp" onclick="showAdd('camp')">Announce</div>
+                    <div class="add-tab"    id="tab-pic" onclick="showAdd('pic')">Send piece</div>
+                </div>
+                <div class="add-body" id="add-fu">
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="fu-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What needs doing</label>
+                        <input type="text" id="fu-task" placeholder="Call about the bangle">
+                    </div>
+                    <div class="fld">
+                        <label>By when</label>
+                        <input type="date" id="fu-date">
+                    </div>
+                    <button class="btn btn-primary" onclick="addFollowup()">Add follow-up</button>
+                </div>
+                <div class="add-body" id="add-or" hidden>
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="or-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>What is being made or mended</label>
+                        <input type="text" id="or-desc" placeholder="Chain clasp repair">
+                    </div>
+                    <div class="fld-row">
+                        <div class="fld">
+                            <label>Type</label>
+                            <select id="or-kind"><option value="order">Order</option><option value="repair">Repair</option></select>
+                        </div>
+                        <div class="fld">
+                            <label>Promised</label>
+                            <input type="date" id="or-date">
+                        </div>
+                    </div>
+                    <div class="fld">
+                        <label>Advance taken</label>
+                        <input type="number" id="or-advance" placeholder="0" step="1" min="0">
+                    </div>
+                    <button class="btn btn-primary" onclick="addOrder()">Add order</button>
+                </div>
+                <div class="add-body" id="add-camp" hidden>
+                    <div class="fld">
+                        <label>What kind</label>
+                        <select id="camp-kind" onchange="onCampKind()">
+                            <option value="new_item">New arrival</option>
+                            <option value="broadcast">Announcement</option>
+                            <option value="festival">Festival greeting</option>
+                        </select>
+                    </div>
+                    <div class="fld" id="camp-item-wrap">
+                        <label>The piece</label>
+                        <input type="text" id="camp-item" placeholder="22K temple necklace, 32g">
+                    </div>
+                    <div class="fld" id="camp-note-wrap" hidden>
+                        <label>What to say</label>
+                        <input type="text" id="camp-note" placeholder="We are shut Monday for Diwali">
+                    </div>
+                    <div class="fld" id="camp-greet-wrap" hidden>
+                        <label>Greeting</label>
+                        <input type="text" id="camp-greeting" placeholder="Happy Diwali">
+                    </div>
+                    <div class="fld">
+                        <label>Who</label>
+                        <select id="camp-segment">
+                            <option value="all">Everyone</option>
+                            <option value="vip">VIP only</option>
+                            <option value="repeat">Regulars</option>
+                            <option value="lapsed">Those gone quiet</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-wa" onclick="startCampaign()">Prepare messages</button>
+                </div>
+
+                <div class="add-body" id="add-pic" hidden>
+                    <div class="fld">
+                        <label>Customer</label>
+                        <input type="text" id="pic-customer" list="customer-names" placeholder="Name">
+                    </div>
+                    <div class="fld">
+                        <label>Which piece</label>
+                        <select id="pic-item"><option value="">Loading stock…</option></select>
+                    </div>
+                    <div class="fld">
+                        <label>Anything to add</label>
+                        <input type="text" id="pic-note" placeholder="Can be made to order in 18K">
+                    </div>
+                    <div class="fld-row">
+                        <button class="btn btn-ghost" onclick="attachPhoto()">Add photo</button>
+                        <button class="btn btn-wa" onclick="sendPiece()">Send</button>
+                    </div>
+                    <div class="skip-list" id="pic-state">Pick a piece to see whether it has a picture.</div>
+                </div>
+
+            </div><!-- /do -->
+        </div><!-- /col -->
+
+    </div><!-- /cols -->
+
+</div><!-- /scroll -->
 </main>
 
 <div class="ov" id="camp-ov" hidden>
@@ -642,18 +624,35 @@ function emptyState(title, line){
 }
 
 // ── loading ──────────────────────────────────────────────────────────
+// Every list on the screen, so one message can reach all of them.
+var LISTS = ['occasions', 'followups', 'orders', 'dues', 'plans', 'lapsed', 'top'];
+
+function setAllLists(title, line){
+    for (var i = 0; i < LISTS.length; i++) {
+        var box = el(LISTS[i]);
+        if (box) box.innerHTML = emptyState(title, line);
+    }
+}
+
 function loadAll(manual){
     var a = api();
     if (!a || typeof a.crm_dashboard !== 'function') {
-        el('head-sub').textContent = 'Not available in this build — restart after updating.';
-        setLive('stale', 'offline');
+        el('head-sub').textContent = 'Close and reopen AurumOS to finish updating.';
+        setLive('stale', 'needs restart');
+        // Without this every card sat on "Loading…" for ever while only the
+        // header said anything, which reads as a hung screen rather than one
+        // waiting on a restart.
+        setAllLists('Waiting for the app to restart',
+                    'The customer features arrived in an update. Close AurumOS and open it again.');
         return;
     }
     setLive('busy', 'checking');
     a.crm_dashboard(30, 365).then(function(d){
         if (!d || d.status !== 'success') {
-            el('head-sub').textContent = (d && d.message) || 'Could not load.';
+            var why = (d && d.message) || 'Could not load.';
+            el('head-sub').textContent = why;
             setLive('stale', 'not updating');
+            setAllLists('Could not load', why);
             return;
         }
         DATA = d;
@@ -677,6 +676,7 @@ function loadAll(manual){
     }).catch(function(e){
         el('head-sub').textContent = 'Could not load: ' + e;
         setLive('stale', 'not updating');
+        setAllLists('Could not load', String(e));
     });
 
     if (typeof a.crm_customers === 'function') {
@@ -898,11 +898,15 @@ function onSearch(q){
 }
 
 // ── one place to write something down ────────────────────────────────
+var ADD_TABS = ['fu', 'or', 'camp', 'pic'];
+
 function showAdd(which){
-    el('add-fu').hidden = (which !== 'fu');
-    el('add-or').hidden = (which !== 'or');
-    el('tab-fu').className = 'add-tab' + (which === 'fu' ? ' on' : '');
-    el('tab-or').className = 'add-tab' + (which === 'or' ? ' on' : '');
+    for (var i = 0; i < ADD_TABS.length; i++) {
+        var k = ADD_TABS[i];
+        var body = el('add-' + k), tab = el('tab-' + k);
+        if (body) body.hidden = (k !== which);
+        if (tab) tab.className = 'add-tab' + (k === which ? ' on' : '');
+    }
 }
 
 function addFollowup(){
