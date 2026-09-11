@@ -63,6 +63,7 @@ body{font-family:var(--sans);background:var(--offwhite);color:var(--ink);font-si
 .row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--rule2);}
 .row:last-child{border-bottom:none;}
 .row:hover{background:var(--offwhite);}
+.row-click{cursor:pointer;}
 .row-main{flex:1;min-width:0;}
 .row-name{font-weight:600;font-size:0.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .row-meta{font-size:0.66rem;color:var(--muted);margin-top:2px;}
@@ -233,6 +234,16 @@ var CUSTOMERS = [];
 
 function el(id){ return document.getElementById(id); }
 
+// For a value dropped inside a single-quoted onclick attribute. Customer
+// names are typed by people, and one apostrophe would otherwise end the
+// attribute early and take the row's markup with it.
+function escAttr(s){
+    var t = String(s === null || s === undefined ? '' : s);
+    t = t.split('\\').join('\\\\');
+    t = t.split("'").join("\\'");
+    return t.split('"').join('&quot;').split('<').join('&lt;');
+}
+
 function esc(s){
     return String(s === null || s === undefined ? '' : s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -262,6 +273,22 @@ function goTo(page){
     var a = api();
     if (a && typeof a.navigate === 'function') { a.navigate(page); return; }
     window.location.href = page;
+}
+
+// A name on this screen should open that person, not a list to search again.
+// customer_detail.html takes ?name=, so the bridge's navigate() is bypassed
+// here: it takes a bare page and would drop the query string.
+function openCustomer(name){
+    if (!name) return;
+    // Cut back to the folder this page is in. Done by hand rather than with a
+    // regular expression because the separator can be either slash and the
+    // escaping is easy to get quietly wrong.
+    var href = window.location.href;
+    var q = href.indexOf('?');
+    if (q >= 0) href = href.substring(0, q);
+    var cut = Math.max(href.lastIndexOf('/'), href.lastIndexOf('\\'));
+    var base = cut >= 0 ? href.substring(0, cut + 1) : '';
+    window.location.href = base + 'customer_detail.html?name=' + encodeURIComponent(name);
 }
 
 function today(){
@@ -348,7 +375,7 @@ function renderOccasions(list){
                  : '<span class="pill pill-ok">' + d + ' days</span>';
         var what = o.occasion === 'birthday' ? 'Birthday' : 'Anniversary';
         var turns = (o.turns && o.turns > 0) ? (' · ' + o.turns + (o.occasion === 'birthday' ? ' years' : ' years married')) : '';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(o.name) + '\')"><div class="row-main">'
              + '<div class="row-name">' + esc(o.name) + '</div>'
              + '<div class="row-meta">' + what + turns + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>'
              + '</div><div class="row-right">' + pill + '</div></div>';
@@ -369,7 +396,7 @@ function renderAgeing(totals, dues){
     el('dues').innerHTML = dues.map(function(d){
         var old = d.oldest_days || 0;
         var cls = old > 90 ? 'pill-lapsed' : old > 30 ? 'pill-soon' : 'pill-ok';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(d.customer) + '\')"><div class="row-main">'
              + '<div class="row-name">' + esc(d.customer) + '</div>'
              + '<div class="row-meta">oldest ' + old + ' days</div>'
              + '</div><div class="row-right">' + money(d.total)
@@ -390,7 +417,7 @@ function renderPlans(list){
                 : p.status === 'completed' ? 'pill-ok' : 'pill-repeat';
         var label = p.status === 'behind' ? 'Behind ' + money(p.behind_by)
                   : p.status === 'completed' ? 'Complete' : 'On track';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(p.customer) + '\')"><div class="row-main">'
              + '<div class="row-name">' + esc(p.customer) + '</div>'
              + '<div class="row-meta">' + esc(p.scheme_name) + ' · '
              + (p.paid_count || 0) + ' of ' + (p.instalments || 0)
@@ -441,7 +468,7 @@ function renderOrders(list){
 function renderLapsed(list){
     if (!list.length) { el('lapsed').innerHTML = '<div class="empty">Nobody has gone quiet.</div>'; return; }
     el('lapsed').innerHTML = list.map(function(c){
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
              + '<div class="row-name">' + esc(c.name) + '</div>'
              + '<div class="row-meta">last bought ' + esc(c.last_purchase || '—')
              + ' · ' + (c.days_since || 0) + ' days ago'
@@ -454,7 +481,7 @@ function renderTop(list){
     if (!list.length) { el('top').innerHTML = '<div class="empty">No purchases recorded yet.</div>'; return; }
     el('top').innerHTML = list.map(function(c){
         var seg = c.segment_computed || 'new';
-        return '<div class="row"><div class="row-main">'
+        return '<div class="row row-click" onclick="openCustomer(\'' + escAttr(c.name) + '\')"><div class="row-main">'
              + '<div class="row-name">' + esc(c.name)
              + ' <span class="pill pill-' + esc(seg) + '">' + esc(seg) + '</span></div>'
              + '<div class="row-meta">' + (c.bill_count || 0) + ' bills'
