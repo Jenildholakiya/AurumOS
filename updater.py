@@ -1,34 +1,76 @@
 # -*- coding: utf-8 -*-
 """
-AurumOS Updater Module
-Checks GitHub releases for updates and downloads changed files.
+AurumOS updater: which version this copy runs, and whether GitHub has a newer one.
+
+main.py does the downloading (AurumAPI.auto_update_silent). This module only
+answers three questions:
+
+    CURRENT_VERSION           the number baked in when the EXE was built
+    get_installed_version()   the number the last update wrote (version.lock),
+                              or CURRENT_VERSION when no update has run yet
+    check_for_update()        the newest release's manifest when it is newer
+                              than the installed number (or marked force),
+                              else None
+
+The manifest comes from the release's "latest/download" link, which needs no
+API token and has no rate limit. The GitHub API is only a fallback.
+
+Every push to main creates a release (see .github/workflows/release.yml), so
+the number here is not edited by hand: build.py stamps the highest git tag
+into build_version.txt inside the bundle and CURRENT_VERSION reads it.
 """
 
-import os
-import sys
-import json
 import hashlib
-import urllib.request
+import json
+import os
+import re
+import sys
 import urllib.error
+import urllib.request
 from pathlib import Path
 
-# Current version baked into the EXE at build time
-# Update this BEFORE building each release — must match the GitHub release tag
-CURRENT_VERSION = "1.1.5"
-
-# GitHub repo for releases
 REPO_OWNER = "Jenildholakiya"
 REPO_NAME = "AurumOS"
+MANIFEST_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest/download/version.json"
 VERSION_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
+
+VERSION_RE = re.compile(r'^\d+\.\d+\.\d+$')
+
+# Used only when build_version.txt is missing (running from source, or a
+# build made without git). Keep it at the last number that was shipped by
+# hand so such a copy still accepts the next automatic release.
+FALLBACK_VERSION = "1.1.7"
 
 # Files that should never be auto-updated (protected)
 PROTECTED_PATHS = {
     'database', 'logs', 'config.json', 'exe_trusted_hash.txt',
-    'AurumOS.exe', 'version.lock',
+    'AurumOS.exe', 'version.lock', 'build_version.txt',
 }
 
+
+def _bundle_dir() -> Path:
+    """Where bundled data lives: _internal/ next to the EXE, or this folder."""
+    if getattr(sys, 'frozen', False):
+        meipass = getattr(sys, '_MEIPASS', None)
+        return Path(meipass) if meipass else Path(sys.executable).parent / '_internal'
+    return Path(__file__).resolve().parent
+
+
+def _baked_version() -> str:
+    try:
+        v = (_bundle_dir() / 'build_version.txt').read_text(encoding='utf-8').strip()
+        if VERSION_RE.match(v):
+            return v
+    except Exception:
+        pass
+    return FALLBACK_VERSION
+
+
+CURRENT_VERSION = _baked_version()
+
+
 def sha256(path: Path) -> str:
-    """Compute SHA256 hash of a file. Returns empty string if missing."""
+    """SHA256 of a file, or '' when it is missing or unreadable."""
     try:
         h = hashlib.sha256()
         with open(path, 'rb') as f:
@@ -40,21 +82,23 @@ def sha256(path: Path) -> str:
 
 
 def get_app_root() -> Path:
-    """Return the application root directory (where updatable files live)."""
+    """Where updates land.
+
+    Frozen: the folder holding AurumOS.exe. Its _internal/ui is what the app
+    serves, so a downloaded screen is the one the user sees next. (The old
+    rule of climbing out of a folder called dist/ or AurumOS/ sent the files
+    one level too high whenever the install folder had one of those names.)
+    From source: the working directory.
+    """
     if getattr(sys, 'frozen', False):
-        exe_dir = Path(sys.executable).parent
-        # If EXE is in dist/ or dist/AurumOS/, go up to project root
-        if exe_dir.name.lower() in ('dist', 'aurumos'):
-            return exe_dir.parent
-        return exe_dir
+        return Path(sys.executable).resolve().parent
     return Path.cwd()
 
 
 def _is_protected(rel_path: str) -> bool:
-    """Check if a relative path should be protected from auto-updates."""
+    """True for paths an update must never overwrite."""
     rel = rel_path.replace('\\', '/').lstrip('./')
     parts = rel.split('/')
-    # Protect top-level folders like database/, logs/, and specific files
     if parts[0] in PROTECTED_PATHS:
         return True
     if rel in PROTECTED_PATHS:
@@ -63,104 +107,37 @@ def _is_protected(rel_path: str) -> bool:
 
 
 def _version_key(v: str):
-    """Convert version string to tuple for comparison."""
+    """'1.2.3' -> (1, 2, 3); anything unparsable -> (0, 0, 0)."""
     try:
-        return tuple(int(x) for x in v.split('.')[:3])
+        return tuple(int(x) for x in str(v).strip().lstrip('v').split('.')[:3])
     except Exception:
         return (0, 0, 0)
 
 
-def check_for_update(timeout=8) -> dict | None:
-    """
-    Check GitHub for the latest release.
-    Returns dict with version info if update available, None otherwise.
-    """
-    try:
-        req = urllib.request.Request(
-            VERSION_URL,
-            headers={
-                'User-Agent': f'AurumOS/{CURRENT_VERSION}',
-                'Accept': 'application/vnd.github.v3+json',
-            }
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode())
-    except urllib.error.URLError:
-        return None  # No network
-    except Exception:
-        return None
+def is_newer(remote: str, local: str) -> bool:
+    return _version_key(remote) > _version_key(local)
 
-    # Parse version from tag_name (e.g., "v1.1.4")
-    tag = data.get('tag_name', '')
-    if not tag.startswith('v'):
-        return None
-    remote_version = tag[1:]
 
-    # Compare versions — use installed version (version.lock) if available,
-    # falls back to CURRENT_VERSION for fresh installs.
-    # A release may set "force": true in its manifest (version-reset line):
-    # then it installs even when its number is lower than installed.
-    local_version = get_installed_version()
-    older = _version_key(remote_version) <= _version_key(local_version)
-
-    # Find version.json asset
-    version_json_url = None
-    for asset in data.get('assets', []):
-        if asset.get('name') == 'version.json':
-            version_json_url = asset.get('browser_download_url')
-            break
-
-    if not version_json_url:
-        return None
-
-    # Fetch version.json with file manifest
-    try:
-        req = urllib.request.Request(
-            version_json_url,
-            headers={'User-Agent': f'AurumOS/{CURRENT_VERSION}'}
-        )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            manifest = json.loads(resp.read().decode())
-    except Exception:
-        return None
-
-    if older and not manifest.get('force'):
-        return None
-
-    # Add metadata — callers expect these keys
-    manifest['_remote_version'] = remote_version
-    manifest['_changelog'] = data.get('body', '')
-    manifest['available'] = True
-    manifest['current'] = CURRENT_VERSION
-    manifest['file_count'] = len(manifest.get('files', []))
-    return manifest
-
+# ── installed version (version.lock) ────────────────────────────────────────
 
 def _lock_candidates() -> list:
-    """All places version.lock may live (newest wins).
+    """Every place version.lock may live, newest wins.
 
-    History left locks in two spots: beside the EXE (dist/) on some installs
-    and at the project root on others. Read/write the same resolved file so
-    the sidebar version can never disagree with the updater again.
+    Frozen copies keep it beside the EXE. Running from source, older code
+    left one in dist/ and one at the root; both are read so the sidebar and
+    the updater can never disagree.
     """
     root = get_app_root()
     cands = [root / 'version.lock']
-    try:
-        if getattr(sys, 'frozen', False):
-            exe_lock = Path(sys.executable).parent / 'version.lock'
-            if exe_lock != cands[0]:
-                cands.insert(0, exe_lock)
-        else:
-            dist_lock = Path(root) / 'dist' / 'version.lock'
-            if dist_lock != cands[0]:
-                cands.insert(0, dist_lock)
-    except Exception:
-        pass
+    if not getattr(sys, 'frozen', False):
+        dist_lock = root / 'dist' / 'version.lock'
+        if dist_lock != cands[0]:
+            cands.insert(0, dist_lock)
     return cands
 
 
 def set_installed_version(version: str):
-    """Write version.lock file to mark installed version."""
+    """Record that `version` is fully installed."""
     try:
         _lock_candidates()[0].write_text(version.strip(), encoding='utf-8')
     except Exception:
@@ -168,34 +145,104 @@ def set_installed_version(version: str):
 
 
 def get_installed_version() -> str:
-    """Read the newest version.lock among known locations, else baked version."""
-    try:
-        best, best_key = '', (0, 0, 0)
-        for lock in _lock_candidates():
-            try:
-                if lock.exists():
-                    v = lock.read_text(encoding='utf-8').strip()
-                    if _version_key(v) > best_key:
-                        best, best_key = v, _version_key(v)
-            except Exception:
-                pass
-        if best:
-            return best
-    except Exception:
-        pass
+    """The newest version.lock among known locations, else the baked version."""
+    best, best_key = '', (0, 0, 0)
+    for lock in _lock_candidates():
+        try:
+            if lock.exists():
+                v = lock.read_text(encoding='utf-8').strip()
+                if VERSION_RE.match(v) and _version_key(v) > best_key:
+                    best, best_key = v, _version_key(v)
+        except Exception:
+            pass
+    if best and _version_key(best) >= _version_key(CURRENT_VERSION):
+        return best
     return CURRENT_VERSION
 
 
-# Backwards compatibility - main.py imports these
+# ── what GitHub has ─────────────────────────────────────────────────────────
+
+def _get_json(url: str, timeout: float):
+    req = urllib.request.Request(url, headers={
+        'User-Agent': f'AurumOS/{CURRENT_VERSION}',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode('utf-8'))
+
+
+def fetch_latest_manifest(timeout=8):
+    """version.json of the newest release, or None when offline.
+
+    The direct link first (no API, no rate limit); the API second, for the
+    odd case where the redirect misbehaves."""
+    try:
+        m = _get_json(MANIFEST_URL, timeout)
+        if isinstance(m, dict) and m.get('version'):
+            return m
+    except Exception:
+        pass
+    try:
+        rel = _get_json(VERSION_URL, timeout)
+        for asset in rel.get('assets', []):
+            if asset.get('name') == 'version.json':
+                m = _get_json(asset.get('browser_download_url'), timeout)
+                if isinstance(m, dict) and m.get('version'):
+                    if not m.get('changelog') and rel.get('body'):
+                        m['changelog'] = [ln.strip() for ln in str(rel['body']).split('\n') if ln.strip()]
+                    return m
+    except Exception:
+        pass
+    return None
+
+
+def decide(manifest, installed: str):
+    """The manifest if it should be installed over `installed`, else None.
+
+    Pure, so test_release_plan.py can pin the rules: newer wins; equal or
+    older is ignored unless the release is marked force (a version reset).
+    """
+    if not isinstance(manifest, dict):
+        return None
+    remote = str(manifest.get('version', '') or '').strip()
+    if not VERSION_RE.match(remote):
+        return None
+    if not is_newer(remote, installed) and not manifest.get('force'):
+        return None
+    result = dict(manifest)
+    result['_remote_version'] = remote
+    result['_changelog'] = '\n'.join(str(c) for c in (manifest.get('changelog') or []))
+    result['available'] = True
+    result['current'] = installed
+    result['file_count'] = len(manifest.get('files') or [])
+    return result
+
+
+def check_for_update(timeout=8):
+    """The newest release manifest if this copy should install it, else None.
+
+    None also means "offline" -- callers treat both the same: nothing to do.
+    """
+    manifest = fetch_latest_manifest(timeout)
+    if not manifest:
+        return None
+    return decide(manifest, get_installed_version())
+
+
+# Backwards compatibility: main.py once imported this name.
 def _sha256(path):
-    """Alias for sha256() used by main.py"""
     return sha256(Path(path) if not isinstance(path, Path) else path)
 
 
-# Export for main.py
 __all__ = [
     'CURRENT_VERSION',
+    'FALLBACK_VERSION',
+    'MANIFEST_URL',
     'check_for_update',
+    'decide',
+    'fetch_latest_manifest',
+    'is_newer',
     'sha256',
     'get_app_root',
     '_is_protected',

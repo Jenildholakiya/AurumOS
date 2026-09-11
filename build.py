@@ -11,6 +11,7 @@ import os
 import sys
 import glob
 import platform
+import re
 import shutil
 import subprocess
 import fnmatch
@@ -157,6 +158,7 @@ def _boot_clr():
     #    only fall back to coreclr. NEVER set PYTHONNET_RUNTIME=coreclr up front
     #    because that forces coreclr which can't load System.Windows.Forms.
     clr_ok = False
+    why = []
     try:
         import pythonnet
         os.environ.pop("PYTHONNET_RUNTIME", None)
@@ -166,14 +168,20 @@ def _boot_clr():
                 os.environ["PYTHONNET_RUNTIME"] = runtime
                 clr_ok = True
                 return
-            except Exception:
+            except Exception as e:
+                # Keep the reason. Without it main.py could only say the CLR
+                # did not start, which is how every failure ended up being
+                # reported to the customer as a missing download.
+                why.append(runtime + ": " + repr(e)[:200])
                 continue
-    except Exception:
-        pass
+    except Exception as e:
+        why.append("pythonnet import: " + repr(e)[:200])
 
-    # 6) no .NET runtime found - set flag for friendly error in main.py
+    # 6) could not start a runtime - record the flag AND the reason, so main.py
+    #    can tell a missing install apart from a broken one.
     if not clr_ok:
         os.environ["AURUM_CLR_FAILED"] = "1"
+        os.environ["AURUM_CLR_ERROR"] = " | ".join(why)[:500]
 
 _boot_clr()
 '''
@@ -185,6 +193,23 @@ TARGETS = [
     os.path.join('database', 'db_manager.py'),
     os.path.join('core', 'tag_engine.py'),
 ]
+
+# ── WHO PUBLISHES THIS ────────────────────────────────────────────────────────
+# Windows embeds these in the EXE and shows them in file Properties. An
+# executable carrying none of them, unsigned, that then opens a listening
+# socket is the shape of a thing antivirus is built to stop, and heuristic
+# engines score it accordingly. Filling them in costs nothing and removes a
+# large part of the reason AurumOS gets flagged.
+#
+# SET COMPANY to the registered business name BEFORE buying a code-signing
+# certificate: a certificate is issued to a legal entity, and CompanyName here
+# should be the same name, or the two disagree in front of the customer.
+COMPANY     = "AurumOS"
+PRODUCT     = "AurumOS"
+DESCRIPTION = "AurumOS Jewellery Retail and Wholesale Management"
+COPYRIGHT   = "Copyright (c) AurumOS. All rights reserved."
+SUPPORT_URL = "aurumos.software@gmail.com"
+
 
 # ── STEP 0: Verify we're in venv ─────────────────────────────────────────────
 def check_env():
@@ -338,6 +363,106 @@ except Exception:
 
 
 # ── STEP 3: Write AurumOS.spec ────────────────────────────────────────────────
+def stamp_version():
+    """Write build_version.txt: the number this EXE will report as its own.
+
+    Releases are numbered by git (every push to main tags the next vX.Y.Z, see
+    .github/workflows/release.yml), so the version is taken from the highest
+    tag in the repository rather than typed into a source file. The file is
+    bundled into _internal/ and read by updater.CURRENT_VERSION.
+
+    Build from a checkout with the tags fetched. Without them this falls back
+    to updater.FALLBACK_VERSION, and an EXE that under-reports its version
+    re-downloads an update it already has.
+    """
+    print("\n[2b/7] Stamping build version...")
+    version, source = None, ''
+    try:
+        out = subprocess.run(['git', 'tag', '-l', 'v*'], capture_output=True,
+                             text=True, cwd=ROOT, timeout=30)
+        found = []
+        for t in out.stdout.split():
+            m = re.match(r'^v(\d+)\.(\d+)\.(\d+)$', t.strip())
+            if m:
+                found.append(tuple(int(x) for x in m.groups()))
+        if found:
+            version = '.'.join(str(x) for x in max(found))
+            source = 'highest git tag'
+    except Exception as e:
+        print(f"  (warning) could not read git tags: {e}")
+
+    if not version:
+        try:
+            with open(os.path.join(ROOT, 'updater.py'), 'r', encoding='utf-8') as f:
+                for line in f:
+                    m = re.match(r'FALLBACK_VERSION\s*=\s*["\'](.+?)["\']', line)
+                    if m:
+                        version, source = m.group(1), 'updater.FALLBACK_VERSION'
+                        break
+        except Exception:
+            pass
+    if not version:
+        version, source = '0.0.0', 'nothing found'
+        print("  WARNING: no git tags and no fallback -- this EXE will report 0.0.0")
+
+    with open(os.path.join(ROOT, 'build_version.txt'), 'w', encoding='utf-8') as f:
+        f.write(version)
+    print(f"  OK -- v{version} (from {source}) -> build_version.txt")
+    return version
+
+
+def write_version_resource(version):
+    """Write the Windows version resource PyInstaller stamps into the EXE.
+
+    Without this the file has no CompanyName, ProductName, FileDescription or
+    FileVersion at all -- Properties shows an empty tab. That absence is not
+    neutral. Reputation and heuristic engines weigh it, and an unsigned binary
+    with no publisher details that then listens on a socket scores like
+    something they are meant to stop. Costs nothing to fill in.
+
+    Not a substitute for signing. It removes a reason to be suspicious; only a
+    certificate removes the SmartScreen warning.
+    """
+    print("")
+    print("[2c/7] Writing version resource...")
+    parts = tuple(int(x) for x in version.split('.')[:3]) + (0,)
+    out = os.path.join(ROOT, 'version_info.txt')
+    body = f"""# Generated by build.py -- edit COMPANY/PRODUCT at the top of build.py, not here.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers={parts},
+    prodvers={parts},
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName',      {COMPANY!r}),
+         StringStruct('FileDescription',  {DESCRIPTION!r}),
+         StringStruct('FileVersion',      {version!r}),
+         StringStruct('InternalName',     'AurumOS'),
+         StringStruct('LegalCopyright',   {COPYRIGHT!r}),
+         StringStruct('OriginalFilename', 'AurumOS.exe'),
+         StringStruct('ProductName',      {PRODUCT!r}),
+         StringStruct('ProductVersion',   {version!r}),
+         StringStruct('Comments',         {SUPPORT_URL!r})])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
+"""
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write(body)
+    print(f"  OK -- {COMPANY} / {PRODUCT} v{version} -> version_info.txt")
+    return out
+
+
 def write_spec(venv_site, webview_dir, arch):
     print("\n[3/7] Writing AurumOS.spec...")
 
@@ -415,6 +540,7 @@ a = Analysis(
 {winspool_str}{serial_bin_str}
     ],
     datas=[
+        ("build_version.txt", "."),
         ("ui",    "ui"),
         ("fonts", "fonts"),
         ("core",  "core"),
@@ -485,10 +611,17 @@ exe = EXE(
     pyz, a.scripts, [],
     name="AurumOS",
     icon="AurumOS.ico" if os.path.exists("AurumOS.ico") else None,
+    version="version_info.txt",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX off, deliberately. A UPX-packed binary is treated as packed by every
+    # scanner, because that is what malware uses to hide, and it raises the
+    # detection rate on its own. UPX is not installed on this machine, so
+    # upx=True had been doing nothing -- which means the day someone built on a
+    # machine that had it, the EXE would have started getting flagged for no
+    # visible reason. Saying False keeps that from being luck.
+    upx=False,
     upx_exclude=["win32api.pyd","win32print.pyd","win32gui.pyd",
                  "pywintypes*.dll","pythoncom*.dll","winspool.drv","WebView2Loader.dll",
                  "Python.Runtime.dll","ClrLoader.dll","Python.Runtime.deps.json",
@@ -523,7 +656,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=["win32api.pyd","win32print.pyd","win32gui.pyd",
                  "pywintypes*.dll","pythoncom*.dll","winspool.drv","WebView2Loader.dll",
                  "Python.Runtime.dll","ClrLoader.dll","Python.Runtime.deps.json",
@@ -681,8 +814,10 @@ def _locate_signtool():
 
 def _load_sign_config():
     """Read signing config from sign_config.json OR environment variables.
-    Env vars take precedence (so you never have to put the password in a file):
-      AURUMOS_PFX, AURUMOS_PFX_PASSWORD, AURUMOS_TIMESTAMP_URL
+
+    Env vars win, so a password never has to sit in a file:
+      AURUMOS_PFX, AURUMOS_PFX_PASSWORD, AURUMOS_TIMESTAMP_URL,
+      AURUMOS_CERT_THUMBPRINT
     """
     cfg = {}
     path = os.path.join(ROOT, "sign_config.json")
@@ -695,57 +830,210 @@ def _load_sign_config():
             print(f"  WARNING: could not read sign_config.json ({e})")
     cfg.setdefault("pfx_path", os.environ.get("AURUMOS_PFX", ""))
     cfg.setdefault("password", os.environ.get("AURUMOS_PFX_PASSWORD", ""))
+    # An OV/EV certificate issued after June 2023 lives on a hardware token or
+    # in an HSM and is used from the Windows certificate store by thumbprint --
+    # there is no .pfx to point at. Support both.
+    cfg.setdefault("thumbprint", os.environ.get("AURUMOS_CERT_THUMBPRINT", ""))
     cfg.setdefault("timestamp_url", os.environ.get(
         "AURUMOS_TIMESTAMP_URL", "http://timestamp.digicert.com"))
     return cfg
 
+
+def _sign_with_powershell(exe_path, cfg):
+    """Sign using Windows' own Set-AuthenticodeSignature.
+
+    signtool comes with the Windows SDK, which is a large download and was not
+    installed here, so the build kept producing unsigned EXEs for a reason
+    that had nothing to do with the certificate. PowerShell can do the same
+    job with what is already on every Windows machine.
+
+    The PFX password is handed over through the environment, not on the
+    command line, because a command line is readable by any other process on
+    the machine while it runs.
+    """
+    pfx = cfg.get("pfx_path", "")
+    thumb = str(cfg.get("thumbprint", "") or "").replace(" ", "")
+    ts = cfg.get("timestamp_url", "http://timestamp.digicert.com")
+    store = "LocalMachine" if cfg.get("machine_store") else "CurrentUser"
+
+    if thumb:
+        get_cert = (
+            "$c = Get-ChildItem -Path Cert:\\%s\\My -CodeSigningCert | "
+            "Where-Object { $_.Thumbprint -eq $env:AURUM_THUMB }; "
+            "if (-not $c) { Write-Output 'AURUMFAIL:No code-signing certificate "
+            "with that thumbprint in the %s store.'; exit 2 }" % (store, store)
+        )
+    else:
+        get_cert = (
+            "$pw = $env:AURUM_PFX_PW; "
+            "if ($pw) { $sec = ConvertTo-SecureString $pw -AsPlainText -Force; "
+            "$c = Get-PfxCertificate -FilePath $env:AURUM_PFX -Password $sec } "
+            "else { $c = Get-PfxCertificate -FilePath $env:AURUM_PFX }; "
+            "if (-not $c) { Write-Output 'AURUMFAIL:Could not read that .pfx.'; exit 2 }"
+        )
+
+    script = (
+        get_cert + "; "
+        "$r = Set-AuthenticodeSignature -FilePath $env:AURUM_EXE -Certificate $c "
+        "-HashAlgorithm SHA256 -TimestampServer $env:AURUM_TS -Force; "
+        "Write-Output $r.Status; "
+        "if ($r.Status -ne 'Valid') { Write-Output ('AURUMFAIL:' + $r.StatusMessage); exit 3 }"
+    )
+
+    env = dict(os.environ)
+    env["AURUM_EXE"] = exe_path
+    env["AURUM_TS"] = ts
+    if thumb:
+        env["AURUM_THUMB"] = thumb
+    else:
+        env["AURUM_PFX"] = pfx
+        if cfg.get("password"):
+            env["AURUM_PFX_PW"] = str(cfg["password"])
+
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=300)
+    except Exception as e:
+        print(f"  X PowerShell signing could not run: {e}")
+        return False
+    out = (r.stdout or "").strip()
+    if r.returncode != 0 or "Valid" not in out:
+        print("  X Signing FAILED.")
+        # Only the line the script marked as the reason. PowerShell otherwise
+        # echoes the whole command back and buries it.
+        said = [ln.split("AURUMFAIL:", 1)[1].strip()
+                for ln in out.split(chr(10)) if "AURUMFAIL:" in ln]
+        if not said:
+            said = [ln.strip() for ln in (r.stderr or "").split(chr(10))
+                    if ln.strip() and not ln.strip().startswith("+")][:2]
+        for line in said[:3] or ["PowerShell reported no reason."]:
+            print(f"    {line}")
+        return False
+    print("  OK SIGNED via Windows (no SDK needed).")
+    return True
+
+
+def _verify_signature(exe_path):
+    """Confirm the signature actually validates, using Windows itself.
+
+    signtool would be used if it were here. It is not, and a signature that
+    does not verify fails only on the customer's PC, which is the worst place
+    to find out.
+    """
+    script = ("$s = Get-AuthenticodeSignature -FilePath $env:AURUM_EXE; "
+              "Write-Output $s.Status; "
+              "if ($s.TimeStamperCertificate) { Write-Output 'timestamped' } "
+              "else { Write-Output 'no-timestamp' }")
+    env = dict(os.environ)
+    env["AURUM_EXE"] = exe_path
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    except Exception:
+        return True  # cannot check; do not claim a failure
+    lines = [x.strip() for x in (r.stdout or "").strip().split(chr(10)) if x.strip()]
+    status = lines[0] if lines else "Unknown"
+    if status != "Valid":
+        print(f"  X SIGNED BUT DOES NOT VERIFY ({status}).")
+        print("    A customer PC will reject this. Check the certificate chain.")
+        return False
+    if len(lines) > 1 and lines[1] == "no-timestamp":
+        print("  (warning) not timestamped - the signature dies with the cert.")
+    return True
+
+
 def sign_exe():
-    print("\n[5a/7] Code-signing EXE (Authenticode)...")
-    # PyInstaller's temporary onedir output is finalized to this fixed path.
+    """Authenticode-sign the EXE, and say plainly what is lost when it is not.
+
+    Signing is the only thing that removes the SmartScreen "unknown publisher"
+    warning outright, and it is what lets a file build reputation instead of
+    being judged fresh on every machine. Everything else in this build --
+    version resource, no packer -- reduces suspicion; only this ends it.
+    """
+    print("")
+    print("[5a/7] Code-signing EXE (Authenticode)...")
     exe_path = os.path.join(DIST, "AurumOS", "AurumOS.exe")
     if not os.path.isfile(exe_path):
-        print("  SKIP -- EXE not found at dist\\AurumOS.exe")
+        print("  SKIP -- EXE not found at dist\\AurumOS\\AurumOS.exe")
         return False
 
     cfg = _load_sign_config()
     pfx = cfg.get("pfx_path", "")
-    if not pfx:
-        print("  SKIP -- no certificate configured.")
-        print("  → To remove the SmartScreen 'unknown publisher' warning, get a")
-        print("    code-signing cert (.pfx) and put its path in sign_config.json")
-        print("    (see sign_config.json.example), or set env: AURUMOS_PFX.")
+    thumb = str(cfg.get("thumbprint", "") or "").replace(" ", "")
+
+    if not pfx and not thumb:
+        print("  SKIP -- no certificate configured. The EXE will be UNSIGNED.")
+        print("    Every customer who DOWNLOADS this gets 'Windows protected")
+        print("    your PC' and has to click More info, then Run anyway.")
+        print("    A code-signing certificate is the only thing that removes it.")
+        print("")
+        print("    Cheapest route: Azure Trusted Signing, a Microsoft service")
+        print("    billed monthly rather than a few hundred up front. It needs")
+        print("    an organisation with verifiable trading history.")
+        print("    Otherwise Sectigo, DigiCert or GlobalSign sell the usual")
+        print("    one- to three-year certificates. Extended Validation clears")
+        print("    SmartScreen immediately; a standard one has to accumulate")
+        print("    reputation over some weeks of installs first.")
+        print("")
+        print("    Then point sign_config.json at it and this step signs by")
+        print("    itself. The Windows SDK is NOT required -- signing falls")
+        print("    back to Windows' own Set-AuthenticodeSignature.")
         return False
-    if not os.path.isfile(pfx):
+    if pfx and not os.path.isfile(pfx):
         print(f"  ERROR -- PFX not found: {pfx}")
         return False
 
     signtool = _locate_signtool()
     if not signtool:
-        print("  ERROR -- signtool.exe not found (install the Windows SDK).")
-        print("    https://developer.microsoft.com/windows/downloads/windows-sdk/")
-        return False
+        # No SDK. Windows can still sign, so use it rather than shipping an
+        # unsigned EXE over a missing download.
+        print("  signtool not found - signing with Windows instead.")
+        if not _sign_with_powershell(exe_path, cfg):
+            print("    If you would rather use signtool, install the Windows SDK:")
+            print("    https://developer.microsoft.com/windows/downloads/windows-sdk/")
+            return False
+        return _verify_signature(exe_path)
 
-    # Sign with SHA256 file digest + RFC3161 timestamp (keeps signature valid
-    # after the cert expires). Password via env or config; empty password allowed.
+    # SHA256 digest plus an RFC3161 timestamp, so the signature stays valid
+    # after the certificate expires. /d and /du are what a user is shown in the
+    # UAC and SmartScreen dialogs, so they should read like the product.
     cmd = [
         signtool, "sign",
         "/fd", "SHA256",
         "/tr", cfg.get("timestamp_url", "http://timestamp.digicert.com"),
         "/td", "SHA256",
-        "/f", pfx,
+        "/d", PRODUCT,
     ]
-    pw = cfg.get("password", "")
-    if pw:
-        cmd += ["/p", pw]
+    if thumb:
+        cmd += ["/sha1", thumb]
+        if not pfx:
+            cmd += ["/sm"] if cfg.get("machine_store") else []
+    else:
+        cmd += ["/f", pfx]
+        pw = cfg.get("password", "")
+        if pw:
+            cmd += ["/p", pw]
     cmd.append(exe_path)
 
     r = subprocess.run(cmd, cwd=ROOT)
     if r.returncode != 0:
-        print("  X Signing FAILED - see output above. EXE left UNSIGNED"
-              " (SmartScreen will still warn).")
+        print("  X Signing FAILED -- see output above. EXE left UNSIGNED.")
         return False
-    print("  OK SIGNED - SmartScreen 'unknown publisher' warning removed.")
+
+    # Signtool reports success even where the chain does not build on a clean
+    # machine, which is the only place it matters. Verify rather than assume.
+    v = subprocess.run([signtool, "verify", "/pa", "/v", exe_path],
+                       cwd=ROOT, capture_output=True, text=True)
+    if v.returncode != 0:
+        print("  X SIGNED BUT DOES NOT VERIFY -- a customer PC will reject it.")
+        for line in (v.stdout or v.stderr or "").strip().split('\n')[-6:]:
+            print(f"    {line}")
+        return False
+    print("  OK SIGNED and verified -- SmartScreen 'unknown publisher' removed.")
     return True
+
 
 # ── STEP 5b: Write trusted EXE hash ───────────────────────────────────────────
 def write_trusted_hash():
@@ -768,13 +1056,69 @@ def write_trusted_hash():
     print(f"  OK -- {digest[:16]}... written to dist\\exe_trusted_hash.txt")
 
 # ── STEP 6: Report ────────────────────────────────────────────────────────────
-def report():
+def _report_smartscreen(exe):
+    """Say plainly what a customer's PC will do with this file.
+
+    A build that finishes with a tick and no mention of signing gets shipped,
+    and the first anyone hears about SmartScreen is a phone call from a shop
+    that will not click past a red box. Say it here, while there is still
+    something to do about it.
+    """
+    print("")
+    print("  What a customer will see")
+    try:
+        with open(exe, 'rb') as f:
+            head = f.read(4096)
+        packed = b'UPX0' in head or b'UPX1' in head or b'UPX!' in head
+        data = open(exe, 'rb').read()
+        # 'CompanyName' as UTF-16, which is how the version resource
+        # stores it. Built with chr() so no literal nulls sit in this file.
+        needle = ''.join(c + chr(0) for c in 'CompanyName').encode('latin1')
+        named = needle in data
+        import struct
+        pe = struct.unpack_from('<I', data, 0x3C)[0]
+        opt = struct.unpack_from('<H', data, pe + 20)[0]
+        sec = struct.unpack_from('<II', data, pe + 24 + (144 if opt >= 240 else 128))
+        signed = bool(sec[1])
+    except Exception as e:
+        print(f"  (could not inspect the EXE: {e})")
+        return
+
+    print(f"  Signed          : {'yes' if signed else 'NO'}")
+    print(f"  Publisher shown : {'yes' if named else 'NO'}")
+    print(f"  Packed          : {'YES' if packed else 'no'}")
+    if not signed:
+        print("")
+        print("  This build is UNSIGNED. Anyone who DOWNLOADS it gets")
+        print("  \"Windows protected your PC\" and has to click More info,")
+        print("  then Run anyway. Copied from a USB stick or a network")
+        print("  share it runs without the prompt, because Windows only")
+        print("  tags files that came from the internet.")
+        print("")
+        print("  Only a code-signing certificate removes it. Set one up in")
+        print("  sign_config.json and this step signs automatically.")
+        print(r"  See docs\ANTIVIRUS.md.")
+    print("")
+    print("  Check any built folder before shipping it:")
+    print(r"    powershell -ExecutionPolicy Bypass -File tools\check_release.ps1")
+
+
+def report(built_version='?'):
     print("\n[7/7] Build report...")
     exe = os.path.join(DIST, 'AurumOS.exe')
     if os.path.exists(exe):
+        # Match version.lock to this build. A lock left behind by an older
+        # install claims a version this EXE does not have, and the app trusts
+        # the higher of the two, so a stale lock hides real updates.
+        try:
+            with open(os.path.join(DIST, 'version.lock'), 'w', encoding='utf-8') as f:
+                f.write(built_version)
+        except Exception as e:
+            print(f"  (warning) could not write dist\\version.lock: {e}")
         size_mb = os.path.getsize(exe) / 1024 / 1024
         print(f"\n  ✓ SUCCESS")
         print(f"  EXE   : {exe}")
+        print(f"  Version: v{built_version}  (shown in the app; updates count up from here)")
         print(f"  Runtime: {os.path.join(ROOT, 'dist', '_internal')}")
         print(f"  Size: {size_mb:.1f} MB")
         print(f"\n  Ship the WHOLE dist\\ folder to each client PC. Clean layout:")
@@ -784,6 +1128,7 @@ def report():
         print(f"  dist\\config.json  dist\\exe_trusted_hash.txt")
         print(f"  (the hash file tells Bastion AI this exact build is legitimate --")
         print(f"   without it next to the EXE, tamper-detection can't run)")
+        _report_smartscreen(exe)
     else:
         print(f"\n  �- EXE not found at {exe}")
         print(f"  Check build output above for errors")
@@ -957,6 +1302,21 @@ def finalize_dist():
     # Remove the now-empty nested folder.
     shutil.rmtree(nested, ignore_errors=True)
 
+    # Ship the firewall helper beside the EXE. The main PC needs an inbound
+    # rule before staff PCs can reach it, and the alternative is whoever is at
+    # the counter guessing at a Windows prompt -- where Cancel writes a BLOCK
+    # rule that no later allow rule overrides.
+    tools_src = os.path.join(ROOT, 'tools')
+    if os.path.isdir(tools_src):
+        tools_dst = os.path.join(dist, 'tools')
+        try:
+            if os.path.isdir(tools_dst):
+                shutil.rmtree(tools_dst, ignore_errors=True)
+            shutil.copytree(tools_src, tools_dst)
+            print("  Tools         -> dist\\tools\\ (firewall helper)")
+        except Exception as e:
+            print(f"  (warning) could not copy tools: {e}")
+
     # Prune dev-only launch scripts so the client folder stays clean.
     for junk in ('run_with_log.bat', 'show_log.bat'):
         p = os.path.join(dist, junk)
@@ -1030,6 +1390,8 @@ if __name__ == '__main__':
     check_env()
     kill_running_exe()
     venv_site, webview_dir, arch = get_paths()
+    built_version = stamp_version()
+    write_version_resource(built_version)
     write_hooks()
     write_spec(venv_site, webview_dir, arch)
 
@@ -1044,6 +1406,6 @@ if __name__ == '__main__':
     sign_exe()
     write_trusted_hash()
     finalize_dist()
-    report()
+    report(built_version)
     print(f"\n  Total time: {time.time()-t0:.0f}s")
     print("=" * 50)

@@ -19,6 +19,7 @@ var NAV_ADMIN = [
     { id:'coa',       label:'Chart of Accounts', icon:'list',  page:'chart_of_accounts.html', section:'Finance' },
     { id:'ledger',    label:'Ledger',       icon:'book',      page:'ledger.html',          section:'Finance' },
     { id:'party',     label:'Party',        icon:'users',     page:'party.html',           section:'Finance' },
+    { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Finance' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'Finance' },
     { id:'network',   label:'Network',      icon:'wifi',      page:'network_manager.html', section:'System'  },
 ];
@@ -30,6 +31,7 @@ var NAV_RETAIL = [
     { id:'inventory', label:'Inventory',    icon:'box',       page:'inventory.html',       section:'Main'     },
     { id:'karigar',   label:'Karigar',      icon:'orders',    page:'karigar.html',         section:'Business' },
     { id:'customers', label:'Customers',    icon:'users',     page:'customer_account.html',section:'Business' },
+    { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Business' },
     { id:'old-gold',  label:'Old Gold',     icon:'old-gold',  page:'old_gold.html',        section:'Business' },
     { id:'reports',   label:'Reports',      icon:'bar-chart', page:'reports.html',         section:'Business' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'System'   },
@@ -51,6 +53,8 @@ var PAGE_META = {
     'history.html':         { id:'history',   label:'History',      icon:'clock',     section:'Main'    },
     'voucher_history.html': { id:'vouchers',  label:'Voucher History', icon:'receipt', section:'Main'    },
     'party.html':           { id:'party',     label:'Party',        icon:'users',     section:'Finance' },
+    'crm.html':             { id:'crm',       label:'CRM',          icon:'crm',       section:'Business' },
+    'crm_schemes.html':     { id:'crm',       label:'Savings Plans', icon:'wallet',   section:'Business' },
     'accounting.html':      { id:'accounting',label:'Accounting',   icon:'book',      section:'Finance' },
     'cash_bank.html':       { id:'cashbank',  label:'Cash & Bank',  icon:'wallet',    section:'Finance' },
     'chart_of_accounts.html':{id:'coa',       label:'Chart of Accounts', icon:'list',  section:'Finance' },
@@ -84,6 +88,7 @@ var ICONS = {
     'receipt':   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>',
     'wallet':    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5z"/><path d="M16 12h.01"/><path d="M3 8h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3"/></svg>',
     'list':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    'crm':       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5 17c0-1.8 1.8-3 4-3s4 1.2 4 3"/><line x1="16" y1="10" x2="19" y2="10"/><line x1="16" y1="14" x2="19" y2="14"/></svg>',
     'tag':       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
 };
 
@@ -433,7 +438,9 @@ function _renderSidebar(activePage) {
        + '<span id="sb-staff-name" style="font-size:0.56rem;font-weight:500;color:#94a3b8;letter-spacing:0.3px;">'
        + (isStaff ? _cacheGet('aurum_staff_name','Staff') : '') + '</span>'
        + (isStaff ? '<span style="width:3px;height:3px;border-radius:50%;background:#94a3b8;"></span>' : '')
-       + '<span id="sb-ver-pill" style="font-size:0.52rem;font-weight:500;color:#94a3b8;font-family:var(--sb-mono);">v' + appVer + '</span>'
+       + '<span id="sb-ver-pill" data-aurum-version title="Installed AurumOS version" style="font-size:0.52rem;font-weight:500;color:#94a3b8;font-family:var(--sb-mono);">v' + appVer + '</span>'
+       + '<span id="sb-ver-new" data-aurum-update hidden title="A newer version is downloading in the background" '
+       + 'style="font-size:0.5rem;font-weight:700;color:#22c55e;letter-spacing:0.3px;">UPDATE READY</span>'
        + '</div>'
        + '<button class="sb-collapse-btn" onclick="toggleSidebar()">'
        + '<span class="sb-collapse-icon">&#8592;</span>'
@@ -530,37 +537,17 @@ function _fillDynamic() {
                 }).catch(function(){});
             } catch(e) {}
 
+            // The version pill (and the "update ready" flag beside it) is
+            // painted by the shared version module in boot.js, which every
+            // page loads. It also repaints on a silent update, so the number
+            // here cannot drift from the one Settings shows.
             try {
-                window.pywebview.api.get_current_version &&
-                window.pywebview.api.get_current_version().then(function(v) {
-                    if (!v) return;
-                    var el = document.getElementById('sb-ver-pill');
-                    if (el) el.innerText = 'v' + v;
-                    _cacheSet('aurum_app_version', v);
-                }).catch(function(){});
-            } catch(e) {}
-            // Silent auto-updates change the version mid-session — repaint
-            // the pill immediately instead of showing a stale number.
-            try {
-                window.addEventListener('aurum-auto-updated', function(e) {
-                    var v=(e.detail&&e.detail.version)||'';
-                    if (!v) {
-                        try {
-                            window.pywebview.api.get_current_version &&
-                            window.pywebview.api.get_current_version().then(function(rv) {
-                                if (!rv) return;
-                                var el2 = document.getElementById('sb-ver-pill');
-                                if (el2) el2.innerText = 'v' + rv;
-                                _cacheSet('aurum_app_version', rv);
-                            }).catch(function(){});
-                        } catch(err) {}
-                        return;
-                    }
-                    var el = document.getElementById('sb-ver-pill');
-                    if (el) el.innerText = 'v' + v;
-                    _cacheSet('aurum_app_version', v);
-                });
-            } catch(e) {}
+                if (window.AurumOS && window.AurumOS.refreshVersion) {
+                    window.AurumOS.refreshVersion(false).then(function (v) {
+                        if (v && v.installed) _cacheSet('aurum_app_version', v.installed);
+                    }).catch(function () {});
+                }
+            } catch (e) {}
 
             if (_getRole() === 'staff') {
                 _loadStaffAccess();

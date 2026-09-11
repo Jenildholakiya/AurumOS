@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="boot.js"></script>
+<script src="gst.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Setup</title>
@@ -102,6 +103,26 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
     transition:border-color 0.25s cubic-bezier(0.4,0,0.2,1),box-shadow 0.25s cubic-bezier(0.4,0,0.2,1),background 0.25s ease,transform 0.2s ease;
 }
 .fg input:hover,.fg select:hover{border-color:var(--muted2);}
+/* ── GST block ───────────────────────────────────────────────────── */
+.gst-wrap{border:1.5px solid var(--rule);border-radius:10px;padding:14px;margin-bottom:14px;background:var(--offwhite);}
+.gst-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.gst-head-txt{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+.gst-head-sub{font-size:0.62rem;color:var(--muted2);text-transform:none;letter-spacing:0;margin-top:3px;font-weight:400;}
+.gst-body{margin-top:14px;}
+.gst-body[hidden]{display:none;}
+.gst-note{min-height:14px;font-size:0.62rem;margin-top:4px;color:var(--muted2);}
+.gst-note.ok{color:var(--green);}
+.gst-note.bad{color:var(--red);}
+.fg input.gst-ok{border-color:var(--green-ln);}
+.fg input.gst-bad{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg);}
+#inp-gstin{font-family:var(--mono,'DM Mono',monospace);letter-spacing:1px;text-transform:uppercase;}
+/* Switch */
+.gst-sw{position:relative;width:42px;height:24px;flex-shrink:0;}
+.gst-sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2;}
+.gst-sw span{position:absolute;inset:0;background:var(--rule);border-radius:99px;transition:background 0.2s;}
+.gst-sw span::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--white);transition:transform 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.2);}
+.gst-sw input:checked + span{background:var(--blue);}
+.gst-sw input:checked + span::after{transform:translateX(18px);}
 .fg input:focus,.fg select:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(37,99,235,0.12),0 2px 8px rgba(37,99,235,0.08);background:var(--white);transform:translateY(-1px);}
 .fg input:focus + .pw-strength{transform:translateY(0);}
 .fg input.err{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg);animation:inputShake 0.4s ease;}
@@ -427,6 +448,49 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
                 <label>Jewellers Address</label>
                 <input type="text" id="inp-address" placeholder="Shop address"
                        onkeydown="if(event.key==='Enter')goToStep3()">
+            </div>
+
+            <!-- GST registration. Shown for retail and wholesale alike: both
+                 bill customers and both file the same returns. Asked here so
+                 the shop is not billing before anyone has entered it. -->
+            <div class="gst-wrap">
+                <div class="gst-head">
+                    <div>
+                        <div class="gst-head-txt">GST Registered</div>
+                        <div class="gst-head-sub">Turn on to put your GSTIN on every invoice</div>
+                    </div>
+                    <label class="gst-sw">
+                        <input type="checkbox" id="gst-registered" onchange="toggleGst()">
+                        <span></span>
+                    </label>
+                </div>
+
+                <div class="gst-body" id="gst-body" hidden>
+                    <div class="fg">
+                        <label>GSTIN <span class="req">*</span></label>
+                        <input type="text" id="inp-gstin" placeholder="24AAACC1206D1ZM">
+                        <div class="gst-note" id="gst-note"></div>
+                    </div>
+                    <div class="fg">
+                        <label>Legal Name <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted2);">(as printed on the GST certificate)</span></label>
+                        <input type="text" id="inp-gst-legal" placeholder="Leave blank to use the shop name">
+                    </div>
+                    <div class="grid-2">
+                        <div class="fg">
+                            <label>CGST %</label>
+                            <input type="number" id="inp-cgst" step="0.01" min="0" max="100" value="1.5">
+                        </div>
+                        <div class="fg">
+                            <label>SGST %</label>
+                            <input type="number" id="inp-sgst" step="0.01" min="0" max="100" value="1.5">
+                        </div>
+                    </div>
+                    <div class="fg" style="margin-bottom:0;">
+                        <label>HSN Code</label>
+                        <input type="text" id="inp-hsn" value="7113" placeholder="7113">
+                        <div class="gst-note">7113 is jewellery of precious metal, taxed at 3%. Check with your accountant.</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -911,17 +975,36 @@ async function finishSetup() {
             setTimeout(function(){ document.getElementById('inp-pw2').placeholder = 'Re-enter password'; }, 1500);
             return;
         }
+        var gstBlock = collectGst();
+        if (gstBlock.error) {
+            markErr('inp-gstin');
+            var gn = document.getElementById('gst-note');
+            if (gn) { gn.textContent = gstBlock.error; gn.className = 'gst-note bad'; }
+            btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+            shakeCard();
+            return;
+        }
         var biz   = document.getElementById('inp-biz').value.trim();
         var owner = document.getElementById('inp-owner').value.trim();
         var city  = document.getElementById('inp-city').value.trim();
         var phone = document.getElementById('inp-phone').value.trim();
         try {
-            res = await window.pywebview.api.save_setup({
+            var setupPayload = {
                 businessName: biz, ownerName: owner,
                 adminPass: pw, licenseKey: verifiedKey,
                 city: city, phone: phone,
                 address: document.getElementById('inp-address').value.trim()
-            });
+            };
+            Object.keys(gstBlock.fields).forEach(function(k){ setupPayload[k] = gstBlock.fields[k]; });
+            res = await window.pywebview.api.save_setup(setupPayload);
+            if (res && res.status === 'error' && res.field === 'gstin') {
+                markErr('inp-gstin');
+                var gn2 = document.getElementById('gst-note');
+                if (gn2) { gn2.textContent = res.message || 'Check the GSTIN.'; gn2.className = 'gst-note bad'; }
+                btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+                shakeCard();
+                return;
+            }
             if (res && res.status === 'success') {
                 // Marks this PC as the one holding the shop and starts serving
                 // straight away, so a staff PC can be joined without restarting.
@@ -1002,6 +1085,48 @@ function shakeCard() {
 window.onload = function() {
     document.getElementById('inp-key').focus();
 };
+
+// ── GST ──────────────────────────────────────────────────────────────
+// Both modes. Retail and wholesale bill on different screens but file the
+// same returns, so the registration is asked for once, here, rather than
+// discovered in Settings after the shop has already billed a customer.
+function toggleGst(){
+    var on = document.getElementById('gst-registered').checked;
+    document.getElementById('gst-body').hidden = !on;
+    if (on) setTimeout(function(){ document.getElementById('inp-gstin').focus(); }, 60);
+}
+
+// Returns {fields, error}. A shop that is not registered is never asked to
+// produce a valid number, and what it typed is kept so the toggle is
+// reversible. Python checks all of this again on save.
+function collectGst(){
+    var on = document.getElementById('gst-registered').checked;
+    var G  = window.AurumGST;
+    var fields = {
+        gst_registered: on ? '1' : '0',
+        gstin:          G ? G.normalise(document.getElementById('inp-gstin').value) : '',
+        gst_legal_name: document.getElementById('inp-gst-legal').value.trim(),
+        gst_cgst_rate:  document.getElementById('inp-cgst').value,
+        gst_sgst_rate:  document.getElementById('inp-sgst').value,
+        gst_hsn:        document.getElementById('inp-hsn').value
+    };
+    if (!on || !G) return { fields: fields, error: '' };
+    var r = G.validate(fields.gstin);
+    if (!r.ok) return { fields: fields, error: r.error };
+    fields.gstin          = r.gstin;
+    fields.gst_state      = r.state;
+    fields.gst_state_code = r.state_code;
+    fields.pan            = r.pan;
+    return { fields: fields, error: '' };
+}
+
+(function(){
+    function wire(){
+        if (window.AurumGST) window.AurumGST.attach({ input: 'inp-gstin', note: 'gst-note' });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+    else wire();
+})();
 </script>
 </body>
 </html>

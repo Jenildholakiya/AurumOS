@@ -1,6 +1,16 @@
 {
-  "_comment": "Copy this file to sign_config.json and fill in your values. sign_config.json is gitignored so your password is never committed. You can instead set env vars: AURUMOS_PFX, AURUMOS_PFX_PASSWORD, AURUMOS_TIMESTAMP_URL.",
+  "_comment": "Copy to sign_config.json and fill in. sign_config.json is gitignored, so a password is never committed. Environment variables override this file: AURUMOS_PFX, AURUMOS_PFX_PASSWORD, AURUMOS_CERT_THUMBPRINT, AURUMOS_TIMESTAMP_URL.",
+
+  "_option_1": "A .pfx file. Certificates issued before June 2023, and most test certs.",
   "pfx_path": "C:/Certificates/AurumOS.pfx",
   "password": "YOUR_PFX_PASSWORD",
-  "timestamp_url": "http://timestamp.digicert.com"
+
+  "_option_2": "A certificate in the Windows store, by thumbprint. This is what an OV or EV certificate issued today needs, because the private key lives on a hardware token or in an HSM and there is no .pfx to point at. Copy the thumbprint from certmgr.msc, spaces and all; they are stripped. Leave pfx_path empty when using this.",
+  "thumbprint": "",
+  "machine_store": false,
+
+  "timestamp_url": "http://timestamp.digicert.com",
+
+  "_needed": "Nothing extra. Signing uses Windows' own Set-AuthenticodeSignature when signtool.exe from the Windows SDK is not installed, so the SDK is optional.",
+  "_note": "Set COMPANY at the top of build.py to the same legal name the certificate is issued to, or the EXE's Properties tab and the SmartScreen dialog will disagree."
 }

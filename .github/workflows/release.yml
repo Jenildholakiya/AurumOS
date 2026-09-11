@@ -1,79 +1,140 @@
 # AurumOS — push-to-update release pipeline.
 #
 # HOW TO SHIP AN UPDATE (the only command you ever need):
-#   git tag v1.0.3 -m "Fix dashboard totals" && git push origin v1.0.3
+#   git push origin main
 #
-# That's it. This workflow then:
-#   1. Generates version.json (manifest: UI + backend files, hashes, URLs)
-#   2. Creates GitHub Release v1.0.3 with changelog from the tag message
-#   3. Uploads version.json + every UI file + every backend .py (flat names)
-# Client terminals pick it up silently within hours — zero clicks, zero
-# installs. Backend .py files auto-apply on next app launch; UI applies live.
+# Every push to main becomes a release. This workflow:
+#   1. Picks the next version number (highest existing tag + 1, e.g. v1.1.7 -> v1.1.8)
+#   2. Writes version.json (manifest: every ui/ file with hash + download URL)
+#   3. Tags the commit and creates the GitHub Release, with the commit messages
+#      since the previous release as the notes
+#   4. Uploads version.json + every ui/ file
+# Running copies of AurumOS fetch the manifest within minutes, download only
+# the files whose hash changed, and the version shown in the sidebar, on the
+# login screen and in Settings moves to the new number by itself.
 #
-# NOTES:
-# - Tag MUST look like vX.Y.Z (e.g. v1.0.3). Anything else is ignored.
-# - main.py / updater.py are NEVER shipped (self-update protection) — if you
-#   change those, build a new EXE with build.py and attach it manually.
-# - EXE/binary changes are NOT part of this pipeline (file updates only).
+# WHAT SHIPS LIVE vs WHAT NEEDS A REBUILD
+#   ui/*             live: on the next screen the user opens
+#   anything Python  frozen inside AurumOS.exe. The release notes and the job
+#                    summary say "Rebuild needed" when a push touched one;
+#                    run build.py and reinstall to get that change out.
+#
+# COMMIT MESSAGE MARKERS (on the pushed commit)
+#   [minor] / [major]   1.1.7 -> 1.2.0 / 2.0.0
+#   [force]             installs even on copies whose number is higher
+#   [skip release]      push without releasing
+#
+# A hand-made tag still works and uses that exact number:
+#   git tag v2.0.0 -m "Big one" && git push origin v2.0.0
+# The "Run workflow" button (Actions tab) releases on demand, optionally with
+# an exact version.
 
 name: Push-to-Update Release
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact version to release, e.g. 1.2.0 (blank = next patch number)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
+
+# One release at a time: two quick pushes queue, and the second one sees the
+# first one's tag and takes the number after it.
+concurrency:
+  group: aurumos-release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (all tags and history, so the next number and the notes are right)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      - name: Plan the release
+        id: plan
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          # tee would otherwise swallow a planner failure and let the job
+          # carry on to publish a release built from nothing.
+          set -o pipefail
+          ARGS=""
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            ARGS="--tag ${GITHUB_REF_NAME}"
+          elif [ -n "${INPUT_VERSION}" ]; then
+            ARGS="--tag v${INPUT_VERSION#v}"
+          fi
+          python3 release_plan.py $ARGS | tee -a "$GITHUB_OUTPUT"
+
+      - name: Nothing to release
+        if: steps.plan.outputs.skip == 'true'
+        env:
+          REASON: ${{ steps.plan.outputs.reason }}
+        run: |
+          echo "### Skipped: $REASON" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build manifest + stage assets
-        id: build
+        if: steps.plan.outputs.skip != 'true'
         env:
           AURUM_UI_DIR: ui
         run: |
-          TAG="${GITHUB_REF_NAME}"          # e.g. v1.0.3
-          VER="${TAG#v}"                    # e.g. 1.0.3
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          CHANGELOG="$(git tag -l --format='%(contents)' "$TAG" | head -n 5)"
-          [ -z "$CHANGELOG" ] && CHANGELOG="Bug fixes and improvements"
-          {
-            echo "changelog<<EOF"
-            echo "$CHANGELOG"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-          # A tag message containing [force] marks a version-reset release
-          # (e.g. restarting the line at v1.0.1): terminals install it even
-          # when its number is lower than what's installed.
-          FORCE_FLAG=""
-          case "$CHANGELOG" in *"[force]"*) FORCE_FLAG=1;; esac
-          if [ -n "$FORCE_FLAG" ]; then export AURUM_FORCE=1; fi
-          python3 gen_version_manifest.py "$VER" "$CHANGELOG"
-          # Stage assets driven by the manifest itself (single source of truth):
-          # _internal/ui/X -> ui/X (flat name X), backend a/b.py -> a__b.py
+          python3 gen_version_manifest.py --plan release_plan.json
           python3 stage_release_assets.py release_assets
           cp version.json release_assets/
-          echo "--- assets ---"
-          ls release_assets | head -n 100
-          echo "total: $(ls release_assets | wc -l) files"
+          echo "staged $(ls release_assets | wc -l) assets"
 
-      - name: Create release + upload assets
+      - name: Tag the commit
+        if: steps.plan.outputs.skip != 'true' && github.ref_type != 'tag'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -F release_changelog.txt "${GITHUB_SHA}"
+          git push origin "refs/tags/$TAG"
+
+      - name: Publish release
+        if: steps.plan.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: AurumOS v${{ steps.build.outputs.version }}
-          body: ${{ steps.build.outputs.changelog }}
+          tag_name: ${{ steps.plan.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: AurumOS v${{ steps.plan.outputs.version }}
+          body_path: release_notes.md
           files: release_assets/*
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: steps.plan.outputs.skip != 'true'
+        env:
+          NEEDS_REBUILD: ${{ steps.plan.outputs.needs_rebuild }}
+          REBUILD_COUNT: ${{ steps.plan.outputs.rebuild_count }}
+        run: |
+          {
+            cat release_notes.md
+            echo
+            python3 -c "import json;m=json.load(open('version.json'));print('Manifest:',len(m['files']),'files,',format(m['size_bytes'],','),'bytes')"
+            if [ "$NEEDS_REBUILD" = "true" ]; then
+              echo
+              echo "> :warning: **Rebuild needed** — $REBUILD_COUNT frozen file(s) changed. Run \`python build.py\` and reinstall on each PC to ship them."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

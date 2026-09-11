@@ -73,6 +73,7 @@ class DBManager:
         self.initialize_tables()
         try:
             self.ensure_retail_columns()
+            self.ensure_crm_tables()
         except Exception:
             pass
         try:
@@ -1456,17 +1457,29 @@ class DBManager:
         except:
             return []
 
-    def add_product_master(self, code, name, category, touch, wastage):
+    def add_product_master(self, code, name, category, touch, wastage,
+                           making_charge=0, making_type='percent', sale_price=0, hsn=''):
+        """Save a product. The four retail arguments are optional so every
+        existing caller keeps working unchanged."""
         return self.execute_query(
-            "INSERT OR REPLACE INTO product_master (code,name,category,touch,wastage) VALUES (?,?,?,?,?)",
-            (code, name, category, touch, float(wastage or 0))
+            """INSERT OR REPLACE INTO product_master
+                   (code,name,category,touch,wastage,making_charge,making_type,sale_price,hsn)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (code, name, category, touch, float(wastage or 0),
+             float(making_charge or 0), str(making_type or 'percent'),
+             float(sale_price or 0), str(hsn or ''))
         )
 
     def get_all_products(self):
         try:
             with self._get_connection() as conn:
                 return [dict(r) for r in conn.execute(
-                    "SELECT code,name,category,touch,wastage FROM product_master"
+                    """SELECT code,name,category,touch,wastage,
+                              COALESCE(making_charge,0) AS making_charge,
+                              COALESCE(making_type,'percent') AS making_type,
+                              COALESCE(sale_price,0) AS sale_price,
+                              COALESCE(hsn,'') AS hsn
+                       FROM product_master"""
                 ).fetchall()]
         except:
             return []
@@ -1598,8 +1611,9 @@ class DBManager:
                     'OPENING-') else "INSERT INTO stock_inventory"
                 conn.execute(sql + """
                         (it_code,it_name,tag_id,pkg_wt,para_stone_wt,size,design,
-                         pcs,gr_wt,ls_wt,nt_wt,ghat_wt,touch,wastage,huid,is_tagged,entry_date)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,date('now'))""",
+                         pcs,gr_wt,ls_wt,nt_wt,ghat_wt,touch,wastage,huid,is_tagged,entry_date,
+                         category,karat,making_type,making_charge,sale_price,stone_value)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,date('now'),?,?,?,?,?,?)""",
                              (str(kwargs.get('it_code', '')).strip(),
                               str(kwargs.get('it_name', '')),
                               str(tag_id),
@@ -1614,7 +1628,15 @@ class DBManager:
                               float(kwargs.get('ghat_wt') or 0.0),
                               float(kwargs.get('touch') or 0.0),
                               float(kwargs.get('wastage') or 0.0),
-                              str(kwargs.get('huid') or '-'))
+                              str(kwargs.get('huid') or '-'),
+                              # Retail pricing. Absent for a wholesale entry,
+                              # which stores the same harmless defaults.
+                              str(kwargs.get('category') or ''),
+                              str(kwargs.get('karat') or ''),
+                              str(kwargs.get('making_type') or 'percent'),
+                              float(kwargs.get('making_charge') or 0.0),
+                              float(kwargs.get('sale_price') or 0.0),
+                              float(kwargs.get('stone_value') or 0.0))
                              )
                 conn.commit()
                 new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -1643,11 +1665,33 @@ class DBManager:
             return False
 
     def update_stock_entry(self, entry_id, data):
+        """Update one stock row.
+
+        Column names are checked against the table before being put into the
+        statement. They arrive as dictionary keys from the screens and used to
+        be interpolated straight into SQL, so a key that was mistyped took the
+        whole update down with a syntax error, and a key that was not a column
+        at all had no business being there.
+        """
         try:
-            cols = ", ".join([f"{k}=?" for k in data.keys()])
-            values = list(data.values()) + [entry_id]
-            return self.execute_query(f"UPDATE stock_inventory SET {cols} WHERE id=?", tuple(values))
-        except:
+            if not isinstance(data, dict) or not data:
+                return False
+            with self._get_connection() as conn:
+                allowed = {r[1] for r in conn.execute(
+                    "PRAGMA table_info(stock_inventory)").fetchall()}
+                fields = {k: v for k, v in data.items() if k in allowed and k != 'id'}
+                skipped = [k for k in data if k not in fields and k != 'id']
+                if skipped:
+                    _dblog(f"[DB] update_stock_entry ignored unknown column(s): {skipped}")
+                if not fields:
+                    return False
+                cols = ", ".join(f"{k}=?" for k in fields)
+                conn.execute(f"UPDATE stock_inventory SET {cols} WHERE id=?",
+                             tuple(list(fields.values()) + [entry_id]))
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[DB] update_stock_entry: {e}")
             return False
 
     def mark_as_tagged(self, item_id):
@@ -2163,29 +2207,24 @@ class DBManager:
 
                     # -- Case 2: Weight-based (katti / opening stock) ----------
                     # Logic:
-                    #   Step 1 - If it_code looks like a number -> treat as touch value
-                    #   Step 2 - Else try exact it_code match in stock
-                    #   Step 3 - Else try it_code as touch (float parse)
-                    #   Step 4 - FIFO multi-row deduction across batches
+                    #   Step 1 - Match it_code against real stock, use that row's touch
+                    #   Step 2 - Only if nothing matched, read it_code AS a touch value
+                    #   Step 3 - FIFO multi-row deduction across batches
+                    #
+                    # Step 1 used to come second. A number between 1 and 100 was
+                    # read as a purity before anything checked whether it was a
+                    # product code, so selling an item whose code happened to be
+                    # "75" deducted from 75-touch bulk gold and left the item
+                    # itself sitting in stock. Real stock wins now; reading the
+                    # code as a purity is the fallback, which is what a
+                    # wholesale weight line relies on and still gets.
                     elif gross_wt > 0:
 
                         touch_val = None
                         use_touch = False
 
-                        # Step 1: Detect if it_code IS a touch value (pure number like 68, 91.6, 76)
+                        # Step 1: a real stock row with this code decides the touch.
                         if it_code:
-                            try:
-                                parsed = float(it_code)
-                                # Valid touch range: 1 - 100
-                                if 1.0 <= parsed <= 100.0:
-                                    touch_val = parsed
-                                    use_touch = True
-                            except ValueError:
-                                pass
-
-                        # Step 2 & 3: If not touch, try it_code match first,
-                        #             then check if that stock row has a touch we can use
-                        if not use_touch and it_code:
                             ref = cursor.execute(
                                 """SELECT id, gr_wt, touch FROM stock_inventory
                                    WHERE TRIM(it_code)=?
@@ -2206,11 +2245,36 @@ class DBManager:
                                        ORDER BY id ASC LIMIT 1""",
                                     (it_code,)
                                 ).fetchone()
+                            if not ref:
+                                # Last look, this time without ruling out tagged
+                                # rows. A tagged piece normally leaves by its tag
+                                # and never reaches here, but a line that arrives
+                                # with the tag missing would otherwise fall
+                                # through and be read as a purity.
+                                ref = cursor.execute(
+                                    """SELECT id, gr_wt, touch FROM stock_inventory
+                                       WHERE TRIM(it_code)=?
+                                         AND tag_id NOT LIKE 'OPENING-%'
+                                       ORDER BY id ASC LIMIT 1""",
+                                    (it_code,)
+                                ).fetchone()
                             if ref and ref['touch']:
                                 # Found a stock row -- use its touch for deduction
                                 touch_val = float(ref['touch'])
                                 use_touch = True
                                 print(f"[DEDUCT] it_code={it_code} -> touch={touch_val}")
+
+                        # Step 2: nothing in stock under that code, so fall back
+                        # to reading it as a purity (a wholesale weight line).
+                        if not use_touch and it_code:
+                            try:
+                                parsed = float(it_code)
+                                if 1.0 <= parsed <= 100.0:
+                                    touch_val = parsed
+                                    use_touch = True
+                                    print(f"[DEDUCT] it_code={it_code} read as touch={touch_val}")
+                            except ValueError:
+                                pass
 
                         # FIFO touch-based deduction across multiple rows
                         if use_touch and touch_val is not None:
@@ -2390,6 +2454,7 @@ class DBManager:
             if safe_pay not in ('cash', 'upi', 'card'):
                 safe_pay = 'cash'
             self.ensure_retail_columns()
+            self.ensure_crm_tables()
             _dblog(f"[SALE] Recording sale vch_id={safe_vch_id} customer={customer}")
             with self._get_connection() as conn:
                 conn.execute("PRAGMA busy_timeout = 30000")
@@ -2844,6 +2909,12 @@ class DBManager:
                     SELECT id,it_code,it_name,pcs,touch,size,design,
                            gr_wt,para_stone_wt,ls_wt,nt_wt,ghat_wt,huid,entry_date,tag_id,
                            wastage,
+                           COALESCE(category,'')      AS category,
+                           COALESCE(karat,'')         AS karat,
+                           COALESCE(making_type,'')   AS making_type,
+                           COALESCE(making_charge,0)  AS making_charge,
+                           COALESCE(sale_price,0)     AS sale_price,
+                           COALESCE(stone_value,0)    AS stone_value,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE entry_date=?
@@ -3023,25 +3094,32 @@ class DBManager:
         try:
             with self._get_connection() as conn:
 
-                # Opening stock rows (OPENING- tagged) per touch
+                # Opening stock rows (OPENING- tagged), by purity or by category
                 opening = conn.execute("""
                     SELECT ROUND(touch,2) as touch,
+                           COALESCE(category,'') as category,
                            COALESCE(SUM(gr_wt),0) as wt
                     FROM stock_inventory
                     WHERE tag_id LIKE 'OPENING-%'
-                      AND touch IS NOT NULL AND touch > 0
-                    GROUP BY ROUND(touch,2)
+                      AND ((touch IS NOT NULL AND touch > 0)
+                           OR COALESCE(category,'') != '')
+                    GROUP BY ROUND(touch,2), COALESCE(category,'')
                 """).fetchall()
 
-                # All live stock per touch (includes opening + katti + tagged)
+                # All live stock per touch (includes opening + katti + tagged).
+                # Rows with no purity are grouped by category instead: a retail
+                # shop counts rings and chains, not 91.6% and 75%, and dropping
+                # them here is why its stock take came back empty.
                 live = conn.execute("""
                     SELECT ROUND(touch,2) as touch,
+                           COALESCE(category,'') as category,
                            COALESCE(SUM(gr_wt),0) as wt,
                            COALESCE(COUNT(*),0)   as cnt
                     FROM stock_inventory
-                    WHERE touch IS NOT NULL AND touch > 0
-                    GROUP BY ROUND(touch,2)
-                    ORDER BY touch
+                    WHERE (touch IS NOT NULL AND touch > 0)
+                       OR COALESCE(category,'') != ''
+                    GROUP BY ROUND(touch,2), COALESCE(category,'')
+                    ORDER BY touch, category
                 """).fetchall()
 
                 # Katti inward
@@ -3079,13 +3157,31 @@ class DBManager:
                     except:
                         pass
 
-                open_wt = {round(float(r['touch']), 2): float(r['wt']) for r in opening}
-                live_wt = {round(float(r['touch']), 2): float(r['wt']) for r in live}
-                live_cnt = {round(float(r['touch']), 2): int(r['cnt']) for r in live}
+                # Rows are keyed by purity where there is one and by category
+                # otherwise, so a retail shop that records no touch still gets
+                # a line per category instead of everything collapsing into a
+                # single 0.0 group it cannot count against.
+                def _key(r):
+                    t = round(float(r['touch'] or 0), 2)
+                    if t > 0:
+                        return t
+                    cat = str((r['category'] if 'category' in r.keys() else '') or '').strip()
+                    return cat or 0.0
+
+                open_wt = {}
+                for r in opening:
+                    open_wt[_key(r)] = open_wt.get(_key(r), 0) + float(r['wt'])
+                live_wt, live_cnt, cat_of = {}, {}, {}
+                for r in live:
+                    k = _key(r)
+                    live_wt[k] = live_wt.get(k, 0) + float(r['wt'])
+                    live_cnt[k] = live_cnt.get(k, 0) + int(r['cnt'])
+                    cat_of[k] = str((r['category'] if 'category' in r.keys() else '') or '').strip()
                 kat_wt = {round(float(r['touch']), 2): float(r['wt']) for r in katti}
 
-                # Include ALL touches — even those with 0 opening after stock med
-                all_tv = sorted(set(list(open_wt) + list(live_wt) + list(kat_wt) + list(out)))
+                # Include ALL groups — even those with 0 opening after stock med
+                all_tv = sorted(set(list(open_wt) + list(live_wt) + list(kat_wt) + list(out)),
+                                key=lambda k: (isinstance(k, str), k))
                 result = []
                 for tv in all_tv:
                     ow_val = round(open_wt.get(tv, 0), 3)  # opening stock weight
@@ -3095,7 +3191,8 @@ class DBManager:
                     cnt = live_cnt.get(tv, 0)
                     _dblog(f"[STOCKSYNC] touch={tv} opening={ow_val} live={lw} katti={kw} sold={ow}")
                     result.append({
-                        'touch': tv,
+                        'touch': tv if not isinstance(tv, str) else 0.0,
+                        'category': cat_of.get(tv, '') if isinstance(tv, str) else '',
                         'wt_opening': ow_val,
                         'wt_inward': kw,
                         'wt_outward': ow,
@@ -3674,6 +3771,612 @@ class DBManager:
                 conn.commit()
         except Exception as e:
             _dberr(f"[MIGRATE] retail columns: {e}")
+        self.ensure_retail_pricing_columns()
+
+    # -- CRM ---------------------------------------------------------------
+    # Storage only. Every rule about dates, dues, points and savings plans
+    # lives in core/crm.py so it can be checked without a database.
+
+    def crm_customers(self):
+        """Every customer, with what they are worth and when they last came.
+
+        The spend figures are read from the sale history rather than kept as a
+        running total on the customer, so they cannot drift out of step with
+        the bills they are made of.
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT c.*,
+                           COALESCE(s.bill_count, 0)     AS bill_count,
+                           COALESCE(s.lifetime_value, 0) AS lifetime_value,
+                           s.last_purchase               AS last_purchase,
+                           COALESCE(l.points, 0)         AS loyalty_points
+                    FROM clients_master c
+                    LEFT JOIN (
+                        SELECT TRIM(customer) AS cust,
+                               COUNT(*) AS bill_count,
+                               SUM(COALESCE(total_amount,0)) AS lifetime_value,
+                               MAX(date) AS last_purchase
+                        FROM sales_history
+                        WHERE TRIM(COALESCE(customer,'')) != ''
+                        GROUP BY TRIM(customer)
+                    ) s ON TRIM(c.name) = s.cust
+                    LEFT JOIN (
+                        SELECT TRIM(customer) AS cust,
+                               SUM(COALESCE(earned,0)) - SUM(COALESCE(used,0)) AS points
+                        FROM loyalty_ledger GROUP BY TRIM(customer)
+                    ) l ON TRIM(c.name) = l.cust
+                    ORDER BY c.name
+                """).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[CRM] customers: {e}")
+            return []
+
+    def crm_save_customer(self, data):
+        """Create or update one customer, keyed by name.
+
+        clients_master has a UNIQUE name and the screens have no stable id to
+        hold on to, so the name is the key. Only real columns are written.
+        """
+        try:
+            name = str((data or {}).get('name') or '').strip()
+            if not name:
+                return {'status': 'error', 'message': 'A customer needs a name.'}
+            with self._get_connection() as conn:
+                allowed = {r[1] for r in conn.execute(
+                    "PRAGMA table_info(clients_master)").fetchall()} - {'id', 'created_at'}
+                fields = {k: v for k, v in (data or {}).items() if k in allowed}
+                fields['name'] = name
+                found = conn.execute(
+                    "SELECT id FROM clients_master WHERE TRIM(name)=?", (name,)).fetchone()
+                if found:
+                    rest = [k for k in fields if k != 'name']
+                    if rest:
+                        sets = ", ".join(f"{k}=?" for k in rest)
+                        conn.execute(f"UPDATE clients_master SET {sets} WHERE id=?",
+                                     tuple([fields[k] for k in rest] + [found['id']]))
+                    row_id = found['id']
+                else:
+                    cols = ", ".join(fields)
+                    marks = ", ".join("?" for _ in fields)
+                    conn.execute(f"INSERT INTO clients_master ({cols}) VALUES ({marks})",
+                                 tuple(fields.values()))
+                    row_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': row_id, 'name': name}
+        except Exception as e:
+            _dberr(f"[CRM] save customer: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_dues(self):
+        """Outstanding cash per customer, each entry with the date it arose,
+        so the ageing buckets are built from real movements."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT TRIM(client_name) AS customer, date,
+                           (COALESCE(cash_dr,0) - COALESCE(cash_cr,0)) AS amount
+                    FROM credit_ledger
+                    WHERE TRIM(COALESCE(client_name,'')) != ''
+                    ORDER BY date
+                """).fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            _dberr(f"[CRM] dues: {e}")
+            return []
+
+    def crm_add_note(self, customer, note, kind='note', created_by=''):
+        try:
+            if not str(customer or '').strip() or not str(note or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO customer_notes (customer,note,kind,created_by) VALUES (?,?,?,?)",
+                (str(customer).strip(), str(note).strip(),
+                 str(kind or 'note'), str(created_by or '')))
+        except Exception as e:
+            _dberr(f"[CRM] add note: {e}")
+            return False
+
+    def crm_notes(self, customer):
+        try:
+            with self._get_connection() as conn:
+                return [dict(r) for r in conn.execute(
+                    "SELECT * FROM customer_notes WHERE TRIM(customer)=? "
+                    "ORDER BY id DESC LIMIT 200",
+                    (str(customer or '').strip(),)).fetchall()]
+        except Exception:
+            return []
+
+    def crm_add_followup(self, customer, task, due_date='', owner=''):
+        try:
+            if not str(customer or '').strip() or not str(task or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO customer_followups (customer,task,due_date,owner) VALUES (?,?,?,?)",
+                (str(customer).strip(), str(task).strip(),
+                 str(due_date or '') or None, str(owner or '')))
+        except Exception as e:
+            _dberr(f"[CRM] add followup: {e}")
+            return False
+
+    def crm_followups(self, status='open'):
+        try:
+            with self._get_connection() as conn:
+                order = " ORDER BY COALESCE(due_date,'9999-12-31'), id"
+                if status and status != 'all':
+                    rows = conn.execute(
+                        "SELECT * FROM customer_followups WHERE status=?" + order,
+                        (status,)).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM customer_followups" + order).fetchall()
+                return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+    def crm_close_followup(self, followup_id):
+        return self.execute_query(
+            "UPDATE customer_followups SET status='done', closed_at=CURRENT_TIMESTAMP "
+            "WHERE id=?", (followup_id,))
+
+    def crm_add_loyalty(self, customer, earned=0, used=0, vch_id='', note=''):
+        try:
+            if not str(customer or '').strip():
+                return False
+            return self.execute_query(
+                "INSERT INTO loyalty_ledger (customer,vch_id,earned,used,note) "
+                "VALUES (?,?,?,?,?)",
+                (str(customer).strip(), str(vch_id or ''), int(earned or 0),
+                 int(used or 0), str(note or '')))
+        except Exception as e:
+            _dberr(f"[CRM] loyalty: {e}")
+            return False
+
+    def crm_loyalty_balance(self, customer):
+        try:
+            v = self.get_scalar(
+                "SELECT COALESCE(SUM(earned),0) - COALESCE(SUM(used),0) "
+                "FROM loyalty_ledger WHERE TRIM(customer)=?",
+                (str(customer or '').strip(),))
+            return int(v or 0)
+        except Exception:
+            return 0
+
+    # -- savings schemes ---------------------------------------------------
+
+    def crm_schemes(self, active_only=True):
+        try:
+            with self._get_connection() as conn:
+                sql = "SELECT * FROM savings_schemes"
+                if active_only:
+                    sql += " WHERE active=1"
+                return [dict(r) for r in conn.execute(sql + " ORDER BY name").fetchall()]
+        except Exception:
+            return []
+
+    def crm_save_scheme(self, data):
+        try:
+            d = data or {}
+            name = str(d.get('name') or '').strip()
+            months = int(d.get('months') or 0)
+            amount = float(d.get('monthly_amount') or 0)
+            if not name or months <= 0 or amount <= 0:
+                return {'status': 'error',
+                        'message': 'A plan needs a name, a number of months and an amount.'}
+            sid = d.get('id')
+            with self._get_connection() as conn:
+                if sid:
+                    conn.execute(
+                        "UPDATE savings_schemes SET name=?,months=?,monthly_amount=?,"
+                        "bonus_type=?,bonus_value=?,active=? WHERE id=?",
+                        (name, months, amount, str(d.get('bonus_type') or 'month'),
+                         float(d.get('bonus_value') or 0), int(d.get('active', 1)), sid))
+                else:
+                    conn.execute(
+                        "INSERT INTO savings_schemes "
+                        "(name,months,monthly_amount,bonus_type,bonus_value,active) "
+                        "VALUES (?,?,?,?,?,?)",
+                        (name, months, amount, str(d.get('bonus_type') or 'month'),
+                         float(d.get('bonus_value') or 0), int(d.get('active', 1))))
+                    sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': sid}
+        except Exception as e:
+            _dberr(f"[CRM] save scheme: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_enrol(self, scheme_id, customer, start_date=''):
+        try:
+            cust = str(customer or '').strip()
+            if not cust or not scheme_id:
+                return {'status': 'error', 'message': 'Pick a customer and a plan.'}
+            start = str(start_date or '').strip() or date.today().isoformat()
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO scheme_enrolments (scheme_id,customer,start_date) "
+                    "VALUES (?,?,?)", (int(scheme_id), cust, start))
+                eid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': eid}
+        except Exception as e:
+            _dberr(f"[CRM] enrol: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_enrolments(self, customer=''):
+        """Enrolments joined to their plan, each with the payments received,
+        which is what core.crm.scheme_status needs to say where one stands."""
+        try:
+            with self._get_connection() as conn:
+                sql = ("SELECT e.id, e.customer, e.start_date, e.status, e.scheme_id, "
+                       "       s.name AS scheme_name, s.months, s.monthly_amount, "
+                       "       s.bonus_type, s.bonus_value "
+                       "FROM scheme_enrolments e "
+                       "JOIN savings_schemes s ON s.id = e.scheme_id")
+                args = ()
+                if str(customer or '').strip():
+                    sql += " WHERE TRIM(e.customer)=?"
+                    args = (str(customer).strip(),)
+                sql += " ORDER BY e.id DESC"
+                out = []
+                for r in conn.execute(sql, args).fetchall():
+                    row = dict(r)
+                    row['payments'] = [dict(p) for p in conn.execute(
+                        "SELECT amount,paid_date,mode FROM scheme_payments "
+                        "WHERE enrolment_id=? ORDER BY paid_date",
+                        (row['id'],)).fetchall()]
+                    out.append(row)
+                return out
+        except Exception as e:
+            _dberr(f"[CRM] enrolments: {e}")
+            return []
+
+    def crm_add_payment(self, enrolment_id, amount, paid_date='', mode='cash', note=''):
+        try:
+            amt = float(amount or 0)
+            if not enrolment_id or amt <= 0:
+                return {'status': 'error', 'message': 'An instalment needs an amount.'}
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO scheme_payments (enrolment_id,amount,paid_date,mode,note) "
+                    "VALUES (?,?,COALESCE(NULLIF(?,''),date('now')),?,?)",
+                    (int(enrolment_id), amt, str(paid_date or ''),
+                     str(mode or 'cash'), str(note or '')))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            _dberr(f"[CRM] payment: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # -- orders and repairs ------------------------------------------------
+
+    def crm_save_order(self, data):
+        try:
+            d = data or {}
+            cust = str(d.get('customer') or '').strip()
+            desc = str(d.get('description') or '').strip()
+            if not cust or not desc:
+                return {'status': 'error',
+                        'message': 'An order needs a customer and a description.'}
+            status = str(d.get('status') or 'open')
+            with self._get_connection() as conn:
+                if d.get('id'):
+                    conn.execute(
+                        "UPDATE customer_orders SET customer=?,kind=?,description=?,"
+                        "promised_date=?,advance=?,karigar=?,status=?,"
+                        "closed_at=CASE WHEN ?='done' THEN CURRENT_TIMESTAMP ELSE closed_at END "
+                        "WHERE id=?",
+                        (cust, str(d.get('kind') or 'order'), desc,
+                         str(d.get('promised_date') or '') or None,
+                         float(d.get('advance') or 0), str(d.get('karigar') or ''),
+                         status, status, d['id']))
+                    oid = d['id']
+                else:
+                    conn.execute(
+                        "INSERT INTO customer_orders "
+                        "(customer,kind,description,promised_date,advance,karigar,status) "
+                        "VALUES (?,?,?,?,?,?,?)",
+                        (cust, str(d.get('kind') or 'order'), desc,
+                         str(d.get('promised_date') or '') or None,
+                         float(d.get('advance') or 0), str(d.get('karigar') or ''), status))
+                    oid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                conn.commit()
+            return {'status': 'success', 'id': oid}
+        except Exception as e:
+            _dberr(f"[CRM] save order: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def crm_close_order(self, order_id):
+        """Mark an order done without touching anything else on it.
+
+        Reusing the save path for this meant sending a whole row back just to
+        change one field, and any value the caller left out would overwrite
+        what was stored.
+        """
+        return self.execute_query(
+            "UPDATE customer_orders SET status='done', closed_at=CURRENT_TIMESTAMP "
+            "WHERE id=?", (order_id,))
+
+    def crm_orders(self, status='open'):
+        try:
+            with self._get_connection() as conn:
+                order = " ORDER BY COALESCE(promised_date,'9999-12-31'), id"
+                if status and status != 'all':
+                    rows = conn.execute(
+                        "SELECT * FROM customer_orders WHERE status=?" + order,
+                        (status,)).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM customer_orders" + order).fetchall()
+                return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+    def ensure_crm_tables(self):
+        """Everything the CRM needs, added in place on an existing shop.
+
+        clients_master held a name, a phone and two credit limits. That is
+        enough to bill someone and not much else: no way to know when their
+        birthday is, whether they are on a savings plan, what was promised to
+        them, or why they stopped coming in.
+
+        Safe on every startup. Columns are added only where missing and every
+        table is IF NOT EXISTS.
+        """
+        try:
+            with self._get_connection() as conn:
+                have = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(clients_master)").fetchall()]
+                for col, ddl in (
+                    ('dob',          "ALTER TABLE clients_master ADD COLUMN dob DATE"),
+                    ('anniversary',  "ALTER TABLE clients_master ADD COLUMN anniversary DATE"),
+                    ('email',        "ALTER TABLE clients_master ADD COLUMN email TEXT"),
+                    ('whatsapp',     "ALTER TABLE clients_master ADD COLUMN whatsapp TEXT"),
+                    ('address',      "ALTER TABLE clients_master ADD COLUMN address TEXT"),
+                    ('city',         "ALTER TABLE clients_master ADD COLUMN city TEXT"),
+                    ('pan',          "ALTER TABLE clients_master ADD COLUMN pan TEXT"),
+                    ('gstin',        "ALTER TABLE clients_master ADD COLUMN gstin TEXT"),
+                    # Set by hand when the shop disagrees with the inferred one.
+                    ('segment',      "ALTER TABLE clients_master ADD COLUMN segment TEXT"),
+                    ('referred_by',  "ALTER TABLE clients_master ADD COLUMN referred_by TEXT"),
+                    # Jewellery is bought by families, so several names are
+                    # often one relationship.
+                    ('household',    "ALTER TABLE clients_master ADD COLUMN household TEXT"),
+                    ('notes',        "ALTER TABLE clients_master ADD COLUMN notes TEXT"),
+                ):
+                    if col not in have:
+                        conn.execute(ddl)
+                        _dblog(f"[MIGRATE] clients_master.{col} added")
+
+                conn.executescript("""
+                CREATE TABLE IF NOT EXISTS customer_notes (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    note        TEXT NOT NULL,
+                    kind        TEXT DEFAULT 'note',
+                    created_by  TEXT DEFAULT '',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_cust_notes ON customer_notes(customer);
+
+                CREATE TABLE IF NOT EXISTS customer_followups (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    task        TEXT NOT NULL,
+                    due_date    DATE,
+                    owner       TEXT DEFAULT '',
+                    status      TEXT DEFAULT 'open',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed_at   DATETIME);
+                CREATE INDEX IF NOT EXISTS idx_followup_due ON customer_followups(status, due_date);
+
+                CREATE TABLE IF NOT EXISTS loyalty_ledger (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer    TEXT NOT NULL,
+                    vch_id      TEXT DEFAULT '',
+                    earned      INTEGER DEFAULT 0,
+                    used        INTEGER DEFAULT 0,
+                    note        TEXT DEFAULT '',
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_loyalty_cust ON loyalty_ledger(customer);
+
+                CREATE TABLE IF NOT EXISTS savings_schemes (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name           TEXT NOT NULL,
+                    months         INTEGER NOT NULL,
+                    monthly_amount REAL NOT NULL,
+                    bonus_type     TEXT DEFAULT 'month',
+                    bonus_value    REAL DEFAULT 1,
+                    active         INTEGER DEFAULT 1,
+                    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                CREATE TABLE IF NOT EXISTS scheme_enrolments (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scheme_id   INTEGER NOT NULL,
+                    customer    TEXT NOT NULL,
+                    start_date  DATE NOT NULL,
+                    status      TEXT DEFAULT 'active',
+                    closed_at   DATETIME,
+                    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_enrol_cust ON scheme_enrolments(customer);
+
+                CREATE TABLE IF NOT EXISTS scheme_payments (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    enrolment_id INTEGER NOT NULL,
+                    amount       REAL NOT NULL,
+                    paid_date    DATE DEFAULT (date('now')),
+                    mode         TEXT DEFAULT 'cash',
+                    note         TEXT DEFAULT '',
+                    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP);
+                CREATE INDEX IF NOT EXISTS idx_pay_enrol ON scheme_payments(enrolment_id);
+
+                CREATE TABLE IF NOT EXISTS customer_orders (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer       TEXT NOT NULL,
+                    kind           TEXT DEFAULT 'order',
+                    description    TEXT NOT NULL,
+                    promised_date  DATE,
+                    advance        REAL DEFAULT 0,
+                    karigar        TEXT DEFAULT '',
+                    status         TEXT DEFAULT 'open',
+                    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed_at      DATETIME);
+                CREATE INDEX IF NOT EXISTS idx_orders_status ON customer_orders(status, promised_date);
+                """)
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[MIGRATE] crm tables: {e}")
+
+    def get_item_by_tag(self, tag_id):
+        """One tagged piece, by its tag, with everything the till needs.
+
+        Without this the POS had no way to learn what a scanned piece costs,
+        so rate and making came out of browser storage: one pair of numbers
+        for the whole shop. Here the piece carries its own, falling back to
+        its product master and then to nothing, which the till reads as
+        "ask the salesperson".
+        """
+        try:
+            tag = str(tag_id or '').strip()
+            if not tag:
+                return None
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    """SELECT s.*,
+                              COALESCE(NULLIF(s.making_charge,0), p.making_charge, 0) AS eff_making_charge,
+                              COALESCE(NULLIF(s.making_type,''),  p.making_type, 'percent') AS eff_making_type,
+                              COALESCE(NULLIF(s.sale_price,0),    p.sale_price, 0) AS eff_sale_price,
+                              COALESCE(NULLIF(s.category,''),     p.category, '') AS eff_category,
+                              COALESCE(p.hsn,'') AS hsn
+                       FROM stock_inventory s
+                       LEFT JOIN product_master p ON TRIM(p.code) = TRIM(s.it_code)
+                       WHERE LOWER(TRIM(s.tag_id)) = LOWER(?)
+                       LIMIT 1""",
+                    (tag,)).fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            _dberr(f"[TAG LOOKUP] {tag_id}: {e}")
+            return None
+
+    def get_sold_tags(self, from_date='', to_date='', search='', group=''):
+        """Pieces that have been sold, for the Sold Tags screen.
+
+        The screen has called this since it was written and nothing ever
+        defined it, so the page could only ever render "Failed to load".
+        Rows are read out of the sale history, which is where the item lines
+        actually live once stock has been deducted.
+        """
+        try:
+            where, args = ["1=1"], []
+            if from_date:
+                where.append("date(sh.date) >= date(?)"); args.append(str(from_date))
+            if to_date:
+                where.append("date(sh.date) <= date(?)"); args.append(str(to_date))
+            sql = f"""SELECT sh.vch_id, sh.customer, sh.date, sh.status,
+                             sh.total_amount, sh.mobile, sh.items
+                      FROM sales_history sh
+                      WHERE {' AND '.join(where)}
+                      ORDER BY sh.date DESC, sh.id DESC
+                      LIMIT 2000"""
+            out = []
+            needle = str(search or '').strip().lower()
+            grp = str(group or '').strip().lower()
+            with self._get_connection() as conn:
+                have = [r[1] for r in conn.execute("PRAGMA table_info(sales_history)").fetchall()]
+                if 'items' not in have:
+                    return []
+                for bill in conn.execute(sql, tuple(args)).fetchall():
+                    try:
+                        items = json.loads(bill['items'] or '[]')
+                    except Exception:
+                        items = []
+                    if not isinstance(items, list):
+                        items = []
+                    for it in items:
+                        row = {
+                            'vch_id':   bill['vch_id'],
+                            'customer': bill['customer'],
+                            'date':     bill['date'],
+                            'status':   bill['status'],
+                            'mobile':   bill['mobile'],
+                            'tag_id':   str(it.get('tag_id') or '').strip(),
+                            'it_code':  str(it.get('code') or it.get('it_code') or '').strip(),
+                            'it_name':  str(it.get('it_name') or it.get('name') or '').strip(),
+                            'huid':     str(it.get('huid') or '').strip(),
+                            'touch':    float(it.get('touch') or 0),
+                            'gr_wt':    float(it.get('weight') or it.get('gr_wt') or 0),
+                            'less':     float(it.get('ls_wt') or 0),
+                            'para':     float(it.get('para_stone_wt') or 0),
+                            'fine':     float(it.get('fine') or 0),
+                            'making':   float(it.get('making') or 0),
+                            'amount':   float(it.get('amount') or 0),
+                            'category': str(it.get('category') or '').strip(),
+                        }
+                        if needle and needle not in ' '.join(
+                                str(row[k]).lower() for k in
+                                ('tag_id', 'it_code', 'it_name', 'huid', 'customer', 'vch_id')):
+                            continue
+                        # The filter is a touch band in wholesale ("91.x") and a
+                        # category in retail. One control, read whichever way the
+                        # value looks.
+                        if grp and grp not in ('', 'all'):
+                            # A band reads "91.x" on the screen while its option
+                            # value is the bare "91", so accept either rather
+                            # than silently filtering every row away.
+                            head = grp[:-2] if grp.endswith('.x') else grp
+                            if head.isdigit():
+                                if not str(int(row['touch'] or 0)).startswith(head):
+                                    continue
+                            elif row['category'].lower() != grp:
+                                continue
+                        out.append(row)
+            return out
+        except Exception as e:
+            _dberr(f"[SOLD TAGS] {e}")
+            return []
+
+    def ensure_retail_pricing_columns(self):
+        """What a retail shop needs to price a piece, which the schema had no
+        room for.
+
+        Stock was modelled the wholesale way: weight and purity, settled in
+        grams. A retail shop sells a finished piece for money, so it has to be
+        able to say what this piece costs to make and what it sells for. With
+        nowhere to put that, the till fell back to one rate and one making
+        charge held in browser storage and applied to every line, which is why
+        a shop selling rings at 12% and chains at 8% retyped it every time.
+
+        Safe on every startup: ALTER only where the column is missing.
+        """
+        try:
+            with self._get_connection() as conn:
+                def add(table, columns):
+                    have = [r[1] for r in conn.execute(
+                        f"PRAGMA table_info({table})").fetchall()]
+                    for col, ddl in columns:
+                        if col not in have:
+                            conn.execute(ddl)
+                            _dblog(f"[MIGRATE] {table}.{col} added")
+
+                add('stock_inventory', (
+                    ('category',      "ALTER TABLE stock_inventory ADD COLUMN category TEXT"),
+                    ('karat',         "ALTER TABLE stock_inventory ADD COLUMN karat TEXT"),
+                    # percent of metal value | rupees per gram | a flat amount
+                    ('making_type',   "ALTER TABLE stock_inventory ADD COLUMN making_type TEXT DEFAULT 'percent'"),
+                    ('making_charge', "ALTER TABLE stock_inventory ADD COLUMN making_charge REAL DEFAULT 0"),
+                    # 0 means "work it out from today's rate" rather than "free"
+                    ('sale_price',    "ALTER TABLE stock_inventory ADD COLUMN sale_price REAL DEFAULT 0"),
+                    ('stone_value',   "ALTER TABLE stock_inventory ADD COLUMN stone_value REAL DEFAULT 0"),
+                ))
+                add('product_master', (
+                    ('making_type',   "ALTER TABLE product_master ADD COLUMN making_type TEXT DEFAULT 'percent'"),
+                    ('making_charge', "ALTER TABLE product_master ADD COLUMN making_charge REAL DEFAULT 0"),
+                    ('sale_price',    "ALTER TABLE product_master ADD COLUMN sale_price REAL DEFAULT 0"),
+                    ('hsn',           "ALTER TABLE product_master ADD COLUMN hsn TEXT"),
+                ))
+                conn.commit()
+        except Exception as e:
+            _dberr(f"[MIGRATE] retail pricing columns: {e}")
 
     # ── NOTIFICATION CENTER ──────────────────────────────────────────────
     # Owner inbox: staff-bill alerts (local) + AurumOS admin messages (remote).
@@ -4158,6 +4861,12 @@ class DBManager:
                 rows = conn.execute("""
                     SELECT id, it_code, it_name, tag_id, pcs, touch, gr_wt, nt_wt,
                            para_stone_wt, ls_wt, huid, entry_date,
+                           COALESCE(category,'')      AS category,
+                           COALESCE(karat,'')         AS karat,
+                           COALESCE(making_type,'')   AS making_type,
+                           COALESCE(making_charge,0)  AS making_charge,
+                           COALESCE(sale_price,0)     AS sale_price,
+                           COALESCE(stone_value,0)    AS stone_value,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE UPPER(TRIM(huid)) = ?
@@ -4176,6 +4885,12 @@ class DBManager:
                 return [dict(r) for r in conn.execute("""
                     SELECT id, it_code, it_name, tag_id, pcs, touch, gr_wt, nt_wt,
                            para_stone_wt, ls_wt, huid, entry_date,
+                           COALESCE(category,'')      AS category,
+                           COALESCE(karat,'')         AS karat,
+                           COALESCE(making_type,'')   AS making_type,
+                           COALESCE(making_charge,0)  AS making_charge,
+                           COALESCE(sale_price,0)     AS sale_price,
+                           COALESCE(stone_value,0)    AS stone_value,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE tag_id IS NOT NULL
@@ -5808,18 +6523,27 @@ class DBManager:
                 for entry in new_opening:
                     touch = float(entry.get('touch') or 0)
                     phys_wt = float(entry.get('physical_wt') or 0)
-                    # Allow phys_wt = 0 (explicitly audited as zero)
-                    # Only skip if touch is invalid
-                    if touch <= 0:
+                    # A retail shop counts by category, not purity, so its rows
+                    # arrive with no touch at all. They used to be dropped here,
+                    # which meant a shop could complete a whole stock take and
+                    # sign it off and have nothing written.
+                    category = str(entry.get('category') or entry.get('label') or '').strip()
+                    if touch <= 0 and not category:
                         continue
                     if phys_wt < 0:
                         phys_wt = 0
-                    tag_id = (
-                            'OPENING-WT-'
-                            + _dt.now().strftime('%Y%m%d')
-                            + '-'
-                            + str(int(touch * 10)).zfill(4)
-                    )
+                    if touch > 0:
+                        tag_id = (
+                                'OPENING-WT-'
+                                + _dt.now().strftime('%Y%m%d')
+                                + '-'
+                                + str(int(touch * 10)).zfill(4)
+                        )
+                    else:
+                        slug = ''.join(ch for ch in category.upper()
+                                       if ch.isalnum())[:12] or 'UNCAT'
+                        tag_id = ('OPENING-CAT-' + _dt.now().strftime('%Y%m%d')
+                                  + '-' + slug)
                     conn.execute("""
                         INSERT OR REPLACE INTO stock_inventory
                             (it_code, it_name, tag_id, pcs,
@@ -5827,8 +6551,10 @@ class DBManager:
                              touch, wastage, is_tagged, entry_date)
                         VALUES (?, ?, ?, 0, ?, 0, ?, ?, 0, 0, ?)
                     """, (
-                        'OPENING-' + str(int(touch)),
-                        'Opening Stock ' + str(touch) + '% - ' + med_date,
+                        ('OPENING-' + str(int(touch))) if touch > 0
+                        else ('OPENING-' + (category.upper() or 'UNCAT')),
+                        ('Opening Stock ' + str(touch) + '% - ' + med_date) if touch > 0
+                        else ('Opening Stock ' + category + ' - ' + med_date),
                         tag_id, phys_wt, phys_wt, touch, med_date
                     ))
                     inserted += 1

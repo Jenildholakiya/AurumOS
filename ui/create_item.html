@@ -396,6 +396,38 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                         </div>
                     </div>
 
+                    <!-- Retail only. Hidden here so wholesale never shows it; applyRetailWastagePolicy() reveals it. -->
+                    <div id="product-retail-pricing" style="display:none;">
+                        <div class="form-sec">Pricing</div>
+
+                        <div class="fg">
+                            <label>Making Charge</label>
+                            <div style="display:flex;gap:8px;">
+                                <input type="number" id="p-making-charge" class="inp" step="0.01" placeholder="0"
+                                       style="flex:1;min-width:0;"
+                                       onkeydown="navEnter(event,'p-sale-price')">
+                                <select id="p-making-type" class="inp" style="flex:0 0 160px;width:160px;font-family:var(--sans);">
+                                    <option value="percent">% of metal value</option>
+                                    <option value="per_gram">Rs per gram</option>
+                                    <option value="fixed">Flat Rs</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="fg">
+                            <label>Sale Price / MRP</label>
+                            <input type="number" id="p-sale-price" class="inp" step="0.01" placeholder="0"
+                                   onkeydown="navEnter(event,'p-hsn')">
+                            <span class="hint">0 means work it out from today's rate.</span>
+                        </div>
+
+                        <div class="fg">
+                            <label>HSN Code</label>
+                            <input type="text" id="p-hsn" class="inp" value="7113" placeholder="7113"
+                                   onkeydown="if(event.key==='Enter')saveProduct()">
+                        </div>
+                    </div>
+
                     <button class="btn-submit" id="btn-save-product" onclick="saveProduct()">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         Save Product
@@ -418,7 +450,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
                 <div style="max-height:420px;overflow-y:auto;scrollbar-width:thin;">
                     <table class="list-table">
-                        <thead><tr><th>Code</th><th>Name</th><th>Touch</th><th>Wastage</th><th>Category</th><th style="width:40px;"></th></tr></thead>
+                        <thead><tr><th>Code</th><th>Name</th><th>Touch</th><th id="product-wastage-heading">Wastage</th><th id="product-making-heading" style="display:none;">Making</th><th id="product-mrp-heading" style="display:none;">MRP</th><th>Category</th><th style="width:40px;"></th></tr></thead>
                         <tbody id="product-list">
                             <tr class="empty-row"><td colspan="6">Loading...</td></tr>
                         </tbody>
@@ -654,8 +686,17 @@ function applyRetailWastagePolicy() {
         var el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    var heading = document.getElementById('touch-wastage-heading');
-    if (heading) heading.style.display = 'none';
+    ['touch-wastage-heading', 'product-wastage-heading'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    // The retail-only bits ship hidden, so wholesale never sees them.
+    var pricing = document.getElementById('product-retail-pricing');
+    if (pricing) pricing.style.display = 'block';
+    ['product-making-heading', 'product-mrp-heading'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
 }
 
 // Build touch dropdown options
@@ -764,7 +805,9 @@ function autoGenerateCode() {
     var touch = parts[0];
     var wastage = parts[1] || "0";
     wastEl.value = wastage;
-    codeInp.value = catCode + "-" + touch + "+" + wastage;
+    // Retail has no wastage, so the code must not carry a "+0" tail.
+    codeInp.value = isRetailMode() ? (catCode + "-" + touch)
+                                   : (catCode + "-" + touch + "+" + wastage);
     badge.style.display = "inline";
     updatePreview();
 }
@@ -809,11 +852,22 @@ async function loadProducts() {
     renderProducts();
 }
 
+// A making charge reads differently per type, so carry the unit with it.
+function makingLabel(p) {
+    var amount = p.making_charge || 0;
+    if (!amount) return '\u2014';
+    var type = p.making_type || 'percent';
+    if (type === 'percent')  return amount + '%';
+    if (type === 'per_gram') return amount + '/g';
+    return String(amount);
+}
+
 function renderProducts() {
     var tb = document.getElementById('product-list');
+    var retail = isRetailMode();
     document.getElementById('p-count').innerText = products.length;
     if (!products.length) {
-        tb.innerHTML = '<tr class="empty-row"><td colspan="6">No products yet. Create your first one.</td></tr>';
+        tb.innerHTML = '<tr class="empty-row"><td colspan="' + (retail ? '7' : '6') + '">No products yet. Create your first one.</td></tr>';
         return;
     }
     tb.innerHTML = products.map(function(p) {
@@ -821,9 +875,14 @@ function renderProducts() {
             + '<td><span class="code-tag">' + h(p.code) + '</span></td>'
             + '<td style="font-weight:600;">' + h(p.name) + '</td>'
             + '<td style="font-family:var(--mono);color:var(--gold3);">' + h(p.touch || '\u2014') + '%</td>'
-            + '<td style="font-family:var(--mono);color:var(--muted2);">' + h(p.wastage || '0') + '%</td>'
+            + (retail ? '' : '<td style="font-family:var(--mono);color:var(--muted2);">' + h(p.wastage || '0') + '%</td>')
+            + (retail ? '<td style="font-family:var(--mono);color:var(--muted2);">' + h(makingLabel(p)) + '</td>' : '')
+            + (retail ? '<td style="font-family:var(--mono);color:var(--muted2);">' + h(p.sale_price || '\u2014') + '</td>' : '')
             + '<td style="color:var(--muted2);">' + h(p.category || '\u2014') + '</td>'
-            + '<td style="text-align:right;"><button class="btn-del" title="Delete" onclick="deleteMaster(\'product\',' + p.id + ')">\u2715</button></td>'
+            // product_master is keyed by code and has no id column, and
+            // get_all_products never returned one, so p.id was always
+            // undefined and deleting a product silently removed nothing.
+            + '<td style="text-align:right;"><button class="btn-del" title="Delete" onclick="deleteMaster(\'product\',\'' + String(p.code || '').replace(/'/g, '') + '\')">\u2715</button></td>'
             + '</tr>';
     }).join('');
 }
@@ -885,7 +944,14 @@ async function saveProduct() {
     var parts = selected.split("+");
     var touch = parseFloat(parts[0]);
     var wastage = parseFloat(parts[1] || 0);
-    var res = await window.pywebview.api.add_product_master(code, name, cat, touch, wastage);
+    // Wholesale sends the backend defaults, so nothing about it changes.
+    var retail = isRetailMode();
+    var makingCharge = retail ? (parseFloat(document.getElementById("p-making-charge").value) || 0) : 0;
+    var makingType = retail ? (document.getElementById("p-making-type").value || "percent") : "percent";
+    var salePrice = retail ? (parseFloat(document.getElementById("p-sale-price").value) || 0) : 0;
+    var hsn = retail ? document.getElementById("p-hsn").value.trim() : "";
+    var res = await window.pywebview.api.add_product_master(code, name, cat, touch, wastage,
+                                                            makingCharge, makingType, salePrice, hsn);
     if (res.status === "success") {
         showMsg("product-msg", "\u2713 Product saved.", "ok");
         document.getElementById("p-code").value = "";
@@ -893,6 +959,11 @@ async function saveProduct() {
         ddClear('p-category-dd');
         ddClear('p-touch-dd');
         document.getElementById("p-wastage").value = "";
+        if (retail) {
+            document.getElementById("p-making-charge").value = "";
+            document.getElementById("p-sale-price").value = "";
+            document.getElementById("p-hsn").value = "7113";
+        }
         document.getElementById("p-code-badge").style.display = "none";
         updatePreview();
         await loadProducts();
