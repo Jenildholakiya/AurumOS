@@ -72,6 +72,17 @@ class DBManager:
         print(f"[DB] Dir writable: {os.access(self.db_dir, os.W_OK)}")
         self.initialize_tables()
         try:
+            # Before anything asks. An install that already has a
+            # fingerprint keeps it, whatever the hardware readers say today.
+            with self._get_connection() as _c:
+                _row = _c.execute(
+                    "SELECT value FROM app_config WHERE key='machine_fingerprint'"
+                ).fetchone()
+            if _row and str(_row[0] or '').strip():
+                DBManager._pin_fingerprint(_row[0])
+        except Exception:
+            pass
+        try:
             self.ensure_retail_columns()
             self.ensure_crm_tables()
             self.ensure_hallmark_tables()
@@ -3349,56 +3360,124 @@ class DBManager:
 
     # ── Fingerprint cache — computed ONCE per process ─────────────────────────
     _FP_CACHE = None
+    _FP_PINNED = None
 
     @staticmethod
     def _machine_fingerprint() -> str:
-        """
-        Hardware DNA — 5 hardware components hashed into one fingerprint.
-        CACHED after first call so WMIC never runs twice.
-        This is the core fix for unlock key mismatch — fingerprint
-        must be identical at lock-time and unlock-time.
+        """The value a licence lock code is cut from. It must not move.
+
+        It used to be a hash of five ids, four of them read with `wmic`.
+        Windows removed `wmic`, every one of those four came back empty, and
+        the fingerprint changed on machines that had not been touched. A
+        lock code that changes is a customer locked out of software they
+        paid for.
+
+        Two changes. The ids now come from readers that still exist. And
+        once an install has a fingerprint recorded, that recorded one is
+        what gets returned, for ever, because a licence lock has to be a
+        fact about an install rather than a fresh opinion each morning.
         """
         if DBManager._FP_CACHE is not None:
             return DBManager._FP_CACHE
+        if DBManager._FP_PINNED:
+            DBManager._FP_CACHE = DBManager._FP_PINNED
+            _dblog(f"[DNA] using the recorded fingerprint {DBManager._FP_PINNED[:8]}..")
+            return DBManager._FP_CACHE
 
-        import uuid as _uuid, hashlib as _hl, subprocess as _sp
+        import hashlib as _hl
 
-        def _wmic(query):
-            try:
-                out = _sp.check_output(
-                    'wmic ' + query + ' get /value',
-                    shell=True, timeout=5,
-                    stderr=_sp.DEVNULL,
-                    creationflags=0x08000000
-                ).decode('ascii', errors='ignore')
-                vals = [
-                    l.split('=', 1)[1].strip()
-                    for l in out.splitlines()
-                    if '=' in l and l.split('=', 1)[1].strip()
-                       and l.split('=', 1)[1].strip() not in
-                       ('', 'None', 'To Be Filled By O.E.M.', 'Default string')
-                ]
-                return vals[0].strip() if vals else ''
-            except Exception:
-                return ''
-
-        mac = str(_uuid.getnode())
-        cpu_id = _wmic('cpu get ProcessorId')
-        disk_id = _wmic('diskdrive get SerialNumber')
-        bios_id = _wmic('bios get SerialNumber')
-        board_id = _wmic('baseboard get SerialNumber')
-
-        raw = '|'.join([mac, cpu_id, disk_id, bios_id, board_id])
+        probe = DBManager._id_probe()
+        parts = [str(probe.get(k) or '') for k in
+                 ('mac', 'csproduct', 'volume', 'bios', 'baseboard')]
+        raw = '|'.join(parts)
         fp = _hl.sha256(raw.encode('utf-8')).hexdigest()[:24]
 
         DBManager._FP_CACHE = fp
-
-        _dblog(
-            f"[DNA] mac={mac[:6]}.. cpu={cpu_id[:6]}.. "
-            f"disk={disk_id[:6]}.. bios={bios_id[:6]}.. "
-            f"board={board_id[:6]}.. fp={fp[:8]}.."
-        )
+        answered = [k for k in ('mac', 'csproduct', 'volume', 'bios', 'baseboard')
+                    if probe.get(k)]
+        _dblog(f"[DNA] computed from {', '.join(answered) or 'nothing'} -> {fp[:8]}..")
         return fp
+
+    @classmethod
+    def _pin_fingerprint(cls, value):
+        """Adopt the fingerprint an install already has, so the lock code it
+        was activated with keeps working."""
+        v = str(value or '').strip()
+        if not v:
+            return
+        cls._FP_PINNED = v
+        cls._FP_CACHE = v
+
+    _ID_CACHE = None
+
+    @classmethod
+    def _id_probe(cls):
+        """What this machine's readers say about it, one value per source.
+
+        None of this goes through `wmic`. Microsoft removed it, and the day
+        it went the old fingerprint changed on machines that had not moved,
+        which is what sent shops back to the setup wizard with their books
+        deleted. MachineGuid comes straight out of the registry with no
+        process spawned at all, so there is nothing left to retire.
+        """
+        if cls._ID_CACHE is not None:
+            return cls._ID_CACHE
+
+        out = {}
+
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                r'SOFTWARE\Microsoft\Cryptography', 0,
+                                winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as k:
+                out['machineguid'] = str(winreg.QueryValueEx(k, 'MachineGuid')[0])
+        except Exception as e:
+            _dblog(f"[ID] MachineGuid unreadable: {e}")
+
+        # CIM is what replaced wmic. One call for all of it, so a slow
+        # machine pays for one process rather than four.
+        try:
+            import subprocess as _sp, json as _js
+            script = (
+                "$ErrorActionPreference='SilentlyContinue';"
+                "$o=[ordered]@{};"
+                "$o.csproduct=(Get-CimInstance Win32_ComputerSystemProduct).UUID;"
+                "$o.bios=(Get-CimInstance Win32_BIOS).SerialNumber;"
+                "$o.baseboard=(Get-CimInstance Win32_BaseBoard).SerialNumber;"
+                "$o.volume=(Get-CimInstance Win32_LogicalDisk "
+                "-Filter \"DeviceID='C:'\").VolumeSerialNumber;"
+                "$o|ConvertTo-Json -Compress")
+            raw = _sp.check_output(
+                ['powershell', '-NoProfile', '-NonInteractive',
+                 '-ExecutionPolicy', 'Bypass', '-Command', script],
+                timeout=20, stderr=_sp.DEVNULL,
+                creationflags=0x08000000).decode('utf-8', 'ignore').strip()
+            if raw:
+                for k2, v2 in (_js.loads(raw) or {}).items():
+                    if v2:
+                        out[k2] = str(v2)
+        except Exception as e:
+            _dblog(f"[ID] CIM unreadable: {e}")
+
+        # Last resort only. uuid.getnode() invents a random number when it
+        # cannot find a network card, so it must never outrank a real id.
+        try:
+            import uuid as _uuid
+            node = _uuid.getnode()
+            if not (node >> 40) & 1:          # the random-fallback marker
+                out['mac'] = str(node)
+        except Exception:
+            pass
+
+        cls._ID_CACHE = out
+        _dblog('[ID] readers answering: '
+               + (', '.join(sorted(k for k, v in out.items() if v)) or 'none'))
+        return out
+
+    def machine_identity(self):
+        """This machine's recorded identity, e.g. 'machineguid:1a2b...'."""
+        from core import machine_id as _mid
+        return _mid.identity(self._id_probe())[0]
 
     def _wipe_business_data(self):
         """
@@ -3547,56 +3626,92 @@ class DBManager:
             return False
 
     def is_setup_done(self) -> bool:
-        """
-        Returns True only if setup was completed on THIS machine.
-        3 layers of protection:
-          1. Fingerprint-locked marker file — fast, can't be copied to another PC
-          2. Database flag (app_config.setup_done = '1') + fingerprint match
-          3. If DB throws error, returns False (forces fresh setup)
-        """
-        # Layer 1: Check fingerprint-locked marker (fastest, no DB needed)
-        if self._setup_marker_valid():
-            _dblog("[SETUP] Marker valid for THIS machine -> show login (layer 1)")
-            return True
+        """Has this shop already been set up here.
 
-        # Layer 2: Check database flag + fingerprint
+        The old answer was a hash of five hardware ids that had to match
+        exactly, and four of them came from `wmic`. When Windows removed
+        `wmic` the hash changed on machines that had not moved, and the code
+        read that as "this database belongs to another PC", wiped the stock,
+        sales, customers and ledger, and showed the setup wizard.
+
+        So: a reader that cannot answer is not evidence. If the source that
+        recorded this machine has gone quiet, and somebody has an account
+        here, the shop opens at its login screen. Nothing in this method
+        deletes anything any more.
+        """
+        from core import machine_id as _mid
         try:
-            fp = self._machine_fingerprint()
+            probe = self._id_probe()
             with self._get_connection() as conn:
                 rows = {
                     r['key']: r['value']
                     for r in conn.execute(
-                        "SELECT key, value FROM app_config WHERE key IN ('setup_done','machine_fingerprint')"
+                        "SELECT key, value FROM app_config WHERE key IN "
+                        "('setup_done','machine_fingerprint','machine_identity')"
                     ).fetchall()
                 }
-            done = rows.get('setup_done') == '1'
-            stored_fp = rows.get('machine_fingerprint', '')
+                accounts = conn.execute(
+                    "SELECT COUNT(*) FROM admin_creds").fetchone()[0]
 
-            _dblog(f"[SETUP] done={done} my_fp={fp[:8]}... stored_fp={stored_fp[:8] if stored_fp else 'none'}...")
+            stored = (rows.get('machine_identity')
+                      or rows.get('machine_fingerprint') or '')
+            verdict = _mid.compare(stored, probe)
+            call = _mid.decide({'has_accounts': bool(accounts),
+                                'setup_flag': rows.get('setup_done') == '1',
+                                'verdict': verdict})
 
-            if not done:
-                _dblog("[SETUP] setup_done != 1 -> show setup")
+            _dblog(f"[SETUP] accounts={accounts} flag={rows.get('setup_done')!r} "
+                   f"verdict={verdict} -> {call['screen']} ({call['reason']})")
+
+            if call['screen'] == _mid.FOREIGN:
+                # The folder really does look copied from another machine.
+                # It still does not get the wizard: the wizard would write a
+                # new shop over the one already in here. The flag is left
+                # for the licence check, which is where a per-machine rule
+                # belongs. Nothing is deleted either way.
+                self._foreign = True
+                _dblog('[SETUP] this database was set up on another machine; '
+                       'opening the login and leaving the data alone')
+                return True
+
+            if call['screen'] == _mid.SETUP:
                 return False
 
-            # DB says done but fingerprint doesn't match -> different PC
-            # Wipe all data so the new PC gets a clean start
-            if stored_fp and stored_fp != fp:
-                _dblog("[SETUP] FINGERPRINT MISMATCH -> DB belongs to another PC, wiping data")
-                try:
-                    self._wipe_business_data()
-                except Exception as wipe_err:
-                    _dberr(f"[SETUP] Wipe failed: {wipe_err}")
-                return False
-
-            # DB says done and fingerprint matches (or first-time write) -> write marker for speed
+            # Recognised, or recognised enough. Take the chance to record a
+            # better identity than whatever is stored, so the next launch
+            # has a source it can actually re-check.
+            if call.get('adopt') and _mid.should_restamp(stored, probe):
+                self._stamp_identity()
             self._write_setup_marker()
-
-            _dblog("[SETUP] all checks passed -> show login")
             return True
 
         except Exception as e:
-            _dberr(f"[SETUP] is_setup_done DB error: {e}")
-            return False
+            _dberr(f"[SETUP] is_setup_done error: {e}")
+            # An unreadable database is a reason to say so, not a reason to
+            # walk somebody through a wizard that would write over a shop.
+            try:
+                with self._get_connection() as conn:
+                    return conn.execute(
+                        "SELECT COUNT(*) FROM admin_creds").fetchone()[0] > 0
+            except Exception:
+                return False
+
+    def _stamp_identity(self):
+        """Record which machine this is, and which reader said so."""
+        from core import machine_id as _mid
+        ident = _mid.identity(self._id_probe())[0]
+        if not ident:
+            _dblog('[SETUP] no reader answered, so no identity recorded')
+            return
+        try:
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) "
+                    "VALUES('machine_identity',?)", (ident,))
+                conn.commit()
+            _dblog(f"[SETUP] identity recorded: {ident}")
+        except Exception as e:
+            _dberr(f"[SETUP] could not record identity: {e}")
 
     def mark_setup_done(self) -> None:
         """Write machine fingerprint to DB after successful setup."""
@@ -3620,7 +3735,10 @@ class DBManager:
                 """, (fp, hostname))
                 conn.commit()
             _dblog(f"[SETUP] machine_fingerprint stored: {fp[:8]}...")
-            # Write permanent marker file too
+            # The fingerprint above still feeds licence lock codes. This is
+            # the one the setup decision reads, and it names the reader it
+            # came from so a later launch can re-check that same reader.
+            self._stamp_identity()
             self._write_setup_marker()
         except Exception as e:
             _dberr(f"[SETUP] mark_setup_done error: {e}")
@@ -3685,6 +3803,12 @@ class DBManager:
             )
             conn.commit()
             _dblog(f"[SETUP] fingerprint stored: {self._machine_fingerprint()[:8]}...")
+
+            # The line above is the licence lock code. This one is what the
+            # setup check reads, and it names the reader it came from so a
+            # later launch re-checks that same reader instead of hashing
+            # whatever happens to answer that morning.
+            self._stamp_identity()
 
             # Write permanent marker file — belt-and-suspenders so setup
             # NEVER shows again even if DB has future issues
