@@ -133,7 +133,7 @@ BUNDLES = {
     'hallmark': {
         'label': 'Hallmarking',
         'pages': {
-            'wholesale': [],
+            'wholesale': ['hallmark.html'],
             'retail':    ['hallmark.html'],
         },
         'methods': frozenset([
@@ -233,7 +233,8 @@ BUNDLES = {
 PLAN_BUNDLES = {
     'lite':       [],
     'pro':        ['billing'],
-    'enterprise': ['billing', 'inventory', 'karigar', 'history'],
+    'enterprise': ['billing', 'inventory', 'karigar', 'history',
+                   'crm', 'hallmark'],
 }
 
 
