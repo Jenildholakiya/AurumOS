@@ -130,6 +130,19 @@ BUNDLES = {
             'tag_audit_get_available_touches',
         ]),
     },
+    'deadstock': {
+        'label': 'Dead Stock',
+        'pages': {
+            'wholesale': ['dead_stock.html'],
+            'retail':    ['dead_stock.html'],
+        },
+        'methods': frozenset([
+            'dead_stock_report', 'dead_stock_export', 'dead_stock_reveal',
+            # Offering a dead piece to a customer goes through the machinery
+            # the CRM already owns, so the screen needs those three too.
+            'crm_customers', 'wa_send_item', 'wa_open', 'wa_mark_sent',
+        ]),
+    },
     'hallmark': {
         'label': 'Hallmarking',
         'pages': {
@@ -234,7 +247,7 @@ PLAN_BUNDLES = {
     'lite':       [],
     'pro':        ['billing'],
     'enterprise': ['billing', 'inventory', 'karigar', 'history',
-                   'crm', 'hallmark'],
+                   'crm', 'hallmark', 'deadstock'],
 }
 
 

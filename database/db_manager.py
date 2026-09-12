@@ -7315,6 +7315,65 @@ class DBManager:
             return True  # fail open on unexpected error
 
     # ══════════════════════════════════════════════════════════════════
+    #  DEAD STOCK
+    #  Everything still in stock, with the date it arrived. A sold piece is
+    #  deducted from this table, so whatever is here has not been sold.
+    # ══════════════════════════════════════════════════════════════════
+
+    def dead_stock_rows(self, limit=5000):
+        """Every row still in stock, with the columns the report needs.
+
+        Columns added after the table was first written are selected through
+        PRAGMA rather than assumed, because a shop upgrading from an old
+        version has the table without them and the query has to survive that.
+        """
+        try:
+            with self._get_connection() as conn:
+                have = {r[1] for r in conn.execute(
+                    "PRAGMA table_info(stock_inventory)").fetchall()}
+
+                def col(name, default="''"):
+                    return ("COALESCE(%s,%s)" % (name, default)) if name in have else default
+
+                sql = (
+                    "SELECT id, tag_id, it_code, it_name, "
+                    "       COALESCE(gr_wt,0) AS gr_wt, COALESCE(nt_wt,0) AS nt_wt, "
+                    "       COALESCE(touch,0) AS touch, COALESCE(pcs,1) AS pcs, "
+                    "       COALESCE(is_tagged,0) AS is_tagged, "
+                    "       COALESCE(huid,'') AS huid, entry_date, "
+                    + col('category') + " AS category, "
+                    + col('karat') + " AS karat, "
+                    + col('sale_price', '0') + " AS sale_price, "
+                    + col('stone_value', '0') + " AS stone_value, "
+                    + col('photo') + " AS photo, "
+                    + col('design') + " AS design "
+                    "FROM stock_inventory "
+                    "ORDER BY date(COALESCE(entry_date,'9999-12-31')) ASC "
+                    "LIMIT ?")
+                return [dict(r) for r in conn.execute(sql, (int(limit or 5000),)).fetchall()]
+        except Exception as e:
+            _dberr(f"[DEAD] rows: {e}")
+            return []
+
+    def latest_gold_rate(self):
+        """The ten-gram rate the shop last billed at.
+
+        Read from billing rather than a setting, exactly as the dashboard
+        does, so the dead stock report and the dashboard can never put two
+        different values on the same shelf.
+        """
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT gold_rate FROM sales_history "
+                    "WHERE COALESCE(gold_rate,0)>0 ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+            return float(row[0]) if row and row[0] else 0.0
+        except Exception as e:
+            _dberr(f"[DEAD] rate: {e}")
+            return 0.0
+
+    # ══════════════════════════════════════════════════════════════════
     #  HALLMARKING
     #  Stock cannot be sold until it comes back from the assaying centre
     #  with a number struck on it. These tables are the register of what
