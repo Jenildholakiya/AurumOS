@@ -11,6 +11,7 @@ var NAV_ADMIN = [
     { id:'dashboard', label:'Dashboard',    icon:'grid',      page:'dashboard.html',       section:'Main'    },
     { id:'inventory', label:'Inventory',    icon:'box',       page:'inventory.html',       section:'Main'    },
     { id:'karigar',   label:'Karigar',      icon:'orders',    page:'karigar.html',         section:'Main'    },
+    { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  page:'hallmark.html',        section:'Main'    },
     { id:'billing',   label:'Create Bill',  icon:'file-text', page:'billing.html',         section:'Main'    },
     { id:'history',   label:'History',      icon:'clock',     page:'history.html',         section:'Main'    },
     { id:'vouchers',  label:'Voucher History', icon:'receipt', page:'voucher_history.html', section:'Main'    },

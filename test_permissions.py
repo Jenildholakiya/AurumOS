@@ -118,8 +118,23 @@ check("an unknown plan grants nothing", P.licensed_seats('platinum', []), 0)
 
 print("\n-- what an owner may hand out --")
 check("pro offers billing only", P.bundles_for_plan('pro'), ['billing'])
-check("enterprise offers all four", len(P.bundles_for_plan('enterprise')), 4)
+check("enterprise offers every bundle there is",
+      sorted(P.bundles_for_plan('enterprise')), sorted(P.BUNDLES))
 check("lite offers nothing", P.bundles_for_plan('lite'), [])
+
+# A bundle in no plan is a screen nobody on staff can ever reach, however
+# well it is built. Both the CRM and hallmarking sat like that until this
+# was checked: written, wired, and unreachable for any staff login.
+orphans = sorted(b for b in P.BUNDLES
+                 if not any(b in P.bundles_for_plan(plan) for plan in P.PLAN_BUNDLES))
+check("every bundle belongs to some plan", orphans, [])
+
+# The menu is one list; the policy is another. An entry a plan grants but
+# a mode does not allow is a link into a refusal.
+for _bid, _b in sorted(P.BUNDLES.items()):
+    _pages = _b.get('pages', {})
+    check("%s names the pages it unlocks" % _bid,
+          bool(_pages.get('retail') or _pages.get('wholesale')), True)
 
 print("\n-- the guard, and the bridge surviving it --")
 

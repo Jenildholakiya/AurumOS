@@ -267,6 +267,40 @@ def check_layout(html):
         out.append('boot.js is not the first script, so the wait cannot work')
     if 'id="sidebar-container"' not in html:
         out.append('no sidebar container, so the page renders without the menu')
+    if not re.search(r'<script src="sidebar\.js\?v=\d+"></script>', html):
+        out.append('the sidebar script is not loaded, so no menu is drawn')
+
+    # The menu itself. The software type falls back to wholesale whenever
+    # the stored value is missing or unreadable, so an entry that lives in
+    # only one of the two lists vanishes for reasons that have nothing to
+    # do with the licence.
+    nav = os.path.join(ROOT, 'ui', 'sidebar.js')
+    if os.path.isfile(nav):
+        with open(nav, encoding='utf-8', errors='replace') as f:
+            js = f.read()
+        for name in ('NAV_RETAIL', 'NAV_ADMIN'):
+            m = re.search(name + r'\s*=\s*(\[.*?\n\];)', js, re.S)
+            if not m:
+                out.append('%s not found in sidebar.js' % name)
+            elif "page:'hallmark.html'" not in m.group(1).replace(' ', ''):
+                out.append('Hallmarking is missing from %s' % name)
+        if "'hallmark.html':" not in js:
+            out.append('hallmark.html has no routing entry, so the menu '
+                       'cannot mark it as the page you are on')
+        if "'hallmark':" not in js:
+            out.append('the hallmark icon is not defined, so the row draws blank')
+
+    # Policy has to agree with the menu, or the entry is a link into a refusal.
+    try:
+        sys.path.insert(0, ROOT)
+        from core import permissions as _p
+        ids = _p.bundles_for_plan('enterprise')
+        for mode in ('retail', 'wholesale'):
+            if 'hallmark.html' not in _p.pages_for(ids, mode):
+                out.append('the top plan does not reach hallmark.html in %s '
+                           'mode, so a staff login cannot open it' % mode)
+    except Exception as e:
+        out.append('could not read the permission policy: %s' % e)
     return out
 
 
@@ -291,6 +325,7 @@ def main():
         print('  [FAIL] ' + p)
     if not problems:
         print('  [PASS] two stacks, every counter has a card, and it waits for the bridge')
+        print('  [PASS] the menu carries Hallmarking in both modes, and policy agrees')
     print('')
 
     if not node_available():
