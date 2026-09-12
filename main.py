@@ -3833,6 +3833,90 @@ class AurumAPI:
             return {'status': 'error', 'message': str(e)}
 
     # ══════════════════════════════════════════════════════════════════
+    #  DEAD STOCK
+    #  The metal that has not moved. The largest idle sum in most shops and
+    #  the one nothing else in the software was measuring.
+    # ══════════════════════════════════════════════════════════════════
+
+    def dead_stock_report(self, threshold_days=0, limit=5000):
+        """Everything the screen shows, in one call.
+
+        The shop's mode decides what is said out loud, not what is counted:
+        a retail owner reads rupees, a wholesaler reads fine weight. Both
+        get the same rows underneath.
+        """
+        try:
+            from core import deadstock as _ds
+            rows = self.db.dead_stock_rows(limit)
+            rate = self.db.latest_gold_rate()
+            days = int(threshold_days or 0) or _ds.DEFAULT_DEAD_DAYS
+            out = _ds.report(rows, rate, days, None, self._software_type())
+            out['headline'] = _ds.headline(out)
+            out['choices'] = list(_ds.CHOICES)
+            out['status'] = 'success'
+            return out
+        except Exception as e:
+            ERR(f"[DEAD] report: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def dead_stock_export(self, threshold_days=0):
+        """The dead rows as a CSV file the shop can open or hand to a karigar.
+
+        Written to the shop's own folder rather than offered as a download,
+        because the window has no download of its own and a path a person can
+        find is more use than a file that vanishes.
+        """
+        try:
+            from core import deadstock as _ds
+            import csv as _csv, datetime as _dt
+
+            rep = self.dead_stock_report(threshold_days)
+            if rep.get('status') != 'success':
+                return rep
+            rows = rep.get('rows') or []
+            if not rows:
+                return {'status': 'empty',
+                        'message': 'Nothing has been sitting that long.'}
+
+            base = os.path.dirname(sys.executable if getattr(sys, 'frozen', False)
+                                   else os.path.abspath(__file__))
+            folder = os.path.join(base, 'exports')
+            os.makedirs(folder, exist_ok=True)
+            name = 'dead_stock_%s.csv' % _dt.datetime.now().strftime('%Y%m%d_%H%M')
+            path = os.path.join(folder, name)
+
+            fields = [('tag_id', 'Tag'), ('it_name', 'Item'),
+                      ('category', 'Category'), ('karat', 'Purity'),
+                      ('gr_wt', 'Gross wt'), ('fine_wt', 'Fine wt'),
+                      ('entry_date', 'In stock since'), ('age_days', 'Days'),
+                      ('band_label', 'Age'), ('metal_value', 'Metal value'),
+                      ('sale_price', 'Ticket price'), ('huid', 'HUID')]
+            with open(path, 'w', newline='', encoding='utf-8-sig') as fh:
+                w = _csv.writer(fh)
+                w.writerow([label for _k, label in fields])
+                for r in rows:
+                    w.writerow([r.get(k, '') for k, _label in fields])
+
+            return {'status': 'success', 'path': path, 'rows': len(rows),
+                    'folder': folder}
+        except Exception as e:
+            ERR(f"[DEAD] export: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def dead_stock_reveal(self, path=''):
+        """Open the folder the export landed in."""
+        try:
+            import subprocess
+            target = str(path or '').strip()
+            if not target or not os.path.exists(target):
+                return {'status': 'error', 'message': 'That file is not there.'}
+            subprocess.Popen(['explorer', '/select,', os.path.normpath(target)])
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[DEAD] reveal: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ══════════════════════════════════════════════════════════════════
     #  HALLMARKING
     #  Gold jewellery may not be sold in India without a hallmark. Stock
     #  goes to an assaying centre, comes back struck with a six-character

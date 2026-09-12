@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Dead Stock</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+    --bg-main:#f8fafb;--white:#ffffff;--cream:#f1f5f9;
+    --text-main:#0f172a;--text-muted:#64748b;--muted2:#94a3b8;
+    --primary:#0f172a;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --border:#e2e8f0;--rule:#e2e8f0;--rule2:rgba(15,23,42,0.05);
+    --success:#16a34a;--success-bg:rgba(22,163,74,0.08);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.09);
+    --danger:#dc2626;--danger-bg:rgba(220,38,38,0.07);
+    --gold:#a87d1e;--gold-bg:rgba(168,125,30,0.1);
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 2px rgba(15,23,42,0.04);
+    --sh2:0 4px 14px rgba(15,23,42,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+/* The shell every page in this app uses: body is the row that holds the
+   sidebar and main side by side, main scrolls on its own. */
+body{display:flex!important;height:100vh!important;width:100vw!important;
+     overflow:hidden!important;background:var(--bg-main);
+     color:var(--text-main);font-family:var(--sans);font-size:0.82rem;}
+main{width:100%!important;min-width:0;flex:1;display:flex;
+     flex-direction:column;overflow:hidden;}
+
+header{height:58px;background:var(--white);border-bottom:1px solid var(--border);
+       display:flex;align-items:center;justify-content:space-between;
+       padding:0 24px;flex-shrink:0;position:relative;z-index:50;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 5%,var(--blue-ln) 50%,transparent 95%);}
+.header-left h1{font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:9px;}
+.status-dot{width:9px;height:9px;background:var(--amber);border-radius:50%;
+    box-shadow:0 0 10px rgba(217,119,6,0.45);}
+.header-sub{font-size:0.66rem;color:var(--text-muted);margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:9px;}
+
+.btn{height:34px;padding:0 14px;border:none;border-radius:9px;font-family:inherit;
+     font-size:0.73rem;font-weight:600;cursor:pointer;display:inline-flex;
+     align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:var(--blue3);}
+.btn-primary:disabled{background:var(--muted2);cursor:not-allowed;}
+.btn-ghost{background:var(--white);color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--cream);color:var(--text-main);}
+.btn-wa{background:#25D366;color:#fff;}
+.btn-wa:hover{background:#1da851;}
+.btn-sm{height:26px;padding:0 9px;font-size:0.66rem;border-radius:7px;}
+.icon-btn{width:34px;height:34px;border:1px solid var(--border);background:var(--white);
+          border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;
+          justify-content:center;color:var(--text-muted);transition:all .15s;}
+.icon-btn:hover{background:var(--cream);color:var(--text-main);}
+
+select.pick{height:34px;padding:0 10px;border:1px solid var(--border);
+    border-radius:9px;font-family:inherit;font-size:0.73rem;background:var(--white);
+    color:var(--text-main);outline:none;cursor:pointer;}
+
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;
+        scrollbar-width:thin;scrollbar-color:var(--rule) transparent;}
+.scroll::-webkit-scrollbar{width:5px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+
+/* ── The sentence an owner reads first. ── */
+.lead{background:var(--white);border:1px solid var(--border);border-left:3px solid var(--amber);
+      border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:var(--sh);}
+.lead-line{font-size:0.98rem;font-weight:600;line-height:1.45;}
+.lead-sub{font-size:0.67rem;color:var(--text-muted);margin-top:5px;line-height:1.55;}
+.lead.is-clean{border-left-color:var(--success);}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+       gap:11px;margin-bottom:18px;}
+.tile{background:var(--white);border:1px solid var(--border);border-radius:12px;
+      padding:13px 15px;box-shadow:var(--sh);cursor:pointer;
+      transition:all .15s;border-left:3px solid var(--border);}
+.tile:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
+.tile-label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+            letter-spacing:1px;color:var(--muted2);}
+.tile-value{font-size:1.4rem;font-weight:700;margin-top:4px;letter-spacing:-0.5px;
+            line-height:1.1;}
+.tile-sub{font-size:0.63rem;color:var(--text-muted);margin-top:3px;}
+.tile.is-alert{border-left-color:var(--danger);}
+.tile.is-alert .tile-value{color:var(--danger);}
+.tile.is-warn{border-left-color:var(--amber);}
+.tile.is-warn .tile-value{color:var(--amber);}
+.tile.is-gold{border-left-color:var(--gold);}
+.tile.is-gold .tile-value{color:var(--gold);}
+.tile.is-ok{border-left-color:var(--success);}
+
+/* Two columns, never three, so no window is too narrow to fill a row. */
+.cols{display:grid;gap:16px;align-items:start;
+      grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);}
+@media (max-width:1120px){ .cols{grid-template-columns:1fr;} }
+.col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:13px;
+      box-shadow:var(--sh);overflow:hidden;}
+.card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);display:flex;
+          align-items:center;justify-content:space-between;gap:10px;
+          background:rgba(248,250,251,0.55);}
+.card-hdr-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.card-icon{width:28px;height:28px;border-radius:8px;flex-shrink:0;
+           display:flex;align-items:center;justify-content:center;
+           background:var(--blue-bg);color:var(--blue3);border:1px solid var(--blue-ln);}
+.card-icon.warn{background:var(--amber-bg);color:var(--amber);border-color:rgba(217,119,6,0.25);}
+.card-icon.gold{background:var(--gold-bg);color:var(--gold);border-color:rgba(168,125,30,0.25);}
+.card-title{font-size:0.79rem;font-weight:700;}
+.card-sub{font-size:0.62rem;color:var(--muted2);margin-top:1px;}
+.count-pill{font-size:0.63rem;font-weight:700;color:var(--text-muted);
+            background:var(--cream);border-radius:99px;padding:3px 9px;}
+
+.list{max-height:none;}
+.row{display:flex;align-items:center;gap:11px;padding:9px 17px;
+     border-bottom:1px solid var(--rule2);font-size:0.74rem;}
+.row:last-child{border-bottom:none;}
+.row-main{flex:1;min-width:0;}
+.row-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-sub{font-size:0.63rem;color:var(--text-muted);margin-top:1px;}
+.row-right{display:flex;align-items:center;gap:7px;flex-shrink:0;
+           font-size:0.73rem;font-weight:600;text-align:right;}
+.rows-scroll{max-height:56vh;overflow-y:auto;scrollbar-width:thin;}
+.rows-scroll::-webkit-scrollbar{width:5px;}
+.rows-scroll::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+
+.pill{font-size:0.57rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;
+      border-radius:99px;padding:3px 8px;white-space:nowrap;}
+.pill-dead{background:var(--danger-bg);color:var(--danger);}
+.pill-stale{background:var(--amber-bg);color:var(--amber);}
+.pill-slow{background:var(--blue-bg);color:var(--blue3);}
+.pill-fresh{background:var(--success-bg);color:var(--success);}
+.pill-grade{background:var(--gold-bg);color:var(--gold);font-family:var(--mono);}
+
+/* Bands as a bar, because the shape is the point: a shop wants to see the
+   weight sliding to the right over the months. */
+.band{padding:10px 17px;border-bottom:1px solid var(--rule2);}
+.band:last-child{border-bottom:none;}
+.band-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.band-name{font-size:0.72rem;font-weight:600;}
+.band-num{font-size:0.72rem;font-weight:700;}
+.band-sub{font-size:0.62rem;color:var(--text-muted);margin-top:1px;}
+.bar{height:6px;background:var(--cream);border-radius:99px;overflow:hidden;margin-top:7px;}
+.bar-fill{height:100%;border-radius:99px;transition:width .3s;}
+.bar-fill.fresh{background:var(--success);}
+.bar-fill.slow{background:var(--blue2);}
+.bar-fill.stale{background:var(--amber);}
+.bar-fill.dead{background:var(--danger);}
+
+.note{padding:12px 17px;font-size:0.67rem;color:var(--text-muted);line-height:1.6;
+      background:var(--bg-main);border-top:1px solid var(--rule2);}
+
+.empty{padding:26px 18px;text-align:center;color:var(--muted2);font-size:0.71rem;
+       line-height:1.6;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:3px;min-height:104px;}
+.empty strong{display:block;color:var(--text-muted);font-size:0.74rem;}
+
+.ov{position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:600;
+    display:flex;align-items:center;justify-content:center;padding:20px;}
+.ov[hidden]{display:none;}
+.ov-card{background:var(--white);border-radius:15px;width:430px;max-width:100%;
+         max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+         box-shadow:0 24px 60px rgba(15,23,42,0.25);}
+.ov-hdr{padding:15px 19px;border-bottom:1px solid var(--rule2);
+        display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ov-body{padding:15px 19px;overflow-y:auto;display:grid;gap:10px;}
+.ov-foot{padding:13px 19px;border-top:1px solid var(--rule2);display:flex;
+         gap:8px;align-items:center;background:var(--bg-main);}
+.ov-foot .spacer{flex:1;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+           letter-spacing:0.9px;color:var(--muted2);}
+.fld input{height:32px;padding:0 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;font-size:0.75rem;outline:none;width:100%;}
+.fld input:focus{border-color:var(--blue2);}
+.hint{background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:9px;
+      padding:10px 12px;font-size:0.67rem;color:var(--blue3);line-height:1.55;}
+
+.toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
+       padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
+       opacity:0;transform:translateY(8px);transition:all .22s;
+       pointer-events:none;z-index:700;max-width:360px;}
+.toast.show{opacity:1;transform:none;}
+.toast.bad{background:var(--danger);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+
+<main>
+<header>
+    <div class="header-left">
+        <h1><div class="status-dot"></div>Dead Stock</h1>
+        <div class="header-sub" id="head-sub">Loading…</div>
+    </div>
+    <div class="header-right">
+        <select class="pick" id="threshold" onchange="loadAll(true)">
+            <option value="90">Sitting over 3 months</option>
+            <option value="180" selected>Sitting over 6 months</option>
+            <option value="270">Sitting over 9 months</option>
+            <option value="365">Sitting over a year</option>
+        </select>
+        <button class="btn btn-ghost" onclick="doExport()">Export</button>
+        <button class="icon-btn" onclick="loadAll(true)" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+    </div>
+</header>
+
+<div class="scroll">
+
+    <div class="lead" id="lead">
+        <div class="lead-line" id="lead-line">Loading…</div>
+        <div class="lead-sub" id="lead-sub"></div>
+    </div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="cols">
+
+        <div class="col">
+            <div class="card" id="sec-rows">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon warn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">What is not moving</div>
+                            <div class="card-sub">Longest on the shelf first</div>
+                        </div>
+                    </div>
+                    <span class="count-pill" id="rows-count">0</span>
+                </div>
+                <div class="rows-scroll" id="rows"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card" id="sec-bands">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">How the whole shelf ages</div>
+                            <div class="card-sub">Every piece in stock, not only the dead</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="bands"><div class="empty">Loading…</div></div>
+                <div class="note" id="weight-note"></div>
+            </div>
+
+            <div class="card" id="sec-cat">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon gold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Where it is sitting</div>
+                            <div class="card-sub">By kind, then by purity</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="list" id="groups"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+    </div><!-- /cols -->
+
+</div><!-- /scroll -->
+</main>
+
+<!-- Offer a piece to a customer, through the machinery that already exists -->
+<div class="ov" id="offer-ov" hidden>
+    <div class="ov-card">
+        <div class="ov-hdr">
+            <div>
+                <div class="card-title">Offer this piece</div>
+                <div class="card-sub" id="offer-sub"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="closeOffer()">Close</button>
+        </div>
+        <div class="ov-body">
+            <div class="hint">
+                The price and the photograph come from the stock record. The
+                message opens in WhatsApp for you to read before sending.
+            </div>
+            <div class="fld">
+                <label>Customer</label>
+                <input type="text" id="offer-who" list="customer-names" placeholder="Name" autocomplete="off">
+                <datalist id="customer-names"></datalist>
+            </div>
+            <div class="fld">
+                <label>Anything to add</label>
+                <input type="text" id="offer-note" placeholder="Kept aside for you at a better making charge">
+            </div>
+            <div class="card-sub" id="offer-state"></div>
+        </div>
+        <div class="ov-foot">
+            <div class="spacer"></div>
+            <button class="btn btn-ghost" onclick="closeOffer()">Cancel</button>
+            <button class="btn btn-wa" id="offer-send" onclick="sendOffer()">Send</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── the bridge ───────────────────────────────────────────────────────
+function api(){
+    var a = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+    if (!a) return null;
+    // pywebview puts an empty object there first and fills it a moment
+    // later, so "the object exists" is not the same as "the bridge works".
+    try { return Object.keys(a).length ? a : null; } catch (e) { return a; }
+}
+
+function el(id){ return document.getElementById(id); }
+
+function esc(v){
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Tag numbers are typed by people and go inside single-quoted onclick
+// attributes, where one apostrophe would close the attribute early.
+function escAttr(v){ return esc(v).replace(/'/g, '&#39;'); }
+
+function money(n){
+    var v = parseFloat(n);
+    if (isNaN(v)) v = 0;
+    return 'Rs ' + Math.round(v).toLocaleString('en-IN');
+}
+
+function grams(n){
+    var v = parseFloat(n);
+    if (isNaN(v)) v = 0;
+    return v.toFixed(3) + 'g';
+}
+
+function months(days){
+    var d = parseInt(days || 0, 10);
+    if (d < 60) return d + ' days';
+    return Math.round(d / 30) + ' months';
+}
+
+function toast(msg, bad){
+    var t = el('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (bad ? ' bad' : '');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.className = 'toast'; }, bad ? 6000 : 3200);
+}
+
+function emptyState(title, line){
+    return '<div class="empty"><strong>' + esc(title) + '</strong>' + esc(line) + '</div>';
+}
+
+function jumpTo(id){
+    var box = el(id);
+    if (box) box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── state ────────────────────────────────────────────────────────────
+var DATA = null;
+var OFFER = null;
+
+var LISTS = ['rows', 'bands', 'groups'];
+
+function setAllLists(title, line){
+    for (var i = 0; i < LISTS.length; i++) {
+        var box = el(LISTS[i]);
+        if (box) box.innerHTML = emptyState(title, line);
+    }
+    el('lead-line').textContent = title;
+    el('lead-sub').textContent = line;
+}
+
+// A wholesaler reads grams; a retail owner reads rupees. The mode comes
+// from the licence, through the report, not from anything the page guesses.
+function isWholesale(){ return DATA && DATA.mode === 'wholesale'; }
+
+function worth(totals){
+    if (!totals) return '0';
+    if (isWholesale() || !(DATA && DATA.has_rate)) return grams(totals.fine_wt);
+    return money(totals.metal_value);
+}
+
+// ── loading ──────────────────────────────────────────────────────────
+function loadAll(manual){
+    var a = api();
+    if (!a) {
+        el('head-sub').textContent = 'Could not reach AurumOS.';
+        setAllLists('Not connected',
+                    'This screen could not reach AurumOS. Close the program and open it again.');
+        return;
+    }
+    if (typeof a.dead_stock_report !== 'function') {
+        el('head-sub').textContent = 'Close and reopen AurumOS to finish updating.';
+        setAllLists('Waiting for the app to restart',
+                    'The dead stock report arrived in an update. Close AurumOS and open it again.');
+        return;
+    }
+    var days = parseInt(el('threshold').value || '180', 10);
+    a.dead_stock_report(days, 5000).then(function(d){
+        if (!d || d.status !== 'success') {
+            var why = (d && d.message) || 'Could not load.';
+            el('head-sub').textContent = why;
+            setAllLists('Could not load', why);
+            return;
+        }
+        DATA = d;
+        renderLead(d);
+        renderTiles(d);
+        renderRows(d);
+        renderBands(d);
+        renderGroups(d);
+        el('head-sub').textContent =
+            d.all_pieces.pieces + ' pieces in stock · counted on ' + d.today;
+    }).catch(function(e){
+        el('head-sub').textContent = 'Could not load: ' + e;
+        setAllLists('Could not load', String(e));
+    });
+    loadCustomers();
+}
+
+function renderLead(d){
+    var clean = !d.dead.pieces;
+    el('lead').className = 'lead' + (clean ? ' is-clean' : '');
+    el('lead-line').textContent = d.headline || '';
+    if (clean) {
+        el('lead-sub').textContent =
+            'Every piece on the shelf has arrived within the last '
+            + d.threshold_days + ' days.';
+        return;
+    }
+    var sub = 'That is ' + d.share_of_stock + '% of what is on the shelf.';
+    if (!d.has_rate) {
+        sub += ' No gold rate has been billed yet, so this is shown in grams '
+             + 'rather than rupees.';
+    } else {
+        sub += ' Valued at the last rate you billed at, Rs '
+             + Math.round(d.rate_per_10g).toLocaleString('en-IN') + ' per 10g.';
+    }
+    el('lead-sub').textContent = sub;
+}
+
+function renderTiles(d){
+    var wholesale = isWholesale() || !d.has_rate;
+    var tiles = [
+        { label:(wholesale ? 'Metal asleep' : 'Money asleep'),
+          value:worth(d.dead),
+          sub:'Sitting over ' + d.threshold_days + ' days',
+          cls:(d.dead.pieces ? 'is-alert' : 'is-ok'), go:'sec-rows' },
+        { label:'Pieces', value:d.dead.pieces,
+          sub:'of ' + d.all_pieces.pieces + ' in stock',
+          cls:'is-warn', go:'sec-rows' },
+        { label:'Share of the shelf', value:d.share_of_stock + '%',
+          sub:(wholesale ? 'by fine weight' : 'by value'),
+          cls:(d.share_of_stock >= 25 ? 'is-alert' : 'is-warn'), go:'sec-bands' },
+        { label:'Longest here', value:months(d.oldest_days),
+          sub:(d.oldest_days ? 'and still unsold' : 'nothing old'),
+          cls:'is-gold', go:'sec-rows' },
+        { label:'Gross weight', value:grams(d.dead.gross_wt),
+          sub:'before touch', cls:'', go:'sec-rows' }
+    ];
+    el('tiles').innerHTML = tiles.map(function(t){
+        return '<div class="tile ' + t.cls + '" onclick="jumpTo(\'' + t.go + '\')">'
+             + '<div class="tile-label">' + esc(t.label) + '</div>'
+             + '<div class="tile-value">' + esc(t.value) + '</div>'
+             + '<div class="tile-sub">' + esc(t.sub) + '</div></div>';
+    }).join('');
+}
+
+function bandPill(band, days){
+    var cls = 'pill-' + (band || 'fresh');
+    return '<span class="pill ' + cls + '">' + months(days) + '</span>';
+}
+
+function renderRows(d){
+    var rows = d.rows || [];
+    el('rows-count').textContent = rows.length;
+    if (!rows.length) {
+        el('rows').innerHTML = emptyState('Nothing is sitting that long',
+            'Every piece has arrived within the last ' + d.threshold_days + ' days.');
+        return;
+    }
+    var canOffer = (typeof (api() || {}).wa_send_item === 'function');
+    el('rows').innerHTML = rows.map(function(r){
+        var price = r.ticket_value ? ' · ticket ' + money(r.ticket_value) : '';
+        return '<div class="row">'
+             + '<div class="row-main">'
+             +   '<div class="row-name">' + esc(r.it_name || r.tag_id || 'Piece')
+             +     (r.photo ? ' 📷' : '') + '</div>'
+             +   '<div class="row-sub">' + esc(r.tag_id || '')
+             +     (r.category ? ' · ' + esc(r.category) : '')
+             +     (r.karat ? ' · ' + esc(r.karat) : '')
+             +     ' · in since ' + esc(r.entry_date || '') + price + '</div>'
+             + '</div>'
+             + '<div class="row-right">'
+             +   '<span>' + grams(r.gr_wt) + '</span>'
+             +   '<span>' + worth({fine_wt:r.fine_wt, metal_value:r.metal_value}) + '</span>'
+             +   bandPill(r.band, r.age_days)
+             +   (canOffer
+                 ? '<button class="btn btn-wa btn-sm" onclick="openOffer(\''
+                   + escAttr(r.tag_id) + '\',\'' + escAttr(r.it_name || '') + '\')">Offer</button>'
+                 : '')
+             + '</div></div>';
+    }).join('');
+}
+
+function renderBands(d){
+    var bands = d.bands || [];
+    var wholesale = isWholesale() || !d.has_rate;
+    var biggest = 0;
+    bands.forEach(function(b){
+        var v = wholesale ? b.fine_wt : b.metal_value;
+        if (v > biggest) biggest = v;
+    });
+    el('bands').innerHTML = bands.map(function(b){
+        var v = wholesale ? b.fine_wt : b.metal_value;
+        var pct = biggest > 0 ? Math.round(v * 100 / biggest) : 0;
+        return '<div class="band">'
+             + '<div class="band-top">'
+             +   '<span class="band-name">' + esc(b.label) + '</span>'
+             +   '<span class="band-num">' + worth(b) + '</span>'
+             + '</div>'
+             + '<div class="band-sub">' + b.pieces + ' piece'
+             +   (b.pieces === 1 ? '' : 's') + ' · ' + grams(b.gross_wt) + ' gross</div>'
+             + '<div class="bar"><div class="bar-fill ' + esc(b.band)
+             +   '" style="width:' + pct + '%"></div></div>'
+             + '</div>';
+    }).join('');
+
+    var w = d.weight_stock || {};
+    el('weight-note').textContent = w.pieces
+        ? ('Loose metal is counted separately: ' + w.pieces + ' row'
+           + (w.pieces === 1 ? '' : 's') + ', ' + grams(w.fine_wt)
+           + ' fine. It is raw material waiting for the next order, not a '
+           + 'design nobody wants.')
+        : 'No loose metal in stock, so everything above is finished pieces.';
+}
+
+function renderGroups(d){
+    var cats = d.by_category || [];
+    var pure = d.by_purity || [];
+    if (!cats.length && !pure.length) {
+        el('groups').innerHTML = emptyState('Nothing to group',
+            'Nothing has been sitting past the threshold.');
+        return;
+    }
+    function block(title, list){
+        if (!list.length) return '';
+        return '<div class="row" style="background:var(--bg-main);">'
+             + '<div class="row-main"><div class="row-sub" style="font-weight:700;'
+             + 'text-transform:uppercase;letter-spacing:0.9px;">' + esc(title)
+             + '</div></div></div>'
+             + list.map(function(g){
+                 return '<div class="row">'
+                      + '<div class="row-main">'
+                      +   '<div class="row-name">' + esc(g.name) + '</div>'
+                      +   '<div class="row-sub">' + g.pieces + ' piece'
+                      +     (g.pieces === 1 ? '' : 's') + ' · ' + grams(g.fine_wt)
+                      +     ' fine</div>'
+                      + '</div>'
+                      + '<div class="row-right">' + worth(g) + '</div></div>';
+               }).join('');
+    }
+    el('groups').innerHTML = block('By kind', cats) + block('By purity', pure);
+}
+
+// ── offering a piece ─────────────────────────────────────────────────
+function loadCustomers(){
+    var a = api();
+    if (!a || typeof a.crm_customers !== 'function') return;
+    a.crm_customers().then(function(list){
+        el('customer-names').innerHTML = (list || []).slice(0, 400).map(function(c){
+            return '<option value="' + esc(c.name) + '">';
+        }).join('');
+    }).catch(function(){});
+}
+
+function openOffer(tag, name){
+    OFFER = { tag: tag, name: name };
+    el('offer-sub').textContent = (name || '') + ' · ' + tag;
+    el('offer-state').textContent = '';
+    el('offer-ov').hidden = false;
+    el('offer-who').focus();
+}
+
+function closeOffer(){
+    el('offer-ov').hidden = true;
+    OFFER = null;
+}
+
+function sendOffer(){
+    var a = api();
+    if (!a || typeof a.wa_send_item !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var who = (el('offer-who').value || '').trim();
+    if (!who) { toast('Type the customer name first.', true); return; }
+    el('offer-send').disabled = true;
+    a.wa_send_item(who, OFFER.tag, (el('offer-note').value || '').trim())
+     .then(function(r){
+        el('offer-send').disabled = false;
+        if (!r || r.status !== 'success') {
+            toast((r && (r.reason || r.message)) || 'Could not prepare that message.', true);
+            return;
+        }
+        if (typeof a.wa_open === 'function') { a.wa_open(r.url).catch(function(){}); }
+        el('offer-state').textContent = r.hint || '';
+        toast(r.photo_copied ? 'Photo copied — press Ctrl+V in WhatsApp'
+                             : 'Message opened');
+        if (typeof a.wa_mark_sent === 'function') {
+            a.wa_mark_sent(who, 'item_photo', r.phone, r.text).catch(function(){});
+        }
+     }).catch(function(e){
+        el('offer-send').disabled = false;
+        toast('Could not prepare: ' + e, true);
+     });
+}
+
+// ── the export ───────────────────────────────────────────────────────
+function doExport(){
+    var a = api();
+    if (!a || typeof a.dead_stock_export !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var days = parseInt(el('threshold').value || '180', 10);
+    a.dead_stock_export(days).then(function(r){
+        if (!r) { toast('No answer from the program.', true); return; }
+        if (r.status === 'empty') { toast(r.message, true); return; }
+        if (r.status !== 'success') {
+            toast(r.message || 'Could not write the file.', true); return;
+        }
+        toast(r.rows + ' rows written. Opening the folder.');
+        if (typeof a.dead_stock_reveal === 'function') {
+            a.dead_stock_reveal(r.path).catch(function(){});
+        }
+    }).catch(function(e){ toast('Could not export: ' + e, true); });
+}
+
+// -- start ------------------------------------------------------------
+try { initSidebar('deadstock'); } catch (e) {}
+
+// pywebview injects the bridge a moment AFTER the page is parsed, so asking
+// for it on this line would always find nothing and the screen would open
+// claiming the build was too old. boot.js already knows how to wait.
+function begin(){ loadAll(); }
+if (typeof window.apiReady === 'function') { window.apiReady(begin); } else { begin(); }
+</script>
+</body>
+</html>
