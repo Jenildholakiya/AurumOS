@@ -11,6 +11,32 @@
   if (window.__aurumBoot) return;
   window.__aurumBoot = true;
 
+  // ── No steppers on number fields ──────────────────────────────────────
+  // A jeweller types a weight or an amount; nobody nudges 32.400 grams one
+  // click at a time. The little arrows only sit in the way of the digits
+  // and get clicked by accident.
+  //
+  // This lives here rather than in a stylesheet because boot.js is the one
+  // file every screen already has to load for the bridge to work, so a new
+  // screen cannot be built that quietly gets its arrows back. Seventeen
+  // pages had each written this rule for themselves and six had not.
+  (function hideNumberSteppers() {
+    try {
+      var css =
+        'input[type=number]::-webkit-outer-spin-button,' +
+        'input[type=number]::-webkit-inner-spin-button{' +
+          '-webkit-appearance:none;appearance:none;margin:0;}' +
+        // Firefox. The app runs on Chromium, but a page opened in a browser
+        // for testing should look the same. Prefixed on purpose: the
+        // unprefixed property would change how Chromium draws the field.
+        'input[type=number]{-moz-appearance:textfield;}';
+      var el = document.createElement('style');
+      el.id = 'aurum-no-steppers';
+      el.appendChild(document.createTextNode(css));
+      (document.head || document.documentElement).appendChild(el);
+    } catch (e) { /* a page without a head yet is not worth an error */ }
+  })();
+
   function apiLive() {
     return !!(window.pywebview && window.pywebview.api &&
               Object.keys(window.pywebview.api).length > 0);

@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS BASTION — Unlock Key Generator</title>
 <style>
+/* No steppers on number fields. Every other screen gets this from boot.js,
+   which this page does not load. */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#f5f3ee;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(14,12,9,0.08);width:480px;max-width:100%;overflow:hidden}
