@@ -2549,7 +2549,8 @@ class DBManager:
 
     def record_sale(self, vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0,
-                    pay_mode='cash', og_value=0.0, og_wt=0.0):
+                    pay_mode='cash', og_value=0.0, og_wt=0.0,
+                    og_desc='', og_touch=0.0, og_rate=0.0):
         try:
             safe_vch_id = str(vch_id).strip()
             safe_mobile = str(mobile or '').strip()
@@ -2582,9 +2583,10 @@ class DBManager:
                            (vch_id,customer,mobile,status,ledger_fine,collected_fine,fine_995,fine_dhal,
                             remaining_fine,gold_rate,total_amount,items,date,time_stamp,
                             discount_type,discount_touch,discount_fine,discount_amount,
-                            payment_mode,old_gold_value,old_gold_wt)
+                            payment_mode,old_gold_value,old_gold_wt,
+                            old_gold_desc,old_gold_touch,old_gold_rate)
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,date('now'),time('now'),?,?,?,?,
-                                ?,?,?)""",
+                                ?,?,?,?,?,?)""",
                     (safe_vch_id, customer, safe_mobile, resolved,
                      0.0 if is_uchak else float(l_fine or 0),
                      0.0 if is_uchak else float(coll or 0),
@@ -2599,7 +2601,10 @@ class DBManager:
                      float(disc_amount or 0.0),
                      safe_pay,
                      0.0 if is_uchak else float(og_value or 0),
-                     0.0 if is_uchak else float(og_wt or 0))
+                     0.0 if is_uchak else float(og_wt or 0),
+                     '' if is_uchak else str(og_desc or ''),
+                     0.0 if is_uchak else float(og_touch or 0),
+                     0.0 if is_uchak else float(og_rate or 0))
                 )
                 _dblog(f"[SALE] INSERT OR REPLACE succeeded for vch_id={safe_vch_id}")
                 # NOTE: stock_inventory modifications are handled exclusively by
@@ -2693,14 +2698,20 @@ class DBManager:
                     "PRAGMA table_info(sales_history)").fetchall()]
                 if 'old_gold_value' not in cols or 'old_gold_wt' not in cols:
                     return []
+                has_desc = 'old_gold_desc' in cols
+                has_touch = 'old_gold_touch' in cols
+                has_rate = 'old_gold_rate' in cols
                 try:
                     lim = max(1, min(int(limit or 1000), 5000))
                 except (TypeError, ValueError):
                     lim = 1000
-                return [dict(r) for r in conn.execute("""
-                    SELECT date, vch_id, customer, mobile,
+                return [dict(r) for r in conn.execute(f"""
+                    SELECT date, time_stamp, vch_id, customer, mobile,
                            COALESCE(old_gold_wt,0.0)    AS old_gold_wt,
                            COALESCE(old_gold_value,0.0) AS old_gold_value,
+                           {'COALESCE(old_gold_desc,\'\') AS old_gold_desc,' if has_desc else "'' AS old_gold_desc,"}
+                           {'COALESCE(old_gold_touch,0.0) AS old_gold_touch,' if has_touch else "0.0 AS old_gold_touch,"}
+                           {'COALESCE(old_gold_rate,0.0) AS old_gold_rate' if has_rate else "0.0 AS old_gold_rate"},
                            COALESCE(total_amount,0.0)   AS total_amount
                     FROM sales_history
                     WHERE COALESCE(old_gold_value,0) > 0
@@ -4044,6 +4055,9 @@ class DBManager:
                     ('payment_mode', "ALTER TABLE sales_history ADD COLUMN payment_mode TEXT DEFAULT 'cash'"),
                     ('old_gold_value', "ALTER TABLE sales_history ADD COLUMN old_gold_value REAL DEFAULT 0"),
                     ('old_gold_wt', "ALTER TABLE sales_history ADD COLUMN old_gold_wt REAL DEFAULT 0"),
+                    ('old_gold_desc', "ALTER TABLE sales_history ADD COLUMN old_gold_desc TEXT DEFAULT ''"),
+                    ('old_gold_touch', "ALTER TABLE sales_history ADD COLUMN old_gold_touch REAL DEFAULT 0"),
+                    ('old_gold_rate', "ALTER TABLE sales_history ADD COLUMN old_gold_rate REAL DEFAULT 0"),
                 ):
                     if col not in cols:
                         conn.execute(ddl)

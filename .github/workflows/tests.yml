@@ -54,6 +54,9 @@ jobs:
       - name: Finance desk
         run: python test_finance.py
 
+      - name: Old gold register
+        run: python test_old_gold.py
+
       - name: Release planner
         run: python test_release_plan.py
 
