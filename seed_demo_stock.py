@@ -44,6 +44,23 @@ KATTI_ITEMS = [
          packets=2, box='B-102'),
 ]
 
+# Bin Viewer lists stock whose HUID field holds the bin code, so a few
+# pieces live in B-001 itself.
+BIN_PIECES = [
+    dict(it_code='RING22', it_name='Bin Ring A', tag_id='DEMO-TAG-006',
+         gr_wt=4.800, nt_wt=4.500, touch=91.6, wastage=0.5, huid='B-001',
+         category='Rings', karat='22K', making_type='per_gram',
+         making_charge=420.0, pcs=1),
+    dict(it_code='PEND22', it_name='Bin Pendant B', tag_id='DEMO-TAG-007',
+         gr_wt=2.600, nt_wt=2.400, touch=91.6, wastage=0.4, huid='B-001',
+         category='Pendants', karat='22K', making_type='per_gram',
+         making_charge=460.0, pcs=1),
+    dict(it_code='EAR18', it_name='Bin Studs C', tag_id='DEMO-TAG-008',
+         gr_wt=1.900, nt_wt=1.750, touch=75.0, wastage=0.3, huid='B-001',
+         category='Earrings', karat='18K', making_type='fixed',
+         making_charge=800.0, pcs=2),
+]
+
 
 def main():
     db = DBManager()
@@ -55,7 +72,7 @@ def main():
             (KATTI_VCH,)).fetchone()
 
     added_tags = 0
-    for item in TAGGED:
+    for item in TAGGED + BIN_PIECES:
         if item['tag_id'] in have_tags:
             print(f"  skip {item['tag_id']} (already in stock)")
             continue
