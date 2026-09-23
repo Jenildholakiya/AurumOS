@@ -208,25 +208,42 @@ table.item-table{width:100%;border-collapse:collapse;font-size:0.75rem;}
 .btn-charge:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,0.25);}
 
 
-.print-selector-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.print-selector-overlay{position:fixed;inset:0;background:rgba(10,15,30,0.5);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
 .print-selector-overlay.open{display:flex;}
-.print-selector-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px 32px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
-.print-selector-panel h3{color:var(--text);font-size:1.05rem;margin-bottom:18px;font-weight:700;}
-.print-cards{display:flex;gap:12px;margin-bottom:22px;}
-.print-card{flex:1;padding:16px;background:var(--bg-card2);border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:all 0.15s;}
-.print-card:hover{border-color:var(--muted);}
-.print-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);}
-.print-card .print-num{font-size:1.5rem;font-weight:800;color:var(--accent);display:block;margin-bottom:4px;}
-.print-card .print-label{font-size:0.72rem;color:var(--text2);font-weight:600;}
-.print-selector-actions{display:flex;gap:10px;justify-content:flex-end;}
-.print-selector-actions button{padding:10px 20px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.82rem;font-weight:600;background:var(--bg-card2);color:var(--text2);transition:all 0.12s;}
-.print-selector-actions button:hover{background:var(--bg-hover);color:var(--text);}
-.print-selector-actions .btn-print-go{background:var(--accent);color:#fff;border-color:var(--accent);}
-.print-selector-actions .btn-print-go:hover{background:var(--accent2);}
-.printer-row{margin-bottom:18px;}
-.printer-row label{display:block;font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:6px;}
-.printer-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card2);color:var(--text);font-size:0.82rem;font-weight:500;cursor:pointer;appearance:auto;}
-.printer-select:focus{border-color:var(--accent);outline:none;}
+.print-selector-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:0;max-width:440px;width:calc(100% - 32px);box-shadow:0 32px 80px rgba(0,0,0,0.28);overflow:hidden;animation:psPop .22s cubic-bezier(.34,1.4,.64,1);}
+@keyframes psPop{from{transform:scale(.94) translateY(12px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.print-selector-topbar{height:5px;background:linear-gradient(90deg,var(--accent),#7aa5ff,var(--accent));}
+.print-selector-body{padding:22px 24px 20px;}
+.ps-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.ps-icon{width:42px;height:42px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;}
+.ps-head h3{color:var(--text);font-size:1.08rem;font-weight:800;margin:0;letter-spacing:-0.2px;}
+.ps-head p{color:var(--muted);font-size:0.7rem;margin:2px 0 0;font-weight:500;}
+.ps-sec{font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;}
+.print-cards{display:flex;gap:10px;margin-bottom:18px;}
+.print-card{flex:1;padding:14px 6px 12px;background:var(--bg-card2);border:2px solid var(--border);border-radius:14px;cursor:pointer;text-align:center;transition:all 0.15s;position:relative;}
+.print-card:hover{border-color:var(--muted);transform:translateY(-1px);}
+.print-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent),0 6px 16px rgba(37,99,235,0.18);}
+.print-card.selected::after{content:'✓';position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,99,235,0.4);}
+.print-card svg{color:var(--muted);margin-bottom:6px;}
+.print-card.selected svg{color:var(--accent);}
+.print-card .print-num{font-size:1.45rem;font-weight:800;color:var(--text);display:block;line-height:1.1;}
+.print-card.selected .print-num{color:var(--accent);}
+.print-card .print-label{font-size:0.68rem;color:var(--text2);font-weight:600;}
+.print-selector-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:4px;}
+.print-selector-actions button{padding:11px 20px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:0.82rem;font-weight:700;background:var(--bg-card2);color:var(--text2);transition:all 0.14s;font-family:inherit;}
+.print-selector-actions button:hover{background:var(--bg-hover);color:var(--text);transform:translateY(-1px);}
+.print-selector-actions .btn-print-go,.ps-billtype .btn-print-go{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border:none;box-shadow:0 4px 14px rgba(37,99,235,0.35);}
+.print-selector-actions .btn-print-go:hover,.ps-billtype .btn-print-go:hover{background:var(--accent2);box-shadow:0 6px 18px rgba(37,99,235,0.45);color:#fff;}
+.btn-gst-soft{background:rgba(37,99,235,0.12);color:var(--accent);border:1px solid rgba(37,99,235,0.3);}
+.btn-gst-soft:hover{background:rgba(37,99,235,0.2);color:var(--accent);}
+.print-selector-actions button:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.printer-row{margin-bottom:16px;}
+.printer-row label{display:flex;align-items:center;gap:6px;font-size:0.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.printer-select{width:100%;padding:11px 36px 11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--text);font-size:0.84rem;font-weight:600;cursor:pointer;appearance:none;font-family:inherit;transition:border-color 0.14s, box-shadow 0.14s;}
+.printer-select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,0.12);}
+.ps-billtype{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+.ps-hint{display:flex;gap:6px;align-items:flex-start;font-size:0.66rem;color:var(--muted);margin-top:10px;line-height:1.5;}
+.ps-hint svg{flex-shrink:0;margin-top:1px;}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .modal-overlay.open{display:flex;}
@@ -323,35 +340,49 @@ body{display:flex;}
 </div>
 <div id="print-selector-modal" class="print-selector-overlay" onclick="if(event.target===this)closePrintSelectorModal()">
   <div class="print-selector-panel">
-    <h3>Print Settings</h3>
+    <div class="print-selector-topbar"></div>
+    <div class="print-selector-body">
+    <div class="ps-head">
+      <span class="ps-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>
+      <div><h3>Print Settings</h3><p>Receipt output &amp; copies</p></div>
+    </div>
     <div class="printer-row">
-      <label>Printer</label>
+      <label><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Printer</label>
       <select id="printer-select" class="printer-select" onchange="_selectedPrinter=this.value">
         <option value="">Loading printers...</option>
       </select>
     </div>
+    <p class="ps-sec">Copies</p>
     <div class="print-cards">
       <div class="print-card selected" onclick="selectPrintCopyCount(1)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="print-num">1</span>
         <span class="print-label">Copy</span>
       </div>
       <div class="print-card" onclick="selectPrintCopyCount(2)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="print-num">2</span>
         <span class="print-label">Copies</span>
       </div>
       <div class="print-card" onclick="selectPrintCopyCount(3)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="print-num">3</span>
         <span class="print-label">Copies</span>
       </div>
     </div>
-    <div class="print-selector-actions" style="flex-wrap:wrap;">
-      <button onclick="closePrintSelectorModal()">Cancel</button>
-      <button onclick="commitBillPreview()" style="background:var(--bg-card2);color:var(--text2);border:1px solid var(--border);">Preview</button>
-      <button class="btn-print-go" id="btn-normal-bill" onclick="commitBill(false,'normal')">Normal Bill</button>
-      <button class="btn-print-go" id="btn-gst-bill" onclick="commitBill(false,'gst')">GST Bill</button>
+    <p class="ps-sec">Bill type</p>
+    <div class="ps-billtype">
+      <button class="btn-print-go" id="btn-normal-bill" onclick="commitBill(false,'normal')" style="padding:12px 10px;border-radius:10px;border:none;cursor:pointer;font-size:0.84rem;font-weight:800;font-family:inherit;">Normal Bill</button>
+      <button class="btn-gst-soft" id="btn-gst-bill" onclick="commitBill(false,'gst')" style="padding:12px 10px;border-radius:10px;cursor:pointer;font-size:0.84rem;font-weight:800;font-family:inherit;">GST Bill</button>
     </div>
-    <div id="gst-bill-hint" style="display:none;font-size:0.66rem;color:var(--muted);margin-top:8px;">
-      Add your GSTIN in Settings to print a GST bill.
+    <div class="print-selector-actions">
+      <button onclick="closePrintSelectorModal()">Cancel</button>
+      <button onclick="commitBillPreview()">Preview</button>
+    </div>
+    <div class="ps-hint" id="gst-bill-hint" style="display:none;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>Add your GSTIN in Settings to print a GST bill.</span>
+    </div>
     </div>
   </div>
 </div>
