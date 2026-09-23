@@ -1897,10 +1897,6 @@ function _updateScaleUI(weight, stable) {
 
 function JSLOG(msg) {
     try {
-        console.log('[JS] ' + msg);
-    } catch (e) {
-    }
-    try {
         if (window.pywebview && window.pywebview.api && window.pywebview.api.js_log) {
             window.pywebview.api.js_log(msg);
         }
@@ -2030,9 +2026,6 @@ function scaleLoadPorts() {
         if (baudEl && lastBaud) baudEl.value = lastBaud;
 
         if (msg) msg.innerText = 'Select port and click Connect';
-        console.log('[SCALE] Ports loaded:', ports.map(function (p) {
-            return p.port;
-        }).join(', '));
     }).catch(function (e) {
         sel.innerHTML = '<option value="">Error: ' + e + '</option>';
         console.error('[SCALE] scale_get_ports error:', e);
@@ -2705,7 +2698,6 @@ async function sendBillToWhatsApp() {
     closePrintSelectorModal();
     var vchId = document.getElementById('v-id').value;
     var mobile = document.getElementById('v-mobile').value || '';
-    console.log('[WHATSAPP] sendBillToWhatsApp vchId=' + vchId + ' mobile=' + mobile);
     if (!mobile.trim()) {
         showError('Customer mobile number is required to send via WhatsApp.', 'No Mobile');
         return;
@@ -2751,17 +2743,13 @@ async function sendBillToWhatsApp() {
                 discountFine: discData.fineSaved,
                 items: currentItems
             };
-            console.log('[WHATSAPP] calling generate_bill with vch_id=' + vchId);
 var saveRes = await window.pywebview.api.generate_bill(data);
-            console.log('[WHATSAPP] generate_bill returned: ' + JSON.stringify(saveRes));
             if (saveRes.status !== 'success') {
                 showError('Failed to save bill before sending: ' + (saveRes.message || 'Unknown error'), 'Save Error');
                 return;
             }
             var savedVchId = (saveRes.vch_id && String(saveRes.vch_id).trim()) ? saveRes.vch_id : vchId;
-            console.log('[WHATSAPP] using vch_id=' + savedVchId + ' for send_bill_whatsapp');
             var res = await window.pywebview.api.send_bill_whatsapp(savedVchId);
-            console.log('[WHATSAPP] send_bill_whatsapp returned: ' + JSON.stringify(res));
             if (res.status === 'success') {
                 if (res.pdf_path) {
                     var pdfUrl = res.pdf_path.replace(/\\/g, '/');
@@ -2946,7 +2934,6 @@ async function processItCodeInput() {
         if (typeof lookupItemByCode === 'function') {
             lookupItemByCode(code);
         } else {
-            console.log('Searching for IT Code:', code);
             // If you have a specific function for this, call it here
         }
     }
