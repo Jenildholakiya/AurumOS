@@ -643,12 +643,14 @@ initSidebar('billing');
 })();
 
 function _loadProducts(){
-    if(!window.pywebview||!window.pywebview.api) return;
+    if(!window.pywebview||!window.pywebview.api) return Promise.resolve([]);
     var fn = window.pywebview.api.get_pos_stock || window.pywebview.api.get_products;
-    fn && fn().then(function(res){
+    if(!fn) return Promise.resolve([]);
+    return fn().then(function(res){
         var list = (res && res.stock) ? res.stock : (Array.isArray(res) ? res : []);
         _allProducts = list || [];
-    }).catch(function(){});
+        return _allProducts;
+    }).catch(function(){ return _allProducts; });
 }
 function _loadClients(){
     if(!window.pywebview||!window.pywebview.api) return;
@@ -769,25 +771,31 @@ async function onEntryKey(e){
         var cur=e.target;
         if(cur.id==='it-code'){
             var typed=cur.value.trim();
-            var exact=resolveStockRow(typed);
-            if(exact){
-                if(isTagStockRow(exact,typed)){
-                    addTaggedStockRow(exact,typed);
-                } else {
-                    pickStockRow(exact,typed);
+            // Self-heal: if the browser-side list never loaded (slow bridge,
+            // denied call, stale cache), refresh once before resolving so a
+            // real tag is never rejected as "not in inventory".
+            var doResolve=function(){
+                var exact=resolveStockRow(typed);
+                if(exact){
+                    if(isTagStockRow(exact,typed)){
+                        addTaggedStockRow(exact,typed);
+                    } else {
+                        pickStockRow(exact,typed);
+                    }
+                    return true;
                 }
+                return false;
+            };
+            if(doResolve()) return;
+            if(!_allProducts.length){
+                _loadProducts().then(function(){
+                    if(doResolve()) return;
+                    lookupTagServerSide(typed);
+                });
                 return;
             }
-            if(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_product_by_tag==='function'){
-                var tagged=await window.pywebview.api.get_product_by_tag(typed);
-                if(tagged){
-                    addTaggedStockRow(tagged,typed);
-                    return;
-                }
-            }
-            var dd=document.getElementById('it-dropdown');
-            var hl=dd?dd.querySelector('.it-option.highlighted'):null;
-            if(dd&&dd.classList.contains('open')&&hl){hl.click();return;}
+            lookupTagServerSide(typed);
+            return;
         }
         if(cur.id==='it-making'){
             addItemToBill();
@@ -804,6 +812,27 @@ async function onEntryKey(e){
     }
 }
 var _lastPicked = null;
+async function lookupTagServerSide(typed){
+    // Server-side tag lookup: the database is the source of truth when the
+    // browser list missed (or the piece was stocked after page load).
+    if(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.scan_tag==='function'){
+        try{
+            var res=await window.pywebview.api.scan_tag(typed);
+            if(res&&res.status==='success'&&res.line){ fillScannedLine(res.line, typed); return; }
+            if(res&&res.status==='not_found'){ showModal('Tag not in stock',(res.message||'Tag not found.')+' It may be sold already.'); return; }
+        }catch(e){}
+    }
+    if(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_product_by_tag==='function'){
+        try{
+            var tagged=await window.pywebview.api.get_product_by_tag(typed);
+            if(tagged){ addTaggedStockRow(tagged,typed); return; }
+        }catch(e){}
+    }
+    var dd=document.getElementById('it-dropdown');
+    var hl=dd?dd.querySelector('.it-option.highlighted'):null;
+    if(dd&&dd.classList.contains('open')&&hl){hl.click();return;}
+    showModal('Not found','"'+typed+'" matches nothing in inventory. Check the tag and try again.');
+}
 function normalizeStockKey(value){
     return String(value||'').trim().toLowerCase().replace(/\s+/g,'');
 }
@@ -844,7 +873,7 @@ function addTaggedStockRow(row, enteredValue){
     fillScannedRowLocal(row, enteredValue);
 }
 function fillScannedLine(line, enteredValue){
-    _lastPicked={code:line.it_code,weight:line.weight,touch:line.touch,huid:line.huid,tag_id:line.tag_id,name:''};
+    _lastPicked={code:line.it_code,weight:line.weight,touch:line.touch,huid:line.huid,tag_id:line.tag_id,name:'',verified:true};
     document.getElementById('it-code').value=enteredValue||line.tag_id||line.it_code;
     document.getElementById('it-weight').value=line.weight?Number(line.weight).toFixed(3):'';
     document.getElementById('it-touch').value=line.touch?Number(line.touch).toFixed(2):'';
@@ -1161,6 +1190,12 @@ function addItemToBill(){
     if(!enteredCode){showModal('Enter IT Code or Tag ID','Please scan or type an IT code or tag ID.');return;}
     if(wt<=0){showModal('Enter Weight','Please enter the item weight.');return;}
     if(touch<=0){showModal('Touch required','Enter a valid touch before adding this item.');return;}
+    // A server-verified tag scan is proof the exact piece exists with this
+    // weight: it bypasses the browser-side stock list, which may be empty
+    // or stale (slow load, denied call, old cache). Manual entries still
+    // go through the full local availability check below.
+    var verifiedTag = _lastPicked && _lastPicked.verified && _lastPicked.tag_id;
+    if(!verifiedTag){
     var stockRows=_allProducts.filter(function(p){return String(p.it_code||'').trim().toLowerCase()===code.toLowerCase();});
     if(!stockRows.length){showModal('IT code not found','IT code '+code+' is not available in inventory.');return;}
     var matchingStock=stockRows.filter(function(p){return Math.abs((parseFloat(p.touch)||0)-touch)<=0.01;});
@@ -1173,6 +1208,7 @@ function addItemToBill(){
     },0);
     needed+=existingNeeded;
     if(available+0.001<needed){showModal('Stock over','Available stock for '+code+' is '+available.toFixed(3)+'g, but '+needed.toFixed(3)+'g is required.');return;}
+    }
     var fine=parseFloat((wt*touch/100).toFixed(3));
     var baseAmount=parseFloat((wt/10*rate*qty).toFixed(2));
     var making=parseMaking(makingRaw, baseAmount, wt, qty, makingType());
@@ -1210,6 +1246,7 @@ function makingType(){
     return (el&&el.dataset&&el.dataset.makingType)||'per_gram';
 }
 function clearEntry(){
+    _lastPicked = null;
     document.getElementById('it-code').value='';
     document.getElementById('it-weight').value='';
     document.getElementById('it-touch').value='';
