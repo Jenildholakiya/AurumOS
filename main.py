@@ -4753,6 +4753,98 @@ class AurumAPI:
             ERR(f"[TAG] lookup {tag_id}: {e}")
             return {"status": "error", "message": str(e)}
 
+    @staticmethod
+    def _price_tag_line(item, gold_rate_10g, qty=1):
+        """Price one tagged piece. Single source of truth for the till.
+
+        Formula (rate is per 10g, the shop convention):
+          fine   = net_wt × touch / 100
+          base   = net_wt / 10 × rate × qty
+          making = per-gram: making_rate × net_wt × qty
+                   percent:  base × making_rate / 100
+                   fixed:    making_rate × qty
+          amount = base + making
+        """
+        try:
+            wt = float(item.get('nt_wt') or item.get('gr_wt') or 0)
+        except (TypeError, ValueError):
+            wt = 0.0
+        try:
+            touch = float(item.get('touch') or 0)
+        except (TypeError, ValueError):
+            touch = 0.0
+        try:
+            rate = float(gold_rate_10g or 0)
+        except (TypeError, ValueError):
+            rate = 0.0
+        try:
+            qty = max(int(qty or 1), 1)
+        except (TypeError, ValueError):
+            qty = 1
+        try:
+            mk_rate = float(item.get('eff_making_charge')
+                            or item.get('making_charge') or 0)
+        except (TypeError, ValueError):
+            mk_rate = 0.0
+        mk_type = str(item.get('eff_making_type')
+                      or item.get('making_type') or 'percent').strip().lower()
+        if mk_type not in ('per_gram', 'percent', 'fixed'):
+            mk_type = 'percent'
+        fine = round(wt * touch / 100, 3)
+        base = round(wt / 10 * rate * qty, 2)
+        if mk_type == 'per_gram':
+            making = round(mk_rate * wt * qty, 2)
+        elif mk_type == 'fixed':
+            making = round(mk_rate * qty, 2)
+        else:
+            making = round(base * mk_rate / 100, 2)
+        return {
+            'it_code': str(item.get('it_code') or ''),
+            'it_name': str(item.get('it_name') or ''),
+            'tag_id': str(item.get('tag_id') or ''),
+            'huid': str(item.get('huid') or ''),
+            'weight': round(wt, 3),
+            'touch': round(touch, 2),
+            'rate': rate,
+            'qty': qty,
+            'fine': fine,
+            'making_type': mk_type,
+            'making_rate': mk_rate,
+            'making': making,
+            'amount': round(base + making, 2),
+        }
+
+    def scan_tag(self, tag_id, gold_rate_10g=None, qty=1):
+        """Scan a tag ID and get back a fully priced bill line.
+
+        Exact match (case/space-insensitive) on tag_id, then HUID. A tag
+        absent from stock is reported not_found — sold pieces leave stock
+        on sale, so a missing tag means already sold or never existed.
+        """
+        try:
+            tag = str(tag_id or '').strip()
+            if not tag:
+                return {"status": "error", "message": "Scan or type a tag ID."}
+            row = self.db.get_item_by_tag(tag)
+            if not row:
+                try:
+                    prow = self.db.get_product_by_tag(tag)
+                except Exception:
+                    prow = None
+                if isinstance(prow, dict) and (prow.get('tag_id') or prow.get('it_code')):
+                    row = prow
+                else:
+                    return {"status": "not_found", "tag_id": tag,
+                            "message": f"Tag {tag} is not in stock — it may be sold already."}
+            line = self._price_tag_line(row, gold_rate_10g, qty)
+            if line['weight'] <= 0:
+                return {"status": "error", "tag_id": tag,
+                        "message": f"Tag {tag} has no weight recorded."}
+            return {"status": "success", "line": line}
+        except Exception as e:
+            ERR(f"[TAG] scan {tag_id}: {e}")
+            return {"status": "error", "message": str(e)}
+
     def get_sold_tags(self, from_date='', to_date='', search='', group=''):
         """Pieces already sold. The Sold Tags screen has called this since it
         was written; nothing ever defined it, so the page only ever said

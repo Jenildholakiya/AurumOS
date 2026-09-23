@@ -129,6 +129,7 @@ BUNDLES = {
             'get_live_invoice_print_payload', 'trigger_print_window',
             'open_print_window', 'generate_bill_pdf', 'send_bill_whatsapp',
             'get_pos_stock', 'get_product_by_tag', 'get_uchak_price_by_code',
+            'scan_tag',
             'check_weight_stock_available', 'check_uchak_stock_available',
             'get_touch_details', 'get_touch_groups', 'get_categories',
             'get_products', 'get_client_list', 'add_new_client',
