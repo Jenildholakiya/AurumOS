@@ -57,6 +57,9 @@ jobs:
       - name: Old gold register
         run: python test_old_gold.py
 
+      - name: Tag scan pricing
+        run: python test_tag_scan.py
+
       - name: Release planner
         run: python test_release_plan.py
 

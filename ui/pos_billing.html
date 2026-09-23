@@ -822,8 +822,46 @@ function isTagStockRow(row, enteredValue){
     return key && (normalizeStockKey(row.tag_id)===key || normalizeStockKey(row.huid)===key);
 }
 function addTaggedStockRow(row, enteredValue){
+    // Proper tag scan: the backend prices the exact piece (net weight,
+    // its own making type + rate, current gold rate) and the till fills
+    // every field from that answer — nothing hand-typed, nothing guessed.
+    var api = window.pywebview && window.pywebview.api;
+    var tagKey = String((enteredValue||'') !== '' ? enteredValue : (row.tag_id||'')).trim();
+    var rate = parseFloat((document.getElementById('it-rate').value||'').replace(/,/g,''))||0;
+    if (!rate) rate = parseFloat(localStorage.getItem('aurum_pos_rate')||'0')||0;
+    if (api && typeof api.scan_tag === 'function' && tagKey) {
+        api.scan_tag(tagKey, rate, 1).then(function(res){
+            if (res && res.status === 'success' && res.line) {
+                fillScannedLine(res.line, enteredValue);
+            } else if (res && res.status === 'not_found') {
+                showModal('Tag not in stock', (res.message||'Tag not found.')+' It may be sold already.');
+            } else {
+                showModal('Scan failed', (res&&res.message)||'Could not price this tag.');
+            }
+        }).catch(function(e){ showModal('Scan failed', String(e)); });
+        return;
+    }
+    fillScannedRowLocal(row, enteredValue);
+}
+function fillScannedLine(line, enteredValue){
+    _lastPicked={code:line.it_code,weight:line.weight,touch:line.touch,huid:line.huid,tag_id:line.tag_id,name:''};
+    document.getElementById('it-code').value=enteredValue||line.tag_id||line.it_code;
+    document.getElementById('it-weight').value=line.weight?Number(line.weight).toFixed(3):'';
+    document.getElementById('it-touch').value=line.touch?Number(line.touch).toFixed(2):'';
+    var mkInput=document.getElementById('it-making');
+    if (mkInput) {
+        mkInput.value=line.making_rate?line.making_rate:'';
+        try{ mkInput.dataset.makingType=line.making_type||'per_gram'; }catch(e){}
+        mkInput.title = (line.making_type==='per_gram') ? ('Rs '+line.making_rate+'/g from the tag · making Rs.'+Number(line.making).toFixed(2))
+                      : (line.making_type==='fixed')    ? ('Flat Rs.'+line.making_rate+' from the tag')
+                      :                                 (line.making_rate+'% from the tag · making Rs.'+Number(line.making).toFixed(2));
+    }
+    try { if (typeof recalcSummary === 'function') recalcSummary(); } catch(e){}
+    addItemToBill();
+}
+function fillScannedRowLocal(row, enteredValue){
     var code=String(row.it_code||'').trim();
-    var wt=parseFloat(row.gr_wt)||0;
+    var wt=parseFloat(row.nt_wt||row.gr_wt)||0;
     var touch=parseFloat(row.touch)||0;
     var tagId=String(row.tag_id||'');
     var huid=String(row.huid||'');
@@ -832,6 +870,7 @@ function addTaggedStockRow(row, enteredValue){
     document.getElementById('it-code').value=enteredValue||tagId||huid||code;
     document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
     document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
+    applyItemPricing(tagId);
     addItemToBill();
 }
 function pickStockItem(code,wt,touch,huid,tag_id,name){
@@ -866,6 +905,8 @@ function pickStockRow(row, enteredValue){
 // have been. The piece now answers for itself, falling back to its product
 // master, and only then to whatever is already in the box.
 function applyItemPricing(tagId){
+    var mkInput = document.getElementById('it-making');
+    if (mkInput && mkInput.dataset) { try{ delete mkInput.dataset.makingType; }catch(e){} mkInput.title=''; }
     if (!tagId) return;
     var api = window.pywebview && window.pywebview.api;
     if (!api || typeof api.get_item_by_tag !== 'function') return;
@@ -873,7 +914,6 @@ function applyItemPricing(tagId){
         if (!res || res.status !== 'success' || !res.item) return;
         var it = res.item;
         var mk = parseFloat(it.eff_making_charge || 0);
-        var mkInput = document.getElementById('it-making');
         if (mkInput && mk > 0) {
             mkInput.value = mk;
             // The till reads a bare number as a percentage, so say what this
@@ -1135,7 +1175,7 @@ function addItemToBill(){
     if(available+0.001<needed){showModal('Stock over','Available stock for '+code+' is '+available.toFixed(3)+'g, but '+needed.toFixed(3)+'g is required.');return;}
     var fine=parseFloat((wt*touch/100).toFixed(3));
     var baseAmount=parseFloat((wt/10*rate*qty).toFixed(2));
-    var making=parseMaking(makingRaw, baseAmount, wt, qty);
+    var making=parseMaking(makingRaw, baseAmount, wt, qty, makingType());
     var amount=parseFloat((baseAmount+making).toFixed(2));
     var item={code:code,weight:wt,touch:touch,rate:rate,qty:qty,fine:fine,making:making,makingRaw:makingRaw,amount:amount,
               huid:_lastPicked?_lastPicked.huid:'', tag_id:_lastPicked?_lastPicked.tag_id:'',
@@ -1152,12 +1192,22 @@ function addItemToBill(){
     clearEntry();
     document.getElementById('it-code').focus();
 }
-function parseMaking(raw, baseAmount, wt, qty){
+function parseMaking(raw, baseAmount, wt, qty, type){
     if(!raw) return 0;
-    raw=raw.replace(/,/g,'').trim();
+    raw=String(raw).replace(/,/g,'').trim();
+    // A trailing % always means percent, whatever the tag said.
+    var pct = raw.match(/^([\d.]+)\s*%$/);
+    if(pct){ return parseFloat((baseAmount*parseFloat(pct[1])/100).toFixed(2))||0; }
     qty=qty||1;
-    var perGram=parseFloat(raw)||0;
-    return parseFloat((perGram*wt*qty).toFixed(2));
+    var rate=parseFloat(raw)||0;
+    type=String(type||'per_gram').trim().toLowerCase();
+    if(type==='percent'){ return parseFloat((baseAmount*rate/100).toFixed(2))||0; }
+    if(type==='fixed'){ return parseFloat((rate*Math.max(qty,1)).toFixed(2))||0; }
+    return parseFloat((rate*wt*Math.max(qty,1)).toFixed(2))||0;
+}
+function makingType(){
+    var el=document.getElementById('it-making');
+    return (el&&el.dataset&&el.dataset.makingType)||'per_gram';
 }
 function clearEntry(){
     document.getElementById('it-code').value='';
