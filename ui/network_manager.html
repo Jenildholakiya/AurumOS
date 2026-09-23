@@ -173,6 +173,61 @@ tbody tr:hover{background:var(--accent-light);}
 .dev-scroll thead th{position:sticky;top:0;z-index:2;background:var(--light);
   box-shadow:0 1px 0 var(--border);}
 
+/* ── Devices table: proper card rows + pinned Action column ──────────
+   The table needs border-collapse:separate for sticky cells to paint
+   correctly. Every data row owns a --rowbg variable (white, tinted on
+   hover); the sticky Action cell reads the same variable, so it always
+   matches its row instead of flashing a mismatched white block. */
+.dev-scroll{overflow-x:auto;}
+.dev-scroll table{min-width:680px;width:100%;border-collapse:separate;border-spacing:0;}
+.dev-scroll tbody td{border-bottom:1px solid var(--border);}
+.dev-scroll tbody tr:last-child td{border-bottom:none;}
+tr.dev td{background:var(--rowbg,#fff);}
+tr.dev:hover td{--rowbg:var(--accent-light);}
+tr.dev.cand td{--rowbg:#fff;}
+tr.dev.other td{--rowbg:#f8fafc;}
+tr.dev.other:hover td{--rowbg:#eef2f7;}
+.dev-scroll tbody td:last-child{position:sticky;right:0;z-index:2;
+  background:var(--rowbg,#fff);
+  box-shadow:-1px 0 0 var(--border);}
+.dev-scroll thead th{border-bottom:1px solid var(--border);}
+.dev-scroll thead th:last-child{position:sticky;right:0;z-index:4;background:var(--light);
+  box-shadow:-1px 0 0 var(--border);}
+
+/* Device identity: status dot + name stack */
+.dev-id{display:flex;align-items:center;gap:10px;min-width:0;}
+.dev-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--text-muted2);
+  box-shadow:0 0 0 3px rgba(148,163,184,0.15);}
+.dev-dot.ok{background:var(--success);box-shadow:0 0 0 3px rgba(22,163,74,0.14);}
+.dev-dot.cand{background:var(--warning);box-shadow:0 0 0 3px rgba(180,83,9,0.14);}
+.dev-id .pc-name{font-weight:700;color:var(--text-main);font-size:0.78rem;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;}
+.dev-id .pc-id{font-family:var(--mono);font-size:0.6rem;color:var(--text-muted2);margin-top:2px;}
+
+/* Address reads as a tappable chip */
+.addr-chip{display:inline-block;font-family:var(--mono);font-size:0.72rem;color:var(--text-main);
+  background:var(--light);border:1px solid var(--border);border-radius:7px;padding:4px 10px;
+  cursor:pointer;white-space:nowrap;transition:all .15s;}
+.addr-chip:hover{color:var(--accent);border-color:var(--blue-ln);background:var(--accent-light);}
+
+/* Group headers: card section dividers */
+tr.grp td{background:var(--white);padding:16px 16px 8px;border-bottom:none;}
+.grp-ttl{display:flex;align-items:center;gap:8px;font-size:.6rem;text-transform:uppercase;
+  letter-spacing:1px;font-weight:700;color:var(--text-muted2);}
+.grp-ttl .dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted2);}
+.grp-ttl.ok .dot{background:var(--success);}
+.grp-ttl.cand .dot{background:var(--warning);}
+.grp-ttl.cand{color:var(--warning);}
+.grp-cnt{background:var(--light);color:var(--text-muted);padding:1px 8px;border-radius:10px;
+  font-size:.58rem;letter-spacing:0;border:1px solid var(--border);}
+.grp-hint{font-size:.68rem;color:var(--text-muted);margin-top:4px;line-height:1.5;
+  text-transform:none;letter-spacing:0;font-weight:500;}
+.grp-hint b{color:var(--text-main);}
+
+/* Row actions: always fit Connect + Copy side by side */
+.row-acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap;min-width:max-content;}
+.row-acts .btn{white-space:nowrap;}
+
 /* group rows: one heading per kind, the instruction stated once */
 tr.grp td{background:var(--white);padding:14px 16px 7px;border-bottom:none;}
 .grp-ttl{display:flex;align-items:center;gap:8px;font-size:.6rem;text-transform:uppercase;
@@ -210,6 +265,17 @@ tr.dev.other .pc-name{color:var(--text-muted);font-weight:600;}
 .spin-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);
   animation:pulse 1s ease-in-out infinite;margin-right:6px;vertical-align:middle;}
 @keyframes pulse{0%,100%{opacity:.25;transform:scale(.8);}50%{opacity:1;transform:scale(1);}}
+
+/* per-row connect: device rows reuse .row-acts / .btn from the terminals table */
+.msg.info{background:var(--accent-light);color:var(--accent3);}
+.conn-steps{font-size:0.72rem;color:var(--text-muted);line-height:1.7;background:var(--light);
+  border:1px solid var(--border);border-radius:9px;padding:11px 13px;margin:12px 0;}
+.conn-steps b{color:var(--text-main);}
+.conn-ips{display:flex;gap:10px;margin-bottom:4px;}
+.conn-ip{flex:1;background:var(--accent-light);border:1px solid var(--blue-ln);border-radius:9px;
+  padding:9px 12px;}
+.conn-ip .k{font-size:0.56rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted2);font-weight:700;}
+.conn-ip .v{font-family:var(--mono);font-size:0.95rem;font-weight:700;color:var(--accent);margin-top:3px;}
 </style>
 </head>
 <body>
@@ -352,10 +418,47 @@ tr.dev.other .pc-name{color:var(--text-muted);font-weight:600;}
 
 <div class="toast" id="toast"></div>
 
+<!-- CONNECT: what it means + how to finish it from the other PC -->
+<div class="overlay" id="connect-ov">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <div>
+        <div class="modal-ttl" id="connect-ttl">Connect this computer</div>
+        <div class="modal-sub" id="connect-sub">&nbsp;</div>
+      </div>
+      <button class="modal-x" onclick="closeConnect()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="msg" id="connect-msg"></div>
+      <div class="conn-ips">
+        <div class="conn-ip">
+          <div class="k">This PC (main)</div>
+          <div class="v" id="connect-my-ip">--</div>
+        </div>
+        <div class="conn-ip">
+          <div class="k">That PC</div>
+          <div class="v" id="connect-their-ip">--</div>
+        </div>
+      </div>
+      <div class="conn-steps" id="connect-steps"></div>
+      <div class="modal-foot">
+        <button class="btn" onclick="copyAddr(document.getElementById('connect-my-ip').innerText)">Copy my address</button>
+        <button class="btn" id="connect-check" onclick="checkConnectTarget()">Check that PC</button>
+        <button class="btn btn-primary" id="connect-setup" style="display:none;" onclick="setupDetected()">Set up now</button>
+        <button class="btn" onclick="closeConnect()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-var STATE   = { terminals: [], bundles: [], licensed: 0, plan: '', staff: [] };
+var STATE   = { terminals: [], bundles: [], licensed: 0, plan: '', staff: [], devices: [] };
 var EDITING = null;
 var TIMER   = null;
+var CONNECT_TARGET = null;
+var CONNECT_POLL = null;
+var CONNECT_DETECTED = null;
 
 function h(s) {
     return String(s === null || s === undefined ? '' : s)
@@ -507,7 +610,8 @@ function render() {
         var pill    = blocked ? '<span class="pill off">Blocked</span>'
                     : (t.status === 'pending' ? '<span class="pill wait">Needs setting up</span>'
                     : (live ? '<span class="pill ok">Online</span>'
-                            : '<span class="pill idle">Offline</span>'));
+                            : '<span class="pill idle" title="Last reached this server ' +
+                              h(since(t.last_seen)) + '">Offline</span>'));
 
         var mods = (t.bundles && t.bundles.length)
             ? '<div class="chips">' + t.bundles.map(function (b) {
@@ -528,13 +632,33 @@ function render() {
             '<td><div class="row-acts">' +
             '<button class="btn btn-sm" onclick="openAssign(\'' + h(t.terminal_id) + '\')">Set up</button>' +
             (blocked
-                ? '<button class="btn btn-sm" onclick="unblockPc(\'' + h(t.terminal_id) + '\')">Allow</button>'
-                : '<button class="btn btn-sm btn-danger" onclick="blockPc(\'' + h(t.terminal_id) + '\')">Block</button>') +
+                ? '<button class="btn btn-sm btn-primary" onclick="unblockPc(\'' + h(t.terminal_id) + '\')">Connect</button>'
+                : '<button class="btn btn-sm btn-danger" onclick="blockPc(\'' + h(t.terminal_id) + '\')">Disconnect</button>') +
             '<button class="btn btn-sm btn-danger" onclick="removePc(\'' + h(t.terminal_id) + '\')">Remove</button>' +
             '</div></td></tr>';
     });
 
-    wrap.innerHTML =
+    // "Offline" only means no contact — usually that PC is dialling a wrong
+    // or stale main-PC address (or the main PC was off). Say so plainly, with
+    // the fix, instead of leaving a grey pill to be read as "switched off".
+    var stale = list.filter(function (t) {
+        return t.status !== 'blocked' && !isOnline(t.last_seen) && t.last_seen;
+    });
+    var staleNotice = '';
+    if (stale.length) {
+        var names = stale.slice(0, 3).map(function (t) {
+            return (t.hostname || 'Unnamed computer') + ' (' + since(t.last_seen) + ')';
+        }).join(', ');
+        if (stale.length > 3) names += ', and ' + (stale.length - 3) + ' more';
+        staleNotice =
+            '<div class="notice notice-amber" style="margin:14px 16px 4px;">' +
+            '<span>&#9888;</span><div><b>Not reaching the server: ' + h(names) + '</b>' +
+            'That PC has not contacted this server since then — its main-PC address ' +
+            'is usually wrong or changed. On that PC the login screen shows which address ' +
+            'it is dialling; correct it there with Check &rarr; Reconnect. Nothing needs setting up twice.</div></div>';
+    }
+
+    wrap.innerHTML = staleNotice +
         '<table><thead><tr>' +
         '<th>Computer</th><th>Address</th><th>Status</th><th>Used by</th>' +
         '<th>Can open</th><th>Last seen</th><th style="text-align:right;">Actions</th>' +
@@ -625,16 +749,16 @@ function saveAssign() {
 
 function blockPc(id) {
     var t = findTerminal(id);
-    if (!confirm('Block ' + ((t && t.hostname) || 'this computer') +
+    if (!confirm('Disconnect ' + ((t && t.hostname) || 'this computer') +
                  '?\n\nIt will not be able to sign in. Its seat is freed for another PC.')) return;
     api().cluster('block_terminal', { terminal_id: id }).then(function () {
-        toast('Computer blocked'); loadTerminals();
+        toast('Computer disconnected'); loadTerminals();
     }).catch(function () {});
 }
 
 function unblockPc(id) {
     api().cluster('assign_terminal', { terminal_id: id, status: 'approved' })
-        .then(function () { toast('Computer allowed again'); loadTerminals(); })
+        .then(function () { toast('Computer connected'); loadTerminals(); })
         .catch(function () {});
 }
 
@@ -701,6 +825,7 @@ function renderDevices(res) {
     }
 
     var list = res.devices || [];
+    STATE.devices = list;
     var candidates = list.filter(function (d) {
         return d.kind === 'pc' || d.kind === 'aurum';
     }).length;
@@ -755,7 +880,7 @@ function renderDevices(res) {
             .sort(function (a, b) { return a.ip.localeCompare(b.ip, undefined, { numeric: true }); });
         if (!members.length) return;
 
-        rows += '<tr class="grp"><td colspan="4">' +
+        rows += '<tr class="grp"><td colspan="5">' +
             '<div class="grp-ttl ' + g.cls + '"><span class="dot"></span>' + g.title +
             '<span class="grp-cnt">' + members.length + '</span></div>' +
             (g.hint ? '<div class="grp-hint">' + g.hint + '</div>' : '') +
@@ -764,17 +889,38 @@ function renderDevices(res) {
         members.forEach(function (d) {
             var kind = DEVICE_KINDS[d.kind] || DEVICE_KINDS.device;
             var rowCls = 'dev ' + (g.cls === 'cand' ? 'cand' : (g.cls === 'ok' ? 'mine' : 'other'));
+            var dotCls = g.cls === 'ok' ? 'ok' : (g.cls === 'cand' ? 'cand' : '');
             // Stagger the reveal, but cap it so a long list does not crawl in.
             var delay = Math.min(index * 28, 420);
             index++;
-            rows +=
-                '<tr class="' + rowCls + '" style="animation-delay:' + delay + 'ms">' +
-                '<td><div class="pc-name">' + h(d.hostname || 'Unnamed device') + '</div>' +
-                (d.business ? '<div class="pc-id">' + h(d.business) + '</div>' : '') + '</td>' +
-                '<td><span class="mono addr-copy" title="Click to copy" data-ip="' + h(d.ip) +
-                '" onclick="copyAddr(this.getAttribute(\'data-ip\'))">' + h(d.ip) + '</span></td>' +
+            var action = '';
+            if (d.kind === 'this_pc') {
+                action = '<button class="btn btn-sm" onclick="copyAddr(\'' + h(d.ip) + '\')">Copy</button>';
+            } else {
+                var jt = terminalForDevice(d);
+                if (jt && jt.status !== 'blocked') {
+                    action = '<button class="btn btn-sm btn-danger" onclick="blockPc(\'' +
+                             h(jt.terminal_id) + '\')">Disconnect</button>';
+                } else if (jt) {
+                    action = '<button class="btn btn-sm btn-primary" onclick="unblockPc(\'' +
+                             h(jt.terminal_id) + '\')">Connect</button>';
+                } else {
+                    action = '<button class="btn btn-sm btn-primary" onclick="connectDevice(\'' +
+                             h(d.ip) + '\')">Connect</button>';
+                }
+                action += ' <button class="btn btn-sm" onclick="copyAddr(\'' +
+                          h(d.ip) + '\')">Copy</button>';
+            }
+                rows +=
+                    '<tr class="' + rowCls + '" style="animation-delay:' + delay + 'ms">' +
+                    '<td><div class="dev-id"><span class="dev-dot ' + dotCls + '"></span>' +
+                    '<div style="min-width:0;"><div class="pc-name">' + h(d.hostname || 'Unnamed device') + '</div>' +
+                    (d.business ? '<div class="pc-id">' + h(d.business) + '</div>' : '') + '</div></div></td>' +
+                    '<td><span class="addr-chip" title="Click to copy" data-ip="' + h(d.ip) +
+                    '" onclick="copyAddr(this.getAttribute(\'data-ip\'))">' + h(d.ip) + '</span></td>' +
                 '<td class="hw">' + h(d.mac || '—') + '</td>' +
                 '<td><span class="' + kind.pill + '">' + kind.label + '</span></td>' +
+                '<td><div class="row-acts">' + action + '</div></td>' +
                 '</tr>';
         });
     });
@@ -783,6 +929,7 @@ function renderDevices(res) {
         '<div class="dev-shell" id="dev-shell"><div class="dev-scroll" id="dev-scroll">' +
         '<table><thead><tr>' +
         '<th>Device</th><th>Address</th><th>Hardware ID</th><th>What it is</th>' +
+        '<th style="text-align:right;">Action</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table>' +
         '</div></div>';
 
@@ -824,11 +971,172 @@ function copyAddr(ip) {
     fallbackCopy(ip);
 }
 
+// ── per-row Connect / Disconnect ─────────────────────────────────────
+// A row's button acts directly: new PCs open the Connect dialog (which
+// watches for the join and finishes the setup), joined ones Disconnect
+// (= block, frees the seat) or Connect again (= allow).
+function connectDevice(ip) {
+    var d = findDevice(ip);
+    if (d) openConnect(d);
+    else toast('That device is no longer in the list. Scan again.');
+}
+
+function findDevice(ip) {
+    for (var i = 0; i < STATE.devices.length; i++) {
+        if (STATE.devices[i].ip === ip) return STATE.devices[i];
+    }
+    return null;
+}
+
+function terminalForDevice(d) {
+    if (!d) return null;
+    if (d.terminal_id) return findTerminal(d.terminal_id);
+    for (var i = 0; i < STATE.terminals.length; i++) {
+        if ((STATE.terminals[i].last_ip || '') === d.ip) return STATE.terminals[i];
+    }
+    return null;
+}
+
+// (Connect / Disconnect now live directly on each row as buttons.)
+
+// ── Connect dialog for a discovered PC ───────────────────────────────
+// The join itself always happens on the other PC (it picks Client Node and
+// enters this PC's address), because only that PC can enrol itself. So
+// Connect guides that step, then watches the terminal list: the moment the
+// other PC joins, the dialog flips to "Set up now" and finishes the job
+// right here. That is the whole connection, end to end.
+function openConnect(d) {
+    CONNECT_TARGET = d;
+    CONNECT_DETECTED = null;
+    var myIp = document.getElementById('my-ip').innerText || '--';
+    document.getElementById('connect-ttl').innerText =
+        'Connect ' + (d.hostname || d.ip || 'this computer');
+    document.getElementById('connect-sub').innerText =
+        (d.kind === 'aurum' ? 'AurumOS is already running there'
+                            : 'Windows PC, no AurumOS seen yet') +
+        (d.business ? '  ·  ' + d.business : '');
+    document.getElementById('connect-my-ip').innerText = myIp;
+    document.getElementById('connect-their-ip').innerText = d.ip || '--';
+    var holding = STATE.terminals.filter(function (t) { return t.status !== 'blocked'; }).length;
+    var freeSeats = Math.max(STATE.licensed - holding, 0);
+    document.getElementById('connect-steps').innerHTML =
+        'On <b>' + h(d.hostname || d.ip || 'that PC') + '</b>: ' +
+        (d.kind === 'aurum'
+            ? 'open AurumOS, pick <b>Client Node</b> at Step 2 of setup and enter <b>' + h(myIp) + '</b>, then press Check.'
+            : 'install AurumOS, pick <b>Client Node</b> at Step 2 of setup and enter <b>' + h(myIp) + '</b>, then press Check.') +
+        ' It will appear under Computers on this shop straight away.' +
+        (!freeSeats
+            ? '<br><br><b>No seats free:</b> your plan connects ' + STATE.licensed +
+              ', all in use. Free one (Disconnect above) or add a connection first, or the join will be refused.'
+            : '');
+    var msg = document.getElementById('connect-msg');
+    msg.className = 'msg info show';
+    msg.innerText = 'Waiting for that PC to join — this dialog detects it automatically. Keep it open.';
+    document.getElementById('connect-setup').style.display = 'none';
+    var chk = document.getElementById('connect-check');
+    chk.style.display = '';
+    document.getElementById('connect-ov').classList.add('show');
+    if (CONNECT_POLL) clearInterval(CONNECT_POLL);
+    CONNECT_POLL = setInterval(pollConnectTarget, 4000);
+}
+
+function closeConnect() {
+    document.getElementById('connect-ov').classList.remove('show');
+    if (CONNECT_POLL) { clearInterval(CONNECT_POLL); CONNECT_POLL = null; }
+    CONNECT_TARGET = null;
+    CONNECT_DETECTED = null;
+}
+
+// Has the target PC enrolled since the dialog opened? Match by its address
+// (it can change, but right after a join it is the one just scanned).
+function pollConnectTarget() {
+    if (!CONNECT_TARGET) return;
+    api().cluster('list_terminals').then(function (res) {
+        if (!CONNECT_TARGET || CONNECT_DETECTED) return;
+        if (!res || res.status !== 'success') return;
+        STATE.terminals = res.terminals || [];
+        STATE.licensed = res.licensed || STATE.licensed;
+        var found = null;
+        for (var i = 0; i < STATE.terminals.length; i++) {
+            var t = STATE.terminals[i];
+            if (CONNECT_TARGET.terminal_id && t.terminal_id === CONNECT_TARGET.terminal_id) {
+                found = t; break;
+            }
+            if (CONNECT_TARGET.ip && (t.last_ip || '') === CONNECT_TARGET.ip) {
+                found = t; break;
+            }
+        }
+        if (!found) return;
+        CONNECT_DETECTED = found.terminal_id;
+        var msg = document.getElementById('connect-msg');
+        msg.className = 'msg ok show';
+        msg.innerText = 'Connected: ' + (found.hostname || found.last_ip || 'that PC') +
+            ' joined the shop. Press Set up now to choose who uses it and what they can open.';
+        document.getElementById('connect-setup').style.display = '';
+        document.getElementById('connect-check').style.display = 'none';
+        toast('Computer connected');
+        render();
+    }).catch(function () {});
+}
+
+function setupDetected() {
+    var id = CONNECT_DETECTED;
+    var target = CONNECT_TARGET;
+    closeConnect();
+    if (id && findTerminal(id)) { openAssign(id); return; }
+    // Fell back to matching by address (fresh enrolments report the same IP).
+    if (target && target.ip) {
+        for (var i = 0; i < STATE.terminals.length; i++) {
+            if ((STATE.terminals[i].last_ip || '') === target.ip) {
+                openAssign(STATE.terminals[i].terminal_id);
+                return;
+            }
+        }
+    }
+    loadTerminals();
+}
+
+function checkConnectTarget() {
+    if (!CONNECT_TARGET || !CONNECT_TARGET.ip) return;
+    var btn = document.getElementById('connect-check');
+    var msg = document.getElementById('connect-msg');
+    btn.disabled = true;
+    btn.innerText = 'Checking…';
+    msg.className = 'msg';
+    msg.innerText = '';
+    api().cluster('verify_server', { ip: CONNECT_TARGET.ip }).then(function (res) {
+        btn.disabled = false;
+        btn.innerText = 'Check that PC';
+        if (res && res.status === 'success') {
+            msg.className = 'msg ok show';
+            msg.innerText = 'Reachable: ' + (res.business || 'AurumOS') +
+                '. Use the steps above to join it to this shop.';
+        } else {
+            msg.className = 'msg err show';
+            msg.innerText = (res && res.message) ||
+                'That PC did not answer as a main PC. If AurumOS is open there as a Client Node waiting to join, that is expected — just follow the steps above.';
+        }
+    }).catch(function () {
+        btn.disabled = false;
+        btn.innerText = 'Check that PC';
+        msg.className = 'msg err show';
+        msg.innerText = 'Could not reach that PC. Check it is switched on and on the same network.';
+    });
+}
+
 // ── start ──────────────────────────────────────────────────────────────
 window.apiReady(function () {
     loadAll(false);
-    // Keeps "online" honest without hammering the machine.
-    TIMER = setInterval(function () { loadAll(false); }, 10000);
+    // Keeps "online" honest: a staff PC that just switched on syncs within
+    // seconds, and the next tick flips its badge by itself — no Refresh
+    // needed. Cheap local reads, so every 5s is fine.
+    TIMER = setInterval(function () { loadAll(false); }, 5000);
+    // Looking back at the tab refreshes immediately instead of making the
+    // owner wait for the next tick.
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) loadAll(false);
+    });
+    window.addEventListener('focus', function () { loadAll(false); });
 });
 
 initSidebar('network');

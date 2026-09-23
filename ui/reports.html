@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Reports</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --serif:'DM Serif Display', Georgia, serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 4px 20px rgba(14, 12, 9, 0.04), 0 1px 3px rgba(14, 12, 9, 0.02);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.25rem;color:var(--ink);font-weight:400;letter-spacing:-0.2px;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-clock{font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:5px;border:1px solid var(--rule);}
+.content{flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;}
+.page-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;letter-spacing:-0.4px;}
+.page-title em{font-style:italic;color:var(--gold3);}
+.page-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+.sec-lbl{font-size:0.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.9px;margin-top:4px;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.rcard{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:18px;box-shadow:var(--sh-lux);cursor:pointer;transition:all 0.15s ease;display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;font-family:var(--sans);}
+.rcard:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 24px rgba(14,12,9,0.08);}
+.ric{width:42px;height:42px;border-radius:10px;background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rt{font-size:0.86rem;font-weight:700;color:var(--ink);}
+.rd{font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.5;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Reports</div>
+    <span class="h-clock" id="clock">-- : --</span>
+  </header>
+  <div class="content">
+    <div>
+      <div class="page-title">Business <em>Reports</em></div>
+      <div class="page-sub">Every register and statement in one place. Pick a report to open it.</div>
+    </div>
+    <div class="sec-lbl">Sales &amp; Bills</div>
+    <div class="grid">
+      <button class="rcard" onclick="go('full_report.html')"><span class="ric">◈</span><span><span class="rt">Full Business Report</span><div class="rd">Touch-wise sales, collection and outstanding across the shop.</div></span></button>
+      <button class="rcard" onclick="go('history.html')"><span class="ric">◷</span><span><span class="rt">Sales History</span><div class="rd">Every bill, searchable, with reprint and delete.</div></span></button>
+      <button class="rcard" onclick="go('voucher_history.html')"><span class="ric">❏</span><span><span class="rt">Voucher History</span><div class="rd">Katti and inward vouchers in one chronological stream.</div></span></button>
+    </div>
+    <div class="sec-lbl">Stock &amp; Metal</div>
+    <div class="grid">
+      <button class="rcard" onclick="go('stock_med.html')"><span class="ric">⬣</span><span><span class="rt">Stock Valuation (MED)</span><div class="rd">Metal-equivalent valuation with sign-off and protected PDF.</div></span></button>
+      <button class="rcard" onclick="go('sold_tags.html')"><span class="ric">🏷</span><span><span class="rt">Sold Tags</span><div class="rd">Tagged pieces that have left the shelf.</div></span></button>
+      <button class="rcard" onclick="go('dead_stock.html')"><span class="ric">◍</span><span><span class="rt">Dead Stock</span><div class="rd">Stagnant pieces, with WhatsApp offers to customers.</div></span></button>
+    </div>
+    <div class="sec-lbl">Money &amp; People</div>
+    <div class="grid">
+      <button class="rcard" onclick="go('ledger.html')"><span class="ric">📖</span><span><span class="rt">Ledger</span><div class="rd">Metal and cash postings across all parties.</div></span></button>
+      <button class="rcard" onclick="go('client_ledger.html')"><span class="ric">👥</span><span><span class="rt">Client Ledger</span><div class="rd">Per-client statements with live outstanding.</div></span></button>
+      <button class="rcard" onclick="go('old_gold.html')"><span class="ric">⟳</span><span><span class="rt">Old Gold Register</span><div class="rd">Part-exchange taken against bills, with calculator.</div></span></button>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+function go(page){
+    if (typeof sideNavigate === 'function') { sideNavigate(page); return; }
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
+        window.pywebview.api.navigate(page); return;
+    }
+    window.location.href = page;
+}
+setInterval(function(){
+    var c = document.getElementById('clock');
+    if (c) c.textContent = new Date().toLocaleString('en-GB', {dateStyle:'short', timeStyle:'medium'});
+}, 1000);
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('reports.html'); });
+</script>
+</body>
+</html>

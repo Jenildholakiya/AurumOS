@@ -26,12 +26,17 @@ from database.bastion_report import generate_bastion_report_async
 
 from database.db_manager import _dberr
 
-# ── ALERT CONFIG — fill these in ──────────────────────────────────
+# ── ALERT CONFIG — environment, never source ───────────────────────
 # Your Gmail address and App Password (not regular password)
 # Go to: Google Account → Security → App Passwords → Generate
-ALERT_EMAIL_FROM     = 'aurumos.software@gmail.com'
-ALERT_EMAIL_PASSWORD = 'ttyx niad ocea oebo'
-ALERT_EMAIL_TO       = 'jenildholakiya8305@gmail.com'
+# Set AURUM_ALERT_EMAIL_FROM / _PASSWORD / _TO on the shop PC (or in the
+# service environment). Unset means alerts queue in bastion_alerts and wait
+# — nothing is lost, nothing is sent. An earlier build hardcoded a live app
+# password here; that credential must be treated as leaked and rotated in
+# Google Account settings, because this file ships in releases.
+ALERT_EMAIL_FROM     = os.environ.get('AURUM_ALERT_EMAIL_FROM', '')
+ALERT_EMAIL_PASSWORD = os.environ.get('AURUM_ALERT_EMAIL_PASSWORD', '')
+ALERT_EMAIL_TO       = os.environ.get('AURUM_ALERT_EMAIL_TO', '')
 
 # Threat score thresholds
 SCORE_WARN    = 40    # log + queue alert
@@ -154,23 +159,40 @@ class BastionAI:
         self._session_active = active
 
     def get_weekly_report(self):
-        """
-        Generates a summary of the past 7 days of Bastion events.
+        """Summary of the past 7 days of Bastion events.
+
+        Reads the bastion_events table the monitor itself writes (the old
+        `logs` table is never written to). Returns the full contract the
+        health push and the status screen read: totals, recent rows and
+        the thresholds they were judged against.
         """
         try:
-            # Assuming you have a database connection or a way to fetch logs
-            # This is a placeholder; replace with your actual DB query logic
-            logs = self.db.get_logs_last_7_days()
-
-            report = {
-                'total_threats': len([e for e in logs if e['severity'] == 'HIGH']),
-                'auto_healed': len([e for e in logs if e['action_taken'] == 'HEALED']),
-                'summary': 'Weekly system analysis complete.'
+            cutoff = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+            with self.db._get_connection() as conn:
+                rows = [dict(r) for r in conn.execute(
+                    "SELECT ts, event_type, severity, score, detail, "
+                    "       action_taken, auto_healed "
+                    "FROM bastion_events WHERE ts >= ? "
+                    "ORDER BY ts DESC LIMIT 200", (cutoff,)).fetchall()]
+            high = [e for e in rows if str(e.get('severity') or '').upper()
+                    in ('HIGH', 'CRITICAL')]
+            healed = [e for e in rows if str(e.get('action_taken') or '').upper()
+                      == 'HEALED' or int(e.get('auto_healed') or 0) > 0]
+            return {
+                'total_events': len(rows),
+                'total_threats': len(high),
+                'high_threats': len(high),
+                'auto_healed': len(healed),
+                'recent': rows[:50],
+                'thresholds': {'window_days': 7, 'high_severities': ['HIGH', 'CRITICAL']},
+                'summary': (f'{len(rows)} events in 7 days, '
+                            f'{len(high)} high/critical, {len(healed)} auto-healed.'),
             }
-            return report
         except Exception as e:
             _dberr(f"[BASTION_AI] Failed to generate weekly report: {str(e)}")
-            return {'error': str(e)}
+            return {'error': str(e), 'total_events': 0, 'high_threats': 0,
+                    'auto_healed': 0, 'recent': [], 'thresholds': {},
+                    'summary': 'Report unavailable.'}
 
     def log_feature_status(self):
         """Prints the current security configuration status to the terminal on startup."""
@@ -1171,10 +1193,13 @@ class BastionAI:
         `recipient` overrides the default ALERT_EMAIL_TO (used for owner
         staff-conduct alerts); falls back to the default when blank/invalid."""
         if not ALERT_EMAIL_FROM or 'your.gmail' in ALERT_EMAIL_FROM or '@' not in ALERT_EMAIL_FROM:
-            _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_FROM is still a placeholder in bastion_ai.py !!!")
+            _err("!!! EMAIL NOT SENT -- set AURUM_ALERT_EMAIL_FROM (see bastion_ai.py header) !!!")
             return False
         if not ALERT_EMAIL_PASSWORD or 'xxxx' in ALERT_EMAIL_PASSWORD:
-            _err("!!! EMAIL NOT SENT -- ALERT_EMAIL_PASSWORD is still a placeholder in bastion_ai.py !!!")
+            _err("!!! EMAIL NOT SENT -- set AURUM_ALERT_EMAIL_PASSWORD !!!")
+            return False
+        if not ALERT_EMAIL_TO or '@' not in str(ALERT_EMAIL_TO):
+            _err("!!! EMAIL NOT SENT -- set AURUM_ALERT_EMAIL_TO !!!")
             return False
         # Choose recipient: per-alert owner email if valid, else the default.
         to_addr = str(recipient).strip() if recipient else ''

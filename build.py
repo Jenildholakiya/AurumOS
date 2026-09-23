@@ -162,6 +162,29 @@ def _boot_clr():
     try:
         import pythonnet
         os.environ.pop("PYTHONNET_RUNTIME", None)
+        # clr_loader 0.2.10's ffi/__init__.py uses os.path without importing
+        # os, so load_netfx() silently falls back to its own
+        # clr_loader/ffi/dlls ClrLoader.dll whose AppDomain cannot see
+        # pythonnet/runtime/*.dll. Frozen builds then die with "Failed to
+        # resolve Python.Runtime.Loader.Initialize" even though every file
+        # is present. Point it at the right ClrLoader explicitly.
+        try:
+            import clr_loader.ffi as _clriffi
+            _orig_load_netfx = _clriffi.load_netfx
+            def _fixed_load_netfx():
+                try:
+                    import pythonnet as _pn2
+                    rt2 = os.path.join(
+                        os.path.dirname(_pn2.__file__),
+                        "runtime", "ClrLoader.dll")
+                    if os.path.isfile(rt2):
+                        return _clriffi.ffi.dlopen(rt2)
+                except Exception:
+                    pass
+                return _orig_load_netfx()
+            _clriffi.load_netfx = _fixed_load_netfx
+        except Exception as _patch_err:
+            why.append("clr patch: " + repr(_patch_err)[:100])
         for runtime in ("netfx", "coreclr"):
             try:
                 pythonnet.load(runtime)
@@ -543,6 +566,7 @@ a = Analysis(
         ("build_version.txt", "."),
         ("ui",    "ui"),
         ("fonts", "fonts"),
+        ("assets", "assets"),
         ("core",  "core"),
         ("network", "network"),
         ("{serial_dir_str}", "serial"),
@@ -582,7 +606,7 @@ a = Analysis(
         # ── FIXED: ALL local project modules (hidden from PyInstaller
         #    because main.py is obfuscated to marshal before the build step) ──
         "sse_listener",
-        "network","network.cluster_server","network.cluster_client","network.lan_scan",
+        "network","network.cluster_server","network.cluster_client","network.lan_scan","network.hm_share",
         "database.cluster_store","core.permissions","core.cluster_api",
         "database.bastion_ai","database.bastion_report","database.aurum_health",
         "core.bastion_sync","core.ai_support","core.io_safety","core.security_lock","core.print_bridge",
@@ -954,9 +978,14 @@ def sign_exe():
     """
     print("")
     print("[5a/7] Code-signing EXE (Authenticode)...")
+    # Nested path first: signing runs before finalize_dist() lifts the EXE
+    # to dist/. The top-level path is the fallback when this step is
+    # re-run standalone after a build.
     exe_path = os.path.join(DIST, "AurumOS", "AurumOS.exe")
     if not os.path.isfile(exe_path):
-        print("  SKIP -- EXE not found at dist\\AurumOS\\AurumOS.exe")
+        exe_path = os.path.join(DIST, "AurumOS.exe")
+    if not os.path.isfile(exe_path):
+        print("  SKIP -- EXE not found at dist\\AurumOS\\AurumOS.exe nor dist\\AurumOS.exe")
         return False
 
     cfg = _load_sign_config()
@@ -1039,6 +1068,8 @@ def sign_exe():
 def write_trusted_hash():
     print("\n[5b/7] Writing trusted EXE hash...")
     exe_path = os.path.join(DIST, 'AurumOS', 'AurumOS.exe')
+    if not os.path.exists(exe_path):
+        exe_path = os.path.join(DIST, 'AurumOS.exe')
     if not os.path.exists(exe_path):
         print(f"  SKIP -- EXE not found at {exe_path}")
         return
@@ -1126,8 +1157,11 @@ def report(built_version='?'):
         print(f"  dist\\_internal\\             (all deps - keep NEXT TO the EXE)")
         print(f"  dist\\database\\  dist\\logs\\  (runtime data)")
         print(f"  dist\\config.json  dist\\exe_trusted_hash.txt")
+        print(f"  dist\\AurumOS.exe.config       (lets .NET load DLLs after a copy)")
         print(f"  (the hash file tells Bastion AI this exact build is legitimate --")
         print(f"   without it next to the EXE, tamper-detection can't run)")
+        print(f"  If a client PC still reports 0x80131515, run once on that PC:")
+        print(f"    Get-ChildItem dist -Recurse | Unblock-File")
         _report_smartscreen(exe)
     else:
         print(f"\n  �- EXE not found at {exe}")
@@ -1196,7 +1230,7 @@ def _merge_move(src, dst):
     """Move ``src`` to ``dst``, merging directories instead of overwriting.
 
     Used when flattening the bundle: bundled code/asset folders (ui/, fonts/,
-    core/, network/) are merged into the runtime copies already present in
+    assets/, core/, network/) are merged into the runtime copies already present in
     dist/, while runtime state folders (Reports/, database/) are never touched
     because they are not part of the bundle.
     """
@@ -1327,6 +1361,30 @@ def finalize_dist():
             except OSError:
                 pass
     print("  Clean layout  -> dist\\AurumOS.exe + dist\\_internal\\ (+ database, logs)")
+
+    # ── AurumOS.exe.config: survive being copied between PCs ──────────────
+    # Copying dist/ from another PC, drive, or download stamps every DLL with
+    # a Mark-of-the-Web (Zone.Identifier). The .NET Framework CLR then refuses
+    # to load managed assemblies such as Microsoft.Web.WebView2.Core.dll and
+    # the app dies with "Failed to execute script 'main'" + HRESULT
+    # 0x80131515. <loadFromRemoteSources> declares the load intended, so a
+    # copied install keeps working. Written on every build, beside the EXE.
+    try:
+        _cfg = os.path.join(dist, 'AurumOS.exe.config')
+        open(_cfg, 'w', encoding='utf-8').write(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<configuration>\n'
+            '  <runtime>\n'
+            '    <loadFromRemoteSources enabled="true"/>\n'
+            '  </runtime>\n'
+            '  <startup>\n'
+            '    <supportedRuntime version="v4.0" '
+            'sku=".NETFramework,Version=v4.8"/>\n'
+            '  </startup>\n'
+            '</configuration>\n')
+        print("  EXE config    -> dist\\AurumOS.exe.config (loadFromRemoteSources)")
+    except Exception as _cfge:
+        print(f"  (warning) could not write EXE config: {_cfge}")
 
     # ── WebView2 runtimes: guarantee ALL arch folders exist ──────────────
     # pywebview's edgechromium loader unconditionally loops over

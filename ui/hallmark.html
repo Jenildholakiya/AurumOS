@@ -147,6 +147,8 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .pill-out{background:var(--blue-bg);color:var(--blue3);}
 .pill-done{background:var(--success-bg);color:var(--success);}
 .pill-void{background:var(--cream);color:var(--muted2);}
+.pill-ok{background:var(--success-bg);color:var(--success);}
+.pill-new{background:var(--cream);color:var(--muted2);}
 .pill-grade{background:var(--gold-bg);color:var(--gold);font-family:var(--mono);}
 
 .pick{display:flex;align-items:center;gap:11px;padding:8px 17px;
@@ -222,6 +224,21 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
        pointer-events:none;z-index:700;max-width:340px;}
 .toast.show{opacity:1;transform:none;}
 .toast.bad{background:var(--danger);}
+
+/* ── centres dashboard table ── */
+.ctable{width:100%;border-collapse:collapse;font-size:0.74rem;}
+.ctable th{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--muted2);text-align:left;padding:10px 14px 6px;font-weight:700;
+    border-bottom:1px solid var(--rule2);white-space:nowrap;}
+.ctable td{padding:11px 14px;border-bottom:1px solid var(--rule2);
+    vertical-align:middle;white-space:nowrap;}
+.ctable tbody tr:last-child td{border-bottom:none;}
+.ctable tbody tr.row-click{cursor:pointer;}
+.ctable tbody tr.row-click:hover{background:var(--bg-main);}
+.ctable .c-name{font-weight:700;}
+.ctable .c-sub{font-size:0.64rem;color:var(--text-muted);margin-top:1px;}
+.ctable .c-num{font-family:var(--mono);font-weight:600;}
+.ctable .empty{padding:26px;text-align:center;color:var(--muted2);}
 </style>
 </head>
 <body>
@@ -243,6 +260,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
             <span class="live-dot"></span><span id="live-text">live</span>
         </div>
         <button class="btn btn-ghost" onclick="showCentres()">Centres</button>
+        <button class="btn btn-ghost" onclick="copyBoardLink()">Centre board</button>
         <button class="icon-btn" onclick="loadAll(true)" title="Refresh now">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
@@ -252,6 +270,28 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 <div class="scroll">
 
     <div class="tiles" id="tiles"></div>
+
+    <div class="card" id="sec-centres" style="margin-bottom:16px;">
+        <div class="card-hdr">
+            <div class="card-hdr-left">
+                <div class="card-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                    <div class="card-title">Assaying centres</div>
+                    <div class="card-sub">Open one for its lots and portal link</div>
+                </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="showCentres()">+ Add centre</button>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="ctable" id="centre-table">
+            <thead><tr><th>Centre</th><th>Contact</th><th>Out</th><th>Ready</th>
+            <th>Done</th><th>Pcs away</th><th>Portal</th><th></th></tr></thead>
+            <tbody id="centre-rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        </table>
+        </div>
+    </div>
 
     <div class="cols">
 
@@ -406,6 +446,10 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
             </div>
             <div class="fld" style="margin-top:9px;">
+                <label>Centre email (portal links go here)</label>
+                <input type="email" id="ct-email" placeholder="centre@example.com">
+            </div>
+            <div class="fld" style="margin-top:9px;">
                 <label>Days to come back</label>
                 <input type="number" id="ct-days" placeholder="7" step="1" min="0">
             </div>
@@ -521,6 +565,7 @@ function loadAll(manual){
         renderWaiting();
         renderLots(d.lots || []);
         renderCentreOptions();
+        renderCentreTable();
         var w = d.waiting || {}, o = d.out || {};
         el('head-sub').textContent =
             (w.pieces || 0) + ' waiting · ' + (o.pieces || 0) + ' at the centre · '
@@ -737,6 +782,7 @@ function renderLots(lots){
              + '</div>'
              + '<div class="row-right">' + statePill(l.state, l.days_out)
              +   '<button class="btn btn-good btn-sm" onclick="openReceive(' + Number(l.id) + ')">Book in</button>'
+             +   '<button class="btn btn-ghost btn-sm" onclick="copyLotLink(\'' + escAttr(l.lot_no) + '\')">Copy link</button>'
              +   '<button class="btn btn-ghost btn-sm" onclick="cancelLot(' + Number(l.id) + ')">Cancel</button>'
              + '</div></div>';
     }).join('') : emptyState('Nothing at the centre',
@@ -757,6 +803,38 @@ function renderLots(lots){
     }).join('') : emptyState('Nothing finished yet',
                              'Lots you have booked back in are kept here.');
 }
+
+// ── centre share links ─────────────────────────────────────────────
+// The centre opens the link in any browser: one lot, or the whole board.
+// It reaches PCs on the shop network; beyond that the shop's usual remote
+// access applies.
+function copyText(t, okMsg){
+    function done(){ toast(okMsg || 'Link copied. Send it to the centre.'); }
+    function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = t; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { toast('Copy this link: ' + t, true); }
+        document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t).then(done, fallback);
+    } else { fallback(); }
+}
+function copyLotLink(lotNo){
+    var a = api();
+    if (!a || typeof a.hm_share_url !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hm_share_url(lotNo || '').then(function(r){
+        if (!r || r.status !== 'success' || !r.url) {
+            toast((r && r.message) || 'Could not make the link.', true);
+            return;
+        }
+        copyText(r.url);
+    }).catch(function(e){ toast('Could not make the link: ' + e, true); });
+}
+function copyBoardLink(){ copyLotLink(''); }
 
 function cancelLot(id){
     var a = api();
@@ -904,6 +982,61 @@ function closeReceive(){
     RC = null;
 }
 
+// ── centres dashboard table ──────────────────────────────────────
+function openCentre(id){
+    if (!id) return;
+    var href = window.location.href;
+    var q = href.indexOf('?');
+    if (q >= 0) href = href.substring(0, q);
+    var cut = Math.max(href.lastIndexOf('/'), href.lastIndexOf('\\'));
+    var base = cut >= 0 ? href.substring(0, cut + 1) : '';
+    window.location.href = base + 'hm_centre.html?id=' + encodeURIComponent(id);
+}
+function renderCentreTable(){
+    var box = el('centre-rows');
+    if (!box) return;
+    var a = api();
+    if (!a || typeof a.hm_centre_overview !== 'function') {
+        // Older builds have no overview: fall back to the centres the
+        // dashboard already carried, without counts.
+        box.innerHTML = (CENTRES || []).map(function(c){
+            return '<tr class="row-click" onclick="openCentre(' + Number(c.id) + ')">'
+                + '<td><div class="c-name">' + esc(c.name) + '</div>'
+                + '<div class="c-sub">' + esc(c.code || '') + '</div></td>'
+                + '<td>' + esc(c.phone || '—') + '</td>'
+                + '<td class="c-num">—</td><td class="c-num">—</td>'
+                + '<td class="c-num">—</td><td class="c-num">—</td>'
+                + '<td>—</td><td><span class="btn btn-ghost btn-sm">Open</span></td></tr>';
+        }).join('') || '<tr><td colspan="8" class="empty">No centres yet.</td></tr>';
+        return;
+    }
+    a.hm_centre_overview().then(function(r){
+        var rows = (r && r.centres) || [];
+        if (!rows.length) {
+            box.innerHTML = '<tr><td colspan="8" class="empty">No centres yet — add the one you send to.</td></tr>';
+            return;
+        }
+        box.innerHTML = rows.map(function(c){
+            var portal = c.has_portal
+                ? '<span class="pill pill-ok">linked</span>'
+                : '<span class="pill pill-new">no link</span>';
+            return '<tr class="row-click" onclick="openCentre(' + Number(c.id) + ')">'
+                + '<td><div class="c-name">' + esc(c.name) + '</div>'
+                + '<div class="c-sub">' + esc(c.code || '') + '</div></td>'
+                + '<td><div>' + esc(c.phone || '—') + '</div>'
+                + '<div class="c-sub">' + esc(c.email || 'no email') + '</div></td>'
+                + '<td class="c-num">' + (c.lots_out || 0) + '</td>'
+                + '<td class="c-num">' + (c.lots_ready || 0) + '</td>'
+                + '<td class="c-num">' + (c.lots_done || 0) + '</td>'
+                + '<td class="c-num">' + (c.pcs_away || 0) + ' pcs</td>'
+                + '<td>' + portal + '</td>'
+                + '<td><span class="btn btn-ghost btn-sm">Open</span></td></tr>';
+        }).join('');
+    }).catch(function(){
+        box.innerHTML = '<tr><td colspan="8" class="empty">Could not load centres.</td></tr>';
+    });
+}
+
 // ── centres ──────────────────────────────────────────────────────────
 function renderCentreOptions(){
     var sel = el('centre');
@@ -952,16 +1085,21 @@ function saveCentre(){
         else { toast('Give the centre a name.', true); }
         return;
     }
-    a.hallmark_save_centre({
+    var payload = {
         name: name,
+        email: (el('ct-email').value || '').trim(),
         per_piece: parseFloat(el('ct-rate').value || '0') || 45,
         min_charge: parseFloat(el('ct-min').value || '0') || 200,
         turnaround_days: parseInt(el('ct-days').value || '0', 10) || 7
-    }).then(function(r){
+    };
+    var save = (typeof a.hm_save_centre_full === 'function')
+        ? a.hm_save_centre_full(payload)
+        : a.hallmark_save_centre(payload);
+    save.then(function(r){
         if (!r || r.status !== 'success') {
             toast((r && r.message) || 'Could not save.', true); return;
         }
-        el('ct-name').value = '';
+        el('ct-name').value = ''; el('ct-email').value = '';
         toast('Centre saved.');
         closeCentres();
         loadAll(true);

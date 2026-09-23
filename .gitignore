@@ -6,14 +6,29 @@ logs/
 
 # PyInstaller build output
 build/
+dist/
+_internal/
+pythonnet_runtime_backup*/
 # AurumOS.spec is written from scratch by build.py on every run, and the paths
 # inside it belong to whichever machine last built. Tracking it meant the
 # committed copy pointed at a drive that does not exist here, and every build
 # left a change that blocked the next merge.
 AurumOS.spec
 database/aurum_local.db
+database/aurum_local.db-shm
+database/aurum_local.db-wal
+database/aurum_test_bastion.db
+database/.subscription_cache
+database/.subscription_state.json
+database/.session_token
+database/.sse_cache
+database/.setup_complete
 db_path.txt
 machine.lock
+
+# Local machine config: holds terminal_id/terminal_secret + LAN IPs.
+# Never commit — copy config.example.json to config.json on a new machine.
+config.json
 
 # Temp/preview files
 ui/temp/

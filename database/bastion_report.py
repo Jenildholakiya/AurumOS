@@ -35,12 +35,28 @@ C_WHITE     = (1.0,   1.0,   1.0  )
 C_RULE      = (0.878, 0.859, 0.820)
 C_RULE2     = (0.910, 0.898, 0.875)
 
-# ── EMBEDDED ACCESS PASSWORD ──────────────────────────────────────
-# NOTE: real PDF encryption needs the plaintext password. A SHA256 hash
-# cannot be used to encrypt/open the document. Prefer reading from an
-# environment variable so the password isn't hard-coded in source.
-_PDF_USER_PASSWORD  = os.environ.get('BASTION_PDF_PW',       'Jenil@8305')        # required to OPEN
-_PDF_OWNER_PASSWORD = os.environ.get('BASTION_PDF_OWNER_PW', 'Jenil@8305_admin')  # controls permissions
+# ── PDF ACCESS PASSWORDS ─────────────────────────────────────────
+# Resolution order per password: environment variable first, then a
+# per-machine default derived from this install's fingerprint (unique per
+# shop, recoverable from the lock screen), then a static last resort used
+# only before setup has ever run. No live shop password sits in source —
+# an earlier build hardcoded one here, which meant anyone with the repo
+# could open every shop's forensic PDFs.
+def _pdf_passwords(db=None):
+    fp = ''
+    try:
+        if db is not None:
+            fp = str(db.get_config('machine_fingerprint', '') or '').strip().upper()
+    except Exception:
+        fp = ''
+    tag = fp[:8] if len(fp) >= 8 else ''
+    user_pw = os.environ.get('BASTION_PDF_PW', '')
+    owner_pw = os.environ.get('BASTION_PDF_OWNER_PW', '')
+    if not user_pw:
+        user_pw = f'AurumOS-{tag}' if tag else 'AurumOS-Setup-Pending'
+    if not owner_pw:
+        owner_pw = f'AurumOS-{tag}-Admin' if tag else 'AurumOS-Setup-Pending-Admin'
+    return user_pw, owner_pw
 
 
 def _safe(val, default='—'):
@@ -858,9 +874,10 @@ def generate_bastion_report(db, attack_type, detail, timestamp,
     enc = None
     if _ENC_AVAILABLE:
         try:
+            _user_pw, _owner_pw = _pdf_passwords(db)
             enc = StandardEncryption(
-                userPassword=_PDF_USER_PASSWORD,    # prompts on OPEN
-                ownerPassword=_PDF_OWNER_PASSWORD,  # full-permission password
+                userPassword=_user_pw,    # prompts on OPEN
+                ownerPassword=_owner_pw,  # full-permission password
                 canPrint=1,
                 canModify=0,
                 canCopy=0,

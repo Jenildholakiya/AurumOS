@@ -94,6 +94,12 @@ body::before{
     transition: all .14s;
 }
 .inp:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff;}
+/* Masked like a password box, but a plain text control underneath: security
+   software on counter PCs hooks real password fields and can swallow every
+   keystroke in embedded browsers while the mouse keeps working. Dots stay
+   dots; the keys just reach the page again. */
+#inp{-webkit-text-security:disc;}
+#inp.plain{-webkit-text-security:none;}
 .inp:disabled{opacity:.45;cursor:not-allowed;}
 .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;padding:4px;color:var(--muted2);transition:color 0.13s;font-size:0.9rem;}
 .eye-btn:hover{color:var(--blue);}
@@ -299,10 +305,10 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <div id="pass-mode" style="display:none">
             <label class="lbl">Password</label>
             <div class="pass-wrap">
-                <input type="password" id="inp" class="inp"
-                       placeholder="••••••••" autocomplete="current-password"
-                       oninput="onPassInput(this.value)"
-                       onkeydown="if(event.key==='Enter')login()">
+                <input type="text" id="inp" class="inp"
+                       placeholder="••••••••" autocomplete="off" spellcheck="false"
+                        oninput="onPassInput(this.value)"
+                        onkeydown="if(event.key==='Enter')login()">
                 <button class="eye-btn" id="eye-btn" onclick="toggleEye()" type="button" tabindex="-1">
                     <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -323,6 +329,34 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
             </div>
         </div>
         <div class="em" id="em"></div>
+
+        <!-- Terminal only: re-point at the main PC when its address changed
+             (or was typed wrong at setup). Re-joining keeps the owner's user
+             and module assignment, so nothing has to be set up twice. -->
+        <div id="server-box" style="display:none;margin-bottom:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--offwhite);">
+            <div style="font-size:.68rem;font-weight:700;color:var(--ink);margin-bottom:2px;">Main PC not reachable</div>
+            <div style="font-size:.66rem;color:var(--muted);line-height:1.55;margin-bottom:8px;">Tap Find below and pick your shop — no typing needed. Or enter its address by hand (top of Connected Computers on the main PC).</div>
+            <button class="btn" id="server-find-btn" style="margin-bottom:8px;" onclick="findServers()" type="button">Find the main PC automatically</button>
+            <div id="server-list" style="margin-bottom:8px;display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="display:flex;gap:6px;">
+                <input id="server-ip-inp" class="inp" style="height:38px;" placeholder="e.g. 10.177.43.20" autocomplete="off">
+                <button class="btn" id="server-check-btn" style="width:auto;padding:0 14px;height:38px;flex-shrink:0;" onclick="checkServerBox()" type="button">Check</button>
+            </div>
+            <div id="server-box-msg" style="font-size:.68rem;margin-top:8px;line-height:1.5;"></div>
+            <button class="btn" id="server-join-btn" style="display:none;margin-top:8px;" onclick="reconnectServer()" type="button">Reconnect to this main PC</button>
+        </div>
+
+        <!-- Terminal only: start over. Deleting the database by hand never
+             worked — the connection lives in config.json, and a running app
+             never re-chooses its page. Setup's join overwrites the saved
+             address and secret, and the running sync loop picks them up on
+             its next tick, so this needs no typing and no restart. -->
+        <button id="reset-link" onclick="resetTerminal()" type="button"
+                style="display:none;background:none;border:none;margin:2px auto 12px;cursor:pointer;
+                       font-family:var(--sans);font-size:.66rem;color:var(--muted);
+                       border-bottom:1px dashed transparent;padding:4px 2px;"
+                onmouseover="this.style.color='var(--blue)';this.style.borderBottomColor='var(--blue-ln)';"
+                onmouseout="this.style.color='';this.style.borderBottomColor='transparent';">Reset connection &amp; open setup…</button>
 
         <!-- Lockout panel — permanent until admin resets -->
         <div class="lkp" id="lkp">
@@ -473,6 +507,131 @@ function onPassInput(val) {
     fill.style.background=score<=1?'#ef4444':score<=3?'#f59e0b':'#15803d';
 }
 
+// ── Show / hide password ───────────────────────────────────────────
+function toggleEye() {
+    var inp = document.getElementById('inp');
+    if (!inp) return;
+    inp.classList.toggle('plain');
+}
+
+// ── Terminal: re-point at the main PC ──────────────────────────────
+// Shop routers reassign addresses, and setup typos happen. Either way the
+// terminal ends up dialling a dead address with "no answer" on every
+// sign-in and no path back (setup runs once). This repairs it in place:
+// check a new address, then re-join it. Re-joining an enrolled terminal
+// keeps its user, modules and secret on the server, so the owner sets
+// nothing up twice.
+var SERVER_CANDIDATE = null;
+function showServerBox() {
+    if (!IS_TERMINAL) return;
+    var b = document.getElementById('server-box');
+    if (b) b.style.display = 'block';
+}
+function serverBoxMsg(text, ok) {
+    var m = document.getElementById('server-box-msg');
+    if (!m) return;
+    m.innerText = text || '';
+    m.style.color = ok ? 'var(--green)' : 'var(--red)';
+}
+function checkServerBox() {
+    var ipEl = document.getElementById('server-ip-inp');
+    var ip = ((ipEl && ipEl.value) || '').trim();
+    if (!ip) { serverBoxMsg('Enter the main PC address first.'); return; }
+    if (!window.pywebview || !window.pywebview.api) { serverBoxMsg('App not ready.'); return; }
+    var btn = document.getElementById('server-check-btn');
+    if (btn) btn.disabled = true;
+    serverBoxMsg('Checking ' + ip + '…');
+    var jb = document.getElementById('server-join-btn');
+    if (jb) jb.style.display = 'none';
+    SERVER_CANDIDATE = null;
+    window.pywebview.api.cluster('verify_server', { ip: ip }).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (res && res.status === 'success') {
+            SERVER_CANDIDATE = res;
+            serverBoxMsg('Found ' + (res.business || 'AurumOS') + ' at ' + res.ip + '.', true);
+            if (jb) jb.style.display = 'block';
+        } else {
+            serverBoxMsg((res && res.message) || 'No answer from that address.');
+        }
+    }).catch(function () {
+        if (btn) btn.disabled = false;
+        serverBoxMsg('Could not reach that address.');
+    });
+}
+function pickServer(ip) {
+    var inp = document.getElementById('server-ip-inp');
+    if (inp) inp.value = ip;
+    checkServerBox();
+}
+function findServers() {
+    if (!window.pywebview || !window.pywebview.api) { serverBoxMsg('App not ready.'); return; }
+    var btn = document.getElementById('server-find-btn');
+    var list = document.getElementById('server-list');
+    if (btn) btn.disabled = true;
+    if (list) list.innerHTML = '';
+    serverBoxMsg('Looking for the main PC on this network… takes a few seconds.');
+    var jb = document.getElementById('server-join-btn');
+    if (jb) jb.style.display = 'none';
+    SERVER_CANDIDATE = null;
+    window.pywebview.api.cluster('find_servers', {}).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (!res || res.status !== 'success') {
+            serverBoxMsg((res && res.message) || 'Could not search the network.');
+            return;
+        }
+        var servers = res.servers || [];
+        if (!servers.length) {
+            serverBoxMsg('No main PC answered. Check it is switched on with AurumOS open, on the same network.');
+            return;
+        }
+        serverBoxMsg('Tap your shop below.', true);
+        if (list) {
+            list.innerHTML = '';
+            servers.forEach(function (s) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'btn';
+                b.style.cssText = 'justify-content:flex-start;';
+                b.innerText = (s.business || 'AurumOS shop') + '  ·  ' + s.ip;
+                b.addEventListener('click', function () { pickServer(s.ip); });
+                list.appendChild(b);
+            });
+        }
+    }).catch(function () {
+        if (btn) btn.disabled = false;
+        serverBoxMsg('Could not search the network. Try again in a moment.');
+    });
+}
+function reconnectServer() {
+    if (!SERVER_CANDIDATE || !SERVER_CANDIDATE.ip) return;
+    var btn = document.getElementById('server-join-btn');
+    if (btn) btn.disabled = true;
+    serverBoxMsg('Reconnecting…');
+    window.pywebview.api.cluster('join', { ip: SERVER_CANDIDATE.ip }).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (res && res.status === 'success') {
+            var addr = res.ip || SERVER_CANDIDATE.ip;
+            serverBoxMsg('Connected to ' + (res.business || 'the main PC') + '. Sign in with your staff password.', true);
+            try {
+                var note = document.getElementById('terminal-note');
+                if (note) note.innerText = 'Staff terminal · ' + (res.business || '') + ' · Main PC ' + addr;
+            } catch (e) {}
+            var inp = document.getElementById('inp');
+            if (inp) { inp.value = ''; inp.focus(); }
+            hideErr();
+            setTimeout(function () {
+                var b = document.getElementById('server-box');
+                if (b) b.style.display = 'none';
+            }, 5000);
+        } else {
+            serverBoxMsg((res && res.message) || 'Could not reconnect.');
+        }
+    }).catch(function () {
+        if (btn) btn.disabled = false;
+        serverBoxMsg('Could not reconnect. Check the address and try again.');
+    });
+}
+
 // ── Bridge polling ─────────────────────────────────────────────────
 var _pt = setInterval(function() {
     try {
@@ -526,15 +685,19 @@ function onReady() {
         } catch(e2) {}
     }
 
-    // Lockout state — when locked, show ONLY the lock screen (never login)
-    (function() {
+    // Lockout state — when locked, show ONLY the lock screen (never login).
+    // Local lockouts belong to the main PC. A staff PC holds no local users
+    // and the server throttles it per terminal, so a local lock screen here
+    // would hide the password box with no way back. Terminals skip it.
+    function _showLogin() {
+        var pm = document.getElementById('pass-mode');
+        var b  = document.getElementById('btn');
+        if (pm) pm.style.display = 'block';
+        if (b)  b.style.display  = 'block';
+    }
+    myRole().then(function () {
+        if (IS_TERMINAL) { _showLogin(); return; }
         var _resolved = false;
-        function _showLogin() {
-            var pm = document.getElementById('pass-mode');
-            var b  = document.getElementById('btn');
-            if (pm) pm.style.display = 'block';
-            if (b)  b.style.display  = 'block';
-        }
         function _handle(s) {
             _resolved = true;
             if (!s) { _showLogin(); return; }
@@ -557,7 +720,7 @@ function onReady() {
         } catch(e) { _showLogin(); }
         // Fail-safe: if the lock check never resolves, show login
         setTimeout(function() { if (!_resolved) { _resolved = true; _showLogin(); } }, 2500);
-    })();
+    });
 }
 
 // ── STAFF TERMINAL ─────────────────────────────────────────────────
@@ -566,32 +729,68 @@ function onReady() {
 // anyone in on its own, so an unreachable server is a closed door rather
 // than a screen someone could work around.
 var IS_TERMINAL = false;
+var IDENTITY_DONE = false;
+var IDENTITY_PROMISE = null;
 
-(function detectTerminal() {
-    function ask() {
-        try {
-            window.pywebview.api.cluster('identity').then(function (me) {
+// Who is this PC? Resolved once, before anything chooses between the local
+// password check and the shop server. A staff PC holds no local users, so a
+// local check there always fails — and three failures used to bury the login
+// behind a 15-minute lockout with no password box left to type in.
+function myRole() {
+    if (!IDENTITY_PROMISE) {
+        IDENTITY_PROMISE = new Promise(function (resolve) {
+            var done = false;
+            function fin(me) {
+                if (done) return;
+                done = true;
+                IDENTITY_DONE = true;
                 IS_TERMINAL = !!(me && me.role === 'terminal');
                 if (IS_TERMINAL) {
-                    var note = document.getElementById('terminal-note');
-                    if (note) {
-                        note.style.display = 'block';
-                        note.innerText = me.business
-                            ? 'Staff terminal · ' + me.business
-                            : 'Staff terminal';
-                    }
+                    try {
+                        var note = document.getElementById('terminal-note');
+                        if (note) {
+                            note.style.display = 'block';
+                            // The configured main-PC address is always visible, so a
+                            // wrong/stale address is evident instead of mysterious.
+                            var via = (me && me.server_ip) ? ' · Main PC ' + me.server_ip : '';
+                            note.innerText = 'Staff terminal' +
+                                ((me && me.business) ? ' · ' + me.business : '') + via;
+                        }
+                        var rl = document.getElementById('reset-link');
+                        if (rl) rl.style.display = 'block';
+                    } catch (e) {}
                 }
-            }).catch(function () {});
-        } catch (e) {}
+                resolve((me && me.role) || '');
+            }
+            function ask() {
+                try {
+                    window.pywebview.api.cluster('identity').then(function (me) {
+                        fin(me);
+                    }).catch(function () { fin(null); });
+                } catch (e) { fin(null); }
+            }
+            if (window.apiReady) { window.apiReady(ask); } else { setTimeout(ask, 300); }
+            setTimeout(function () { fin(null); }, 5000);
+        });
     }
-    if (window.apiReady) { window.apiReady(ask); } else { setTimeout(ask, 1200); }
-})();
+    return IDENTITY_PROMISE;
+}
+myRole();
 
 // ── LOGIN ──────────────────────────────────────────────────────────
 function login() {
     if (LOCKED) return;
     if (!READY || !window.pywebview || !window.pywebview.api) {
         showErr('App not ready — please wait.'); return;
+    }
+    // Never guess the auth path. Until this PC's role is known, a staff PC
+    // would take the local check, fail (it holds no local users), and burn
+    // the lockout budget. Wait for the answer, then come back through here.
+    if (!IDENTITY_DONE) {
+        var wbtn = document.getElementById('btn');
+        if (wbtn) { wbtn.disabled = true; wbtn.innerHTML = '<span>⋯</span> Checking…'; }
+        myRole().then(function () { login(); });
+        return;
     }
     var pass = document.getElementById('inp').value;
     if (!pass) { shake(); showErr('Please enter your password.'); return; }
@@ -607,6 +806,7 @@ function login() {
             btn.disabled = false; btn.innerHTML = '<span>→</span> Sign In';
             showErr('Could not reach the main PC. Check it is switched on.');
             shake();
+            showServerBox();
         });
         return;
     }
@@ -644,6 +844,42 @@ function login() {
     }
 }
 
+// Manual way back: forget the argument of "which screen" entirely and open
+// setup. Setup's join overwrites the saved address and secret, and the
+// running sync loop picks them up on its next tick — no typing, no file
+// hunting, no restart. Terminals only; the link itself is hidden otherwise.
+function resetTerminal() {
+    if (!IS_TERMINAL) return;
+    if (!confirm('Remove this PC\u2019s shop connection and open setup?\n\n' +
+                 'You will join again as a Client Node. Nothing on the main PC is affected.')) return;
+    goSetupJoin('');
+}
+
+// A PC the server no longer knows (removed, or secret lost) must re-join.
+// Setup is the way back; re-joining enrols it fresh and the owner assigns
+// it again — never a dead end on the sign-in screen.
+function goSetupJoin(msg) {
+    if (msg) showErr(msg);
+    setTimeout(function () {
+        try {
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
+                window.pywebview.api.navigate('setup.html');
+            } else {
+                window.location.href = 'setup.html';
+            }
+        } catch (e) {
+            try { window.location.href = 'setup.html'; } catch (e2) {}
+        }
+        // If the bridge call went nowhere, still go there directly.
+        setTimeout(function () {
+            try {
+                var p = location.pathname.replace(/.*[\/\\]/, '').toLowerCase();
+                if (p === 'login.html') window.location.href = 'setup.html';
+            } catch (e) {}
+        }, 2500);
+    }, 1200);
+}
+
 // ── Handle result ──────────────────────────────────────────────────
 function handleResult(res) {
     if (!res) { showErr('No response — try again.'); return; }
@@ -666,9 +902,24 @@ function handleResult(res) {
 
     if (res.status === 'blocked' || res.status === 'not_enrolled' ||
         res.status === 'wrong_user' || res.status === 'seat_limit') {
+        if (IS_TERMINAL && res.status === 'not_enrolled') {
+            goSetupJoin('This PC was removed from the shop. Opening setup to join again…');
+            return;
+        }
         showErr(res.message || 'This PC cannot sign in.');
         shake();
-        document.getElementById('inp').value = '';
+        var e0 = document.getElementById('inp');
+        if (e0) { e0.value = ''; e0.focus(); }
+        return;
+    }
+
+    // Defensive only: terminals never call the local check any more, but if
+    // one ever does, it must not burn the local attempt budget.
+    if (res.status === 'not_terminal') {
+        showErr(res.message || 'This is a staff terminal — sign-in is checked by the main PC.');
+        shake();
+        var e3 = document.getElementById('inp');
+        if (e3) { e3.value = ''; e3.focus(); }
         return;
     }
 
@@ -769,6 +1020,17 @@ function handleResult(res) {
     }
 
     if (res.status === 'locked') {
+        // The server throttles each terminal on its own clock. Keep the box
+        // open so staff can simply retry — hiding it here is what used to
+        // leave terminals with nothing to type in.
+        if (IS_TERMINAL) {
+            var wait = res.retry_after ? (' Try again in ' + res.retry_after + ' seconds.') : '';
+            showErr((res.message || 'Too many wrong passwords.') + wait);
+            shake();
+            var li = document.getElementById('inp');
+            if (li) { li.value = ''; li.focus(); }
+            return;
+        }
         ATTEMPTS=MAX; dots(MAX); showAR();
         applyLock(res.lock_code || '');
         return;
@@ -777,6 +1039,33 @@ function handleResult(res) {
     // Handle error status (exception in backend)
     if (res.status === 'error') {
         showErr(res.message || 'An error occurred. Please try again.');
+        shake();
+        // On a terminal this is almost always "cannot reach the main PC"
+        // (a wrong/stale address resolves to an error dict, it never
+        // rejects) — so this, not the catch below, is where the repair box
+        // must appear.
+        if (IS_TERMINAL) showServerBox();
+        document.getElementById('inp').value = '';
+        document.getElementById('inp').focus();
+        return;
+    }
+
+    // 'denied' from the server is two different things. A secret mismatch
+    // carries no attempts_left and names itself — the PC must re-join, same
+    // as a removed one. A wrong password carries attempts_left.
+    if (res.status === 'denied' && IS_TERMINAL &&
+        typeof res.attempts_left !== 'number' &&
+        /no longer recognised/i.test(res.message || '')) {
+        goSetupJoin('This PC is no longer recognised. Opening setup to join again…');
+        return;
+    }
+
+    // Wrong password on a terminal: the server throttles per terminal on its
+    // own clock (and says so via 'locked'). Counting locally here would bury
+    // the login behind the local lock screen after 3 tries — the same dead
+    // box this page just escaped. Show the server's message and stay open.
+    if (IS_TERMINAL) {
+        showErr(res.message || 'Wrong password.');
         shake();
         document.getElementById('inp').value = '';
         document.getElementById('inp').focus();
@@ -1170,6 +1459,42 @@ window.onload = function() {
     } catch(e) {}
     document.getElementById('inp').focus();
 };
+
+// ── Self-update ────────────────────────────────────────────────────
+// Screens ship through the updater and take effect on the next screen
+// opened — but a page that stays open (like this one, while sign-in keeps
+// failing) would otherwise test yesterday's code forever. So this page
+// watches its own file: when a newer copy lands, it reloads to it. Never
+// while the password (or a server address) is half-typed, and never while
+// a code entry view is open.
+var UI_STAMP = null;
+function uiStampTick() {
+    try {
+        if (!window.pywebview || !window.pywebview.api ||
+            typeof window.pywebview.api.ui_stamp !== 'function') return;
+        window.pywebview.api.ui_stamp('login.html').then(function (r) {
+            if (!r || r.status !== 'success') return;
+            var stamp = r.mtime + ':' + r.size;
+            try {
+                var vr = document.getElementById('vr');
+                if (vr) vr.title = 'Screen file: ' + new Date(r.mtime * 1000).toLocaleString();
+            } catch (e) {}
+            if (!UI_STAMP) { UI_STAMP = stamp; return; }
+            if (UI_STAMP === stamp) return;
+            var busy = false;
+            try {
+                busy = (document.getElementById('inp').value !== '') ||
+                       (document.getElementById('server-ip-inp').value !== '') ||
+                       document.getElementById('tfa').classList.contains('on') ||
+                       document.getElementById('tp-overlay').classList.contains('open');
+            } catch (e) {}
+            if (busy) return;   // try again on the next tick
+            window.location.reload();
+        }).catch(function () {});
+    } catch (e) {}
+}
+setInterval(uiStampTick, 15000);
+setTimeout(uiStampTick, 5000);
 </script>
 
 

@@ -174,6 +174,30 @@ def main():
     if BACKEND_DIRS:
         print(f"  Backend: {backend_count} .py files (AURUM_SHIP_BACKEND=1)")
 
+    # ── SQL migrations: always shipped — they are data, not code ─────────
+    # migrations/NNNN_what.sql runs once per shop via
+    # DBManager.apply_migrations, so a release can fix schema without a
+    # rebuild. The live database/ folder itself is never shipped.
+    mig_dir = os.path.join(ROOT, 'migrations')
+    mig_count = 0
+    if os.path.isdir(mig_dir):
+        for fname in sorted(os.listdir(mig_dir)):
+            if not fname.lower().endswith('.sql'):
+                continue
+            fpath = os.path.join(mig_dir, fname)
+            if not os.path.isfile(fpath) or os.path.getsize(fpath) == 0:
+                continue
+            rel = f"migrations/{fname}"
+            files.append({
+                "path": rel,
+                "sha256": sha256(fpath),
+                "size_bytes": os.path.getsize(fpath),
+                "url": f"{RELEASES}/download/v{version}/{_asset_name(rel)}",
+            })
+            mig_count += 1
+        if mig_count:
+            print(f"  Migrations: {mig_count} .sql file(s)")
+
     total_size = sum(f["size_bytes"] for f in files)
     manifest = {
         "version": version,

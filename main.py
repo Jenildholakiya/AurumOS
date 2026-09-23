@@ -207,6 +207,30 @@ except ImportError as _upd_err:
 # noinspection PyUnresolvedReferences
 from core.tag_engine import TagFactory  # obfuscated module — resolved at runtime
 
+# ── TAG ENGINE TAMPER-EVIDENCE ─────────────────────────────────────────
+# core/tag_engine.py ships obfuscated (source was lost to a build that never
+# restored it; only the encrypted stub is committed). Its interface was
+# re-mapped from the bytecode: TagFactory with generate_tag_image,
+# generate_preview, print_to_thermal_printer and set_printer. Until the
+# source is rewritten, the stub's hash is pinned in core/tag_engine.sha256
+# and checked here. Log-only by design: a mismatch must never brick a shop,
+# it only names the file so the next update can replace it deliberately.
+def _verify_tag_engine():
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        stub = os.path.join(base, 'core', 'tag_engine.py')
+        pin = os.path.join(base, 'core', 'tag_engine.sha256')
+        if not (os.path.isfile(stub) and os.path.isfile(pin)):
+            return
+        want = open(pin, 'r', encoding='utf-8').read().strip().split()[0]
+        got = hashlib.sha256(open(stub, 'rb').read()).hexdigest()
+        if got != want:
+            LOG(f"[TAGENGINE] hash mismatch (want {want[:12]}…, got {got[:12]}…) — module replaced outside release")
+        else:
+            LOG("[TAGENGINE] pinned stub verified")
+    except Exception as _te:
+        LOG(f"[TAGENGINE] verify skipped: {_te}")
+
 try:
     from core.ai_support import AISupport
     _AI_AVAILABLE = True
@@ -306,6 +330,7 @@ def _init_log():
     LOG(f'=== Frozen  : {getattr(sys,"frozen",False)} ===')
 
 _init_log()
+_verify_tag_engine()
 
 
 def get_asset_path(relative_path):
@@ -843,10 +868,21 @@ class AurumAPI:
         # Ensure backup dir exists
         self.ensure_backup_structure()
 
-        # ── BASTION: EXE integrity check (Layer 9) -- DISABLED ─────────────
-        # bastion_verify_exe() is no longer called at startup. Disabled per
-        # explicit request -- this check kept producing false suspensions.
-        LOG("[BASTION] EXE integrity check disabled")
+        # ── BASTION: EXE integrity check (Layer 9) ─────────────────────
+        # Re-enabled: bastion_verify_exe() no longer self-captures the first
+        # run as trusted (that is what falsely suspended rebuilt shops —
+        # every PyInstaller build hashes differently). Trust now comes from
+        # exe_trusted_hash.txt written by build.py, and the check fails OPEN
+        # on missing metadata, dev mode, or any error — it only suspends on
+        # a confirmed mismatch. Runs off-thread so a slow disk never
+        # delays startup.
+        def _exe_check():
+            try:
+                ok = self.db.bastion_verify_exe()
+                LOG(f"[BASTION] EXE integrity: {'OK' if ok else 'MISMATCH'}")
+            except Exception as _ee:
+                LOG(f"[BASTION] EXE check skipped: {_ee}")
+        threading.Thread(target=_exe_check, daemon=True).start()
 
         # ── SHOP NETWORK: this PC serves the shop, or joins one ───────────
         # The main PC listens so staff PCs can verify its address, enrol, and
@@ -998,16 +1034,64 @@ class AurumAPI:
     # -- NAVIGATION ------------------------------------------------------------
     def navigate(self, html_file):
         try:
+            raw = str(html_file or '')
+            # Pages keep query strings (?role=&type=) — strip them for the check.
+            name = os.path.basename(raw.split('?')[0].split('#')[0])
+            if not name or name.startswith('.') or '/' in raw.replace('\\', '/').strip('/').rsplit(name, 1)[0]:
+                return {"status": "error", "message": f"bad page: {raw[:60]}"}
+            target_path = os.path.join(get_asset_path("ui"), name)
+            if not os.path.isfile(target_path):
+                ERR(f"[NAV] missing page: {name}")
+                return {"status": "error", "message": f"page not found: {name}"}
             ui_dir = get_asset_path("ui")
-            target_path = os.path.join(ui_dir, html_file)
+            target_path = os.path.join(ui_dir, name)
             url = Path(target_path).as_uri()
             if self._window:
                 safe_url = url.replace("'", "\\'")
                 self._window.evaluate_js(f"window.location.href='{safe_url}';")
-            return None
+            return {"status": "success", "page": name}
         except Exception as e:
             ERR(f"[NAV] Error: {e}")
-            return None
+            return {"status": "error", "message": str(e)}
+
+    def open_url(self, url):
+        """Open an external link in the system browser.
+
+        Pages (expiry, revoked, upgrade prompts) prefer this over
+        window.open, which has no effect inside pywebview. Only http/https
+        ever leave the app — anything else is refused.
+        """
+        try:
+            import webbrowser
+            u = str(url or '').strip()
+            if not u.lower().startswith(('http://', 'https://', 'mailto:')):
+                return {"status": "error", "message": "Only web links can be opened."}
+            webbrowser.open(u)
+            return {"status": "success"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def ui_stamp(self, page):
+        """Fingerprint of the screen file this app is actually serving.
+
+        Screens ship through the updater and take effect on the next screen
+        opened — but a page that stays open (like a login stuck on sign-in
+        failures) keeps running its old copy forever, so fixes are tested
+        against yesterday's code without anyone realising. The page polls
+        this cheap stat call and reloads itself when a newer copy lands.
+        Only the file name is accepted; directories never leave ui/.
+        """
+        try:
+            raw = str(page or '')
+            name = os.path.basename(raw)
+            if not name or name.startswith('.') or raw != name:
+                return {"status": "error", "message": "bad page"}
+            target = get_asset_path(os.path.join('ui', name))
+            st = os.stat(target)
+            return {"status": "success", "page": name,
+                    "mtime": st.st_mtime, "size": st.st_size}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     # -- SESSION ---------------------------------------------------------------
     def get_session(self):
@@ -1171,10 +1255,13 @@ class AurumAPI:
                 if self.db.store_urgent_message(m):
                     fresh += 1
                     self._forward_urgent_to_ui(m)
-            LOG(f"[URGENT] missed-fetch: {fresh} new")
+            if fresh:
+                LOG(f"[URGENT] missed-fetch: {fresh} new")
             return {"status": "success", "new": fresh}
-        except Exception as e:
-            LOG(f"[URGENT] missed-fetch skipped: {e}")
+        except Exception:
+            # Offline counters and shop PCs without internet hit this on every
+            # poll; logging each timeout buries real signal in the log file.
+            # The contract is "silent on network error" — keep it silent.
             return {"status": "offline", "new": 0}
 
     def _urgent_watchdog(self):
@@ -1824,21 +1911,13 @@ class AurumAPI:
             return _ssl._create_unverified_context()
 
     def _safe_urlopen(self, req, timeout=10):
-        """urlopen that retries without SSL verification on cert errors."""
-        import urllib.request, urllib.error, ssl as _ssl
-        ctx = self._ssl_context()
-        try:
-            return urllib.request.urlopen(req, timeout=timeout, context=ctx)
-        except urllib.error.URLError as e:
-            if isinstance(e.reason, (_ssl.SSLCertVerificationError, _ssl.SSLError, OSError)):
-                LOG(f'[SSL] Retrying without verification: {e.reason}')
-                ctx2 = _ssl._create_unverified_context()
-                return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
-            raise
-        except (_ssl.SSLCertVerificationError, _ssl.SSLError):
-            LOG('[SSL] Retrying without verification')
-            ctx2 = _ssl._create_unverified_context()
-            return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
+        """Verified-TLS urlopen. Cert failures raise so the caller treats the
+        server as unreachable (keeping cached state) instead of trusting an
+        unverified answer."""
+        import urllib.request
+        import ssl as _ssl
+        return urllib.request.urlopen(req, timeout=timeout,
+                                      context=self._ssl_context())
 
     def check_license_revoked(self, network=True):
         # network=False -> only the instant LOCAL checks (.revoked flag + key
@@ -2292,24 +2371,32 @@ class AurumAPI:
         if not current.get('valid') or current.get('status') not in ('active', 'grace'):
             LOG(f'[SSE-PY] Sync result not active (status={current.get("status")}) — applying SSE data directly')
             try:
-                features = data.get('features') or PLAN_FEATURES.get(new_plan, list(LITE_FEATURES))
-                expires = _clamp_expiry(data.get('subscription_expires_at'))
-                remaining = _clamp_remaining(data.get('remaining_days', SUBSCRIPTION_DAYS))
+                cur = self.sub._state
+                plan = (data.get('plan') or data.get('effective_plan')
+                        or cur.get('effective_plan') or cur.get('plan') or 'lite')
+                plan = str(plan).strip().lower() or 'lite'
+                features = data.get('features') or PLAN_FEATURES.get(plan, list(LITE_FEATURES))
+                expires = _clamp_expiry(data.get('subscription_expires_at')
+                                        or (cur.get('subscription') or {}).get('expires_at'))
+                if 'remaining_days' in data:
+                    remaining = _clamp_remaining(data.get('remaining_days') or 0)
+                else:
+                    remaining = ((cur.get('subscription') or {}).get('remaining_days')) or 0
                 self.sub._set_state({
                     'valid': True,
                     'status': 'active',
-                    'effective_plan': new_plan,
+                    'effective_plan': plan,
                     'features': features,
-                    'business': data.get('business', ''),
-                    'owner': data.get('owner', ''),
-                    'plan': new_plan,
+                    'business': data.get('business') or cur.get('business', ''),
+                    'owner': data.get('owner') or cur.get('owner', ''),
+                    'plan': plan,
                     'is_trial': data.get('is_trial', False),
                     'trial_end_ms': data.get('trial_end_ms'),
                     'subscription': {
                         'status': 'active',
                         'expires_at': expires,
                         'remaining_days': remaining,
-                        'grace_remaining_days': data.get('grace_remaining_days', 15),
+                        'grace_remaining_days': data.get('grace_remaining_days', 0) or 0,
                         'renewal_amount': data.get('renewal_amount', 0)
                     }
                 })
@@ -2385,29 +2472,39 @@ class AurumAPI:
             # Handle revoke — same as existing sse_handle_revoke
             self.sse_handle_revoke(status, message)
         elif status == 'active':
-            # License reactivated — trust SSE, set state directly (don't sync server)
+            # License reactivated — apply what SSE said, keeping what it did
+            # not. Never demote the plan or blank the names here: an 'active'
+            # ping carries no plan, and an enterprise shop reactivated as
+            # 'pro' (or nameless) was the old bug.
             was_active = self.sub._state.get('valid', False) and self.sub._state.get('status', '') in ('active', 'grace')
             LOG(f'[SSE-PY] License reactivated via SSE — setting state to active (was_active={was_active})')
             try:
-                from subscription_manager import LITE_FEATURES, PLAN_FEATURES
-                plan = 'pro'
-                features = PLAN_FEATURES.get(plan, LITE_FEATURES)
+                from subscription_manager import PLAN_FEATURES, LITE_FEATURES
+                cur = self.sub._state
+                plan = (data.get('plan') or data.get('effective_plan')
+                        or cur.get('effective_plan') or cur.get('plan') or 'pro')
+                plan = str(plan).strip().lower() or 'pro'
+                features = data.get('features') or PLAN_FEATURES.get(plan, LITE_FEATURES)
+                if 'remaining_days' in data:
+                    remaining = data.get('remaining_days') or 0
+                else:
+                    remaining = (cur.get('subscription') or {}).get('remaining_days', 0) or 0
                 self.sub._set_state({
                     'valid': True,
                     'status': 'active',
                     'effective_plan': plan,
                     'features': features,
-                    'business': '',
-                    'owner': '',
+                    'business': data.get('business') or cur.get('business', ''),
+                    'owner': data.get('owner') or cur.get('owner', ''),
                     'plan': plan,
                     'is_trial': False,
                     'trial_end_ms': None,
                     'subscription': {
                         'status': 'active',
-                        'expires_at': None,
-                        'remaining_days': 365,
-                        'grace_remaining_days': 15,
-                        'renewal_amount': 0
+                        'expires_at': data.get('expires_at') or (cur.get('subscription') or {}).get('expires_at'),
+                        'remaining_days': remaining,
+                        'grace_remaining_days': data.get('grace_remaining_days', 0) or 0,
+                        'renewal_amount': data.get('renewal_amount', 0)
                     }
                 })
                 self.sub._save_cache()
@@ -2630,28 +2727,38 @@ class AurumAPI:
                     self.sub.set_window(self._window)
                 except Exception as _se:
                     ERR(f'[RENEW] Sub setup after renew: {_se}')
-                # Force subscription state to active from renewal response
+                # Force subscription state to active from renewal response.
+                # Plan, names and day counts come from the server first and
+                # the current state second — never from a hardcoded default
+                # that would demote an enterprise shop or invent a year.
                 try:
                     from subscription_manager import LITE_FEATURES, PRO_FEATURES, ENTERPRISE_FEATURES, PLAN_FEATURES, _clamp_expiry, _clamp_remaining, SUBSCRIPTION_DAYS
-                    plan = data.get('plan', 'pro')
-                    features = PLAN_FEATURES.get(plan, PRO_FEATURES)
-                    expires = _clamp_expiry(data.get('subscription_expires_at'))
-                    remaining = _clamp_remaining(data.get('remaining_days', SUBSCRIPTION_DAYS))
+                    cur = self.sub._state
+                    plan = (data.get('plan') or data.get('effective_plan')
+                            or cur.get('effective_plan') or cur.get('plan') or 'pro')
+                    plan = str(plan).strip().lower() or 'pro'
+                    features = data.get('features') or PLAN_FEATURES.get(plan, PRO_FEATURES)
+                    expires = _clamp_expiry(data.get('subscription_expires_at')
+                                            or (cur.get('subscription') or {}).get('expires_at'))
+                    if 'remaining_days' in data:
+                        remaining = _clamp_remaining(data.get('remaining_days') or 0)
+                    else:
+                        remaining = ((cur.get('subscription') or {}).get('remaining_days')) or 0
                     self.sub._set_state({
                         'valid': True,
                         'status': 'active',
                         'effective_plan': plan,
                         'features': features,
-                        'business': data.get('business', ''),
-                        'owner': data.get('owner', ''),
+                        'business': data.get('business') or cur.get('business', ''),
+                        'owner': data.get('owner') or cur.get('owner', ''),
                         'plan': plan,
-                        'is_trial': data.get('is_trial', False),
-                        'trial_end_ms': data.get('trial_end_ms'),
+                        'is_trial': False,
+                        'trial_end_ms': None,
                         'subscription': {
                             'status': 'active',
                             'expires_at': expires,
                             'remaining_days': remaining,
-                            'grace_remaining_days': data.get('grace_remaining_days', 15),
+                            'grace_remaining_days': data.get('grace_remaining_days', 0) or 0,
                             'renewal_amount': data.get('renewal_amount', 0)
                         }
                     })
@@ -2721,6 +2828,18 @@ class AurumAPI:
         except Exception as e:
             return {'valid': False, 'status': 'unknown', 'effective_plan': 'lite', 'features': []}
 
+    def open_admin_renewal(self):
+        """Open the shop's renewal page (upgrade prompts, subscription badges)."""
+        try:
+            base = 'https://aurum-os-admin.vercel.app'
+            try:
+                base = self._get_license_check_url() or base
+            except Exception:
+                pass
+            return self.open_url(base.rstrip('/') + '/pricing')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     def subscription_start_sync(self, interval_minutes=30):
         """Start periodic background sync."""
         try:
@@ -2742,6 +2861,30 @@ class AurumAPI:
             }
         except Exception as e:
             return {'is_trial': False, 'status': 'unknown', 'expiry_ms': None}
+
+    def recover_from_trial(self):
+        """Trial portal's Recover button: a paid licence returns to login.
+
+        Returns {success} exactly as trial_portal.html reads it. On a live
+        licence the window is moved to the login screen as well, so Recover
+        actually recovers instead of just reporting.
+        """
+        try:
+            state = self.sub.get_state_json()
+            valid = bool(state.get('valid'))
+            plan = str(state.get('effective_plan') or 'lite').lower()
+            if valid and plan in ('pro', 'enterprise'):
+                try:
+                    self.navigate('login.html')
+                except Exception:
+                    pass
+                return {'success': True,
+                        'message': 'Premium initialised. Opening sign-in.'}
+            return {'success': False,
+                    'message': 'No active premium licence on this terminal yet. '
+                               'Complete verification with your administrator.'}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
 
     def quit_app(self):
         try:
@@ -2821,6 +2964,42 @@ class AurumAPI:
         except Exception as e:
             ERR(f"[LICENSE] {e}")
             return {"status":"error","message":f"Verification error: {str(e)}"}
+
+    def get_license_details(self, key=None):
+        """Business profile behind a licence key (setup auto-fill).
+
+        Returns {status:'success', business_name, owner_name, city, phone,
+        email, gstin} as setup.html:745 reads it. Server supplies the names;
+        the shop's own saved settings supply the rest.
+        """
+        try:
+            key = str(key or '').strip().upper()
+            if not key:
+                try:
+                    key = str(self.db.get_config('license_key', '') or '').strip().upper()
+                except Exception:
+                    key = ''
+            business, owner = '', ''
+            if key:
+                res = self.verify_key(key)
+                if isinstance(res, dict) and res.get('status') == 'success':
+                    d = res.get('details') if isinstance(res.get('details'), dict) else {}
+                    business = res.get('business') or d.get('business_name') or ''
+                    owner = res.get('owner') or d.get('owner_name') or ''
+            def _cfg(k):
+                try:
+                    return str(self.db.get_config(k, '') or '')
+                except Exception:
+                    return ''
+            return {"status": "success",
+                    "business_name": business or _cfg('business_name') or _cfg('shop_name'),
+                    "owner_name": owner or _cfg('owner_name'),
+                    "city": _cfg('city'),
+                    "phone": _cfg('owner_phone') or _cfg('phone'),
+                    "email": _cfg('email'),
+                    "gstin": _cfg('gstin')}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     # -- LOCKOUT ---------------------------------------------------------------
     def _get_lockout_file(self):
@@ -3147,6 +3326,22 @@ class AurumAPI:
         except Exception as _e:
             LOG(f"[RESET] Temp check error: {_e}")
 
+        # ── TERMINAL GUARD ────────────────────────────────────────
+        # A staff PC holds no local users by design (it joins; it is never
+        # set up), so a local password check here can only fail — and each
+        # failure burns the shared lockout budget until the login hides its
+        # own password box. Staff sign-in is owned by the shop server (see
+        # network/cluster_server._login), which throttles per terminal.
+        # The one-time temp-password check above stays reachable for all.
+        try:
+            from network import cluster_client as _cc
+            _is_term = _cc.is_terminal()
+        except Exception:
+            _is_term = False
+        if _is_term:
+            return {"status": "not_terminal", "attempts": self._login_attempts,
+                    "message": "This is a staff terminal — sign-in is checked "
+                               "by the main PC. Wait a moment and try again."}
         auth = self.db.authenticate_user_by_password(password)
         if auth["authenticated"]:
             role = auth["role"]; username = auth.get("username", "Admin")
@@ -4150,6 +4345,233 @@ class AurumAPI:
             ERR(f"[HM] find: {e}")
             return {'status': 'error', 'message': str(e)}
 
+    def _hm_portal_base(self):
+        """Where portal links point.
+
+        The owner sets their own address (their domain once the shop PC is
+        reachable through it); until then it stays localhost for testing,
+        so no PC name or LAN address ever appears inside a link.
+        """
+        try:
+            base = str(self.db.get_config('hm_portal_base', '')
+                       or '').strip().rstrip('/')
+        except Exception:
+            base = ''
+        if not base:
+            try:
+                port = int(os.environ.get('AURUM_CLUSTER_PORT') or 58903)
+            except ValueError:
+                port = 58903
+            base = f'http://localhost:{port}'
+        return base
+
+    def hm_portal_base_get(self):
+        try:
+            return {'status': 'success', 'base': self._hm_portal_base(),
+                    'custom': bool(str(self.db.get_config(
+                        'hm_portal_base', '') or '').strip())}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_portal_base_save(self, base=''):
+        try:
+            base = str(base or '').strip().rstrip('/')
+            if base and not base.startswith(('http://', 'https://')):
+                return {'status': 'error',
+                        'message': 'Start the address with http:// or https://.'}
+            self.db.set_config('hm_portal_base', base)
+            return {'status': 'success', 'base': self._hm_portal_base()}
+        except Exception as e:
+            ERR(f"[HM] portal base: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_share_url(self, lot_no=''):
+        """A web address for the assaying centre.
+
+        Built on the shop's portal address, never on a PC name or LAN
+        address. The centre opens it in any browser: one lot with every
+        piece, or the whole Kanban board when no lot is named.
+        """
+        try:
+            base = self._hm_portal_base()
+        except Exception:
+            base = 'http://localhost:58903'
+        board = base + '/hm/board'
+        lot = str(lot_no or '').strip()
+        url = board + ('#lot=' + lot if lot else '')
+        return {'status': 'success', 'url': url, 'board': board}
+
+    # ── centre portal: directory, detail, emailed links ──────────────
+    def hm_centre_overview(self):
+        """Every assaying centre with live lot counts, for the table."""
+        try:
+            from network import hm_share as _hms
+            return _hms.centres_overview(self.db)
+        except Exception as e:
+            ERR(f"[HM] centres overview: {e}")
+            return {'status': 'error', 'message': str(e), 'centres': []}
+
+    def hm_centre_detail(self, centre_id):
+        """One centre with its lots split for the tabs."""
+        try:
+            from network import hm_share as _hms
+            return _hms.centre_detail(self.db, centre_id)
+        except Exception as e:
+            ERR(f"[HM] centre detail: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_save_centre_full(self, data):
+        """Save a centre including its email, in one call."""
+        try:
+            from network import hm_share as _hms
+            d = dict(data or {})
+            cid = self.db.hm_save_centre(d)
+            if not cid:
+                return {'status': 'error',
+                        'message': 'Could not save.'}
+            email = str(d.get('email') or '').strip()
+            if email:
+                _hms.ensure_stage_column(self.db)
+                try:
+                    with self.db._get_connection() as conn:
+                        conn.execute(
+                            "UPDATE hallmark_centres SET email=? WHERE id=?",
+                            (email, cid))
+                        conn.commit()
+                except Exception:
+                    pass
+            return {'status': 'success', 'id': cid}
+        except Exception as e:
+            ERR(f"[HM] save centre full: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_email_settings_get(self):
+        """The Gmail the shop sends portal links from (app password)."""
+        try:
+            return {'status': 'success',
+                    'sender': self.db.get_config('hm_sender_email', '') or '',
+                    'has_password': bool(
+                        self.db.get_config('hm_sender_apppw', ''))}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_email_settings_save(self, sender='', app_password=''):
+        try:
+            sender = str(sender or '').strip()
+            if sender and '@' not in sender:
+                return {'status': 'error',
+                        'message': 'That sender email looks wrong.'}
+            self.db.set_config('hm_sender_email', sender)
+            if str(app_password or '').strip():
+                self.db.set_config('hm_sender_apppw',
+                                   str(app_password).strip())
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[HM] email settings: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_centre_pin(self, centre_id, pin=''):
+        """Set (or clear, with a blank) a centre's portal login PIN."""
+        try:
+            from network import hm_share as _hms
+            return _hms.set_centre_pin(self.db, centre_id, pin)
+        except Exception as e:
+            ERR(f"[HM] centre pin: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_portal_link(self, centre_id):
+        """Mint the centre's portal link without emailing it."""
+        try:
+            from network import hm_share as _hms
+            with self.db._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT email FROM hallmark_centres WHERE id=?",
+                    (int(centre_id or 0),)).fetchone()
+            issued = _hms.portal_issue(
+                self.db, centre_id, row['email'] if row else '')
+            if issued.get('status') != 'success':
+                # No email saved yet: the page asks for one first.
+                return issued
+            url = self._hm_portal_base() + f"/hm/c/{issued['token']}"
+            return {'status': 'success', 'url': url,
+                    'email': issued['email'],
+                    'centre': issued.get('centre', '')}
+        except Exception as e:
+            ERR(f"[HM] portal link: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_portal_send(self, centre_id, email=''):
+        """Mint the centre's portal link and email it, in one click.
+
+        The email goes out over Gmail with the shop's own sender address
+        and app password (saved once on the centre page). Returns the link
+        too, so the owner can paste it into WhatsApp instead.
+        """
+        try:
+            from network import hm_share as _hms
+            issued = _hms.portal_issue(self.db, centre_id, email)
+            if issued.get('status') != 'success':
+                return issued
+            url = self._hm_portal_base() + f"/hm/c/{issued['token']}"
+            sent = self._hm_send_portal_email(
+                issued['email'], issued.get('centre', ''), url)
+            out = {'status': 'success' if sent.get('sent') else 'error',
+                   'url': url, 'email': issued['email'],
+                   'centre': issued.get('centre', '')}
+            if not sent.get('sent'):
+                out['message'] = sent.get('message',
+                                          'Link made, email did not go.')
+            return out
+        except Exception as e:
+            ERR(f"[HM] portal send: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def _hm_send_portal_email(self, to_addr, centre_name, url):
+        """Send one portal link. Returns {'sent': bool, 'message': str}."""
+        try:
+            sender = str(self.db.get_config('hm_sender_email', '')
+                         or '').strip()
+            app_pw = str(self.db.get_config('hm_sender_apppw', '')
+                         or '').strip().replace(' ', '')
+            if '@' not in sender or not app_pw:
+                return {'sent': False,
+                        'message': 'Save the sender Gmail and app password '
+                                   'first (email section below).'}
+            shop = self.db.get_config('business_name', '') or 'AurumOS shop'
+            subject = f'{shop} hallmark portal'
+            text = (f'Hello {centre_name or "team"},\n\n'
+                    f'{shop} shares its hallmark lots with you here:\n{url}\n\n'
+                    f'Open it in any browser to see each lot and its pieces, '
+                    f'mark pieces pass or fail, and move lots across the '
+                    f'board. The link is yours alone; ask the shop for a new '
+                    f'one if you lose it.\n')
+            html = (f'<p>Hello {centre_name or "team"},</p>'
+                    f'<p>{shop} shares its hallmark lots with you here:<br>'
+                    f'<a href="{url}">{url}</a></p>'
+                    f'<p>Open it in any browser to see each lot and its '
+                    f'pieces, mark pieces pass or fail, and move lots '
+                    f'across the board.</p>')
+            import smtplib
+            import ssl as _ssl
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            msg = MIMEMultipart('alternative')
+            msg['From'] = sender
+            msg['To'] = to_addr
+            msg['Subject'] = subject
+            msg.attach(MIMEText(text, 'plain'))
+            msg.attach(MIMEText(html, 'html'))
+            ctx = _ssl.create_default_context()
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx,
+                                  timeout=20) as server:
+                server.login(sender, app_pw)
+                server.sendmail(sender, to_addr, msg.as_string())
+            LOG(f"[HM] portal link emailed to {to_addr}")
+            return {'sent': True, 'message': 'Email sent.'}
+        except Exception as e:
+            ERR(f"[HM] portal email: {e}")
+            return {'sent': False, 'message': str(e)[:200]}
+
     def wa_wishes_today(self, within_days=0):
         """Today's birthdays and anniversaries, each with a message written.
 
@@ -4596,6 +5018,32 @@ class AurumAPI:
     def get_product_by_tag(self, tag_id):            return self.db.get_product_by_tag(tag_id)
     def get_uchak_price_by_code(self, it_code):       return self.db.get_uchak_price_by_code(it_code)
 
+    def get_uchak_item_details(self, it_code):
+        """Name + last rate for one Uchak code (uchak_stock_entry autocomplete)."""
+        try:
+            return self.db.get_uchak_item_details(it_code)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    # -- HELD BILLS (POS hold / resume) ------------------------------------
+    def get_held_bills(self):
+        try:
+            return self.db.held_list()
+        except Exception as e:
+            return {"status": "error", "message": str(e), "bills": []}
+
+    def hold_bill(self, bill):
+        try:
+            return self.db.held_save(bill if isinstance(bill, dict) else {})
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def delete_held_bill(self, vch_id):
+        try:
+            return self.db.held_delete(vch_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     def get_sync_status(self):
         """Whether this PC can currently see the rest of the shop."""
         return self.cluster('status')
@@ -4647,6 +5095,155 @@ class AurumAPI:
             if data: return {"status":"success","voucher":data.get('voucher'),"items":data.get('items',[])}
             return {"status":"empty"}
         except: return {"status":"error"}
+
+    # -- KARIGAR (job-work register, retail + wholesale) -------------------
+    # Screens: karigar.html, karigar_master.html, karigar_order.html,
+    # karigar_details.html. Signatures accept the exact positional args
+    # each screen sends (add/update take name,phone,specialty,address,
+    # ghat_norm,allowance) plus extra *args so a screen passing fewer or
+    # more values can never raise TypeError across the bridge.
+    def get_all_karigars(self):
+        try:
+            return self.db.karigar_all()
+        except Exception as e:
+            return []
+
+    def add_karigar(self, name, phone='', specialty='', address='',
+                    ghat_norm=0.5, allowance=1.0, *args):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.karigar_add(name, phone, specialty, address,
+                                       ghat_norm, allowance)
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def update_karigar(self, kid, name, phone='', specialty='', address='',
+                       ghat_norm=0.5, allowance=1.0, *args):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.karigar_update(kid, name, phone, specialty,
+                                          address, ghat_norm, allowance)
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def delete_karigar(self, kid):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.karigar_delete(kid)
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def get_karigar_orders(self, karigar_id=None):
+        try:
+            return self.db.karigar_orders(karigar_id)
+        except Exception as e:
+            return []
+
+    def create_karigar_order(self, karigar_id, order_no='', issue_date='',
+                             due_date='', given_fine_wt=0, given_touch=100,
+                             items=None):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.karigar_create_order(
+                karigar_id, order_no, issue_date, due_date,
+                given_fine_wt, given_touch, items)
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    def receive_karigar_order(self, order_id, received_items=None):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.karigar_receive_order(order_id, received_items)
+        except Exception as e:
+            return {"status":"error","message":str(e)}
+
+    # -- FINANCE (cash/bank + chart of accounts, wholesale Finance) ----
+    # Screens: cash_bank.html, accounting.html, chart_of_accounts.html.
+    # Reads ride the finance bundle; deletes stay owner-only (see
+    # core/permissions.py) because wiping heads is destructive.
+    def get_cash_bank_accounts(self):
+        try:
+            return self.db.finance_accounts(cash_bank_only=True)
+        except Exception as e:
+            return {"status": "error", "message": str(e), "accounts": []}
+
+    def get_chart_of_accounts(self):
+        try:
+            return self.db.finance_accounts()
+        except Exception as e:
+            return {"status": "error", "message": str(e), "accounts": []}
+
+    def save_account(self, data):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.finance_save_account(data if isinstance(data, dict) else {})
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def save_cash_bank_account(self, data):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            d = dict(data if isinstance(data, dict) else {})
+            if not d.get('kind'):
+                d['kind'] = 'CASH'
+            return self.db.finance_save_account(d)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def delete_account(self, code):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.finance_delete_account(code)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def delete_all_accounts(self):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.finance_delete_all()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_cash_position(self):
+        try:
+            return self.db.finance_cash_position()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_daybook(self, limit=500, day=None):
+        try:
+            return self.db.finance_daybook(limit, day)
+        except Exception as e:
+            return {"status": "error", "message": str(e), "entries": []}
+
+    def get_trial_balance(self):
+        try:
+            return self.db.finance_trial_balance()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_next_voucher_no(self, vch_type=''):
+        try:
+            return self.db.finance_next_voucher_no(vch_type)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def post_voucher(self, vch):
+        try:
+            try: self.bastion.notify_write()
+            except Exception: pass
+            return self.db.finance_post_voucher(vch if isinstance(vch, dict) else {})
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     # -- UCHAK INWARD ----------------------------------------------------------
     def get_next_uchak_inward_vch_id(self):         return self.db.get_last_uchak_inward_vch_id()
@@ -5026,6 +5623,13 @@ class AurumAPI:
     def fetch_history(self):
         try: return self.db.fetch_history()
         except: return []
+
+    def get_old_gold_register(self, limit=1000):
+        try:
+            return {"status": "success",
+                    "entries": self.db.get_old_gold_register(limit)}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "entries": []}
 
     def get_voucher_history_list(self, limit=1000):
         try:
@@ -5529,6 +6133,17 @@ class AurumAPI:
                     f"[{i}/{total}] OK {rel}"
                 )
 
+            # Migrations downloaded above apply immediately — they are plain
+            # SQL the database runs idempotently, so no restart is needed.
+            try:
+                mig_rels = [e.get('path', '') for e in all_files
+                            if e.get('_migration')]
+                if mig_rels:
+                    applied = self.db.apply_migrations(str(app_root))
+                    LOG(f"[UPDATE] migrations applied now: {applied}")
+            except Exception as _me:
+                LOG(f"[UPDATE] migration apply deferred to restart: {_me}")
+
             # Set new version — read from version_info passed by JS
             # NEVER use installed_version from DB (could be stale 1.1.0)
             push_progress(95, "Saving version...")
@@ -5579,17 +6194,25 @@ class AurumAPI:
             # ── File categorization ──────────────────────────────────────
             # UI files: _internal/ui/* → download directly (live reload)
             # Backend: core/*.py, database/*.py, network/*.py → stage, apply on restart
+            # Migrations: migrations/*.sql → download directly; the database
+            # applies each one exactly once at startup (see
+            # DBManager.apply_migrations), so schema fixes ride the same
+            # release that needs them instead of waiting for a rebuild.
             _UI_PREFIX = '_internal/ui/'
             _UI_EXTS = {'.html', '.js', '.css', '.png', '.jpg', '.svg', '.json',
                         '.woff', '.woff2', '.ttf', '.map'}
             _BACKEND_PREFIXES = ('core/', 'database/', 'network/')
             _BACKEND_EXTS = {'.py'}
+            _MIGRATION_PREFIX = 'migrations/'
+            _MIGRATION_EXTS = {'.sql'}
 
             def _categorize(rel):
-                """Return 'ui', 'backend', or None (skip)."""
+                """Return 'ui', 'backend', 'migration', or None (skip)."""
                 ext = os.path.splitext(rel)[1].lower()
                 if rel.startswith(_UI_PREFIX) and ext in _UI_EXTS:
                     return 'ui'
+                if rel.startswith(_MIGRATION_PREFIX) and ext in _MIGRATION_EXTS:
+                    return 'migration'
                 for pfx in _BACKEND_PREFIXES:
                     if rel.startswith(pfx) and ext in _BACKEND_EXTS:
                         return 'backend'
@@ -5618,6 +6241,8 @@ class AurumAPI:
                     LOG(f"[UPDATE]   [{tag}] {rel}  local={local_hash[:12] or 'MISSING'}  remote={remote_hash[:12]}")
                     if cat == 'ui':
                         ui_files.append(entry_data)
+                    elif cat == 'migration':
+                        ui_files.append(dict(entry_data, _migration=True))
                     else:
                         backend_files.append(entry_data)
                 else:
@@ -5693,6 +6318,8 @@ class AurumAPI:
                 ext = os.path.splitext(rel)[1].lower()
                 if rel.startswith('_internal/ui/') and ext in {'.html', '.js', '.css', '.png', '.jpg', '.svg', '.json', '.woff', '.woff2', '.ttf', '.map'}:
                     kind = 'ui'
+                elif rel.startswith('migrations/') and ext == '.sql':
+                    kind = 'migration'
                 elif (rel.startswith('core/') or rel.startswith('database/') or rel.startswith('network/')) and ext == '.py':
                     kind = 'backend'
                 else:
@@ -5719,6 +6346,12 @@ class AurumAPI:
                         ui_count += 1
                 except Exception as e:
                     LOG(f"[AUTO-UPDATE] write failed {rel}: {e}")
+            try:
+                applied = self.db.apply_migrations(str(app_root))
+                if applied:
+                    LOG(f"[AUTO-UPDATE] migrations applied now: {applied}")
+            except Exception as _me:
+                LOG(f"[AUTO-UPDATE] migration apply deferred: {_me}")
             new_ver = str(info.get('version', '') or '').strip()
             import re as _re
             if _re.match(r'^\d+\.\d+\.\d+$', new_ver):
@@ -6495,6 +7128,14 @@ class AurumAPI:
             return {'status':'error','message':str(e)}
 
     def get_local_ip(self):
+        # One implementation, in network/lan_scan: dial-out fast path with
+        # adapter-enumeration fallback, so an offline PC reports its real
+        # LAN address instead of 127.0.0.1.
+        try:
+            from network.lan_scan import local_ip as _lan_ip
+            return _lan_ip()
+        except Exception:
+            pass
         import socket as _s
         try:
             sock = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
@@ -6504,6 +7145,51 @@ class AurumAPI:
             return ip
         except Exception:
             return '127.0.0.1'
+
+    def fetch_live_network_nodes(self):
+        """Shop servers answering on this LAN right now (setup satellite mode).
+
+        Returns {status:'success', nodes:[{id, business, version, status}]}
+        as setup.html:639 reads it — the first 'pending' node pre-fills the
+        server IP field. Scan runs off-thread-safe with a hard timeout so a
+        big or firewalled network cannot hang the setup screen.
+        """
+        try:
+            import threading
+            from network import lan_scan
+            try:
+                port = 58903
+                try:
+                    cfg = self.get_network_config()
+                    if isinstance(cfg, dict) and cfg.get('server_port'):
+                        port = int(cfg.get('server_port'))
+                except Exception:
+                    pass
+            except Exception:
+                port = 58903
+            result = {}
+            def _run():
+                try:
+                    result.update(lan_scan.find_servers(port=port) or {})
+                except Exception as e:
+                    result.update({'status': 'error', 'message': str(e)})
+            t = threading.Thread(target=_run, daemon=True)
+            t.start()
+            t.join(timeout=25)
+            if not result:
+                return {"status": "error", "message": "Scan timed out.", "nodes": []}
+            if result.get('status') != 'success':
+                return {"status": "error",
+                        "message": result.get('message') or 'Scan failed.',
+                        "nodes": []}
+            nodes = [{"id": s.get('ip'), "business": s.get('business', ''),
+                      "version": s.get('version', ''), "status": "pending"}
+                     for s in (result.get('servers') or []) if s.get('ip')]
+            return {"status": "success", "nodes": nodes,
+                    "network": result.get('network', ''),
+                    "this_pc": result.get('this_pc', '')}
+        except Exception as e:
+            return {"status": "error", "message": str(e), "nodes": []}
 
     def get_printer_status(self):
         try:

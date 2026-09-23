@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hallmark Lots — Centre Board</title>
+<style>
+:root{
+    --bg:#f1f5f9;--card:#ffffff;--ink:#0f172a;--mut:#64748b;--line:#e2e8f0;
+    --blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#d97706;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);
+     font-family:"DM Sans",system-ui,-apple-system,sans-serif;
+     min-height:100vh;display:flex;flex-direction:column;}
+header{background:var(--ink);color:#fff;padding:14px 20px;
+       display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+header .shop{font-size:0.72rem;opacity:0.65;}
+header h1{font-size:1.05rem;font-weight:800;letter-spacing:-0.3px;}
+header .sp{flex:1;}
+.hbtn{border:1px solid rgba(255,255,255,0.25);background:transparent;color:#fff;
+      border-radius:9px;padding:8px 14px;font-size:0.75rem;font-weight:700;
+      cursor:pointer;font-family:inherit;}
+.hbtn:hover{background:rgba(255,255,255,0.12);}
+#board{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+       gap:14px;padding:18px;align-items:start;}
+@media (max-width:1100px){#board{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:640px){#board{grid-template-columns:minmax(0,1fr);}}
+.col{background:rgba(255,255,255,0.55);border:1px solid var(--line);
+     border-radius:14px;padding:12px;min-height:220px;transition:all .15s;}
+.col.over{background:#dbeafe;border-color:var(--blue);}
+.col-h{display:flex;align-items:center;gap:8px;padding:2px 4px 10px;}
+.col-dot{width:10px;height:10px;border-radius:50%;}
+.col-h b{font-size:0.82rem;}
+.col-h span{font-size:0.68rem;color:var(--mut);background:#fff;border:1px solid var(--line);
+            border-radius:99px;padding:1px 9px;font-weight:700;}
+.lot{background:var(--card);border:1px solid var(--line);border-radius:12px;
+     padding:13px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(15,23,42,0.08);
+     cursor:grab;transition:transform .12s, box-shadow .12s;}
+.lot:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,0.12);}
+.lot.drag{opacity:0.45;}
+.lot-no{font-weight:800;font-size:0.85rem;}
+.lot-sub{font-size:0.7rem;color:var(--mut);margin-top:2px;}
+.lot-meta{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center;}
+.chip{font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:99px;}
+.chip.ok{background:rgba(22,163,74,0.12);color:var(--green);}
+.chip.wait{background:rgba(217,119,6,0.14);color:var(--amber);}
+.chip.late{background:rgba(220,38,38,0.12);color:var(--red);}
+.chip.info{background:rgba(37,99,235,0.1);color:var(--blue);}
+.lot-btns{display:flex;gap:6px;margin-top:10px;}
+.mbtn{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;
+      padding:7px 4px;font-size:0.68rem;font-weight:700;cursor:pointer;
+      color:var(--ink);font-family:inherit;}
+.mbtn:hover{background:#f8fafc;border-color:#94a3b8;}
+.mbtn.go{background:var(--blue);border-color:var(--blue);color:#fff;}
+.mbtn.go:hover{background:#1d4ed8;}
+/* popup */
+.ov{position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:16px;}
+.ov[hidden]{display:none;}
+.ov-card{background:#fff;border-radius:16px;width:640px;max-width:100%;
+         max-height:90vh;display:flex;flex-direction:column;overflow:hidden;
+         box-shadow:0 24px 60px rgba(15,23,42,0.3);}
+.ov-h{padding:16px 20px;border-bottom:1px solid var(--line);
+      display:flex;align-items:flex-start;gap:10px;}
+.ov-h .t{font-size:1rem;font-weight:800;}
+.ov-h .s{font-size:0.7rem;color:var(--mut);margin-top:2px;}
+.ov-b{padding:8px 20px 16px;overflow-y:auto;}
+.prog{height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin:12px 0 4px;}
+.prog i{display:block;height:100%;background:var(--green);border-radius:99px;
+        transition:width .25s;}
+.prog-t{font-size:0.68rem;color:var(--mut);margin-bottom:6px;}
+.pc{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 0;
+    border-bottom:1px solid #f1f5f9;align-items:center;}
+.pc:last-child{border-bottom:none;}
+.pc-name{font-weight:700;font-size:0.82rem;}
+.pc-sub{font-size:0.68rem;color:var(--mut);margin-top:2px;}
+.pc-huid{grid-column:1/-1;display:flex;gap:8px;align-items:center;}
+.pc-huid input{flex:1;height:36px;padding:0 12px;border:1px solid var(--line);
+    border-radius:9px;font-family:ui-monospace,monospace;font-size:0.85rem;
+    letter-spacing:2px;text-transform:uppercase;outline:none;}
+.pc-huid input:focus{border-color:var(--blue);}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+.seg button{border:none;background:#fff;padding:8px 13px;font-size:0.7rem;
+    font-weight:800;cursor:pointer;color:var(--mut);font-family:inherit;}
+.seg button.on-p{background:var(--green);color:#fff;}
+.seg button.on-f{background:var(--red);color:#fff;}
+.seg button.on-n{background:#e2e8f0;color:var(--ink);}
+.ov-f{padding:13px 20px;border-top:1px solid var(--line);display:flex;
+      gap:8px;align-items:center;background:#f8fafc;}
+.ov-f .sp{flex:1;}
+.gate{font-size:0.7rem;color:var(--amber);font-weight:600;}
+/* toast */
+#toast{position:fixed;top:24px;right:24px;z-index:200;display:flex;
+       align-items:center;gap:12px;background:#fff;color:var(--ink);
+       border:1px solid var(--line);border-left:5px solid var(--blue);
+       border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,0.2);
+       font-size:0.95rem;font-weight:600;padding:16px 22px 16px 16px;
+       max-width:min(440px,92vw);opacity:0;transform:translateX(40px);
+       transition:all .3s;pointer-events:none;}
+#toast.show{opacity:1;transform:none;}
+#toast.err{border-left-color:var(--red);}
+#toast.ok{border-left-color:var(--green);}
+#toast::before{content:"i";width:32px;height:32px;flex-shrink:0;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-weight:800;background:rgba(37,99,235,0.12);color:var(--blue);}
+#toast.err::before{content:"!";background:rgba(220,38,38,0.12);color:var(--red);}
+#toast.ok::before{content:"\2713";background:rgba(22,163,74,0.12);color:var(--green);}
+.empty{padding:26px 10px;text-align:center;color:var(--mut);font-size:0.75rem;}
+</style>
+</head>
+<body>
+<header>
+    <div>
+        <div class="shop" id="shop">Connecting…</div>
+        <h1>Hallmark lots</h1>
+    </div>
+    <div class="sp"></div>
+    <button class="hbtn" id="logout-btn" style="display:none;" onclick="logout()">Log out</button>
+    <button class="hbtn" onclick="load(true)">Refresh</button>
+</header>
+<div id="board"></div>
+
+<div class="ov" id="login-ov" hidden>
+    <div class="ov-card" style="width:380px;">
+        <div class="ov-h">
+            <div style="flex:1">
+                <div class="t" id="login-title">Centre login</div>
+                <div class="s" id="login-sub">Type the login the shop gave you.</div>
+            </div>
+        </div>
+        <div class="ov-b">
+            <div class="pc-huid" style="margin-bottom:10px;">
+                <input id="login-pin" type="password" inputmode="numeric"
+                       maxlength="32" placeholder="Login PIN"
+                       style="letter-spacing:4px;text-align:center;"
+                       onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <div class="gate" id="login-err" style="color:#dc2626;"></div>
+        </div>
+        <div class="ov-f">
+            <div class="sp"></div>
+            <button class="mbtn go" style="flex:none;padding:9px 22px;" onclick="doLogin()">Log in</button>
+        </div>
+    </div>
+</div>
+
+<div class="ov" id="ov" hidden>
+    <div class="ov-card">
+        <div class="ov-h">
+            <div style="flex:1">
+                <div class="t" id="m-title">Lot</div>
+                <div class="s" id="m-sub"></div>
+            </div>
+            <button class="mbtn" style="flex:none;padding:8px 14px;" onclick="closeModal()">Close</button>
+        </div>
+        <div class="ov-b">
+            <div class="prog"><i id="m-bar" style="width:0%"></i></div>
+            <div class="prog-t" id="m-prog"></div>
+            <div id="m-rows"></div>
+        </div>
+        <div class="ov-f">
+            <div class="gate" id="m-gate"></div>
+            <div class="sp"></div>
+            <button class="mbtn go" style="flex:none;padding:9px 18px;" onclick="markAll(true)">All pass</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+var DATA = null, MODAL = null, _tt = null;
+// A portal link looks like /hm/c/<token>: the same board, but scoped to
+// one centre's lots. Every request then carries the token instead.
+var TOKEN = (function(){
+    var m = (location.pathname || '').match(/\/hm\/c\/([A-Za-z0-9_\-]+)/);
+    return m ? m[1] : '';
+})();
+// PORTAL is the PIN-login root flow: no token in the address, the login
+// session alone names the centre. The server resolves it the same way.
+var PORTAL = false;
+function lotsUrl(){
+    if (TOKEN) return '/hm/api/clots?token=' + encodeURIComponent(TOKEN);
+    if (PORTAL) return '/hm/api/clots';
+    return '/hm/api/lots';
+}
+function lotUrl(no){
+    if (TOKEN) return '/hm/api/clot?token=' + encodeURIComponent(TOKEN) + '&lot_no=' + encodeURIComponent(no);
+    if (PORTAL) return '/hm/api/clot?lot_no=' + encodeURIComponent(no);
+    return '/hm/api/lot?lot_no=' + encodeURIComponent(no);
+}
+
+function esc(s){
+    return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+function toast(msg, kind){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show ' + (kind || '');
+    clearTimeout(_tt);
+    _tt = setTimeout(function(){ t.className = ''; }, 3600);
+}
+function api(path, body){
+    var opt = body ? {method:'POST', headers:{'Content-Type':'application/json'},
+                             body:JSON.stringify(body)}
+                   : {};
+    return fetch(path, opt).then(function(r){ return r.json(); });
+}
+function grams(n){ return (parseFloat(n) || 0).toFixed(3) + 'g'; }
+
+// ── portal login: the link opens the login, the login opens the lots ──
+function loadPortal(manual){
+    api('/hm/api/csession?token=' + encodeURIComponent(TOKEN)).then(function(s){
+        if (s && s.logged_in) {
+            document.getElementById('login-ov').hidden = true;
+            document.getElementById('logout-btn').style.display = '';
+            loadLots(manual);
+            return;
+        }
+        document.getElementById('logout-btn').style.display = 'none';
+        document.getElementById('login-title').textContent =
+            (s && s.centre ? s.centre + ' login' : 'Centre login');
+        document.getElementById('login-sub').textContent =
+            (s && s.message) || 'Type the login the shop gave you.';
+        document.getElementById('login-err').textContent = '';
+        document.getElementById('login-ov').hidden = false;
+        document.getElementById('board').innerHTML = '';
+        var pin = document.getElementById('login-pin');
+        if (pin) { pin.value = ''; setTimeout(function(){ pin.focus(); }, 100); }
+    }).catch(function(){
+        document.getElementById('shop').textContent = 'No connection';
+    });
+}
+function doLogin(){
+    var pin = document.getElementById('login-pin').value || '';
+    if (!pin) {
+        document.getElementById('login-err').textContent = 'Type your login first.';
+        return;
+    }
+    api('/hm/api/clogin', {token: TOKEN, pin: pin}).then(function(r){
+        if (!r || r.status !== 'success') {
+            document.getElementById('login-err').textContent =
+                (r && r.message) || 'Could not log in.';
+            return;
+        }
+        toast('Welcome' + (r.centre ? ', ' + r.centre : '') + '.', 'ok');
+        loadPortal();
+    }).catch(function(){ toast('Could not log in.', 'err'); });
+}
+function logout(){
+    api('/hm/api/clogout', {}).then(function(){ loadPortal(); })
+        .catch(function(){ loadPortal(); });
+}
+function needLogin(){
+    // Any answered call that stops recognising us drops back to login.
+    if (TOKEN) { loadPortal(); return; }
+    if (PORTAL) { window.location = '/'; }
+}
+
+function load(manual){
+    if (TOKEN) return loadPortal(manual);
+    // PIN-login root flow: no token in the address, but a login session
+    // may already name the centre. Then the board is theirs alone.
+    api('/hm/api/csession').then(function(s){
+        if (s && s.logged_in) {
+            PORTAL = true;
+            document.getElementById('logout-btn').style.display = '';
+            loadLots(manual);
+            return;
+        }
+        PORTAL = false;
+        loadLots(manual);
+    }).catch(function(){ loadLots(manual); });
+}
+
+function loadLots(manual){
+    api(lotsUrl()).then(function(d){
+        if (!d || d.status !== 'success' || d.logged_in === false) {
+            if (kicked(d)) { needLogin(); return; }
+            document.getElementById('shop').textContent = 'No connection';
+            toast((d && d.message) || 'Could not reach the shop computer.', 'err');
+            return;
+        }
+        DATA = d;
+        document.getElementById('shop').textContent =
+            (d.shop ? d.shop + (d.centre ? ' · ' + d.centre : '') : 'Hallmark lots');
+        render();
+        var deep = (location.hash || '').replace('#lot=', '');
+        if (deep && !MODAL) openLot(deep, true);
+    }).catch(function(){
+        document.getElementById('shop').textContent = 'No connection';
+        if (manual) toast('Could not reach the shop computer.', 'err');
+    });
+}
+
+function findLot(no){
+    if (!DATA) return null;
+    for (var i = 0; i < DATA.stages.length; i++) {
+        var lots = DATA.stages[i].lots;
+        for (var j = 0; j < lots.length; j++) {
+            if (lots[j].lot_no === no) return lots[j];
+        }
+    }
+    return null;
+}
+
+function lateDays(lot){
+    if (!lot.expected_date) return 0;
+    var ms = Date.now() - new Date(lot.expected_date + 'T00:00:00').getTime();
+    return Math.floor(ms / 86400000);
+}
+
+function render(){
+    var host = document.getElementById('board');
+    host.innerHTML = DATA.stages.map(function(st, si){
+        var cards = st.lots.map(function(l){
+            var s = l.summary || {};
+            var late = lateDays(l);
+            var badge = late > 0
+                ? '<span class="chip late">' + late + 'd late</span>'
+                : '<span class="chip info">due ' + esc(l.expected_date || '—') + '</span>';
+            var mark = (s.pending || 0) > 0
+                ? '<span class="chip wait">' + (s.passed + s.failed) + '/' + s.pieces + ' marked</span>'
+                : '<span class="chip ok">all marked</span>';
+            return '<div class="lot" draggable="true" data-lot="' + esc(l.lot_no) + '">'
+                + '<div class="lot-no">' + esc(l.lot_no) + '</div>'
+                + '<div class="lot-sub">' + esc(l.centre_name || '') + ' · '
+                + s.pieces + ' pcs · ' + grams(s.gross_wt) + '</div>'
+                + '<div class="lot-meta">' + badge + mark + '</div>'
+                + '<div class="lot-btns">'
+                + (si > 0 ? '<button class="mbtn" data-mv="-1">‹ Back</button>' : '')
+                + '<button class="mbtn go" data-open="1">Open</button>'
+                + (si < 3 ? '<button class="mbtn" data-mv="1">Next ›</button>' : '')
+                + '</div></div>';
+        }).join('');
+        return '<div class="col" data-stage="' + st.id + '">'
+            + '<div class="col-h"><span class="col-dot" style="background:' + dot(st.id) + '"></span>'
+            + '<b>' + esc(st.label) + '</b><span>' + st.lots.length + '</span></div>'
+            + (cards || '<div class="empty">Drop lots here</div>') + '</div>';
+    }).join('');
+    bindCards();
+}
+
+function dot(id){
+    return id === 'sent' ? '#2563eb' : id === 'received' ? '#d97706'
+         : id === 'processing' ? '#7c3aed' : '#16a34a';
+}
+
+function stageIndex(id){
+    for (var i = 0; i < DATA.stages.length; i++) {
+        if (DATA.stages[i].id === id) return i;
+    }
+    return -1;
+}
+
+function moveLot(lotNo, dir){
+    var lot = findLot(lotNo);
+    if (!lot) return;
+    var si = stageIndex(lot.centre_stage);
+    var ni = si + dir;
+    if (ni < 0 || ni > 3) return;
+    dropTo(lotNo, DATA.stages[ni].id);
+}
+
+function kicked(r){
+    return !!r && (r.status === 'login_required' || r.status === 'denied' || r.status === 'no_pin' || r.logged_in === false);
+}
+function dropTo(lotNo, stage){
+    var portal = TOKEN || PORTAL;
+    var body = {lot_no: lotNo, stage: stage};
+    if (TOKEN) body.token = TOKEN;
+    api(portal ? '/hm/api/cstage' : '/hm/api/stage', body).then(function(r){
+        if (!r || (r.status !== 'success')) {
+            if (kicked(r)) { needLogin(); return; }
+            toast((r && r.message) || 'Could not move.', 'err');
+            load();
+            return;
+        }
+        toast(lotNo + ' → ' + stageName(stage), 'ok');
+        load();
+        if (MODAL === lotNo) openLot(lotNo, true);
+    }).catch(function(){ toast('Could not move.', 'err'); });
+}
+
+function stageName(id){
+    for (var i = 0; i < DATA.stages.length; i++) {
+        if (DATA.stages[i].id === id) return DATA.stages[i].label;
+    }
+    return id;
+}
+
+function bindCards(){
+    var cards = document.querySelectorAll('.lot');
+    for (var i = 0; i < cards.length; i++) {
+        (function(card){
+            var lotNo = card.getAttribute('data-lot');
+            card.addEventListener('dragstart', function(ev){
+                ev.dataTransfer.setData('text/plain', lotNo);
+                card.classList.add('drag');
+            });
+            card.addEventListener('dragend', function(){
+                card.classList.remove('drag');
+            });
+            var open = card.querySelector('[data-open]');
+            if (open) open.addEventListener('click', function(ev){
+                ev.stopPropagation();
+                openLot(lotNo);
+            });
+            card.addEventListener('click', function(){ openLot(lotNo); });
+            var mvs = card.querySelectorAll('[data-mv]');
+            for (var k = 0; k < mvs.length; k++) {
+                (function(btn){
+                    btn.addEventListener('click', function(ev){
+                        ev.stopPropagation();
+                        moveLot(lotNo, parseInt(btn.getAttribute('data-mv'), 10));
+                    });
+                })(mvs[k]);
+            }
+        })(cards[i]);
+    }
+    var cols = document.querySelectorAll('.col');
+    for (var c = 0; c < cols.length; c++) {
+        (function(col){
+            col.addEventListener('dragover', function(ev){
+                ev.preventDefault();
+                col.classList.add('over');
+            });
+            col.addEventListener('dragleave', function(){
+                col.classList.remove('over');
+            });
+            col.addEventListener('drop', function(ev){
+                ev.preventDefault();
+                col.classList.remove('over');
+                var lotNo = ev.dataTransfer.getData('text/plain');
+                if (lotNo) dropTo(lotNo, col.getAttribute('data-stage'));
+            });
+        })(cols[c]);
+    }
+}
+
+function openLot(lotNo, silent){
+    api(lotUrl(lotNo)).then(function(l){
+        if (!l || l.status !== 'success' || l.logged_in === false) {
+            if (kicked(l)) { needLogin(); return; }
+            if (!silent) toast((l && l.message) || 'Lot not found.', 'err');
+            return;
+        }
+        MODAL = l.lot_no;
+        document.getElementById('m-title').textContent = l.lot_no;
+        document.getElementById('m-sub').textContent =
+            (l.centre_name || '') + ' · sent ' + (l.sent_date || '—') +
+            ' · due ' + (l.expected_date || '—') + ' · ' + stageName(l.centre_stage);
+        paintRows(l);
+        document.getElementById('ov').hidden = false;
+        if (!silent && location.hash !== '#lot=' + l.lot_no) {
+            try { history.replaceState(null, '', '#lot=' + l.lot_no); } catch (e) {}
+        }
+    }).catch(function(){
+        if (!silent) toast('Could not open the lot.', 'err');
+    });
+}
+
+function paintRows(l){
+    var s = l.summary || {};
+    var done = (s.passed || 0) + (s.failed || 0);
+    var pct = s.pieces ? Math.round(done / s.pieces * 100) : 0;
+    document.getElementById('m-bar').style.width = pct + '%';
+    document.getElementById('m-prog').textContent =
+        done + ' of ' + s.pieces + ' pieces marked';
+    document.getElementById('m-gate').textContent =
+        (s.pending || 0) > 0
+        ? 'Mark every piece before this lot can go to Ready.'
+        : 'Every piece is marked — this lot can go to Ready.';
+    document.getElementById('m-rows').innerHTML = (l.items || []).map(function(it){
+        var r = (it.result || 'pending').toLowerCase();
+        return '<div class="pc" data-tag="' + esc(it.tag_id) + '">'
+            + '<div><div class="pc-name">' + esc(it.tag_id) + ' · '
+            + esc(it.it_name || '') + '</div>'
+            + '<div class="pc-sub">' + grams(it.gr_wt) + ' gross · '
+            + grams(it.nt_wt) + ' net · ' + esc(it.karat || '')
+            + (it.grade ? ' · ' + esc(it.grade) : '') + '</div></div>'
+            + '<div class="seg">'
+            + '<button data-r="pass" class="' + (r === 'pass' ? 'on-p' : '') + '">Pass</button>'
+            + '<button data-r="fail" class="' + (r === 'fail' ? 'on-f' : '') + '">Fail</button>'
+            + '<button data-r="pending" class="' + (r === 'pending' ? 'on-n' : '') + '">Clear</button>'
+            + '</div>'
+            + '<div class="pc-huid"><input maxlength="12" placeholder="HUID — 6 characters" value="'
+            + esc(it.huid || '') + '"></div>'
+            + '</div>';
+    }).join('');
+    bindRows(l.lot_no);
+}
+
+function bindRows(lotNo){
+    var rows = document.querySelectorAll('#m-rows .pc');
+    for (var i = 0; i < rows.length; i++) {
+        (function(row){
+            var tag = row.getAttribute('data-tag');
+            var input = row.querySelector('input');
+            var btns = row.querySelectorAll('.seg button');
+            for (var b = 0; b < btns.length; b++) {
+                (function(btn){
+                    btn.addEventListener('click', function(){
+                        savePiece(lotNo, tag, btn.getAttribute('data-r'), input.value);
+                    });
+                })(btns[b]);
+            }
+            input.addEventListener('change', function(){
+                var cur = row.querySelector('.seg button.on-p,.seg button.on-f');
+                savePiece(lotNo, tag, cur ? cur.getAttribute('data-r') : 'pending', input.value);
+            });
+        })(rows[i]);
+    }
+}
+
+function savePiece(lotNo, tag, result, huid){
+    var body = {tag_id: tag, result: result, huid: huid};
+    if (TOKEN) body.token = TOKEN;
+    else if (!(TOKEN || PORTAL)) body.lot_no = lotNo;
+    api((TOKEN || PORTAL) ? '/hm/api/cpiece' : '/hm/api/piece', body).then(function(r){
+        if (!r || r.status !== 'success') {
+            if (kicked(r)) { needLogin(); return; }
+            toast((r && r.message) || 'Could not save.', 'err');
+            return;
+        }
+        paintRows(r);
+        load();
+    }).catch(function(){ toast('Could not save.', 'err'); });
+}
+
+function markAll(){
+    if (!MODAL) return;
+    api(lotUrl(MODAL)).then(function(l){
+        if (!l || l.status !== 'success') return;
+        var todo = (l.items || []).filter(function(it){
+            return (it.result || 'pending').toLowerCase() === 'pending';
+        });
+        if (!todo.length) { toast('Everything is already marked.', 'ok'); return; }
+        var chain = Promise.resolve();
+        todo.forEach(function(it){
+            chain = chain.then(function(){
+                var body = {tag_id: it.tag_id, result: 'pass', huid: it.huid || ''};
+                if (TOKEN) body.token = TOKEN;
+                else if (!(TOKEN || PORTAL)) body.lot_no = MODAL;
+                return api((TOKEN || PORTAL) ? '/hm/api/cpiece' : '/hm/api/piece', body);
+            });
+        });
+        chain.then(function(){
+            toast('All marked pass.', 'ok');
+            openLot(MODAL, true);
+            load();
+        }).catch(function(){ toast('Stopped partway — try again.', 'err'); });
+    });
+}
+
+function closeModal(){
+    MODAL = null;
+    document.getElementById('ov').hidden = true;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    load();
+}
+
+document.getElementById('ov').addEventListener('click', function(ev){
+    if (ev.target === this) closeModal();
+});
+setInterval(function(){
+    if (!document.hidden && !MODAL) load();
+}, 20000);
+load();
+</script>
+</body>
+</html>

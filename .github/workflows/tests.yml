@@ -1,0 +1,79 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Syntax gate (all sources must parse)
+        run: |
+          python - <<'EOF'
+          import ast, pathlib, sys
+          bad = []
+          for p in list(pathlib.Path('.').rglob('*.py')):
+              skip = ('.venv', 'venv', '.git', '__pycache__', 'dist', 'build', '_internal')
+              if any(s in p.parts for s in skip):
+                  continue
+              try:
+                  ast.parse(p.read_text(encoding='utf-8'))
+              except Exception as e:
+                  bad.append(f'{p}: {e}')
+          if bad:
+              print('\n'.join(bad)); sys.exit(1)
+          print('syntax OK')
+          EOF
+
+      - name: UI scripts parse
+        run: python test_ui_syntax.py
+
+      - name: Permissions matrix
+        run: python test_permissions.py
+
+      - name: Plan tiers
+        run: python test_plan_tiers.py
+
+      - name: Karigar register
+        run: python test_karigar.py
+
+      - name: Subscription logic
+        run: python test_subscription_logic.py
+
+      - name: Network hardening
+        run: python test_network_hardening.py
+
+      - name: Finance desk
+        run: python test_finance.py
+
+      - name: Release planner
+        run: python test_release_plan.py
+
+      - name: Retail inventory
+        run: python test_retail_inventory.py
+
+      - name: CRM
+        run: python test_crm.py
+
+      - name: GST
+        run: python test_gst.py
+
+      - name: Number fields
+        run: python test_number_fields.py
+
+      - name: Hallmark
+        run: python test_hallmark.py
+
+      - name: Dead stock
+        run: python test_deadstock.py
+
+      - name: WhatsApp helpers
+        run: python test_whatsapp.py

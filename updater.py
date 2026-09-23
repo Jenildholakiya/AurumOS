@@ -41,7 +41,11 @@ VERSION_RE = re.compile(r'^\d+\.\d+\.\d+$')
 # hand so such a copy still accepts the next automatic release.
 FALLBACK_VERSION = "1.1.7"
 
-# Files that should never be auto-updated (protected)
+# Files that should never be auto-updated (protected).
+# database/ stays protected ON PURPOSE: it holds the shop's live data, and
+# an overwrite would wipe it. Schema fixes travel as versioned SQL under
+# migrations/ (see DBManager.apply_migrations) — data-safe by construction,
+# so that folder must stay downloadable and is deliberately NOT listed here.
 PROTECTED_PATHS = {
     'database', 'logs', 'config.json', 'exe_trusted_hash.txt',
     'AurumOS.exe', 'version.lock', 'build_version.txt',
