@@ -2858,6 +2858,8 @@ class DBManager:
                     'customer':       row.get('customer') or '',
                     'mobile':         row.get('mobile') or '',
                     'status':         row.get('status') or '',
+                    'payment_mode':   (str(row.get('payment_mode') or 'cash').strip().lower()
+                                       or 'cash'),
                     'fgl':            float(row.get('ledger_fine') or 0),
                     'f995':           float(row.get('fine_995') or 0),
                     'dhal':           float(row.get('fine_dhal') or 0),

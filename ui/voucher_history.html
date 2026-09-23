@@ -99,6 +99,15 @@ tbody tr:nth-child(even):hover{background:var(--c2);}
 .bt-credit{background:var(--amb);color:var(--am);border:1px solid var(--aml);}
 .bt-uchak{background:var(--blb);color:var(--bl);border:1px solid var(--bll);}
 .bt-other{background:rgba(176,169,156,.15);color:var(--mu);border:1px solid rgba(176,169,156,.3);}
+.pay-pill{font-size:.64rem;font-weight:800;padding:3px 10px;border-radius:20px;display:inline-block;text-align:center;text-transform:uppercase;letter-spacing:.5px;}
+.pay-cash{background:rgba(22,163,74,.1);color:var(--gr);border:1px solid var(--grl);}
+.pay-upi{background:rgba(37,99,235,.1);color:var(--g3);border:1px solid var(--g);}
+.pay-card{background:rgba(217,119,6,.1);color:var(--am);border:1px solid var(--aml);}
+.pay-other{background:rgba(176,169,156,.15);color:var(--mu);border:1px solid rgba(176,169,156,.3);}
+.mode-pills{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.mode-pill{height:30px;padding:0 14px;border-radius:20px;border:1px solid var(--c3);background:var(--w);color:var(--mu);font-size:.68rem;font-weight:800;cursor:pointer;font-family:var(--sans);text-transform:uppercase;letter-spacing:.5px;transition:all .13s;white-space:nowrap;}
+.mode-pill:hover{border-color:var(--g);color:var(--g3);}
+.mode-pill.active{background:var(--ink);border-color:var(--ink);color:#fff;}
 tfoot { margin-top: auto; position: sticky; bottom: 0; z-index: 2; }
 tfoot td{padding:11px 14px 20px;background:var(--c2);border-top:2px solid var(--g);border-right:1px solid var(--c3);font-family:var(--mono);font-weight:700;color:var(--ink2);font-size:.76rem;}
 tfoot td.lbl{text-align:right;color:var(--mu);text-transform:uppercase;letter-spacing:1px;font-size:.6rem;font-family:var(--sans);justify-content: flex-end;}
@@ -154,6 +163,12 @@ table.detail-tbl tr:last-child td{border-bottom:none;}
     <div class="vh-stat"><b id="st-net">0g</b><span>Net Fine</span></div>
     <div class="vh-stat"><b id="st-amt">0</b><span>Bill Amount</span></div>
     <input class="vh-search" id="vh-search" type="text" placeholder="Search vch no, tag, customer, touch..." oninput="PAGE=1;render()">
+    <div class="mode-pills" id="mode-pills">
+      <button class="mode-pill active" data-mode="all" onclick="setPayMode('all')">All</button>
+      <button class="mode-pill" data-mode="cash" onclick="setPayMode('cash')">Cash</button>
+      <button class="mode-pill" data-mode="upi" onclick="setPayMode('upi')">UPI</button>
+      <button class="mode-pill" data-mode="card" onclick="setPayMode('card')">Card</button>
+    </div>
   </div>
 
   <div class="vh-wrap" id="vh-wrap">
@@ -182,6 +197,7 @@ var COLS = [
   { key:'pcs',     label:'PCS',           type:'num',  w:70  },
   { key:'tag_ids', label:'Tag ID',        type:'text', w:180 },
   { key:'status',  label:'Bill Type',     type:'bill', w:120 },
+  { key:'payment_mode', label:'Pay',   type:'pay',  w:90 },
   { key:'vch_id',  label:'Vch No',        type:'text', w:150 },
   { key:'date',    label:'Vch Date',      type:'text', w:120 },
   { key:'gross_wt',label:'Total Gross Wt',type:'num',  w:130 },
@@ -192,6 +208,21 @@ var LS_KEY = 'vh_col_widths';
 var COL_W = loadWidths();
 
 var ALL = [];
+var PAYMODE = 'all';
+function payOf(v){
+  var m = String((v && v.payment_mode) || 'cash').trim().toLowerCase();
+  return (m === 'upi' || m === 'card') ? m : 'cash';
+}
+function payLabel(m){ return m === 'upi' ? 'UPI' : (m === 'card' ? 'Card' : 'Cash'); }
+function setPayMode(m){
+  PAYMODE = (m === 'upi' || m === 'card' || m === 'cash') ? m : 'all';
+  PAGE = 1;
+  var pills = document.querySelectorAll('#mode-pills .mode-pill');
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].classList.toggle('active', pills[i].getAttribute('data-mode') === PAYMODE);
+  }
+  render();
+}
 var RESIZING = false;
 var SUPPRESS_CLICK = false;
 var SORT = { key: null, dir: 1 };
@@ -365,6 +396,7 @@ function render() {
   if (!body) return;
 
   var rows = ALL.filter(function(v) {
+    if (PAYMODE !== 'all' && payOf(v) !== PAYMODE) return false;
     if (!q) return true;
     return (v.vch_id + ' ' + (v.tag_ids || []).join(' ') + ' ' + (v.customer || '') + ' ' +
             (v.touches || []).join(' ') + ' ' + (v.status || '')).toLowerCase().indexOf(q) >= 0;
@@ -407,6 +439,9 @@ function render() {
         html += '<td class="num ' + cellClass + '"' + wStyle + '>' + fmt(v[c.key], dec) + '</td>';
       } else if (c.type === 'bill') {
         html += '<td class="' + cellClass + '"' + wStyle + '><span class="bill-type ' + billClass(v.status) + '">' + (v.status || '—') + '</span></td>';
+      } else if (c.type === 'pay') {
+        var pm = payOf(v);
+        html += '<td class="' + cellClass + '"' + wStyle + '><span class="pay-pill pay-' + pm + '">' + payLabel(pm) + '</span></td>';
       } else if (c.key === 'touches') {
         html += '<td class="touch-list ' + cellClass + '"' + wStyle + '>' + (v.touches && v.touches.length ? v.touches.join(', ') : '—') + '</td>';
       } else if (c.key === 'tag_ids') {
@@ -555,6 +590,7 @@ function detailHTML(v) {
 function currentRows() {
   var q = ((document.getElementById('vh-search') || {}).value || '').toLowerCase().trim();
   var rows = ALL.filter(function(v) {
+    if (PAYMODE !== 'all' && payOf(v) !== PAYMODE) return false;
     if (!q) return true;
     return (v.vch_id + ' ' + (v.tag_ids || []).join(' ') + ' ' + (v.customer || '') + ' ' +
             (v.touches || []).join(' ') + ' ' + (v.status || '')).toLowerCase().indexOf(q) >= 0;
