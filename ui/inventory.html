@@ -122,6 +122,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .card-untagged-indicator::before{background:linear-gradient(90deg,var(--error),#ef4444);}
 .card-packets-indicator{border-left:4px solid #d97706;}
 .card-packets-indicator::before{background:linear-gradient(90deg,#d97706,#f59e0b);}
+.stats-row-2{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 
 /* ── INTEL GRID ── */
 .intel-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;}
@@ -340,32 +341,27 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
         </div>
     </div>
 
-    <!-- ── KPI CARDS ── -->
-    <div class="stats-row">
+    <!-- ── KPI CARDS: stock overview + hallmark status ── -->
+    <div class="stats-row stats-row-2">
         <div class="metric-card card-gold-indicator">
             <div><span class="metric-label">Total Net Weight</span>
             <div class="metric-value" id="total-net-wt">0.000<span>g</span></div></div>
-            <div class="metric-sub" id="net-wt-sub">In: 0.000g | Sold: 0.000g</div>
+            <div class="metric-sub" id="net-wt-sub">Tagged + Katti remaining in stock</div>
         </div>
         <div class="metric-card card-showroom-indicator">
             <div><span class="metric-label">Tagged Items</span>
             <div class="metric-value" id="total-pcs">0<span>PCS</span></div></div>
             <div class="metric-sub">Showroom pieces</div>
         </div>
-        <div class="metric-card card-uchak-indicator" id="tile-uchak">
-            <div><span class="metric-label">Uchak Pieces</span>
-            <div class="metric-value" id="total-uchak-pcs" style="color:#334155;">0<span>PCS</span></div></div>
-            <div class="metric-sub">Wholesale stock</div>
+        <div class="metric-card card-showroom-indicator">
+            <div><span class="metric-label">Hallmarked</span>
+            <div class="metric-value" id="hm-done">0<span>PCS</span></div></div>
+            <div class="metric-sub" id="hm-done-sub">0.000 g with HUID</div>
         </div>
-        <div class="metric-card card-untagged-indicator">
-            <div><span class="metric-label">Untagged Items</span>
-            <div class="metric-value" id="untagged-pcs" style="color:var(--error);">0<span>ITEM</span></div></div>
-            <div class="metric-sub">Pending barcode</div>
-        </div>
-        <div class="metric-card card-packets-indicator" id="tile-packets">
-            <div><span class="metric-label">Weight Packets</span>
-            <div class="metric-value" id="total-packets" style="color:#d97706;">0<span>PKT</span></div></div>
-            <div class="metric-sub">Bulk katti entries</div>
+        <div class="metric-card card-packets-indicator">
+            <div><span class="metric-label">Pending Hallmark</span>
+            <div class="metric-value" id="hm-pending" style="color:#d97706;">0<span>PCS</span></div></div>
+            <div class="metric-sub" id="hm-pending-sub">0.000 g awaiting HUID</div>
         </div>
     </div>
 
@@ -442,32 +438,11 @@ var LOW_STOCK_UCHAK_THRESHOLD=5;
 
 function h(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function loadClosingBalance() {
-    if (!window.pywebview || !window.pywebview.api) return;
-    // Net = Tagged pieces + Katti remaining stock (opening excluded — it is a fixed reference)
-    window.pywebview.api.get_inventory_stats().then(function(stats) {
-        if (!stats) return;
-        var net = parseFloat(stats.net || 0);
-        // Only update the sub-text, not the main metric (which is set by loadStockSummary to match closing balance)
-        var sub = document.getElementById('net-wt-sub');
-        if (sub) sub.innerText = 'Tagged + Katti remaining in stock (live: ' + net.toFixed(3) + 'g)';
-    }).catch(function() {});
-}
 function f3(v){ return parseFloat(v||0).toFixed(3); }
 
 // ── STOCK SUMMARY: Opening + Inward - Outward = Closing ──────
 function loadStockSummary(){
     if(!window.pywebview||!window.pywebview.api) return;
-    var api=window.pywebview.api;
-
-    // Total Net Weight card: use live inventory stats (tagged + weight stock)
-    api.get_inventory_stats().then(function(stats){
-        if(!stats) return;
-        var net=parseFloat(stats.net||0);
-        document.getElementById('total-net-wt').innerHTML=f3(net)+'<span>g</span>';
-        var sub=document.getElementById('net-wt-sub');
-        if(sub) sub.innerText='Live stock (tagged + weight)';
-    }).catch(function(){});
 
     // Stock Summary card: touch ledger Opening + In - Out
     window.pywebview.api.get_touch_ledger_details('ALL','weight','','')
@@ -543,22 +518,38 @@ function loadOpeningStock(){
 function loadDashboard(){
     if(!window.pywebview||!window.pywebview.api) return;
     var api=window.pywebview.api;
-    api.get_inventory_stats().then(function(stats){ updateMetricUI(stats); }).catch(function(){});
-    loadClosingBalance();
+    api.get_inventory_stats().then(function(stats){
+        if(!stats) return;
+        var net=parseFloat(stats.net||0);
+        var nw=document.getElementById('total-net-wt'); if(nw) nw.innerHTML=f3(net)+'<span>g</span>';
+        var ns=document.getElementById('net-wt-sub'); if(ns) ns.innerText='Tagged + Katti remaining in stock (live: '+f3(net)+'g)';
+        var tp=document.getElementById('total-pcs'); if(tp) tp.innerHTML=(stats.pcs||0)+'<span>PCS</span>';
+    }).catch(function(){});
     api.get_analytics_payload().then(function(p){ if(p) analyticsData=p; renderHeatmap(); renderCategoryChart(document.getElementById('dist-toggle').value); }).catch(function(){});
     api.get_velocity_products().then(function(d){ hotProductsRaw=d||[]; renderHotProducts(); }).catch(function(){});
-    api.get_stock_ledger().then(function(l){ rawInventoryItemsList=l||[]; renderStockTable(rawInventoryItemsList); }).catch(function(){});
+    api.get_stock_ledger().then(function(l){ rawInventoryItemsList=l||[]; renderStockTable(rawInventoryItemsList); updateHallmarkCards(rawInventoryItemsList); }).catch(function(){});
     runStagnancyScan();
     checkOutOfStock();
 }
 
-function updateMetricUI(stats){
-    if(!stats) return;
-    // Total-net-wt is now driven by stock summary (closing balance)
-    document.getElementById('total-pcs').innerHTML=(stats.pcs||0)+'<span>PCS</span>';
-    document.getElementById('total-packets').innerHTML=(stats.packets||0)+'<span>PKT</span>';
-    var up=document.getElementById('total-uchak-pcs'); if(up) up.innerHTML=(stats.uchak_pcs||0)+'<span>PCS</span>';
-    var ug=document.getElementById('untagged-pcs'); if(ug) ug.innerHTML=(stats.untagged_items||0)+'<span>ITEM</span>';
+// ── KPI: hallmark status from the live stock ledger ──
+// Same HUID rule as the rest of the app: present means not blank/'-'/None/N/A.
+function hasHuid(r){
+    var x=r ? r.huid : '';
+    if(x===null||x===undefined) return false;
+    x=String(x).trim();
+    return x!=='' && x!=='-' && x.toLowerCase()!=='none' && x.toUpperCase()!=='N/A';
+}
+function updateHallmarkCards(list){
+    var done=0, pend=0, doneW=0, pendW=0;
+    (list||[]).forEach(function(r){
+        var w=parseFloat(r.nt_wt||r.gr_wt||0);
+        if(hasHuid(r)){ done++; doneW+=w; } else { pend++; pendW+=w; }
+    });
+    var a=document.getElementById('hm-done'); if(a) a.innerHTML=done+'<span>PCS</span>';
+    var b=document.getElementById('hm-done-sub'); if(b) b.innerText=f3(doneW)+' g with HUID';
+    var c=document.getElementById('hm-pending'); if(c) c.innerHTML=pend+'<span>PCS</span>';
+    var d=document.getElementById('hm-pending-sub'); if(d) d.innerText=f3(pendW)+' g awaiting HUID';
 }
 
 function checkOutOfStock(){

@@ -72,13 +72,62 @@ def _no_window():
     return {}
 
 
+def _adapter_ip():
+    """This PC's own LAN address, without dialing out.
+
+    getaddrinfo on the hostname lists every IPv4 the PC holds. Link-local
+    (169.254.x) and loopback are skipped — neither reaches the shop — and
+    private ranges sort first, so a PC with several adapters reports the
+    shop one rather than a virtual machine's.
+    """
+    cands = []
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None,
+                                        socket.AF_INET):
+            ip = (info[4][0] if info[4] else '')
+            if not ip or ip.startswith('127.') or ip.startswith('169.254.'):
+                continue
+            if ip not in cands:
+                cands.append(ip)
+    except Exception:
+        pass
+
+    def _score(ip):
+        if ip.startswith('192.168.'):
+            return 0
+        if ip.startswith('10.'):
+            return 1
+        if ip.startswith('172.'):
+            try:
+                if 16 <= int(ip.split('.')[1]) <= 31:
+                    return 2
+            except Exception:
+                pass
+        return 3
+
+    cands.sort(key=_score)
+    return cands[0] if cands else ''
+
+
 def local_ip():
+    """This PC's LAN address, online or off.
+
+    The fast path asks the OS which interface it would use (no traffic is
+    sent). Offline that raises, and the old code then claimed 127.0.0.1 —
+    so scan()/find_servers() swept 127.0.0.0/24 and found nothing while the
+    shop LAN sat one adapter away. Now it falls back to enumerating the
+    PC's own adapters instead of lying.
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        sock.connect(('8.8.8.8', 80))
-        return sock.getsockname()[0]
-    except Exception:
-        return '127.0.0.1'
+        try:
+            sock.connect(('8.8.8.8', 80))
+            ip = sock.getsockname()[0]
+            if ip and not str(ip).startswith('127.'):
+                return ip
+        except Exception:
+            pass
+        return _adapter_ip() or '127.0.0.1'
     finally:
         try:
             sock.close()
@@ -317,5 +366,65 @@ def scan(db=None, wake=True, port=CLUSTER_PORT):
         'network': str(network),
         'this_pc': me,
         'devices': devices,
+        'took':    round(time.time() - started, 1),
+    }
+
+
+# How long to wait for one address when hunting servers. Short on purpose:
+# empty addresses refuse fast on a LAN; only firewalled hosts burn the full
+# budget, and 64 of them are asked at once.
+FIND_TIMEOUT = 0.5
+FIND_WORKERS = 64
+
+
+def find_servers(port=CLUSTER_PORT):
+    """Shop servers answering on this network right now.
+
+    Lighter than scan(): no ARP wake, no names, no PC probing — just "who
+    here runs AurumOS as a server". Built for a lost terminal: it dials a
+    dead address and its owner cannot be expected to type the right one, so
+    it asks the network instead and picks its shop from the answers.
+    """
+    import json
+    import urllib.request
+
+    started = time.time()
+    me = local_ip()
+    network = local_network(me)
+    if network is None:
+        return {'status': 'error',
+                'message': "Could not work out this PC's network."}
+    if network.num_addresses > MAX_HOSTS:
+        return {'status': 'error',
+                'message': 'This network is too large to search address by address.'}
+
+    targets = [str(host) for host in network.hosts() if str(host) != me]
+
+    def check(address):
+        try:
+            url = f'http://{address}:{int(port)}/aurum/hello'
+            with urllib.request.urlopen(url, timeout=FIND_TIMEOUT) as response:
+                data = json.loads(response.read().decode('utf-8') or '{}')
+            if data.get('aurumos'):
+                return {'ip':       address,
+                        'business': data.get('business', ''),
+                        'version':  data.get('version', '')}
+        except Exception:
+            pass
+        return None
+
+    found = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=FIND_WORKERS) as pool:
+        for result in pool.map(check, targets):
+            if result:
+                found.append(result)
+    found.sort(key=lambda s: s['ip'])
+
+    _log(f'{len(found)} server(s) on {network} in {time.time() - started:.1f}s')
+    return {
+        'status':  'success',
+        'network': str(network),
+        'this_pc': me,
+        'servers': found,
         'took':    round(time.time() - started, 1),
     }

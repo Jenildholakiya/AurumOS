@@ -146,6 +146,31 @@ CACHE_MAX_HOURS = 24            # cache expires after 24h
 # Server may return 'expired' or 'subscription_expired' for expired subscriptions
 EXPIRED_REASONS = ('expired', 'subscription_expired')
 
+# Rejections that end the licence (distinct from expiry: the shop must
+# re-activate, not just renew). Listed once so every path — poll, sync, SSE —
+# lands on the same status for the same word.
+REVOKED_REASONS = ('revoked', 'disabled', 'suspended', 'blocked',
+                   'terminated', 'cancelled')
+
+# The server asking us to wait, not a verdict — never change state on these.
+TRANSIENT_REASONS = ('server_error', 'timeout', 'error')
+
+
+def classify_reason(reason):
+    """One reading of a server word, shared by poll/sync/SSE.
+
+    Returns 'expired', 'revoked', or None. None means "no verdict" — keep
+    the cached state and try again later.
+    """
+    r = str(reason or '').strip().lower()
+    if r in EXPIRED_REASONS:
+        return 'expired'
+    if r in REVOKED_REASONS:
+        return 'revoked'
+    if r in TRANSIENT_REASONS:
+        return None
+    return 'revoked' if r else None
+
 
 class SubscriptionManager:
     """Manages subscription state, feature gating, and server sync."""
@@ -159,18 +184,13 @@ class SubscriptionManager:
             return _ssl._create_unverified_context()
 
     def _safe_urlopen(self, req, timeout=12):
-        import ssl as _ssl, urllib.error
+        # Verified TLS only. An earlier build retried without verification on
+        # any cert error, which made licence checks MITM-able; a cert failure
+        # is now raised so callers treat the server as unreachable and keep
+        # the cached state instead of trusting an unverified answer.
+        import ssl as _ssl
         ctx = self._ssl_context()
-        try:
-            return urllib.request.urlopen(req, timeout=timeout, context=ctx)
-        except urllib.error.URLError as e:
-            if isinstance(e.reason, (_ssl.SSLCertVerificationError, _ssl.SSLError, OSError)):
-                ctx2 = _ssl._create_unverified_context()
-                return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
-            raise
-        except (_ssl.SSLCertVerificationError, _ssl.SSLError):
-            ctx2 = _ssl._create_unverified_context()
-            return urllib.request.urlopen(req, timeout=timeout, context=ctx2)
+        return urllib.request.urlopen(req, timeout=timeout, context=ctx)
 
     def __init__(self):
         self._cache_path = os.path.join(_base_dir(), 'database', '.subscription_cache')
@@ -326,16 +346,18 @@ class SubscriptionManager:
         self._poll_stop.set()
 
     def _poll_loop(self):
-        """Poll /api/poll every 8 seconds for license changes."""
+        """Poll /api/poll every 8 seconds for license changes.
+
+        Every cycle polls, active or not: skipping while active meant a
+        revoke or a plan downgrade took up to 30 minutes (the sync loop) to
+        reach the shop. The poll is one small POST the server answers from
+        memory, so always asking is cheaper than being late.
+        """
         while not self._poll_stop.is_set():
             self._poll_stop.wait(8)
             if self._poll_stop.is_set():
                 break
             if self._poll_inflight:
-                continue
-            status = self._state.get('status', 'unknown')
-            valid = self._state.get('valid', False)
-            if status in ('active', 'grace') and valid:
                 continue
             self._poll_inflight = True
             try:
@@ -371,28 +393,38 @@ class SubscriptionManager:
             if data.get('updated_at'):
                 self._last_updated_at = data['updated_at']
 
-            # If poll says active — trust it, set state directly (server may still say expired)
+            # If poll says active — apply it, keeping what the poll did NOT say.
+            # An earlier build hardcoded plan='pro' here (demoting enterprise
+            # shops on every reactivation), blanked the business/owner names,
+            # and fabricated a full year of remaining days.
             poll_status = data.get('status', '')
             if poll_status == 'active':
                 _log(f'Poll: server says active — setting state directly')
-                plan = 'pro'
-                features = PLAN_FEATURES.get(plan, list(LITE_FEATURES))
+                cur = self._state
+                plan = (data.get('plan') or data.get('effective_plan')
+                        or cur.get('effective_plan') or cur.get('plan') or 'pro')
+                plan = str(plan).strip().lower() or 'pro'
+                features = data.get('features') or PLAN_FEATURES.get(plan, list(LITE_FEATURES))
+                if 'remaining_days' in data:
+                    remaining = data.get('remaining_days') or 0
+                else:
+                    remaining = (cur.get('subscription') or {}).get('remaining_days', 0) or 0
                 self._set_state({
                     'valid': True,
                     'status': 'active',
                     'effective_plan': plan,
                     'features': features,
-                    'business': '',
-                    'owner': '',
+                    'business': data.get('business') or cur.get('business', ''),
+                    'owner': data.get('owner') or cur.get('owner', ''),
                     'plan': plan,
                     'is_trial': False,
                     'trial_end_ms': None,
                     'subscription': {
                         'status': 'active',
-                        'expires_at': None,
-                        'remaining_days': SUBSCRIPTION_DAYS,
-                        'grace_remaining_days': 15,
-                        'renewal_amount': 0
+                        'expires_at': data.get('expires_at') or (cur.get('subscription') or {}).get('expires_at'),
+                        'remaining_days': remaining,
+                        'grace_remaining_days': data.get('grace_remaining_days', 0) or 0,
+                        'renewal_amount': data.get('renewal_amount', 0)
                     }
                 })
                 self._save_cache()
@@ -436,18 +468,23 @@ class SubscriptionManager:
                     self._last_updated_at = data['updated_at']
 
                 ok = data.get('ok', data.get('valid', False))
-                remaining = data.get('remaining_days', 0)
-                grace = data.get('grace_remaining_days', 0)
+                # Day counts decide active vs expired — but only when the
+                # server actually sent them. Some licence types carry no day
+                # counts at all; an earlier build read the missing keys as 0
+                # and then fabricated a full SUBSCRIPTION_DAYS year to cover
+                # the lie. Now: missing means "trust ok", explicit zeros mean
+                # expired (unless we just renewed and the server is lagging).
+                has_days = ('remaining_days' in data) or ('grace_remaining_days' in data)
+                remaining = data.get('remaining_days', 0) or 0
+                grace = data.get('grace_remaining_days', 0) or 0
 
-                if ok and remaining <= 0 and grace <= 0:
+                if ok and remaining <= 0 and grace <= 0 and has_days:
                     if time.time() < self._force_active_until:
-                        remaining = SUBSCRIPTION_DAYS
+                        remaining = ((self._state.get('subscription') or {}).get('remaining_days')
+                                     or SUBSCRIPTION_DAYS)
                         data['remaining_days'] = remaining
-                    else:
-                        # Server says valid but no remaining days — trust ok flag
-                        _log(f'Poll fetch: server ok=True but remaining=0 grace=0 — trusting ok flag')
-                        remaining = SUBSCRIPTION_DAYS
-                        data['remaining_days'] = remaining
+                    # else: genuinely out of days — _apply_server_response
+                    # will mark it expired below. No fabrication.
 
                 if ok:
                     self._apply_server_response(data)
@@ -456,19 +493,9 @@ class SubscriptionManager:
                     return
                 else:
                     reason = data.get('reason', data.get('status', 'unknown'))
-                    if reason in ('server_error', 'timeout', 'error'):
-                        _log(f'Poll fetch: transient error ({reason}) — keeping cached')
+                    if self._set_status_for_reason(reason):
                         return
-                    if reason in ('expired', 'subscription_expired', 'revoked') and time.time() < self._force_active_until:
-                        _log(f'Poll fetch: server says {reason} but in force-active grace — ignoring')
-                        return
-                    # Server genuinely rejected — set status accordingly
-                    if reason in EXPIRED_REASONS:
-                        self._set_status('expired')
-                        self._notify_js('expired', {'reason': 'expired'})
-                    else:
-                        self._set_status('revoked')
-                        self._notify_js('revoked', {'reason': reason})
+                    _log(f'Poll fetch: transient ({reason}) — keeping cached')
                     return
             except Exception:
                 continue
@@ -540,21 +567,19 @@ class SubscriptionManager:
                 # Normalize: /api/subscription/check uses 'ok', others use 'valid'
                 ok = data.get('ok', data.get('valid', False))
 
-                # Also check: if remaining_days=0 and grace=0, treat as rejected
-                # UNLESS we're in force-active grace period (after renewal)
-                remaining = data.get('remaining_days', 0)
-                grace = data.get('grace_remaining_days', 0)
-                if ok and remaining <= 0 and grace <= 0:
+                # Day counts decide active vs expired — but only when the
+                # server actually sent them (see _fetch_and_apply).
+                has_days = ('remaining_days' in data) or ('grace_remaining_days' in data)
+                remaining = data.get('remaining_days', 0) or 0
+                grace = data.get('grace_remaining_days', 0) or 0
+                if ok and remaining <= 0 and grace <= 0 and has_days:
                     if time.time() < self._force_active_until:
                         _log(f'Sync ({endpoint}): server says expired but in force-active grace — treating as ok')
-                        remaining = SUBSCRIPTION_DAYS
+                        remaining = ((self._state.get('subscription') or {}).get('remaining_days')
+                                     or SUBSCRIPTION_DAYS)
                         data['remaining_days'] = remaining
-                    else:
-                        # Server says valid but no remaining days — trust ok flag
-                        # Server may not provide remaining_days for some license types
-                        _log(f'Sync ({endpoint}): server ok=True but remaining=0 grace=0 — trusting ok flag')
-                        remaining = SUBSCRIPTION_DAYS
-                        data['remaining_days'] = remaining
+                    # else: genuinely out of days — _apply_server_response
+                    # will mark it expired below. No fabrication.
 
                 if ok:
                     _log(f'Sync ({endpoint}): ok plan={data.get("plan")} features={len(data.get("features", []))}')
@@ -571,19 +596,17 @@ class SubscriptionManager:
                     return data, 'server'
                 else:
                     reason = data.get('reason', data.get('status', 'unknown'))
-                    if reason in ('server_error', 'timeout', 'error'):
+                    verdict = classify_reason(reason)
+                    if verdict is None:
                         _log(f'Sync ({endpoint}): transient error ({reason}) — keeping cached state')
                         return None, 'failed'
-                    if reason in ('expired', 'subscription_expired', 'revoked') and time.time() < self._force_active_until:
+                    if (time.time() < self._force_active_until
+                            and verdict in ('expired', 'revoked')):
                         _log(f'Sync ({endpoint}): server says {reason} but in force-active grace — ignoring')
                         return None, 'failed'
                     _log(f'Sync ({endpoint}): rejected reason={reason}')
-                    if reason in EXPIRED_REASONS:
-                        self._set_status('expired')
-                        self._notify_js('expired', {'reason': 'expired'})
-                    else:
-                        self._set_status('revoked')
-                        self._notify_js('revoked', {'reason': reason})
+                    self._set_status(verdict)
+                    self._notify_js(verdict, {'reason': reason})
                     return data, 'server'
 
             except urllib.error.HTTPError as e:
@@ -687,8 +710,9 @@ class SubscriptionManager:
         ok=true: apply plan + features. Derive status from remaining_days/grace.
         If in force-active grace period (after renewal), ignore expired/revoked from server."""
         with self._lock:
-            remaining = data.get('remaining_days', 0)
-            grace = data.get('grace_remaining_days', 0)
+            has_days = ('remaining_days' in data) or ('grace_remaining_days' in data)
+            remaining = data.get('remaining_days', 0) or 0
+            grace = data.get('grace_remaining_days', 0) or 0
 
             # Derive status
             if grace > 0:
@@ -697,17 +721,28 @@ class SubscriptionManager:
             elif remaining > 0:
                 status = 'active'
                 valid = True
+            elif not has_days:
+                # The server tracks no day counts for this licence type.
+                # This method only runs on ok=true, so trust it as active —
+                # keeping the previously known remaining count rather than
+                # inventing one.
+                status = 'active'
+                valid = True
+                remaining = ((self._state.get('subscription') or {}).get('remaining_days')) or 0
             else:
                 status = 'expired'
                 valid = False
 
-            # Force-active grace: after renewal, ignore server's expired/revoked
+            # Force-active grace: just renewed, the server may lag a few
+            # minutes behind. Keep active on the previously known day count;
+            # only when nothing is known, assume a fresh renewal term.
             if time.time() < self._force_active_until and status in ('expired', 'revoked'):
                 _log(f'Force-active grace: ignoring server status={status}, keeping active')
                 status = 'active'
                 valid = True
                 if not remaining or remaining <= 0:
-                    remaining = SUBSCRIPTION_DAYS
+                    remaining = ((self._state.get('subscription') or {}).get('remaining_days')
+                                 or SUBSCRIPTION_DAYS)
 
             self._state['valid'] = valid
             self._state['status'] = status
@@ -776,6 +811,23 @@ class SubscriptionManager:
                 self._state['effective_plan'] = 'lite'
                 self._state['features'] = list(LITE_FEATURES)
         self._save_state_file()
+
+    def _set_status_for_reason(self, reason):
+        """Apply one server word to the state. Returns True when the word
+        was a verdict (expired/revoked set, or ignored inside the
+        post-renewal force-active window) and False when it was transient —
+        in which case the caller keeps the cached state and retries later.
+        """
+        if (time.time() < self._force_active_until
+                and classify_reason(reason) in ('expired', 'revoked')):
+            _log(f'Server says {reason} but in force-active grace — ignoring')
+            return True
+        verdict = classify_reason(reason)
+        if verdict is None:
+            return False
+        self._set_status(verdict)
+        self._notify_js(verdict, {'reason': reason})
+        return True
 
     def _set_state(self, data):
         with self._lock:

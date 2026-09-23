@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Centre</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+    --bg-main:#f8fafb;--white:#ffffff;--cream:#f1f5f9;
+    --text-main:#0f172a;--text-muted:#64748b;--muted2:#94a3b8;
+    --primary:#0f172a;
+    --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+    --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+    --border:#e2e8f0;--rule:#e2e8f0;--rule2:rgba(15,23,42,0.05);
+    --success:#16a34a;--success-bg:rgba(22,163,74,0.08);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.09);
+    --danger:#dc2626;--danger-bg:rgba(220,38,38,0.07);
+    --gold:#a87d1e;--gold-bg:rgba(168,125,30,0.1);
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+    --sh:0 1px 2px rgba(15,23,42,0.04);
+    --sh2:0 4px 14px rgba(15,23,42,0.07);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{display:flex!important;height:100vh!important;width:100vw!important;
+     overflow:hidden!important;background:var(--bg-main);
+     color:var(--text-main);font-family:var(--sans);font-size:0.82rem;}
+main{width:100%!important;min-width:0;flex:1;display:flex;
+     flex-direction:column;overflow:hidden;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--border);
+       display:flex;align-items:center;gap:12px;
+       padding:0 24px;flex-shrink:0;}
+header h1{font-size:0.95rem;font-weight:700;}
+.header-sub{font-size:0.66rem;color:var(--text-muted);margin-top:1px;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:9px;}
+.btn{height:34px;padding:0 14px;border:none;border-radius:9px;font-family:inherit;
+     font-size:0.73rem;font-weight:600;cursor:pointer;display:inline-flex;
+     align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:var(--blue3);}
+.btn-primary:disabled{background:var(--muted2);cursor:not-allowed;}
+.btn-ghost{background:var(--white);color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--cream);color:var(--text-main);}
+.btn-sm{height:26px;padding:0 9px;font-size:0.66rem;border-radius:7px;}
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;
+        scrollbar-width:thin;max-width:1020px;width:100%;margin:0 auto;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:13px;
+      box-shadow:var(--sh);overflow:hidden;margin-bottom:16px;}
+.card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);
+          display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-title{font-size:0.85rem;font-weight:700;}
+.card-sub{font-size:0.62rem;color:var(--text-muted);margin-top:1px;}
+.pad{padding:15px 17px;}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:9px;}
+.fld label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
+           letter-spacing:0.8px;color:var(--muted2);}
+.fld input{height:34px;padding:0 10px;border:1px solid var(--border);
+    border-radius:8px;font-family:inherit;font-size:0.74rem;background:var(--white);
+    color:var(--text-main);outline:none;}
+.fld input:focus{border-color:var(--blue2);}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.hintline{font-size:0.66rem;color:var(--text-muted);line-height:1.6;}
+.urlbox{display:none;margin-top:10px;background:var(--blue-bg);
+        border:1px solid var(--blue-ln);border-radius:9px;padding:10px 12px;
+        font-size:0.7rem;word-break:break-all;}
+.urlbox.show{display:block;}
+.urlbox a{color:var(--blue3);font-weight:600;}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--rule2);}
+.tab{flex:1;padding:10px 4px;font-size:0.7rem;font-weight:700;text-align:center;
+     cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue);background:var(--blue-bg);}
+.tab .n{font-family:var(--mono);opacity:0.75;}
+.row{display:flex;align-items:center;gap:10px;padding:12px 17px;
+     border-bottom:1px solid var(--rule2);}
+.row:last-child{border-bottom:none;}
+.row-main{flex:1;min-width:0;}
+.row-name{font-weight:700;font-size:0.8rem;}
+.row-sub{font-size:0.66rem;color:var(--text-muted);margin-top:2px;}
+.row-right{display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.pill{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;
+      padding:2px 8px;border-radius:99px;white-space:nowrap;}
+.pill-out{background:var(--blue-bg);color:var(--blue3);}
+.pill-ready{background:var(--amber-bg);color:var(--amber);}
+.pill-done{background:var(--success-bg);color:var(--success);}
+.pill-void{background:var(--cream);color:var(--muted2);}
+.empty{padding:30px 18px;text-align:center;color:var(--muted2);font-size:0.71rem;}
+.empty strong{display:block;color:var(--text-muted);font-size:0.76rem;margin-bottom:3px;}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
+       padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
+       opacity:0;transform:translateY(8px);transition:all .22s;
+       pointer-events:none;z-index:700;max-width:340px;}
+.toast.show{opacity:1;transform:none;}
+.toast.bad{background:var(--danger);}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.stat{background:var(--bg-main);border:1px solid var(--border);border-radius:10px;
+      padding:10px 12px;text-align:center;}
+.stat .v{font-size:1.15rem;font-weight:800;}
+.stat .l{font-size:0.58rem;color:var(--text-muted);text-transform:uppercase;
+         letter-spacing:0.7px;margin-top:2px;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+
+<main>
+<header>
+    <button class="btn btn-ghost btn-sm" onclick="goBack()">‹ Centres</button>
+    <div>
+        <h1 id="c-name">Centre</h1>
+        <div class="header-sub" id="c-sub">Loading…</div>
+    </div>
+    <div class="header-right">
+        <button class="btn btn-ghost" onclick="copyBoard()">Copy board link</button>
+    </div>
+</header>
+
+<div class="scroll">
+
+    <div class="card">
+        <div class="card-hdr">
+            <div>
+                <div class="card-title">At a glance</div>
+                <div class="card-sub" id="c-contact">—</div>
+            </div>
+        </div>
+        <div class="pad">
+            <div class="statgrid" id="c-stats"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hdr">
+            <div>
+                <div class="card-title">Portal link for the centre</div>
+                <div class="card-sub">One link per centre — generating a new one retires the old</div>
+            </div>
+            <span class="pill pill-done" id="portal-state" style="display:none;">linked</span>
+        </div>
+        <div class="pad">
+            <div class="fld">
+                <label>Centre email</label>
+                <input type="email" id="portal-email" placeholder="centre@example.com">
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="portal-btn" onclick="generateAndSend()">Generate link + send email</button>
+                <button class="btn btn-ghost" onclick="copyPortal()">Copy link only</button>
+            </div>
+            <div class="urlbox" id="portal-url"></div>
+            <div class="hintline" style="margin-top:9px;">The link opens the centre's own board: its lots, pieces, pass/fail and columns.</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hdr">
+            <div>
+                <div class="card-title">Centre login</div>
+                <div class="card-sub">Typed on the portal link before the board opens</div>
+            </div>
+            <span class="pill pill-done" id="pin-state" style="display:none;">login set</span>
+        </div>
+        <div class="pad">
+            <div class="fld">
+                <label>Login PIN (4–32 characters, blank removes it)</label>
+                <input type="password" id="centre-pin" inputmode="numeric" maxlength="32" placeholder="••••">
+            </div>
+            <button class="btn btn-ghost" onclick="savePin()">Save login</button>
+            <span class="hintline" id="pin-hint" style="margin-left:8px;"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hdr">
+            <div>
+                <div class="card-title">Portal address</div>
+                <div class="card-sub">What the links start with — no PC name inside</div>
+            </div>
+        </div>
+        <div class="pad">
+            <div class="fld">
+                <label>Base URL (testing: http://localhost:58903)</label>
+                <input type="text" id="portal-base" placeholder="http://localhost:58903">
+            </div>
+            <button class="btn btn-ghost" onclick="saveBase()">Save address</button>
+            <span class="hintline" id="base-state" style="margin-left:8px;"></span>
+            <div class="hintline" style="margin-top:9px;">Keep localhost while testing. When the shop PC is reachable through your own domain, put that here and every new link uses it.</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hdr">
+            <div>
+                <div class="card-title">Send portal links from</div>
+                <div class="card-sub">Shop Gmail + app password, saved once</div>
+            </div>
+        </div>
+        <div class="pad">
+            <div class="fld-row">
+                <div class="fld">
+                    <label>Sender Gmail</label>
+                    <input type="email" id="sender-email" placeholder="shop@gmail.com">
+                </div>
+                <div class="fld">
+                    <label>App password</label>
+                    <input type="password" id="sender-pw" placeholder="•••• •••• •••• ••••">
+                </div>
+            </div>
+            <button class="btn btn-ghost" onclick="saveSender()">Save sender</button>
+            <span class="hintline" id="sender-state" style="margin-left:8px;"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="tabs" id="lot-tabs">
+            <div class="tab on" data-tab="recent" onclick="showTab('recent')">Recent</div>
+            <div class="tab" data-tab="out" onclick="showTab('out')">Pending <span class="n" id="n-out"></span></div>
+            <div class="tab" data-tab="ready" onclick="showTab('ready')">Ready <span class="n" id="n-ready"></span></div>
+            <div class="tab" data-tab="done" onclick="showTab('done')">Completed <span class="n" id="n-done"></span></div>
+            <div class="tab" data-tab="all" onclick="showTab('all')">All <span class="n" id="n-all"></span></div>
+        </div>
+        <div id="lot-list"><div class="empty">Loading…</div></div>
+    </div>
+
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+function api(){
+    var a = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+    if (!a) return null;
+    try { return Object.keys(a).length ? a : null; } catch (e) { return a; }
+}
+function el(id){ return document.getElementById(id); }
+function esc(v){
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(v){ return esc(v).replace(/'/g, '&#39;'); }
+function money(n){
+    var v = parseFloat(n); if (isNaN(v)) v = 0;
+    return 'Rs ' + Math.round(v).toLocaleString('en-IN');
+}
+function toast(msg, bad){
+    var t = el('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (bad ? ' bad' : '');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.className = 'toast'; }, bad ? 5200 : 2800);
+}
+function centreId(){
+    var m = (window.location.search || '').match(/[?&]id=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+}
+function goBack(){
+    var a = api();
+    if (a && typeof a.navigate === 'function') { a.navigate('hallmark.html'); return; }
+    window.location.href = 'hallmark.html';
+}
+
+var DETAIL = null, TAB = 'recent';
+
+function load(){
+    var a = api();
+    var cid = centreId();
+    if (!a || !cid) {
+        el('c-sub').textContent = 'Could not open this centre.';
+        return;
+    }
+    if (typeof a.hm_centre_detail !== 'function') {
+        el('c-sub').textContent = 'Close and reopen AurumOS to finish updating.';
+        return;
+    }
+    a.hm_centre_detail(cid).then(function(d){
+        if (!d || d.status !== 'success') {
+            el('c-sub').textContent = (d && d.message) || 'Could not load.';
+            return;
+        }
+        DETAIL = d;
+        paintHead(d.centre);
+        paintTabs(d.tabs);
+        loadSender();
+    }).catch(function(e){
+        el('c-sub').textContent = 'Could not load: ' + e;
+    });
+}
+
+function paintHead(c){
+    el('c-name').textContent = c.name || 'Centre';
+    el('c-sub').textContent = (c.code || '') +
+        (c.turnaround_days ? ' · back in ' + c.turnaround_days + ' days' : '');
+    el('c-contact').textContent = [c.phone, c.email].filter(function(x){ return x; }).join(' · ') || 'No contact saved';
+    el('pin-state').style.display = c.has_pin ? '' : 'none';
+    el('pin-hint').textContent = c.has_pin
+        ? 'The portal asks for it first.' : 'No login yet — the portal opens without one.';
+    if (c.email) el('portal-email').value = c.email;
+    var t = (DETAIL && DETAIL.tabs) || {};
+    function n(k){ return ((t[k] || []).length); }
+    var away = 0;
+    (t.out || []).concat(t.ready || []).forEach(function(l){
+        away += ((l.summary || {}).pieces || 0);
+    });
+    el('c-stats').innerHTML =
+        stat(n('out'), 'away now') + stat(n('ready'), 'ready') +
+        stat(away, 'pcs away') + stat(n('done'), 'completed');
+    function stat(v, l){
+        return '<div class="stat"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>';
+    }
+}
+
+function pillFor(l){
+    if (l.bucket === 'done') {
+        return l.status_code === 'cancelled'
+            ? '<span class="pill pill-void">Cancelled</span>'
+            : '<span class="pill pill-done">Back</span>';
+    }
+    if (l.bucket === 'ready') return '<span class="pill pill-ready">Ready</span>';
+    return '<span class="pill pill-out">Away</span>';
+}
+
+function paintTabs(tabs){
+    ['out','ready','done','all'].forEach(function(k){
+        var n = el('n-' + k);
+        if (n) n.textContent = '(' + ((tabs[k] || []).length) + ')';
+    });
+    showTab(TAB);
+}
+
+function showTab(k){
+    TAB = k;
+    var tabs = document.querySelectorAll('#lot-tabs .tab');
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].className = 'tab' + (tabs[i].getAttribute('data-tab') === k ? ' on' : '');
+    }
+    var list = ((DETAIL && DETAIL.tabs) || {})[k] || [];
+    var box = el('lot-list');
+    if (!list.length) {
+        box.innerHTML = '<div class="empty"><strong>Nothing here</strong>No lots in this view.</div>';
+        return;
+    }
+    box.innerHTML = list.map(function(l){
+        var s = l.summary || {};
+        return '<div class="row">'
+            + '<div class="row-main">'
+            + '<div class="row-name">' + esc(l.lot_no || 'Lot') + '</div>'
+            + '<div class="row-sub">' + (s.pieces || 0) + ' pcs · '
+            + (parseFloat(s.gross_wt || 0)).toFixed(3) + 'g · sent '
+            + esc(l.sent_date || '') + ' · due ' + esc(l.expected_date || '')
+            + (l.received_date ? ' · back ' + esc(l.received_date) : '') + '</div>'
+            + '</div>'
+            + '<div class="row-right">' + pillFor(l)
+            + '<button class="btn btn-ghost btn-sm" onclick="copyLot(\'' + escAttr(l.lot_no) + '\')">Copy link</button>'
+            + '</div></div>';
+    }).join('');
+}
+
+function copyText(t, okMsg){
+    function done(){ toast(okMsg || 'Link copied.'); }
+    function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = t; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { toast('Copy this link: ' + t, true); }
+        document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t).then(done, fallback);
+    } else { fallback(); }
+}
+function copyLot(lotNo){
+    var a = api();
+    if (!a || typeof a.hm_share_url !== 'function') { toast('Not available in this build.', true); return; }
+    a.hm_share_url(lotNo || '').then(function(r){
+        if (!r || r.status !== 'success' || !r.url) {
+            toast((r && r.message) || 'Could not make the link.', true); return;
+        }
+        copyText(r.url, 'Lot link copied.');
+    }).catch(function(e){ toast('Could not make the link: ' + e, true); });
+}
+function copyBoard(){ copyLot(''); }
+
+function loadSender(){
+    var a = api();
+    if (!a) return;
+    if (typeof a.hm_email_settings_get === 'function') {
+        a.hm_email_settings_get().then(function(r){
+            if (!r || r.status !== 'success') return;
+            if (r.sender) el('sender-email').value = r.sender;
+            el('sender-state').textContent = r.has_password
+                ? 'Sender saved.' : 'No app password saved yet.';
+        }).catch(function(){});
+    }
+    if (typeof a.hm_portal_base_get === 'function') {
+        a.hm_portal_base_get().then(function(r){
+            if (!r || r.status !== 'success') return;
+            el('portal-base').value = r.base || '';
+            el('base-state').textContent = r.custom
+                ? 'Custom address in use.' : 'Testing address (localhost).';
+        }).catch(function(){});
+    }
+}
+function savePin(){
+    var a = api();
+    if (!a || typeof a.hm_centre_pin !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hm_centre_pin(centreId(), el('centre-pin').value || '').then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not save.', true); return;
+        }
+        el('centre-pin').value = '';
+        toast(r.has_pin ? 'Login set for this centre.' : 'Login removed.');
+        load();
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+function saveBase(){
+    var a = api();
+    if (!a || typeof a.hm_portal_base_save !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hm_portal_base_save(el('portal-base').value || '').then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not save.', true); return;
+        }
+        toast('Portal address saved.');
+        loadSender();
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+function saveSender(){
+    var a = api();
+    if (!a || typeof a.hm_email_settings_save !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hm_email_settings_save(el('sender-email').value || '',
+                             el('sender-pw').value || '').then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not save.', true); return;
+        }
+        el('sender-pw').value = '';
+        toast('Sender saved.');
+        loadSender();
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+function generateAndSend(){
+    var a = api();
+    if (!a || typeof a.hm_portal_send !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var btn = el('portal-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    a.hm_portal_send(centreId(), el('portal-email').value || '').then(function(r){
+        btn.disabled = false;
+        btn.textContent = 'Generate link + send email';
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not send.', true); return;
+        }
+        var box = el('portal-url');
+        box.innerHTML = 'Sent to <b>' + esc(r.email) + '</b><br><a href="' + esc(r.url) + '">' + esc(r.url) + '</a>';
+        box.className = 'urlbox show';
+        el('portal-state').style.display = '';
+        toast('Portal link emailed to ' + r.email);
+        load();
+    }).catch(function(e){
+        btn.disabled = false;
+        btn.textContent = 'Generate link + send email';
+        toast('Could not send: ' + e, true);
+    });
+}
+function copyPortal(){
+    var a = api();
+    if (!a || typeof a.hm_portal_link !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    a.hm_portal_link(centreId()).then(function(r){
+        if (!r || r.status !== 'success' || !r.url) {
+            toast((r && r.message) || 'Save the centre email first.', true);
+            return;
+        }
+        var box = el('portal-url');
+        box.innerHTML = '<a href="' + esc(r.url) + '">' + esc(r.url) + '</a>';
+        box.className = 'urlbox show';
+        el('portal-state').style.display = '';
+        copyText(r.url, 'Portal link copied.');
+    }).catch(function(e){ toast('Could not make the link: ' + e, true); });
+}
+
+try { initSidebar('hallmark'); } catch (e) {}
+if (typeof window.apiReady === 'function') { window.apiReady(load); } else { load(); }
+</script>
+</body>
+</html>

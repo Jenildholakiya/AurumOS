@@ -86,6 +86,9 @@ class DBManager:
             self.ensure_retail_columns()
             self.ensure_crm_tables()
             self.ensure_hallmark_tables()
+            self.ensure_karigar_tables()
+            self.ensure_held_bills_table()
+            self.ensure_finance_tables()
         except Exception:
             pass
         try:
@@ -100,6 +103,68 @@ class DBManager:
             self.repair_retail_fine()
         except Exception:
             pass
+        try:
+            self.apply_migrations()
+        except Exception:
+            pass
+
+    def apply_migrations(self, base_dir=None):
+        """Run migrations/*.sql once each, in filename order.
+
+        The channel schema fixes travel OTA: a release lists
+        migrations/NNNN_what.sql in version.json, the updater downloads it
+        next to the app, and this runs it exactly once (recorded in
+        app_config, so re-runs and restarts are no-ops). A failing file is
+        logged and skipped — it never blocks startup or later files.
+        Returns how many files were newly applied.
+        """
+        import glob as _glob
+        import hashlib as _hl
+        applied = 0
+        try:
+            if base_dir:
+                root = str(base_dir)
+            else:
+                root = os.path.dirname(os.path.abspath(self.db_dir))
+            files = sorted(_glob.glob(os.path.join(root, 'migrations', '*.sql')))
+            if not files:
+                return 0
+            with self._get_connection() as conn:
+                for path in files:
+                    name = os.path.basename(path)
+                    try:
+                        sql = open(path, 'r', encoding='utf-8').read()
+                    except Exception as _re:
+                        _dberr(f"[MIGRATE] cannot read {name}: {_re}")
+                        continue
+                    if not sql.strip():
+                        continue
+                    digest = _hl.sha256(sql.encode('utf-8')).hexdigest()
+                    try:
+                        row = conn.execute(
+                            "SELECT value FROM app_config WHERE key=?",
+                            (f'migration_applied:{name}',)).fetchone()
+                    except Exception:
+                        row = None
+                    if row and row['value'] == digest:
+                        continue
+                    try:
+                        conn.executescript(sql)
+                        conn.execute(
+                            "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                            (f'migration_applied:{name}', digest))
+                        conn.commit()
+                        applied += 1
+                        _dblog(f"[MIGRATE] applied {name}")
+                    except Exception as _ae:
+                        try:
+                            conn.rollback()
+                        except Exception:
+                            pass
+                        _dberr(f"[MIGRATE] {name} failed (skipped): {_ae}")
+        except Exception as e:
+            _dberr(f"[MIGRATE] {e}")
+        return applied
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path, timeout=20,
@@ -209,6 +274,11 @@ class DBManager:
                     CREATE TABLE IF NOT EXISTS uchak_inward_items (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, vch_id TEXT,
                         it_code TEXT, it_name TEXT, pcs INTEGER DEFAULT 1, price REAL DEFAULT 0.00);
+                    CREATE TABLE IF NOT EXISTS mac_lock (
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        fingerprint TEXT DEFAULT '',
+                        locked_at TEXT DEFAULT '',
+                        hostname TEXT DEFAULT '');
                 """)
 
                 bp_cols = [r['name'] for r in cursor.execute("PRAGMA table_info(business_profile)").fetchall()]
@@ -880,14 +950,13 @@ class DBManager:
         Fetches all event logs from the local database.
         """
         try:
-            cursor = self.conn.cursor()
-            # Ensure 'logs' is the correct table name in your local DB
-            cursor.execute("SELECT * FROM logs ORDER BY ts DESC")
-            # Convert rows to dictionary format
-            columns = [column[0] for column in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            with self._get_connection() as conn:
+                cursor = conn.execute("SELECT * FROM logs ORDER BY ts DESC")
+                # Convert rows to dictionary format
+                columns = [column[0] for column in cursor.description]
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
         except Exception as e:
-            _dberr(f"[DB] load_all_logs failed: {str(e)}")
+            _dberr(f"[DB] load_all_logs failed: {e}")
             return []
 
     def get_changes_since(self, peer_device_id, since_versions):
@@ -957,6 +1026,7 @@ class DBManager:
         we respect via INSERT OR IGNORE / matching update.
         """
         applied = {}
+        failed = {}
         try:
             with self._get_connection() as conn:
                 for tbl, rows in (changes or {}).items():
@@ -978,6 +1048,9 @@ class DBManager:
                                 (peer_device_id, row.get('local_id'))
                             ).fetchone()
                             if existing:
+                                # Already have this exact peer row: settled,
+                                # count it so the sender advances past it.
+                                count += 1
                                 continue
 
                             # admin_creds has no SQL UNIQUE on username -- check
@@ -1053,6 +1126,10 @@ class DBManager:
                                     skip_row = True  # never duplicate or overwrite an existing staff username
 
                             if skip_row:
+                                # Deterministic refusal (username clash) with
+                                # a conflict record written: settled, the
+                                # sender advances past it.
+                                count += 1
                                 continue
 
                             # If this row's parent voucher had to be renumbered
@@ -1092,6 +1169,10 @@ class DBManager:
                                         conn, tbl, row, cols, values,
                                         self.SYNC_NATURAL_KEY.get(tbl),
                                         peer_device_id, _clash):
+                                    # Decided duplicate / unmergeable, with a
+                                    # conflict record written: settled, the
+                                    # sender advances past it.
+                                    count += 1
                                     continue
                             count += 1
 
@@ -1101,7 +1182,14 @@ class DBManager:
                             desc_str = self._describe_synced_row(tbl, row)
                             _dblog(f"[SYNC] RECEIVED from {peer_device_id} -> {tbl}: {desc_str}")
                         except Exception as _re:
-                            _dblog(f"[SYNC] apply row skip {tbl}: {_re}")
+                            # Unexpected failure (bad column, corrupt value…).
+                            # Counted separately from deterministic skips
+                            # (dedup, username clashes, resolved duplicates),
+                            # which the sender may treat as settled. A failed
+                            # row is retried on the next exchange instead of
+                            # being silently marked as sent.
+                            failed[tbl] = failed.get(tbl, 0) + 1
+                            _dblog(f"[SYNC] apply row FAILED {tbl} (will retry): {_re}")
                     if count:
                         applied[tbl] = count
 
@@ -1122,7 +1210,10 @@ class DBManager:
                 _dblog(f"[SYNC] MERGE COMPLETE from {peer_device_id}: {total} row(s) total ({breakdown})")
             else:
                 _dblog(f"[SYNC] Sync with {peer_device_id} complete -- nothing new to merge")
-            return {'status': 'success', 'applied': applied}
+            if failed:
+                _dberr(f"[SYNC] {sum(failed.values())} row(s) FAILED (will retry): " +
+                       ', '.join(f"{v} {k}" for k, v in failed.items()))
+            return {'status': 'success', 'applied': applied, 'failed': failed}
         except Exception as e:
             _dberr(f"[SYNC] apply_incoming_rows: {e}")
             return {'status': 'error', 'message': str(e)}
@@ -2594,6 +2685,32 @@ class DBManager:
         except:
             return []
 
+    def get_old_gold_register(self, limit=1000):
+        """Every bill that took old gold in part-exchange, newest first."""
+        try:
+            with self._get_connection() as conn:
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(sales_history)").fetchall()]
+                if 'old_gold_value' not in cols or 'old_gold_wt' not in cols:
+                    return []
+                try:
+                    lim = max(1, min(int(limit or 1000), 5000))
+                except (TypeError, ValueError):
+                    lim = 1000
+                return [dict(r) for r in conn.execute("""
+                    SELECT date, vch_id, customer, mobile,
+                           COALESCE(old_gold_wt,0.0)    AS old_gold_wt,
+                           COALESCE(old_gold_value,0.0) AS old_gold_value,
+                           COALESCE(total_amount,0.0)   AS total_amount
+                    FROM sales_history
+                    WHERE COALESCE(old_gold_value,0) > 0
+                       OR COALESCE(old_gold_wt,0) > 0
+                    ORDER BY id DESC LIMIT ?
+                """, (lim,)).fetchall()]
+        except Exception as e:
+            _dberr(f"[OLDGOLD] register: {e}")
+            return []
+
     def get_customer_purchases(self, customer_name, mobile=''):
         """Return every bill recorded for one customer, newest first.
         UNIT CONTRACT: collected_fine is ALWAYS grams. Cash totals live in
@@ -3730,6 +3847,13 @@ class DBManager:
                 except Exception:
                     pass
                 conn.execute("""
+                    CREATE TABLE IF NOT EXISTS mac_lock(
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        fingerprint TEXT DEFAULT '',
+                        locked_at TEXT DEFAULT '',
+                        hostname TEXT DEFAULT '')
+                """)
+                conn.execute("""
                     INSERT OR REPLACE INTO mac_lock(id, fingerprint, locked_at, hostname)
                     VALUES(1, ?, datetime('now'), ?)
                 """, (fp, hostname))
@@ -3878,6 +4002,36 @@ class DBManager:
         except Exception as e:
             _dberr(f"[CONFIG] set {key}: {e}")
             return False
+
+    # -- Bastion feature flags (local kill-switches) -------------------
+    # bastion_ai.py reads these on every decision; the health dashboard
+    # (or the owner, via a future settings toggle) writes them. Missing
+    # means ON — a fresh install must never boot dark.
+
+    _BASTION_FLAGS = (
+        'db_watchdog_enabled',
+        'session_guard_enabled',
+        'auto_healer_enabled',
+        'pattern_learner_enabled',
+        'alert_sender_enabled',
+    )
+
+    def get_global_settings(self):
+        """Every Bastion feature flag as {key: bool}."""
+        out = {}
+        for key in self._BASTION_FLAGS:
+            try:
+                raw = str(self.get_config(key, '1') or '1').strip().lower()
+                out[key] = raw not in ('0', 'false', 'no', 'off', '')
+            except Exception:
+                out[key] = True
+        return out
+
+    def set_global_setting(self, key, enabled):
+        """Flip one Bastion feature flag. Returns True on success."""
+        if str(key or '') not in self._BASTION_FLAGS:
+            return False
+        return bool(self.set_config(str(key), '1' if enabled else '0'))
 
     def ensure_retail_columns(self):
         """Permanent schema migration: payment split + old-gold per bill.
@@ -7708,3 +7862,905 @@ class DBManager:
         except Exception as e:
             _dberr(f"[HM] find: {e}")
             return []
+
+    # ── KARIGAR (job-work register) ───────────────────────────────────
+    # UI: karigar.html (dashboard), karigar_master.html (register),
+    # karigar_order.html (issue/receive), karigar_details.html (statement).
+    # Safe on every startup; adds tables/columns in place on old shops.
+
+    def ensure_karigar_tables(self):
+        try:
+            with self._get_connection() as conn:
+                conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS karigars (
+                        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name           TEXT NOT NULL,
+                        phone          TEXT DEFAULT '',
+                        specialty      TEXT DEFAULT '',
+                        address        TEXT DEFAULT '',
+                        ghat_norm      REAL DEFAULT 0.5,
+                        ghat_allowance REAL DEFAULT 1.0,
+                        active         INTEGER DEFAULT 1,
+                        created_at     DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS karigar_orders (
+                        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                        karigar_id     INTEGER NOT NULL,
+                        order_no       TEXT DEFAULT '',
+                        issue_date     TEXT DEFAULT '',
+                        due_date       TEXT DEFAULT '',
+                        given_fine_wt  REAL DEFAULT 0,
+                        given_touch    REAL DEFAULT 100,
+                        status         TEXT DEFAULT 'issued',
+                        returned_fine  REAL DEFAULT 0,
+                        loss           REAL DEFAULT 0,
+                        allowance      REAL DEFAULT 0,
+                        created_at     DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS karigar_order_items (
+                        id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                        order_id           INTEGER NOT NULL,
+                        item_name          TEXT DEFAULT '',
+                        fine_wt            REAL DEFAULT 0,
+                        touch              REAL DEFAULT 0,
+                        expected_return_wt REAL DEFAULT 0,
+                        received           INTEGER DEFAULT 0,
+                        recv_gross_wt      REAL DEFAULT 0,
+                        recv_touch         REAL DEFAULT 0);
+
+                    CREATE INDEX IF NOT EXISTS ix_karigar_orders_kid
+                        ON karigar_orders(karigar_id);
+                    CREATE INDEX IF NOT EXISTS ix_karigar_items_oid
+                        ON karigar_order_items(order_id);
+                """)
+                # Columns added after first release — old shops lack them.
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(karigars)").fetchall()]
+                if 'ghat_norm' not in cols:
+                    conn.execute(
+                        "ALTER TABLE karigars ADD COLUMN ghat_norm REAL DEFAULT 0.5")
+                if 'ghat_allowance' not in cols:
+                    conn.execute(
+                        "ALTER TABLE karigars ADD COLUMN ghat_allowance REAL DEFAULT 1.0")
+                if 'active' not in cols:
+                    conn.execute(
+                        "ALTER TABLE karigars ADD COLUMN active INTEGER DEFAULT 1")
+                ocols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(karigar_orders)").fetchall()]
+                for _c, _d in (('returned_fine', 'ALTER TABLE karigar_orders ADD COLUMN returned_fine REAL DEFAULT 0'),
+                               ('loss', 'ALTER TABLE karigar_orders ADD COLUMN loss REAL DEFAULT 0'),
+                               ('allowance', 'ALTER TABLE karigar_orders ADD COLUMN allowance REAL DEFAULT 0')):
+                    if _c not in ocols:
+                        conn.execute(_d)
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[KARIGAR] tables: {e}")
+            return False
+
+    def _karigar_metrics(self, conn, kid):
+        """Totals + health for one karigar, from its orders."""
+        try:
+            orders = conn.execute(
+                "SELECT * FROM karigar_orders WHERE karigar_id=?",
+                (int(kid),)).fetchall()
+            given = sum(float(o['given_fine_wt'] or 0) for o in orders)
+            holding = sum(float(o['given_fine_wt'] or 0) for o in orders
+                          if str(o['status'] or '') != 'completed')
+            ongoing = sum(1 for o in orders
+                          if str(o['status'] or '') != 'completed')
+            completed = sum(1 for o in orders
+                            if str(o['status'] or '') == 'completed')
+            loss = sum(float(o['loss'] or 0) for o in orders
+                       if str(o['status'] or '') == 'completed')
+            allow_row = conn.execute(
+                "SELECT ghat_allowance FROM karigars WHERE id=?",
+                (int(kid),)).fetchone()
+            allow = float((allow_row['ghat_allowance']
+                           if allow_row else 0) or 0)
+            over = max(0.0, round(loss - allow, 3)) if allow > 0 else 0.0
+            # Overdue = any ongoing order past its due date.
+            from datetime import date as _d
+            today = _d.today().isoformat()
+            overdue = any(str(o['due_date'] or '') != ''
+                          and str(o['due_date']) < today
+                          and str(o['status'] or '') != 'completed'
+                          for o in orders)
+            oldest = 0
+            for o in orders:
+                if str(o['status'] or '') == 'completed':
+                    continue
+                try:
+                    _iss = str(o['issue_date'] or '')[:10]
+                    if len(_iss) == 10:
+                        _y, _m, _dd = map(int, _iss.split('-'))
+                        _delta = (_d.today() - _d(_y, _m, _dd)).days
+                        oldest = max(oldest, max(0, _delta))
+                except Exception:
+                    pass
+            if overdue:
+                health = 'RED'
+            elif over > 0:
+                health = 'AMBER'
+            else:
+                health = 'GREEN'
+            return dict(metal_given=round(given, 3),
+                        metal_holding=round(holding, 3),
+                        ghat_wt=round(loss, 3),
+                        over_allowed=round(over, 3),
+                        ongoing=ongoing, completed=completed,
+                        oldest_job_days=oldest, health=health)
+        except Exception:
+            return dict(metal_given=0, metal_holding=0, ghat_wt=0,
+                        over_allowed=0, ongoing=0, completed=0,
+                        oldest_job_days=0, health='GREEN')
+
+    def karigar_all(self):
+        """Every karigar with dashboard metrics. Returns a list of dicts."""
+        try:
+            self.ensure_karigar_tables()
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT * FROM karigars ORDER BY active DESC, name"
+                ).fetchall()
+                out = []
+                for r in rows:
+                    d = dict(r)
+                    d['ghat_norm'] = float(d.get('ghat_norm') or 0.5)
+                    d['ghat_allowance'] = float(d.get('ghat_allowance') or 0)
+                    d.update(self._karigar_metrics(conn, d['id']))
+                    out.append(d)
+                return out
+        except Exception as e:
+            _dberr(f"[KARIGAR] all: {e}")
+            return []
+
+    def karigar_add(self, name, phone='', specialty='', address='',
+                    ghat_norm=0.5, allowance=1.0):
+        try:
+            name = str(name or '').strip()
+            if not name:
+                return {'status': 'error', 'message': 'Karigar name is required.'}
+            try:
+                ghat_norm = float(ghat_norm or 0.5)
+            except (TypeError, ValueError):
+                ghat_norm = 0.5
+            try:
+                allowance = float(allowance if allowance not in (None, '') else 1.0)
+            except (TypeError, ValueError):
+                allowance = 1.0
+            self.ensure_karigar_tables()
+            with self._get_connection() as conn:
+                cur = conn.execute(
+                    "INSERT INTO karigars(name,phone,specialty,address,"
+                    "ghat_norm,ghat_allowance,active) VALUES(?,?,?,?,?,?,1)",
+                    (name, str(phone or '').strip(),
+                     str(specialty or '').strip(),
+                     str(address or '').strip(), ghat_norm, allowance))
+                conn.commit()
+                return {'status': 'success', 'id': int(cur.lastrowid),
+                        'message': f'{name} registered.'}
+        except Exception as e:
+            _dberr(f"[KARIGAR] add: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def karigar_update(self, kid, name, phone='', specialty='', address='',
+                       ghat_norm=0.5, allowance=1.0):
+        try:
+            name = str(name or '').strip()
+            if not name:
+                return {'status': 'error', 'message': 'Karigar name is required.'}
+            try:
+                ghat_norm = float(ghat_norm or 0.5)
+            except (TypeError, ValueError):
+                ghat_norm = 0.5
+            try:
+                allowance = float(allowance if allowance not in (None, '') else 1.0)
+            except (TypeError, ValueError):
+                allowance = 1.0
+            with self._get_connection() as conn:
+                conn.execute(
+                    "UPDATE karigars SET name=?,phone=?,specialty=?,address=?,"
+                    "ghat_norm=?,ghat_allowance=? WHERE id=?",
+                    (name, str(phone or '').strip(),
+                     str(specialty or '').strip(),
+                     str(address or '').strip(),
+                     ghat_norm, allowance, int(kid)))
+                conn.commit()
+            return {'status': 'success', 'message': 'Karigar updated.'}
+        except Exception as e:
+            _dberr(f"[KARIGAR] update: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def karigar_delete(self, kid):
+        """Refused while orders exist — history must survive the register."""
+        try:
+            with self._get_connection() as conn:
+                n = conn.execute(
+                    "SELECT COUNT(*) AS c FROM karigar_orders WHERE karigar_id=?",
+                    (int(kid),)).fetchone()['c']
+                if int(n or 0) > 0:
+                    return {'status': 'error',
+                            'message': 'Karigar has job orders — cannot remove. Mark inactive instead.'}
+                conn.execute("DELETE FROM karigars WHERE id=?", (int(kid),))
+                conn.commit()
+            return {'status': 'success', 'message': 'Karigar removed.'}
+        except Exception as e:
+            _dberr(f"[KARIGAR] delete: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def karigar_orders(self, karigar_id=None):
+        """All orders (issue screen) or one karigar's (detail screen)."""
+        try:
+            self.ensure_karigar_tables()
+            with self._get_connection() as conn:
+                if karigar_id:
+                    rows = conn.execute(
+                        "SELECT o.*, k.name AS karigar_name, "
+                        "       COALESCE(k.ghat_allowance,0) AS k_allow "
+                        "FROM karigar_orders o "
+                        "LEFT JOIN karigars k ON k.id=o.karigar_id "
+                        "WHERE o.karigar_id=? ORDER BY o.id DESC",
+                        (int(karigar_id),)).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT o.*, k.name AS karigar_name, "
+                        "       COALESCE(k.ghat_allowance,0) AS k_allow "
+                        "FROM karigar_orders o "
+                        "LEFT JOIN karigars k ON k.id=o.karigar_id "
+                        "ORDER BY o.id DESC").fetchall()
+                out = []
+                for r in rows:
+                    d = dict(r)
+                    items = [dict(i) for i in conn.execute(
+                        "SELECT * FROM karigar_order_items WHERE order_id=? "
+                        "ORDER BY id", (d['id'],)).fetchall()]
+                    d['items'] = items
+                    d['allowance'] = float(d.get('allowance') or d.get('k_allow') or 0)
+                    d.pop('k_allow', None)
+                    out.append(d)
+                return out
+        except Exception as e:
+            _dberr(f"[KARIGAR] orders: {e}")
+            return []
+
+    def karigar_create_order(self, karigar_id, order_no='', issue_date='',
+                             due_date='', given_fine_wt=0, given_touch=100,
+                             items=None):
+        try:
+            karigar_id = int(karigar_id or 0)
+            if not karigar_id:
+                return {'status': 'error', 'message': 'Karigar is required.'}
+            items = list(items or [])
+            if not items:
+                return {'status': 'error', 'message': 'Add at least one item.'}
+            try:
+                given = float(given_fine_wt or 0)
+            except (TypeError, ValueError):
+                given = 0
+            if not given > 0:
+                return {'status': 'error', 'message': 'Gold given must be above zero.'}
+            try:
+                gtouch = float(given_touch or 100)
+            except (TypeError, ValueError):
+                gtouch = 100
+            alloc = 0.0
+            clean = []
+            for it in items:
+                d = dict(it or {})
+                nm = str(d.get('name') or d.get('item_name') or '').strip() or 'Item'
+                try:
+                    fw = float(d.get('fine_wt') or 0)
+                except (TypeError, ValueError):
+                    fw = 0
+                try:
+                    tc = float(d.get('touch') or 0)
+                except (TypeError, ValueError):
+                    tc = 0
+                if fw <= 0:
+                    continue
+                exp = round(fw / (tc / 100), 3) if tc > 0 else 0.0
+                alloc += fw
+                clean.append((nm, round(fw, 3), tc, exp))
+            if not clean:
+                return {'status': 'error', 'message': 'Add at least one item with weight.'}
+            if abs(round(alloc, 3) - round(given, 3)) > 0.001:
+                return {'status': 'error',
+                        'message': f'Fine allocated ({alloc:.3f} g) must equal gold given ({given:.3f} g).'}
+            from datetime import date as _d
+            self.ensure_karigar_tables()
+            with self._get_connection() as conn:
+                k = conn.execute(
+                    "SELECT ghat_allowance FROM karigars WHERE id=?",
+                    (karigar_id,)).fetchone()
+                if not k:
+                    return {'status': 'error', 'message': 'Karigar not found.'}
+                allow = float(k['ghat_allowance'] or 0)
+                cur = conn.execute(
+                    "INSERT INTO karigar_orders(karigar_id,order_no,issue_date,"
+                    "due_date,given_fine_wt,given_touch,status,allowance) "
+                    "VALUES(?,?,?,?,?,?,'issued',?)",
+                    (karigar_id, str(order_no or '').strip(),
+                     str(issue_date or _d.today().isoformat()),
+                     str(due_date or ''),
+                     round(given, 3), gtouch, allow))
+                oid = int(cur.lastrowid)
+                for nm, fw, tc, exp in clean:
+                    conn.execute(
+                        "INSERT INTO karigar_order_items(order_id,item_name,"
+                        "fine_wt,touch,expected_return_wt) VALUES(?,?,?,?,?)",
+                        (oid, nm, fw, tc, exp))
+                conn.commit()
+                return {'status': 'success', 'id': oid,
+                        'message': f'Order {str(order_no or oid).strip()} issued.'}
+        except Exception as e:
+            _dberr(f"[KARIGAR] create order: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def karigar_receive_order(self, order_id, received_items=None):
+        try:
+            oid = int(order_id or 0)
+            if not oid:
+                return {'status': 'error', 'message': 'Order is required.'}
+            recv = list(received_items or [])
+            if not recv:
+                return {'status': 'error', 'message': 'No received weights given.'}
+            with self._get_connection() as conn:
+                o = conn.execute(
+                    "SELECT * FROM karigar_orders WHERE id=?", (oid,)).fetchone()
+                if not o:
+                    return {'status': 'error', 'message': 'Order not found.'}
+                if str(o['status'] or '') == 'completed':
+                    return {'status': 'error', 'message': 'Order already completed.'}
+                given = float(o['given_fine_wt'] or 0)
+                allow = float(o['allowance'] or 0)
+                returned = 0.0
+                for ri in recv:
+                    d = dict(ri or {})
+                    try:
+                        iid = int(d.get('item_id') or d.get('id') or 0)
+                    except (TypeError, ValueError):
+                        continue
+                    try:
+                        rg = float(d.get('recv_gross_wt') or d.get('actual_wt') or 0)
+                    except (TypeError, ValueError):
+                        rg = 0
+                    try:
+                        rt = float(d.get('recv_touch') or d.get('touch') or 0)
+                    except (TypeError, ValueError):
+                        rt = 0
+                    if rg <= 0:
+                        return {'status': 'error',
+                                'message': 'Every item needs an actual weight above zero.'}
+                    conn.execute(
+                        "UPDATE karigar_order_items SET received=1,"
+                        "recv_gross_wt=?,recv_touch=? WHERE id=? AND order_id=?",
+                        (round(rg, 3), rt, iid, oid))
+                    returned += rg * rt / 100.0
+                returned = round(returned, 3)
+                loss = round(max(0.0, given - returned), 3)
+                conn.execute(
+                    "UPDATE karigar_orders SET status='completed',"
+                    "returned_fine=?,loss=? WHERE id=?",
+                    (returned, loss, oid))
+                conn.commit()
+                over = round(max(0.0, loss - allow), 3)
+                msg = f'Order received. Loss {loss:.3f} g.'
+                if allow > 0 and over > 0:
+                    msg += f' Over allowance by {over:.3f} g.'
+                return {'status': 'success', 'message': msg,
+                        'returned_fine': returned, 'loss': loss,
+                        'over_allowance': over}
+        except Exception as e:
+            _dberr(f"[KARIGAR] receive: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── HELD BILLS (POS hold / resume, survives navigation) ──────────
+    # pos_billing.html keeps a live in-memory strip; this table is the
+    # persistence behind it so a held bill is still there after the page
+    # reloads or the app restarts.
+
+    def ensure_held_bills_table(self):
+        try:
+            with self._get_connection() as conn:
+                conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS held_bills (
+                        vch_id      TEXT PRIMARY KEY,
+                        customer    TEXT DEFAULT '',
+                        grand_total REAL DEFAULT 0,
+                        items       TEXT DEFAULT '[]',
+                        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
+                """)
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[HELD] tables: {e}")
+            return False
+
+    def held_save(self, bill):
+        try:
+            import json as _j
+            d = dict(bill or {})
+            vch = str(d.get('vch_id') or '').strip()
+            if not vch:
+                return {'status': 'error', 'message': 'Bill id is required.'}
+            items = d.get('items') or []
+            self.ensure_held_bills_table()
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO held_bills(vch_id,customer,"
+                    "grand_total,items) VALUES(?,?,?,?)",
+                    (vch, str(d.get('customer') or 'Walk-in'),
+                     float(d.get('grand_total') or 0),
+                     _j.dumps(items, ensure_ascii=False)))
+                conn.commit()
+            return {'status': 'success', 'vch_id': vch}
+        except Exception as e:
+            _dberr(f"[HELD] save: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def held_list(self):
+        try:
+            import json as _j
+            self.ensure_held_bills_table()
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT vch_id,customer,grand_total,items,created_at "
+                    "FROM held_bills ORDER BY created_at").fetchall()
+            out = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d['items'] = _j.loads(d.get('items') or '[]')
+                except Exception:
+                    d['items'] = []
+                out.append({k: d[k] for k in
+                            ('vch_id', 'customer', 'grand_total', 'items')})
+            return {'status': 'success', 'bills': out}
+        except Exception as e:
+            _dberr(f"[HELD] list: {e}")
+            return {'status': 'error', 'message': str(e), 'bills': []}
+
+    def held_delete(self, vch_id):
+        try:
+            with self._get_connection() as conn:
+                conn.execute("DELETE FROM held_bills WHERE vch_id=?",
+                             (str(vch_id or '').strip(),))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            _dberr(f"[HELD] delete: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── UCHAK ITEM LOOKUP (uchak_stock_entry.html autocomplete) ───────
+    # The page blurs the code field and expects
+    # {status:'success', it_name, rate}. Sources, in order: last inward
+    # batch using that code (freshest price), opening-stock row (the same
+    # source get_uchak_price_by_code reads), product master name.
+
+    def get_uchak_item_details(self, it_code):
+        try:
+            code = str(it_code or '').strip().upper()
+            if not code:
+                return {'status': 'error', 'message': 'Code is required.'}
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT it_name, price FROM uchak_inward_items "
+                    "WHERE UPPER(TRIM(it_code))=? ORDER BY id DESC LIMIT 1",
+                    (code,)).fetchone()
+                if row and (row['it_name'] or row['price']):
+                    return {'status': 'success', 'it_code': code,
+                            'it_name': row['it_name'] or code,
+                            'rate': float(row['price'] or 0)}
+            price = self.get_uchak_price_by_code(code)
+            if price.get('found'):
+                return {'status': 'success', 'it_code': code,
+                        'it_name': price.get('it_name') or code,
+                        'rate': float(price.get('price') or 0)}
+            with self._get_connection() as conn:
+                pm = conn.execute(
+                    "SELECT name FROM product_master WHERE UPPER(TRIM(code))=?"
+                    " LIMIT 1", (code,)).fetchone()
+                if pm:
+                    return {'status': 'success', 'it_code': code,
+                            'it_name': pm['name'] or code, 'rate': 0}
+            return {'status': 'error', 'message': f'{code} not found.'}
+        except Exception as e:
+            _dberr(f"[UCHAK LOOKUP] {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── FINANCE (double-entry cash/bank + chart of accounts) ─────────
+    # Screens: cash_bank.html (receipts/payments/contra + daybook),
+    # accounting.html (position + daybook + trial balance),
+    # chart_of_accounts.html (heads register).
+    # One heads table serves both registers: kind='' is a plain head,
+    # kind CASH/BANK is a cash or bank account. Vouchers always balance
+    # (sum dr == sum cr) or they are refused — that invariant is what
+    # keeps the trial balance honest.
+
+    VOUCHER_PREFIXES = {
+        'CASH_RCPT': 'CR', 'CASH_PAY': 'CP',
+        'BANK_RCPT': 'BR', 'BANK_PAY': 'BP',
+        'CONTRA': 'CT', 'JV': 'JV', 'GST_JV': 'GJ',
+    }
+
+    def ensure_finance_tables(self):
+        try:
+            with self._get_connection() as conn:
+                conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS chart_accounts (
+                        code            TEXT PRIMARY KEY,
+                        name            TEXT NOT NULL,
+                        type            TEXT DEFAULT 'ASSET',
+                        acc_group       TEXT DEFAULT '',
+                        balance_type    TEXT DEFAULT 'Dr',
+                        opening_balance REAL DEFAULT 0,
+                        is_gst          INTEGER DEFAULT 0,
+                        gst_rate        REAL DEFAULT 0,
+                        hsn             TEXT DEFAULT '',
+                        kind            TEXT DEFAULT '',
+                        bank_name       TEXT DEFAULT '',
+                        account_no      TEXT DEFAULT '',
+                        ifsc            TEXT DEFAULT '',
+                        created_at      DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS cash_vouchers (
+                        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                        vch_no    TEXT UNIQUE,
+                        type      TEXT DEFAULT '',
+                        date      TEXT DEFAULT '',
+                        narration TEXT DEFAULT '',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+
+                    CREATE TABLE IF NOT EXISTS cash_voucher_lines (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        vch_no       TEXT NOT NULL,
+                        account_code TEXT NOT NULL,
+                        dr           REAL DEFAULT 0,
+                        cr           REAL DEFAULT 0);
+
+                    CREATE INDEX IF NOT EXISTS ix_cash_lines_vch
+                        ON cash_voucher_lines(vch_no);
+                    CREATE INDEX IF NOT EXISTS ix_cash_lines_acct
+                        ON cash_voucher_lines(account_code);
+                """)
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(chart_accounts)").fetchall()]
+                for _c, _d in (
+                        ('kind', "ALTER TABLE chart_accounts ADD COLUMN kind TEXT DEFAULT ''"),
+                        ('bank_name', "ALTER TABLE chart_accounts ADD COLUMN bank_name TEXT DEFAULT ''"),
+                        ('account_no', "ALTER TABLE chart_accounts ADD COLUMN account_no TEXT DEFAULT ''"),
+                        ('ifsc', "ALTER TABLE chart_accounts ADD COLUMN ifsc TEXT DEFAULT ''"),
+                        ('is_gst', "ALTER TABLE chart_accounts ADD COLUMN is_gst INTEGER DEFAULT 0"),
+                        ('gst_rate', "ALTER TABLE chart_accounts ADD COLUMN gst_rate REAL DEFAULT 0"),
+                        ('hsn', "ALTER TABLE chart_accounts ADD COLUMN hsn TEXT DEFAULT ''")):
+                    if _c not in cols:
+                        conn.execute(_d)
+                conn.commit()
+            return True
+        except Exception as e:
+            _dberr(f"[FINANCE] tables: {e}")
+            return False
+
+    @staticmethod
+    def _finance_signed(opening, balance_type, dr, cr):
+        try:
+            sign = -1.0 if str(balance_type or 'Dr').strip().lower().startswith('cr') else 1.0
+        except Exception:
+            sign = 1.0
+        try:
+            return float(opening or 0) * sign + float(dr or 0) - float(cr or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _finance_balances(self, conn):
+        """Closing signed balance per account code: opening ± posted."""
+        bals = {}
+        for r in conn.execute("SELECT * FROM chart_accounts").fetchall():
+            d = dict(r)
+            bals[d['code']] = {'account': d, 'dr': 0.0, 'cr': 0.0}
+        for r in conn.execute(
+                "SELECT account_code, COALESCE(SUM(dr),0) AS dr, "
+                "COALESCE(SUM(cr),0) AS cr FROM cash_voucher_lines "
+                "GROUP BY account_code").fetchall():
+            if r['account_code'] in bals:
+                bals[r['account_code']]['dr'] = float(r['dr'] or 0)
+                bals[r['account_code']]['cr'] = float(r['cr'] or 0)
+        out = {}
+        for code, b in bals.items():
+            a = b['account']
+            signed = self._finance_signed(a.get('opening_balance'),
+                                          a.get('balance_type'), b['dr'], b['cr'])
+            out[code] = {'account': a, 'posted_dr': b['dr'],
+                         'posted_cr': b['cr'], 'closing': round(signed, 2)}
+        return out
+
+    def finance_accounts(self, cash_bank_only=False):
+        """Heads register; cash_bank_only limits to CASH/BANK accounts."""
+        try:
+            self.ensure_finance_tables()
+            with self._get_connection() as conn:
+                bals = self._finance_balances(conn)
+                out = []
+                for code in sorted(bals):
+                    a = dict(bals[code]['account'])
+                    kind = str(a.get('kind') or '').upper()
+                    if cash_bank_only and kind not in ('CASH', 'BANK'):
+                        continue
+                    a['kind'] = kind
+                    a['current_balance'] = bals[code]['closing']
+                    out.append(a)
+                return {'status': 'success', 'accounts': out}
+        except Exception as e:
+            _dberr(f"[FINANCE] accounts: {e}")
+            return {'status': 'error', 'message': str(e), 'accounts': []}
+
+    def finance_save_account(self, data):
+        try:
+            d = dict(data or {})
+            code = str(d.get('code') or '').strip().upper()
+            name = str(d.get('name') or '').strip()
+            if not code or not name:
+                return {'status': 'error',
+                        'message': 'Code and Name are required.'}
+            self.ensure_finance_tables()
+            fields = {'name': name}
+            for key in ('type', 'acc_group', 'balance_type', 'bank_name',
+                        'account_no', 'ifsc', 'hsn', 'kind'):
+                if d.get(key) not in (None, ''):
+                    fields[key] = str(d.get(key)).strip()
+                    if key == 'kind':
+                        fields[key] = fields[key].upper()
+            for key in ('opening_balance', 'gst_rate'):
+                if d.get(key) not in (None, ''):
+                    try:
+                        fields[key] = float(d.get(key) or 0)
+                    except (TypeError, ValueError):
+                        pass
+            if 'is_gst' in d:
+                try:
+                    fields['is_gst'] = 1 if int(d.get('is_gst') or 0) else 0
+                except (TypeError, ValueError):
+                    fields['is_gst'] = 0
+            with self._get_connection() as conn:
+                exists = conn.execute(
+                    "SELECT code FROM chart_accounts WHERE code=?",
+                    (code,)).fetchone()
+                if exists:
+                    sets = ', '.join(f"{k}=?" for k in fields)
+                    conn.execute(f"UPDATE chart_accounts SET {sets} WHERE code=?",
+                                 list(fields.values()) + [code])
+                else:
+                    cols = ['code'] + list(fields.keys())
+                    conn.execute(
+                        f"INSERT INTO chart_accounts({','.join(cols)}) "
+                        f"VALUES({','.join(['?'] * len(cols))})",
+                        [code] + list(fields.values()))
+                conn.commit()
+            return {'status': 'success', 'code': code}
+        except Exception as e:
+            _dberr(f"[FINANCE] save: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_delete_account(self, code):
+        """Refused while any voucher line points at the head."""
+        try:
+            code = str(code or '').strip().upper()
+            if not code:
+                return {'status': 'error', 'message': 'Code is required.'}
+            with self._get_connection() as conn:
+                n = conn.execute(
+                    "SELECT COUNT(*) AS c FROM cash_voucher_lines "
+                    "WHERE UPPER(TRIM(account_code))=?", (code,)).fetchone()['c']
+                if int(n or 0) > 0:
+                    return {'status': 'error',
+                            'message': f'{code} has posted entries and cannot be deleted.'}
+                conn.execute("DELETE FROM chart_accounts WHERE code=?", (code,))
+                conn.commit()
+            return {'status': 'success', 'message': f'{code} deleted.'}
+        except Exception as e:
+            _dberr(f"[FINANCE] delete: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_delete_all(self):
+        """Wipe every head with no posted entries; keep the rest."""
+        try:
+            self.ensure_finance_tables()
+            with self._get_connection() as conn:
+                used = {str(r[0] or '').strip().upper() for r in conn.execute(
+                    "SELECT DISTINCT UPPER(TRIM(account_code)) "
+                    "FROM cash_voucher_lines").fetchall()}
+                codes = [r[0] for r in conn.execute(
+                    "SELECT code FROM chart_accounts").fetchall()]
+                deleted, blocked = 0, 0
+                for code in codes:
+                    if str(code or '').strip().upper() in used:
+                        blocked += 1
+                        continue
+                    conn.execute("DELETE FROM chart_accounts WHERE code=?", (code,))
+                    deleted += 1
+                conn.commit()
+            return {'status': 'success', 'deleted': deleted, 'blocked': blocked}
+        except Exception as e:
+            _dberr(f"[FINANCE] delete all: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_cash_position(self):
+        """Cash total, bank total, combined — for the position cards."""
+        try:
+            res = self.finance_accounts(cash_bank_only=True)
+            cash = bank = 0.0
+            for a in res.get('accounts', []):
+                if a.get('kind') == 'BANK':
+                    bank += float(a.get('current_balance') or 0)
+                else:
+                    cash += float(a.get('current_balance') or 0)
+            cash, bank = round(cash, 2), round(bank, 2)
+            return {'status': 'success', 'cash': cash, 'bank': bank,
+                    'total': round(cash + bank, 2)}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_daybook(self, limit=500, day=None):
+        """Today's vouchers newest-first with a one-line Dr/Cr summary."""
+        try:
+            from datetime import date as _d
+            self.ensure_finance_tables()
+            day = str(day or _d.today().isoformat())
+            try:
+                limit = max(1, min(int(limit or 500), 2000))
+            except (TypeError, ValueError):
+                limit = 500
+            with self._get_connection() as conn:
+                vchs = conn.execute(
+                    "SELECT vch_no, type, date, narration FROM cash_vouchers "
+                    "WHERE date=? ORDER BY id DESC LIMIT ?",
+                    (day, limit)).fetchall()
+                out = []
+                for v in vchs:
+                    lines = conn.execute(
+                        "SELECT account_code, dr, cr FROM cash_voucher_lines "
+                        "WHERE vch_no=? ORDER BY id", (v['vch_no'],)).fetchall()
+                    summary = ', '.join(
+                        f"{l['account_code']}:{float(l['dr'] or 0):.2f}/"
+                        f"{float(l['cr'] or 0):.2f}" for l in lines)
+                    out.append({'vch_no': v['vch_no'], 'type': v['type'],
+                                'date': v['date'], 'narration': v['narration'],
+                                'lines': summary})
+            return {'status': 'success', 'entries': out}
+        except Exception as e:
+            _dberr(f"[FINANCE] daybook: {e}")
+            return {'status': 'error', 'message': str(e), 'entries': []}
+
+    def finance_trial_balance(self):
+        """Every head with its Dr/Cr closing column and the balanced verdict."""
+        try:
+            self.ensure_finance_tables()
+            with self._get_connection() as conn:
+                bals = self._finance_balances(conn)
+                rows, total_dr, total_cr = [], 0.0, 0.0
+                for code in sorted(bals):
+                    closing = bals[code]['closing']
+                    if abs(closing) < 0.005 and not (
+                            bals[code]['posted_dr'] or bals[code]['posted_cr']):
+                        continue
+                    # A Dr-normal head closes on Dr, Cr-normal on Cr,
+                    # flipping side only when the balance goes negative.
+                    # worth = balance measured on the normal side: positive
+                    # stays home, negative crosses to the other column.
+                    try:
+                        normal_dr = not str(bals[code]['account'].get('balance_type')
+                                            or 'Dr').strip().lower().startswith('cr')
+                    except Exception:
+                        normal_dr = True
+                    worth = round(closing * (1.0 if normal_dr else -1.0), 2)
+                    if worth >= 0:
+                        dr, cr = (worth, 0.0) if normal_dr else (0.0, worth)
+                    else:
+                        dr, cr = (0.0, -worth) if normal_dr else (-worth, 0.0)
+                    total_dr += dr
+                    total_cr += cr
+                    rows.append({'code': code,
+                                 'name': bals[code]['account'].get('name') or code,
+                                 'dr': dr, 'cr': cr})
+            total_dr, total_cr = round(total_dr, 2), round(total_cr, 2)
+            return {'status': 'success',
+                    'trial': {'balanced': abs(total_dr - total_cr) < 0.01,
+                              'rows': rows, 'total_dr': total_dr,
+                              'total_cr': total_cr}}
+        except Exception as e:
+            _dberr(f"[FINANCE] trial: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_next_voucher_no(self, vch_type=''):
+        try:
+            self.ensure_finance_tables()
+            prefix = self.VOUCHER_PREFIXES.get(
+                str(vch_type or '').strip().upper(), 'V')
+            with self._get_connection() as conn:
+                row = conn.execute(
+                    "SELECT vch_no FROM cash_vouchers WHERE vch_no LIKE ? "
+                    "ORDER BY id DESC LIMIT 50", (prefix + '-%',)).fetchone()
+                best = 0
+                for r in conn.execute(
+                        "SELECT vch_no FROM cash_vouchers WHERE vch_no LIKE ?",
+                        (prefix + '-%',)).fetchall():
+                    try:
+                        best = max(best, int(str(r[0]).rsplit('-', 1)[-1]))
+                    except (TypeError, ValueError):
+                        pass
+            return {'status': 'success', 'vch_no': f"{prefix}-{best + 1:03d}"}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_post_voucher(self, vch):
+        """Post one balanced voucher. Returns its number."""
+        try:
+            d = dict(vch or {})
+            vch_type = str(d.get('type') or '').strip().upper()
+            if vch_type not in self.VOUCHER_PREFIXES:
+                return {'status': 'error',
+                        'message': f"Unknown voucher type '{vch_type}'."}
+            lines = [x for x in (d.get('lines') or []) if isinstance(x, dict)]
+            if len(lines) < 2:
+                return {'status': 'error',
+                        'message': 'A voucher needs at least two lines.'}
+            clean = []
+            for ln in lines:
+                code = str(ln.get('account_code') or '').strip().upper()
+                if not code:
+                    return {'status': 'error',
+                            'message': 'Every line needs an account.'}
+                try:
+                    dr = float(ln.get('dr') or 0)
+                    cr = float(ln.get('cr') or 0)
+                except (TypeError, ValueError):
+                    return {'status': 'error',
+                            'message': f'Bad amount on {code}.'}
+                if dr < 0 or cr < 0 or (dr > 0 and cr > 0):
+                    return {'status': 'error',
+                            'message': f'Line {code}: use Dr or Cr, not both.'}
+                clean.append((code, round(dr, 2), round(cr, 2)))
+            total_dr = round(sum(x[1] for x in clean), 2)
+            total_cr = round(sum(x[2] for x in clean), 2)
+            if total_dr <= 0 or abs(total_dr - total_cr) > 0.01:
+                return {'status': 'error',
+                        'message': 'Voucher does not balance '
+                                   f'(Dr {total_dr:.2f} vs Cr {total_cr:.2f}).'}
+            from datetime import date as _d
+            day = str(d.get('date') or _d.today().isoformat())[:10]
+            narration = str(d.get('narration') or vch_type)
+            self.ensure_finance_tables()
+            with self._get_connection() as conn:
+                codes = {r[0] for r in conn.execute(
+                    "SELECT code FROM chart_accounts").fetchall()}
+                missing = sorted({c for c, _, _ in clean} - codes)
+                if missing:
+                    return {'status': 'error',
+                            'message': 'Unknown account: ' + ', '.join(missing)}
+                vch_no = self.finance_next_voucher_no(vch_type).get('vch_no')
+                # Number raced with another save: bump until free.
+                for _ in range(25):
+                    exists = conn.execute(
+                        "SELECT id FROM cash_vouchers WHERE vch_no=?",
+                        (vch_no,)).fetchone()
+                    if not exists:
+                        break
+                    try:
+                        stem, num = vch_no.rsplit('-', 1)
+                        vch_no = f"{stem}-{int(num) + 1:03d}"
+                    except (TypeError, ValueError):
+                        vch_no = f"{vch_no}-2"
+                conn.execute(
+                    "INSERT INTO cash_vouchers(vch_no,type,date,narration) "
+                    "VALUES(?,?,?,?)", (vch_no, vch_type, day, narration))
+                for code, dr, cr in clean:
+                    conn.execute(
+                        "INSERT INTO cash_voucher_lines(vch_no,account_code,dr,cr) "
+                        "VALUES(?,?,?,?)", (vch_no, code, dr, cr))
+                conn.commit()
+            return {'status': 'success', 'vch_no': vch_no,
+                    'message': f'Voucher {vch_no} posted.'}
+        except Exception as e:
+            _dberr(f"[FINANCE] post: {e}")
+            return {'status': 'error', 'message': str(e)}

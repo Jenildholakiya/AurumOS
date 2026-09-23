@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 
 from network.cluster_server import CLUSTER_PORT
+from network.lan_scan import local_ip
 
 # Long enough to cross a slow shop router, short enough that a wrong address
 # fails while the person who typed it is still looking at the screen.
@@ -105,6 +106,47 @@ def hostname():
         return ''
 
 
+def _own_addresses():
+    """Every address or name that means this PC itself.
+
+    Fresh installs boot as a server, so typing this PC's own address into
+    Client Node setup would "verify" against itself and bond the PC to
+    itself. From then on every sign-in dials its own address and dies with
+    "no answer", while the real main PC lists it as offline -- exactly the
+    state that looks like a broken connection rather than a wrong address.
+
+    Loopbacks are deliberately NOT refused: same-machine testing and tools
+    reach a server over 127.0.0.1, and no screen ever presents a loopback
+    address as "the main PC's address", so it is not a setup footgun.
+    """
+    found = set()
+    try:
+        found.add(str(local_ip()).strip())
+    except Exception:
+        pass
+    try:
+        name = hostname()
+        if name:
+            found.add(name.strip())
+            for info in socket.getaddrinfo(name, None):
+                ip = (info[4][0] if info[4] else '')
+                if ip:
+                    found.add(str(ip).strip())
+    except Exception:
+        pass
+    refused = set()
+    for entry in found:
+        low = (entry or '').strip().lower()
+        if not low:
+            continue
+        if low in ('localhost', '::1') or low.startswith('127.'):
+            continue
+        if low.startswith('fe80:'):
+            continue                # link-local moves between networks
+        refused.add(low)
+    return refused
+
+
 # -- talking to the server ----------------------------------------------
 
 def _url(ip, port, path):
@@ -164,6 +206,11 @@ def verify_server(ip, port=CLUSTER_PORT):
     ip = str(ip or '').strip()
     if not ip:
         return {'status': 'error', 'message': 'Enter the main PC address first.'}
+    if ip.lower() in _own_addresses():
+        return {'status': 'error',
+                'message': "That's this computer's own address. Enter the main PC's "
+                           "address instead — you'll find it at the top of "
+                           "Connected Computers on the main PC."}
     try:
         data = _get(ip, port, '/aurum/hello', VERIFY_TIMEOUT)
     except Exception as e:
@@ -299,6 +346,30 @@ def sync_state():
     }
 
 
+def partition_settled(mine, accepted, failed):
+    """Split pushed tables into confirmed vs short of the server's answer.
+
+    A table is confirmed only when the server settled every row it was
+    sent (accepted counts inserts, dedups and clash resolutions — every
+    deterministic outcome). Anything short keeps its old outbound cursor
+    and is resent next exchange.
+    Returns (confirmed, short) where short maps table -> 'got/sent ...'.
+    """
+    confirmed, short = {}, {}
+    for table, rows in (mine or {}).items():
+        if not rows:
+            continue
+        sent = len(rows)
+        got = int((accepted or {}).get(table, 0) or 0)
+        if (failed or {}).get(table):
+            short[table] = f'{got}/{sent} settled, {failed[table]} failed'
+        elif got < sent:
+            short[table] = f'{got}/{sent} settled'
+        else:
+            confirmed[table] = rows
+    return confirmed, short
+
+
 def sync_once(db):
     """One exchange with the shop server.
 
@@ -335,9 +406,21 @@ def sync_once(db):
         _last_error = reply.get('message', '')
         return reply
 
+    # Only advance the outbound cursor past rows the server actually
+    # settled (inserted, deduped, or clash-resolved with a record). A table
+    # with failed rows keeps its old cursor, so the next exchange resends
+    # exactly the remainder instead of silently dropping it.
+    confirmed, short = {}, {}
     if mine:
-        store.record_outbound(db, mine)
+        accepted = reply.get('accepted') or {}
+        failed = reply.get('failed') or {}
+        confirmed, short = partition_settled(mine, accepted, failed)
+        if confirmed:
+            store.record_outbound(db, confirmed)
 
+    # Inbound applies whatever the outcome of our own push was: relayed
+    # rows are already settled on the server, and holding them back a
+    # cycle only because our upload fell short would stall the whole shop.
     received = 0
     for origin, tables in (reply.get('changes') or {}).items():
         if not tables:
@@ -348,6 +431,12 @@ def sync_once(db):
     _last_contact = time.time()
     _lease_seconds = float(reply.get('lease_seconds') or _lease_seconds)
     _last_error = ''
+
+    if short:
+        _log(f'sync: server settled only part — will resend: {short}')
+        return {'status': 'partial', 'sent': sum(len(r) for r in confirmed.values()),
+                'received': received, 'pending': short,
+                'message': 'Shop server kept only part of the push; the rest retries automatically.'}
 
     sent = sum(len(rows) for rows in mine.values())
     if sent or received:

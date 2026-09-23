@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Gold Rate</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-ln:rgba(22,163,74,0.18);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 4px 20px rgba(14, 12, 9, 0.04), 0 1px 3px rgba(14, 12, 9, 0.02);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.25rem;color:var(--ink);font-weight:400;letter-spacing:-0.2px;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-clock{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:5px;border:1px solid var(--rule);}
+.content{flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;}
+.page-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;letter-spacing:-0.4px;}
+.page-title em{font-style:italic;color:var(--gold3);}
+.page-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:20px;box-shadow:var(--sh-lux);border-top:3px solid var(--gold);}
+.card label{font-size:0.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:8px;}
+.rate-row{display:flex;align-items:baseline;gap:6px;margin-bottom:14px;}
+.rate-val{font-family:var(--mono);font-size:1.9rem;font-weight:700;color:var(--ink);}
+.rate-unit{font-size:0.72rem;color:var(--muted2);}
+.card input{width:100%;height:40px;padding:0 13px;border:1px solid var(--rule);border-radius:8px;font-size:0.9rem;font-family:var(--mono);background:var(--cream2);outline:none;}
+.card input:focus{border-color:var(--gold2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.actions{display:flex;gap:10px;align-items:center;}
+.btn{height:40px;padding:0 22px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:var(--sans);}
+.btn:hover{background:var(--gold3);border-color:var(--gold3);}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+.note{font-size:0.74rem;color:var(--muted);}
+.alert{font-size:0.76rem;padding:11px 14px;border-radius:9px;display:none;}
+.alert.err{display:block;background:var(--red-bg);color:var(--red);border:1px solid rgba(185,28,28,0.15);}
+.alert.ok{display:block;background:var(--green-bg);color:var(--green);border:1px solid rgba(21,128,61,0.18);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:0.78rem;font-weight:600;padding:12px 22px;border-radius:6px;z-index:9999;opacity:0;pointer-events:none;transition:all 0.2s ease;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Gold Rate</div>
+    <span class="h-clock" id="clock">-- : --</span>
+  </header>
+  <div class="content">
+    <div>
+      <div class="page-title">Today's <em>Metal Rates</em></div>
+      <div class="page-sub">Per-gram selling rates used across billing and estimates.</div>
+    </div>
+    <div class="alert" id="msg"></div>
+    <div class="cards">
+      <div class="card">
+        <label>Gold 22K · per gram</label>
+        <div class="rate-row"><span class="rate-val" id="v-g22">—</span><span class="rate-unit">₹/g</span></div>
+        <input type="number" step="0.01" min="0" id="in-g22" placeholder="e.g. 6850.00">
+      </div>
+      <div class="card">
+        <label>Gold 24K · per gram</label>
+        <div class="rate-row"><span class="rate-val" id="v-g24">—</span><span class="rate-unit">₹/g</span></div>
+        <input type="number" step="0.01" min="0" id="in-g24" placeholder="e.g. 7470.00">
+      </div>
+      <div class="card">
+        <label>Silver · per gram</label>
+        <div class="rate-row"><span class="rate-val" id="v-sil">—</span><span class="rate-unit">₹/g</span></div>
+        <input type="number" step="0.01" min="0" id="in-sil" placeholder="e.g. 86.50">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-save" onclick="saveRates()">Save Rates</button>
+      <span class="note" id="perm-note">Rate changes are saved instantly for every screen.</span>
+    </div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+function api(){ return window.pywebview && window.pywebview.api; }
+(function boot(n){
+    if (api()) { load(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+})(50);
+function load(){
+    api().get_metal_rates().then(function(r){
+        if (!r || r.status !== 'success') return;
+        setRate('g22', r.gold_22k); setRate('g24', r.gold_24k); setRate('sil', r.silver);
+    }).catch(function(){});
+}
+function setRate(k, v){
+    var n = parseFloat(v || 0);
+    document.getElementById('v-' + k).textContent = n > 0 ? n.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    document.getElementById('in-' + k).value = n > 0 ? n : '';
+}
+function saveRates(){
+    var payload = {
+        gold_22k: parseFloat(document.getElementById('in-g22').value || '0'),
+        gold_24k: parseFloat(document.getElementById('in-g24').value || '0'),
+        silver:   parseFloat(document.getElementById('in-sil').value || '0')
+    };
+    var b = document.getElementById('btn-save');
+    b.disabled = true; b.textContent = 'Saving…';
+    api().set_metal_rates(payload).then(function(r){
+        if (r && r.status === 'success') {
+            setRate('g22', r.gold_22k); setRate('g24', r.gold_24k); setRate('sil', r.silver);
+            msg('Rates saved.', 'ok');
+        } else if (r && r.denied) {
+            msg('Your staff account cannot change rates. Ask the owner.', 'err');
+            lockInputs();
+        } else {
+            msg((r && r.message) || 'Could not save rates.', 'err');
+        }
+        b.disabled = false; b.textContent = 'Save Rates';
+    }).catch(function(e){
+        msg('Error: ' + e, 'err');
+        b.disabled = false; b.textContent = 'Save Rates';
+    });
+}
+function lockInputs(){
+    ['in-g22','in-g24','in-sil'].forEach(function(id){ document.getElementById(id).disabled = true; });
+    document.getElementById('btn-save').disabled = true;
+    document.getElementById('perm-note').textContent = 'Read-only for your account.';
+}
+function msg(t, c){ var el = document.getElementById('msg'); el.textContent = t; el.className = 'alert ' + c; }
+setInterval(function(){
+    var c = document.getElementById('clock');
+    if (c) c.textContent = new Date().toLocaleString('en-GB', {dateStyle:'short', timeStyle:'medium'});
+}, 1000);
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('gold_rate.html'); });
+</script>
+</body>
+</html>

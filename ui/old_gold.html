@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Old Gold</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--amber:#d97706;
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 4px 20px rgba(14, 12, 9, 0.04), 0 1px 3px rgba(14, 12, 9, 0.02);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.25rem;color:var(--ink);font-weight:400;letter-spacing:-0.2px;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-clock{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:5px;border:1px solid var(--rule);}
+.content{flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;}
+.page-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;letter-spacing:-0.4px;}
+.page-title em{font-style:italic;color:var(--gold3);}
+.page-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start;}
+.panel{background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--sh-lux);overflow:hidden;}
+.panel-head{padding:13px 18px;border-bottom:1px solid var(--rule);background:var(--cream2);font-family:var(--serif);font-size:1.02rem;}
+.panel-head em{color:var(--gold3);font-style:italic;}
+.panel-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:0.58rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.fg input{height:38px;padding:0 12px;border:1px solid var(--rule);border-radius:8px;font-size:0.84rem;font-family:var(--mono);background:var(--cream2);outline:none;}
+.fg input:focus{border-color:var(--gold2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.08);}
+.result{background:var(--gold-bg);border:1px solid var(--gold-ln);border-radius:9px;padding:12px 14px;font-size:0.78rem;color:var(--ink3);}
+.result b{display:block;font-family:var(--mono);font-size:1.4rem;color:var(--ink);margin-top:2px;}
+.sums{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.sum{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px;box-shadow:var(--sh-lux);}
+.sum-lbl{font-size:0.55rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted2);font-weight:700;margin-bottom:4px;}
+.sum-val{font-family:var(--mono);font-size:1.3rem;font-weight:700;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--cream2);padding:10px 14px;text-align:left;font-size:0.55rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--rule);position:sticky;top:0;}
+td{padding:10px 14px;font-size:0.78rem;border-bottom:1px solid var(--rule2);color:var(--ink2);}
+.num{text-align:right;font-family:var(--mono);font-weight:600;}
+.empty{padding:36px;text-align:center;color:var(--muted2);font-size:0.8rem;}
+.scroll-frame{overflow-y:auto;max-height:420px;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Old Gold</div>
+    <span class="h-clock" id="clock">-- : --</span>
+  </header>
+  <div class="content">
+    <div>
+      <div class="page-title">Old Gold <em>Exchange</em></div>
+      <div class="page-sub">Value a customer's old ornaments, then take them against a new bill.</div>
+    </div>
+    <div class="sums">
+      <div class="sum"><div class="sum-lbl">Taken this register</div><div class="sum-val" id="s-wt">0.000 g</div></div>
+      <div class="sum"><div class="sum-lbl">Value adjusted</div><div class="sum-val" id="s-val">₹0</div></div>
+      <div class="sum"><div class="sum-lbl">Exchanges</div><div class="sum-val" id="s-n">0</div></div>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-head">Exchange <em>Calculator</em></div>
+        <div class="panel-body">
+          <div class="fg"><label>Weight (g)</label><input type="number" step="0.001" id="c-wt" placeholder="e.g. 10.500" oninput="calc()"></div>
+          <div class="fg"><label>Purity touch (%)</label><input type="number" step="0.01" id="c-touch" placeholder="e.g. 75" oninput="calc()"></div>
+          <div class="fg"><label>Rate (₹/g, 24K)</label><input type="number" step="0.01" id="c-rate" placeholder="e.g. 7470" oninput="calc()"></div>
+          <div class="result">Exchange value<b id="c-out">₹0</b><span id="c-fine"></span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Taken <em>Register</em></div>
+        <div class="scroll-frame">
+          <table>
+            <thead><tr><th>Date</th><th>Bill</th><th>Customer</th><th class="num">Weight (g)</th><th class="num">Value (₹)</th></tr></thead>
+            <tbody id="reg-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+function api(){ return window.pywebview && window.pywebview.api; }
+(function boot(n){
+    if (api()) { init(); return; }
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+})(50);
+function init(){
+    api().get_metal_rates().then(function(r){
+        if (r && r.status === 'success' && parseFloat(r.gold_24k) > 0) {
+            document.getElementById('c-rate').value = r.gold_24k;
+            calc();
+        }
+    }).catch(function(){});
+    api().get_old_gold_register().then(function(r){
+        var rows = (r && r.status === 'success') ? (r.entries || []) : [];
+        render(rows);
+    }).catch(function(){
+        document.getElementById('reg-tbody').innerHTML = '<tr><td colspan="5" class="empty">Could not load register.</td></tr>';
+    });
+}
+function calc(){
+    var wt = parseFloat(document.getElementById('c-wt').value || '0');
+    var touch = parseFloat(document.getElementById('c-touch').value || '0');
+    var rate = parseFloat(document.getElementById('c-rate').value || '0');
+    var fine = wt * touch / 100;
+    var val = Math.round(fine * rate);
+    document.getElementById('c-out').textContent = '₹' + val.toLocaleString('en-IN');
+    document.getElementById('c-fine').textContent = fine > 0 ? ('Fine content: ' + fine.toFixed(3) + ' g') : '';
+}
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function render(rows){
+    var tb = document.getElementById('reg-tbody');
+    var tw = 0, tv = 0;
+    rows.forEach(function(e){
+        tw += parseFloat(e.old_gold_wt || 0);
+        tv += parseFloat(e.old_gold_value || 0);
+    });
+    document.getElementById('s-wt').textContent = tw.toFixed(3) + ' g';
+    document.getElementById('s-val').textContent = '₹' + Math.round(tv).toLocaleString('en-IN');
+    document.getElementById('s-n').textContent = rows.length;
+    if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="5" class="empty">No old-gold exchanges recorded yet. They appear here automatically from billing.</td></tr>';
+        return;
+    }
+    tb.innerHTML = rows.map(function(e){
+        return '<tr><td>' + esc(e.date || '—') + '</td><td style="font-family:Arial;color:var(--gold3);font-weight:600;">' + esc(e.vch_id || '—') + '</td>'
+            + '<td>' + esc(e.customer || 'Walk-in') + '</td>'
+            + '<td class="num">' + parseFloat(e.old_gold_wt || 0).toFixed(3) + '</td>'
+            + '<td class="num">₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN') + '</td></tr>';
+    }).join('');
+}
+setInterval(function(){
+    var c = document.getElementById('clock');
+    if (c) c.textContent = new Date().toLocaleString('en-GB', {dateStyle:'short', timeStyle:'medium'});
+}, 1000);
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('old_gold.html'); });
+</script>
+</body>
+</html>

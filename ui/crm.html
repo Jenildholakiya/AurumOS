@@ -71,12 +71,12 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));
        gap:11px;margin-bottom:18px;}
 .tile{background:var(--white);border:1px solid var(--border);border-radius:12px;
-      padding:13px 15px;box-shadow:var(--sh);cursor:pointer;
+      padding:15px 16px;box-shadow:var(--sh);cursor:pointer;
       transition:all .15s;border-left:3px solid var(--border);}
 .tile:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
 .tile-label{font-size:0.55rem;font-weight:700;text-transform:uppercase;
             letter-spacing:1px;color:var(--muted2);}
-.tile-value{font-size:1.4rem;font-weight:700;margin-top:4px;letter-spacing:-0.5px;
+.tile-value{font-size:1.55rem;font-weight:700;margin-top:4px;letter-spacing:-0.5px;
             line-height:1.1;}
 .tile-sub{font-size:0.63rem;color:var(--text-muted);margin-top:3px;}
 .tile.is-today{border-left-color:var(--gold);}
@@ -88,7 +88,8 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .tile.is-warn .tile-value{color:var(--amber);}
 .tile.is-ok{border-left-color:var(--success);}
 
-/* ── Two columns: what to do, then who to know. ── */
+/* ── Two columns, priority ordered: act/today/promises/money on the left,
+   orders/plans/quiet/best on the right. ── */
 .cols{display:grid;gap:16px;align-items:start;
       grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
 @media (max-width:1120px){ .cols{grid-template-columns:1fr;} }
@@ -98,7 +99,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
 .card{background:var(--white);border:1px solid var(--border);border-radius:13px;
       box-shadow:var(--sh);overflow:hidden;}
-.card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);
+.card-hdr{padding:15px 18px;border-bottom:1px solid var(--rule2);
           display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .card-hdr-left{display:flex;align-items:center;gap:9px;min-width:0;}
 .card-icon{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;
@@ -107,22 +108,22 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .card-icon.danger{background:var(--danger-bg);color:var(--danger);}
 .card-icon.amber{background:var(--amber-bg);color:var(--amber);}
 .card-icon.ok{background:var(--success-bg);color:var(--success);}
-.card-title{font-size:0.79rem;font-weight:700;line-height:1.2;}
+.card-title{font-size:0.85rem;font-weight:700;line-height:1.2;}
 .card-sub{font-size:0.62rem;color:var(--text-muted);margin-top:1px;}
 .count-chip{font-size:0.6rem;font-weight:700;padding:2px 8px;border-radius:99px;
             background:var(--cream);color:var(--text-muted);}
 .count-chip.hot{background:var(--danger-bg);color:var(--danger);}
-.list{max-height:318px;overflow-y:auto;scrollbar-width:thin;}
+.list{max-height:360px;overflow-y:auto;scrollbar-width:thin;}
 .list::-webkit-scrollbar{width:4px;}
 .list::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
 
-.row{display:flex;align-items:center;gap:10px;padding:9px 17px;
+.row{display:flex;align-items:center;gap:10px;padding:13px 18px;
      border-bottom:1px solid var(--rule2);}
 .row:last-child{border-bottom:none;}
 .row-click{cursor:pointer;transition:background .12s;}
 .row-click:hover{background:var(--bg-main);}
 .row-main{flex:1;min-width:0;}
-.row-name{font-weight:600;font-size:0.75rem;white-space:nowrap;
+.row-name{font-weight:600;font-size:0.8rem;white-space:nowrap;
           overflow:hidden;text-overflow:ellipsis;}
 .row-meta{font-size:0.64rem;color:var(--text-muted);margin-top:2px;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -255,7 +256,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 
     <div class="cols">
 
-        <!-- The one place you type something, then what to do today. -->
+        <!-- Priority order: act, today, promises, money — then orders, plans, quiet, best. -->
         <div class="col">
             <div class="card" id="sec-do">
                 <div class="card-hdr">
@@ -401,25 +402,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 <div class="list" id="followups"><div class="empty">Loading…</div></div>
             </div>
 
-            <div class="card" id="sec-orders">
-                <div class="card-hdr">
-                    <div class="card-hdr-left">
-                        <div class="card-icon">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        </div>
-                        <div>
-                            <div class="card-title">Orders and repairs</div>
-                            <div class="card-sub">In hand, overdue shown in red</div>
-                        </div>
-                    </div>
-                    <span class="count-chip" id="chip-orders">0</span>
-                </div>
-                <div class="list" id="orders"><div class="empty">Loading…</div></div>
-            </div>
-        </div>
-
-        <!-- Money: what is owed, what is being saved, and who has gone quiet. -->
-        <div class="col">
             <div class="card" id="sec-money">
                 <div class="card-hdr">
                     <div class="card-hdr-left">
@@ -435,6 +417,24 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 </div>
                 <div class="ageing" id="ageing"></div>
                 <div class="list" id="dues"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="card" id="sec-orders">
+                <div class="card-hdr">
+                    <div class="card-hdr-left">
+                        <div class="card-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        </div>
+                        <div>
+                            <div class="card-title">Orders and repairs</div>
+                            <div class="card-sub">In hand, overdue shown in red</div>
+                        </div>
+                    </div>
+                    <span class="count-chip" id="chip-orders">0</span>
+                </div>
+                <div class="list" id="orders"><div class="empty">Loading…</div></div>
             </div>
 
             <div class="card" id="sec-plans">
@@ -485,7 +485,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 <div class="list" id="top"><div class="empty">Loading…</div></div>
             </div>
         </div>
-
     </div><!-- /cols -->
 
 </div><!-- /scroll -->

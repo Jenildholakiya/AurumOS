@@ -1403,6 +1403,7 @@ function refreshHeldBills(){
             e.stopPropagation();
             _heldBills=_heldBills.filter(function(b){return b.vch_id!==h.vch_id;});
             refreshHeldBills();
+            _persistHeldDelete(h.vch_id);
         });
         chip.addEventListener('click',function(){loadHeldBill(h.vch_id);});
         strip.appendChild(chip);
@@ -1419,12 +1420,14 @@ function loadHeldBill(vchId){
     refreshHeldBills();
     renderItems();
     document.getElementById('it-code').focus();
+    _persistHeldDelete(vchId);
 }
 async function deleteHeldBill(e,vchId){
     e.stopPropagation();
     if(!await aurumConfirm('Delete held bill '+vchId+'?',{title:'Delete Held Bill',confirmText:'Delete',type:'danger'})) return;
     _heldBills=_heldBills.filter(function(h){return h.vch_id!==vchId;});
     refreshHeldBills();
+    _persistHeldDelete(vchId);
 }
 
 async function clearBill(){
@@ -1451,11 +1454,12 @@ function holdBill(){
         var snapshot=[];
         for(var i=0;i<_billItems.length;i++){
             var it=_billItems[i];
-            snapshot.push({code:it.code||'',weight:parseFloat(it.weight)||0,touch:parseFloat(it.touch)||0,rate:parseFloat(it.rate)||0,qty:parseInt(it.qty)||1,fine:parseFloat(it.fine)||0,making:parseFloat(it.making)||0,makingRaw:it.makingRaw||'',amount:parseFloat(it.amount)||0,huid:it.huid||'',tag_id:it.tag_id||''});
+            snapshot.push({code:it.code||'',name:it.name||it.it_name||'',weight:parseFloat(it.weight)||0,touch:parseFloat(it.touch)||0,rate:parseFloat(it.rate)||0,qty:parseInt(it.qty)||1,fine:parseFloat(it.fine)||0,making:parseFloat(it.making)||0,makingRaw:it.makingRaw||'',amount:parseFloat(it.amount)||0,huid:it.huid||'',tag_id:it.tag_id||''});
         }
         var grand=_billMeta?_billMeta.grand:0;
         _heldBills.push({vch_id:vch,grand_total:grand,items:snapshot,customer:_selectedCustomer?_selectedCustomer.name:(document.getElementById('cust-name').value.trim()||'Walk-in')});
         refreshHeldBills();
+        _persistHeldSave({vch_id:vch,grand_total:grand,items:snapshot,customer:_selectedCustomer?_selectedCustomer.name:(document.getElementById('cust-name').value.trim()||'Walk-in')});
         _billItems=[];
         _selectedCustomer=null;
         _oldGold={desc:'',wt:0,touch:0,rate:0,value:0};
@@ -1668,6 +1672,18 @@ function loadHeldBills(){
             if(res.status==='success'){_heldBills=res.bills||[];refreshHeldBills();}
         }).catch(function(){});
     }
+}
+function _persistHeldSave(bill){
+    try{
+        var api=window.pywebview&&window.pywebview.api;
+        if(api&&typeof api.hold_bill==='function'){api.hold_bill(bill).catch(function(){});}
+    }catch(e){}
+}
+function _persistHeldDelete(vchId){
+    try{
+        var api=window.pywebview&&window.pywebview.api;
+        if(api&&typeof api.delete_held_bill==='function'){api.delete_held_bill(vchId).catch(function(){});}
+    }catch(e){}
 }
 loadHeldBills();
 

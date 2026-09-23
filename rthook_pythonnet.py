@@ -106,6 +106,29 @@ def _boot_clr():
     try:
         import pythonnet
         os.environ.pop("PYTHONNET_RUNTIME", None)
+        # clr_loader 0.2.10's ffi/__init__.py uses os.path without importing
+        # os, so load_netfx() silently falls back to its own
+        # clr_loader/ffi/dlls ClrLoader.dll whose AppDomain cannot see
+        # pythonnet/runtime/*.dll. Frozen builds then die with "Failed to
+        # resolve Python.Runtime.Loader.Initialize" even though every file
+        # is present. Point it at the right ClrLoader explicitly.
+        try:
+            import clr_loader.ffi as _clriffi
+            _orig_load_netfx = _clriffi.load_netfx
+            def _fixed_load_netfx():
+                try:
+                    import pythonnet as _pn2
+                    rt2 = os.path.join(
+                        os.path.dirname(_pn2.__file__),
+                        "runtime", "ClrLoader.dll")
+                    if os.path.isfile(rt2):
+                        return _clriffi.ffi.dlopen(rt2)
+                except Exception:
+                    pass
+                return _orig_load_netfx()
+            _clriffi.load_netfx = _fixed_load_netfx
+        except Exception as _patch_err:
+            why.append("clr patch: " + repr(_patch_err)[:100])
         for runtime in ("netfx", "coreclr"):
             try:
                 pythonnet.load(runtime)

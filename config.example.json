@@ -1,0 +1,11 @@
+{
+  "mode": "local",
+  "server_ip": "",
+  "server_port": 58903,
+  "is_server": true,
+  "api_base_url": "https://aurum-os-admin.vercel.app",
+  "cluster_role": "",
+  "terminal_id": "",
+  "terminal_secret": "",
+  "shop_business": ""
+}

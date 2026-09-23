@@ -2,10 +2,22 @@
 """
 Test script to trigger Bastion suspension for testing.
 Run this to simulate EXE tampering / integrity attacks.
+
+SAFETY: without --force this suspends a THROWAWAY database in the temp
+folder, not the shop's real one. Pass --force only when you deliberately
+want to lock the install in front of you (to rehearse the unlock flow).
 """
 import sys
 import os
+import tempfile
 sys.path.insert(0, os.path.dirname(__file__))
+
+FORCE = '--force' in sys.argv[1:]
+if not FORCE:
+    os.environ['AURUM_DB_DIR'] = tempfile.mkdtemp()
+    os.environ['AURUM_DB_PATH'] = os.path.join(os.environ['AURUM_DB_DIR'],
+                                               'suspension_test.db')
+    print('[SAFE] no --force: using throwaway DB, shop data untouched')
 
 from database.db_manager import DBManager
 

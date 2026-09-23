@@ -71,12 +71,39 @@ def sync_now(api, payload):
 def verify_server(api, payload):
     """Check an address typed into setup, before committing to it."""
     return client.verify_server(payload.get('ip'),
-                                payload.get('port') or CLUSTER_PORT)
+                                 payload.get('port') or CLUSTER_PORT)
+
+
+def find_servers(api, payload):
+    """Shop servers answering on this network right now.
+
+    Open to all, like verify_server: a lost terminal must be able to find
+    its way home from the login screen, where nobody is signed in yet.
+    Answers carry shop names only — the same hello any LAN device can ask.
+    """
+    from network import lan_scan
+    return lan_scan.find_servers()
 
 
 def join(api, payload):
-    return client.join_server(api.db, payload.get('ip'),
-                              payload.get('port') or CLUSTER_PORT)
+    out = client.join_server(api.db, payload.get('ip'),
+                             payload.get('port') or CLUSTER_PORT)
+    if out.get('status') == 'success':
+        # The app booted as a server, and nothing would flip that until a
+        # restart: this PC would keep answering as a server while never
+        # syncing as a terminal, so the main PC would list it as offline
+        # minutes after joining even though it is switched on. Flip roles
+        # now — stop serving, start the sync loop (first exchange ~3s).
+        try:
+            from network import cluster_server
+            cluster_server.stop_server()
+        except Exception:
+            pass
+        try:
+            client.start_sync(api.db)
+        except Exception:
+            pass
+    return out
 
 
 def become_server(api, payload):
@@ -87,6 +114,10 @@ def become_server(api, payload):
     owner having to restart the application first.
     """
     client.leave_server()
+    try:
+        client.stop_sync()
+    except Exception:
+        pass
     try:
         api._start_cluster()
     except Exception:
@@ -242,6 +273,7 @@ ACTIONS = {
     'identity':        identity,
     'status':          status,
     'verify_server':   verify_server,
+    'find_servers':    find_servers,
     'join':            join,
     'leave':           leave,
     'become_server':   become_server,

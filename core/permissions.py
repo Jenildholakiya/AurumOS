@@ -73,8 +73,10 @@ OWNER_ONLY = frozenset([
     'ai_save_config',
     # Destructive
     'delete_bill', 'delete_stock_entry', 'delete_new_client',
-    'delete_master_entry', 'delete_katti_voucher',
+    'delete_master_entry', 'delete_katti_voucher', 'delete_account',
+    'delete_all_accounts',
     'tag_audit_delete_session', 'do_year_close', 'switch_year',
+    'update_client_limits',
     # Licensing and money
     'renew_subscription', 'get_plans', 'verify_key',
     # Diagnostics that expose the whole install
@@ -86,9 +88,20 @@ OWNER_ONLY = frozenset([
 # Session plumbing, chrome, and the read-only bits every page touches on load.
 ALWAYS = frozenset([
     'get_session', 'get_business_name', 'get_settings', 'get_dynamic_greeting',
-    'get_current_version', 'get_active_year', 'get_year_list', 'navigate',
+    'get_current_version', 'get_version_info', 'get_active_year',
+    'get_year_list', 'navigate', 'reload', 'ui_stamp',
+    'open_url', 'open_admin_renewal', 'fetch_live_network_nodes',
+    'get_license_details', 'recover_from_trial', 'get_metal_rates',
+    'verify_login', 'verify_2fa', 'get_last_login_info',
+    'record_failed_attempt', 'get_lock_status', 'is_setup_done',
+    'validate_gstin', 'ai_get_config',
+    'check_for_update', 'get_update_state', 'reactivate_check',
+    'get_live_command_metrics', 'get_network_config',
+    'get_sync_status', 'get_sync_conflicts',
+    'urgent_list', 'urgent_mark_read', 'urgent_mark_all_read',
+    'urgent_ingest', 'urgent_fetch_missed',
     'logout', 'quit_app', 'restart_app', 'js_log', 'get_local_ip',
-    'get_metal_rates', 'get_notifications', 'mark_notification_read',
+    'get_notifications', 'mark_notification_read',
     'mark_all_notifications_read', 'get_trial_status',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
@@ -104,13 +117,15 @@ BUNDLES = {
         'label': 'Billing Desk',
         'pages': {
             'wholesale': ['billing.html', 'tag_audit.html'],
-            'retail':    ['pos_billing.html', 'tag_audit.html'],
+            'retail':    ['pos_billing.html', 'tag_audit.html',
+                          'gold_rate.html', 'old_gold.html'],
         },
         'methods': frozenset([
             'get_sales_vch_id', 'get_next_uchak_vch_id', 'generate_bill',
             'generate_retail_bill', 'get_retail_estimate',
             'convert_estimate_to_paid', 'get_estimate_customers',
             'get_customer_estimate', 'get_bill_details',
+            'get_old_gold_register',
             'get_live_invoice_print_payload', 'trigger_print_window',
             'open_print_window', 'generate_bill_pdf', 'send_bill_whatsapp',
             'get_pos_stock', 'get_product_by_tag', 'get_uchak_price_by_code',
@@ -120,7 +135,9 @@ BUNDLES = {
             'get_client_live_outstanding', 'get_customer_purchases',
             'validate_touch_value', 'get_available_printers', 'get_printers',
             'check_printer_status', 'get_printer_status', 'print_tag',
-            'print_tag_local', 'print_multiple_tags', 'get_tag_preview',
+            'print_tag_local', 'print_tag_network', 'print_multiple_tags',
+            'get_tag_preview', 'get_shop_print_block',
+            'get_held_bills', 'hold_bill', 'delete_held_bill',
             'scale_connect', 'scale_disconnect', 'scale_get_ports',
             'scale_is_connected', 'scale_get_saved_config', 'scale_get_last',
             'tag_audit_start', 'tag_audit_scan', 'tag_audit_get_status',
@@ -153,7 +170,11 @@ BUNDLES = {
             'hallmark_dashboard', 'hallmark_quote', 'hallmark_save_centre',
             'hallmark_set_registration', 'hallmark_check_pieces',
             'hallmark_create_lot', 'hallmark_lot', 'hallmark_receive',
-            'hallmark_cancel_lot', 'hallmark_find',
+            'hallmark_cancel_lot', 'hallmark_find', 'hm_share_url',
+            'hm_centre_overview', 'hm_centre_detail', 'hm_save_centre_full',
+            'hm_email_settings_get', 'hm_email_settings_save',
+            'hm_portal_base_get', 'hm_portal_base_save',
+            'hm_centre_pin', 'hm_portal_link', 'hm_portal_send',
         ]),
     },
     'crm': {
@@ -171,6 +192,8 @@ BUNDLES = {
             'crm_schemes', 'crm_save_scheme', 'crm_enrol', 'crm_enrolments',
             'crm_add_payment', 'crm_scheme_schedule',
             'crm_loyalty_balance', 'crm_award_loyalty', 'crm_redeem_loyalty',
+            'update_new_client',
+            'print_customer_credit', 'print_customer_purchases',
             'photo_pick', 'photo_remove', 'photo_path', 'photo_to_clipboard',
             'photo_reveal', 'wa_send_item', 'items_with_photos',
             'wa_message', 'wa_wishes_today', 'wa_campaign', 'wa_mark_sent',
@@ -201,11 +224,15 @@ BUNDLES = {
             'get_low_stock_items', 'get_low_stock_uchak_items',
             'get_out_of_stock_items', 'get_velocity_products',
             'get_weight_stock_it_codes', 'get_touch_ledger_details',
+            'get_touch_stock_report', 'get_stagnant_report',
+            'get_analytics_payload',
             'mark_as_tagged', 'get_stocksync_snapshot',
             'add_category', 'get_categories', 'add_touch_group',
             'get_touch_groups', 'add_product_master', 'get_products',
             'validate_touch_value', 'get_uchak_price_by_code',
-            'print_tag', 'print_tag_local', 'print_multiple_tags',
+            'get_uchak_item_details',
+            'print_tag', 'print_tag_local', 'print_tag_network',
+            'print_multiple_tags',
             'get_tag_preview', 'get_available_printers', 'get_printers',
             'check_printer_status', 'get_printer_status',
             'scale_connect', 'scale_disconnect', 'scale_get_ports',
@@ -215,29 +242,56 @@ BUNDLES = {
     'karigar': {
         'label': 'Karigar Desk',
         'pages': {
-            'wholesale': ['karigar.html', 'katti_entry.html',
-                          'uchak_stock_entry.html'],
-            'retail':    ['karigar.html'],
+            'wholesale': ['karigar.html', 'karigar_master.html',
+                          'karigar_order.html', 'karigar_details.html',
+                          'katti_entry.html', 'uchak_stock_entry.html'],
+            'retail':    ['karigar.html', 'karigar_master.html',
+                          'karigar_order.html', 'karigar_details.html'],
         },
         'methods': frozenset([
+            'get_all_karigars', 'add_karigar', 'update_karigar',
+            'delete_karigar', 'get_karigar_orders', 'create_karigar_order',
+            'receive_karigar_order',
             'get_katti_vch_id', 'save_katti_voucher', 'get_all_katti_vouchers',
             'update_katti_voucher', 'get_voucher_history',
             'get_next_uchak_inward_vch_id', 'get_uchak_inward_voucher_details',
             'save_uchak_inward_batch', 'get_touch_groups', 'get_categories',
             'get_products', 'get_client_list', 'validate_touch_value',
+            'get_uchak_item_details',
+            'get_settings', 'open_print_window',
         ]),
     },
     'history': {
-        'label': 'Sales History',
-        'pages': {
-            'wholesale': ['history.html', 'voucher_history.html'],
-            'retail':    ['history.html'],
+        'label': 'Sales History',        'pages': {
+            'wholesale': ['history.html', 'voucher_history.html',
+                          'reports.html'],
+            'retail':    ['history.html', 'reports.html'],
         },
         'methods': frozenset([
             'fetch_history', 'get_voucher_history_list', 'get_voucher_history',
-            'get_bill_details', 'get_live_invoice_print_payload',
+            'get_bill_details', 'get_old_gold_register', 'get_live_invoice_print_payload',
             'trigger_print_window', 'generate_bill_pdf', 'send_bill_whatsapp',
             'get_customer_purchases',
+        ]),
+    },
+    'finance': {
+        'label': 'Finance Desk',
+        'pages': {
+            # The retail sidebar carries no finance screens; a retail shop
+            # reaching one of these pages is the owner, who is unrestricted.
+            'wholesale': ['accounting.html', 'cash_bank.html',
+                          'chart_of_accounts.html', 'ledger.html',
+                          'party.html', 'client_ledger.html'],
+            'retail':    [],
+        },
+        'methods': frozenset([
+            'get_cash_bank_accounts', 'get_chart_of_accounts',
+            'save_account', 'save_cash_bank_account',
+            'get_cash_position', 'get_daybook', 'get_trial_balance',
+            'get_next_voucher_no', 'post_voucher',
+            'post_to_ledger', 'post_journal_entry',
+            'get_ledger_summary', 'get_full_ledger_stream',
+            'get_client_balances', 'get_ledger_statement',
         ]),
     },
 }
@@ -247,7 +301,7 @@ PLAN_BUNDLES = {
     'lite':       [],
     'pro':        ['billing'],
     'enterprise': ['billing', 'inventory', 'karigar', 'history',
-                   'crm', 'hallmark', 'deadstock'],
+                   'crm', 'hallmark', 'deadstock', 'finance'],
 }
 
 
@@ -288,15 +342,20 @@ def is_allowed(method_name, role, bundle_ids=None):
 
 
 # Methods the application calls on itself from its own background threads,
-# rather than anything a page asked for. Licence checks, the event stream and
-# the scale reconnect all run on timers, and a staff member being signed in at
-# that moment must not make them fail. Found by scanning main.py for calls of
-# the form api.<name>() outside the class, not by guesswork; re-run that scan
-# if the startup code changes. Calls nested inside an already-authorised method
-# are handled separately, by depth, so `self.<name>()` chains need no entry.
+# rather than anything a page asked for. Licence checks, the event stream,
+# update downloads, the urgent-message catch-up and the scale reconnect all
+# run on timers, and a staff member being signed in at that moment must not
+# make them fail. Found by scanning main.py for calls of the form api.<name>()
+# outside the class, not by guesswork; re-run that scan if the startup code
+# changes. Calls nested inside an already-authorised method are handled
+# separately, by depth, so `self.<name>()` chains need no entry.
 INTERNAL = frozenset([
-    'set_window', 'check_license_revoked', 'fire_revoked_screen',
-    'start_sse_stream', 'scale_get_saved_config',
+    'set_window', 'check_license', 'check_license_revoked',
+    'fire_revoked_screen', 'sse_handle_revoke', 'start_sse_stream',
+    'subscription_sync', 'subscription_start_sync', 'subscription_poll_check',
+    'subscription_startup_check', 'subscription_check_update',
+    'auto_update_silent', 'auto_update_loop',
+    'urgent_fetch_missed', 'scale_get_saved_config',
 ])
 
 # Tracks whether this thread is already inside a guarded method. Authorisation

@@ -309,7 +309,14 @@ try:
     check("and the description", closed['description'], 'Chain clasp')
 
     print("-- the dashboard, in one call --")
-    api.crm_save_customer({'name': 'Bhavin Shah', 'phone': '8888', 'dob': '1985-09-13'})
+    # Occasion dates float with the calendar: fixed dates rot (a September
+    # birthday passes and the "upcoming" list goes empty), so Bhavin's
+    # birthday and anniversary are set a few days ahead of today.
+    _ahead5 = (dt.date.today() + dt.timedelta(days=5)).isoformat()
+    _ahead10 = (dt.date.today() + dt.timedelta(days=10)).isoformat()
+    api.crm_save_customer({'name': 'Bhavin Shah', 'phone': '8888',
+                           'dob': '1985' + _ahead5[4:],
+                           'anniversary': '2019' + _ahead10[4:]})
     d = api.crm_dashboard(30, 365)
     check("it loads", d.get('status'), 'success')
     check_that("counts are there", 'customers' in (d.get('counts') or {}))
