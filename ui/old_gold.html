@@ -56,6 +56,27 @@ td{padding:10px 14px;font-size:0.78rem;border-bottom:1px solid var(--rule2);colo
 .num{text-align:right;font-family:var(--mono);font-weight:600;}
 .empty{padding:36px;text-align:center;color:var(--muted2);font-size:0.8rem;}
 .scroll-frame{overflow-y:auto;max-height:420px;}
+/* ── Taken cards ── */
+.reg-tools{display:flex;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--rule);background:var(--white);position:sticky;top:0;z-index:5;}
+.reg-tools input{flex:1;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:8px;font-size:0.78rem;background:var(--cream2);outline:none;font-family:var(--sans);}
+.reg-tools input:focus{border-color:var(--gold2);background:#fff;}
+.reg-count{font-family:var(--mono);font-size:0.68rem;color:var(--muted2);white-space:nowrap;}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;padding:16px 18px;}
+.og-card{background:var(--white);border:1px solid var(--rule);border-radius:12px;padding:14px 15px;box-shadow:var(--sh-lux);border-top:3px solid var(--amber);transition:all 0.15s ease;}
+.og-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(14,12,9,0.08);}
+.og-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:2px;}
+.og-cust{font-size:0.86rem;font-weight:700;color:var(--ink);}
+.og-phone{font-size:0.7rem;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.og-bill{font-family:var(--mono);font-size:0.66rem;font-weight:700;color:var(--gold3);background:var(--gold-bg);border:1px solid var(--gold-ln);padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.og-date{display:inline-block;font-size:0.64rem;color:var(--muted2);background:var(--cream2);border:1px solid var(--rule);padding:2px 9px;border-radius:20px;margin:8px 0 10px;}
+.og-desc{font-size:0.74rem;color:var(--ink3);font-style:italic;margin-bottom:10px;line-height:1.5;}
+.og-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:0.64rem;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--rule);background:var(--cream2);color:var(--ink3);}
+.tag b{font-family:var(--mono);font-weight:700;color:var(--ink);}
+.tag.val{background:var(--green-bg);border-color:var(--green-ln);color:var(--green);}
+.tag.val b{color:var(--green);}
+.og-foot{margin-top:10px;padding-top:8px;border-top:1px dashed var(--rule);font-size:0.66rem;color:var(--muted2);display:flex;justify-content:space-between;}
+.og-foot b{font-family:var(--mono);color:var(--ink3);}
 </style>
 </head>
 <body>
@@ -88,11 +109,12 @@ td{padding:10px 14px;font-size:0.78rem;border-bottom:1px solid var(--rule2);colo
       </div>
       <div class="panel">
         <div class="panel-head">Taken <em>Register</em></div>
-        <div class="scroll-frame">
-          <table>
-            <thead><tr><th>Date</th><th>Bill</th><th>Customer</th><th class="num">Weight (g)</th><th class="num">Value (₹)</th></tr></thead>
-            <tbody id="reg-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
-          </table>
+        <div class="reg-tools">
+          <input type="text" id="reg-search" placeholder="Search customer, bill, ornament…" oninput="renderCards()">
+          <span class="reg-count" id="reg-count">0 taken</span>
+        </div>
+        <div class="scroll-frame" style="max-height:520px;">
+          <div class="cards" id="reg-cards"><div class="empty">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -116,7 +138,7 @@ function init(){
         var rows = (r && r.status === 'success') ? (r.entries || []) : [];
         render(rows);
     }).catch(function(){
-        document.getElementById('reg-tbody').innerHTML = '<tr><td colspan="5" class="empty">Could not load register.</td></tr>';
+        document.getElementById('reg-cards').innerHTML = '<div class="empty">Could not load register.</div>';
     });
 }
 function calc(){
@@ -129,25 +151,65 @@ function calc(){
     document.getElementById('c-fine').textContent = fine > 0 ? ('Fine content: ' + fine.toFixed(3) + ' g') : '';
 }
 function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var REG_ROWS = [];
+function fmtDate(e){
+    var d = esc(e.date || '');
+    var t = esc((e.time_stamp || '').slice(0, 5));
+    if (!d) return '—';
+    var parts = d.split('-');
+    var nice = (parts.length === 3) ? (parts[2] + '/' + parts[1] + '/' + parts[0]) : d;
+    return t ? (nice + ' · ' + t) : nice;
+}
 function render(rows){
-    var tb = document.getElementById('reg-tbody');
+    REG_ROWS = Array.isArray(rows) ? rows : [];
     var tw = 0, tv = 0;
-    rows.forEach(function(e){
+    REG_ROWS.forEach(function(e){
         tw += parseFloat(e.old_gold_wt || 0);
         tv += parseFloat(e.old_gold_value || 0);
     });
     document.getElementById('s-wt').textContent = tw.toFixed(3) + ' g';
     document.getElementById('s-val').textContent = '₹' + Math.round(tv).toLocaleString('en-IN');
-    document.getElementById('s-n').textContent = rows.length;
+    document.getElementById('s-n').textContent = REG_ROWS.length;
+    renderCards();
+}
+function renderCards(){
+    var box = document.getElementById('reg-cards');
+    var q = (document.getElementById('reg-search').value || '').toLowerCase().trim();
+    var rows = REG_ROWS.filter(function(e){
+        if (!q) return true;
+        return (String(e.customer || '').toLowerCase().indexOf(q) !== -1)
+            || (String(e.vch_id || '').toLowerCase().indexOf(q) !== -1)
+            || (String(e.old_gold_desc || '').toLowerCase().indexOf(q) !== -1);
+    });
+    document.getElementById('reg-count').textContent = rows.length + ' taken';
     if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="5" class="empty">No old-gold exchanges recorded yet. They appear here automatically from billing.</td></tr>';
+        box.innerHTML = '<div class="empty">' +
+            (q ? 'No exchanges match your search.' : 'No old-gold exchanges recorded yet. They appear here automatically from POS billing.') + '</div>';
         return;
     }
-    tb.innerHTML = rows.map(function(e){
-        return '<tr><td>' + esc(e.date || '—') + '</td><td style="font-family:Arial;color:var(--gold3);font-weight:600;">' + esc(e.vch_id || '—') + '</td>'
-            + '<td>' + esc(e.customer || 'Walk-in') + '</td>'
-            + '<td class="num">' + parseFloat(e.old_gold_wt || 0).toFixed(3) + '</td>'
-            + '<td class="num">₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN') + '</td></tr>';
+    box.innerHTML = rows.map(function(e){
+        var cust = esc(e.customer || 'Walk-in');
+        var phone = esc(e.mobile || '');
+        var desc = esc(e.old_gold_desc || '');
+        var wt = parseFloat(e.old_gold_wt || 0).toFixed(3);
+        var touch = parseFloat(e.old_gold_touch || 0);
+        var rate = parseFloat(e.old_gold_rate || 0);
+        var val = '₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN');
+        var billT = parseFloat(e.total_amount || 0);
+        return '<div class="og-card">'
+            + '<div class="og-top"><div><div class="og-cust">' + cust + '</div>'
+            + (phone ? '<div class="og-phone">' + phone + '</div>' : '') + '</div>'
+            + '<span class="og-bill">' + esc(e.vch_id || '—') + '</span></div>'
+            + '<span class="og-date">' + fmtDate(e) + '</span>'
+            + (desc ? '<div class="og-desc">“' + desc + '”</div>' : '')
+            + '<div class="og-tags">'
+            + '<span class="tag">Wt <b>' + wt + ' g</b></span>'
+            + (touch > 0 ? '<span class="tag">Touch <b>' + touch.toFixed(2) + '%</b></span>' : '')
+            + (rate > 0 ? '<span class="tag">Rate <b>₹' + rate.toLocaleString('en-IN') + '/g</b></span>' : '')
+            + '<span class="tag val">Value <b>' + val + '</b></span>'
+            + '</div>'
+            + (billT > 0 ? '<div class="og-foot"><span>Bill total</span><b>₹' + Math.round(billT).toLocaleString('en-IN') + '</b></div>' : '')
+            + '</div>';
     }).join('');
 }
 setInterval(function(){

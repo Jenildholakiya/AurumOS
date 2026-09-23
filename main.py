@@ -5762,7 +5762,16 @@ class AurumAPI:
                 og_wt = float(inv.get('old_gold_weight') or inv.get('oldGoldWt') or inv.get('old_gold_wt') or 0)
             except (TypeError, ValueError):
                 og_wt = 0.0
-            if not self.db.record_sale(vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt):
+            og_desc = str(inv.get('old_gold_desc') or inv.get('oldGoldDesc') or '').strip()
+            try:
+                og_touch = float(inv.get('old_gold_touch') or inv.get('oldGoldTouch') or 0)
+            except (TypeError, ValueError):
+                og_touch = 0.0
+            try:
+                og_rate = float(inv.get('old_gold_rate') or inv.get('oldGoldRate') or 0)
+            except (TypeError, ValueError):
+                og_rate = 0.0
+            if not self.db.record_sale(vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt, og_desc, og_touch, og_rate):
                 return {"status":"error","message":"Failed to record retail sale."}
             if status != 'ESTIMATE':
                 if not self.db.deduct_stock_after_sale(items_json):
