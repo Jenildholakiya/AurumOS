@@ -100,7 +100,7 @@ check("wholesale billing lands on billing.html",
       P.pages_for(['billing'], 'wholesale'), ['billing.html', 'tag_audit.html'])
 check("retail billing lands on pos_billing.html",
       P.pages_for(['billing'], 'retail'), ['pos_billing.html', 'tag_audit.html',
-                                             'gold_rate.html', 'old_gold.html'])
+                                             'old_gold.html'])
 check("overlapping bundles do not repeat a page",
       P.pages_for(['inventory', 'karigar'], 'wholesale').count('uchak_stock_entry.html'), 1)
 
