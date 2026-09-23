@@ -118,7 +118,7 @@ BUNDLES = {
         'pages': {
             'wholesale': ['billing.html', 'tag_audit.html'],
             'retail':    ['pos_billing.html', 'tag_audit.html',
-                          'gold_rate.html', 'old_gold.html'],
+                          'old_gold.html'],
         },
         'methods': frozenset([
             'get_sales_vch_id', 'get_next_uchak_vch_id', 'generate_bill',
