@@ -1673,6 +1673,16 @@ function commitBill(isEstimate, billMode){
     if(!isEstimate) closePrintSelectorModal();
     if(_loadedEstimateVch){convertEstimateToPaid();return;}
     var inv = buildInvoice(_billType);
+    if (billMode !== 'gst') {
+        // A normal bill carries no tax. The print template hides GST rows
+        // on non-GST bills, so any tax left inside grand_total prints as a
+        // mystery gap (TOTAL 1,13,955 → GRAND 1,17,374 with no visible tax
+        // line). Strip it here so TOTAL and GRAND can only differ by lines
+        // the customer actually sees: discount, old gold, loyalty.
+        inv.gst_total = 0; inv.cgst = 0; inv.sgst = 0;
+        inv.cgst_rate = 0; inv.sgst_rate = 0;
+        inv.grand_total = Math.max(0, parseFloat(((inv.sub_total||0) - (inv.discount||0) - (inv.old_gold||0) - (inv.loyalty_value||0)).toFixed(2)));
+    }
     inv._printer = _selectedPrinter || '';
     inv._printCopies = _printCopies || 1;
     var api = window.pywebview.api;
@@ -1724,6 +1734,11 @@ function commitBillPreview(){
     if(!window.pywebview||!window.pywebview.api){showModal('Offline','Backend not available.');return;}
     closePrintSelectorModal();
     var inv = buildInvoice(_billType);
+    // Preview presents the normal view (no bill mode chosen yet), so the
+    // same strip applies: never preview a grand the printed bill cannot show.
+    inv.gst_total = 0; inv.cgst = 0; inv.sgst = 0;
+    inv.cgst_rate = 0; inv.sgst_rate = 0;
+    inv.grand_total = Math.max(0, parseFloat(((inv.sub_total||0) - (inv.discount||0) - (inv.old_gold||0) - (inv.loyalty_value||0)).toFixed(2)));
     inv._printer = _selectedPrinter || '';
     inv._printCopies = _printCopies || 1;
     inv._previewOnly = true;
