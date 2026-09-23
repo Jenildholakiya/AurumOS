@@ -115,6 +115,10 @@ td{padding:10px 14px;font-size:0.78rem;border-bottom:1px solid var(--rule2);colo
         </div>
         <div class="scroll-frame" style="max-height:520px;">
           <div class="cards" id="reg-cards"><div class="empty">Loading…</div></div>
+          <table style="margin:0 18px 18px;width:calc(100% - 36px);border:1px solid var(--rule);border-radius:10px;overflow:hidden;">
+            <thead><tr><th>Purchased On</th><th>Bill</th><th>Customer</th><th>Phone</th><th>Ornament</th><th class="num">Wt (g)</th><th class="num">Touch %</th><th class="num">Rate ₹/g</th><th class="num">Value ₹</th></tr></thead>
+            <tbody id="reg-tbody"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -139,6 +143,7 @@ function init(){
         render(rows);
     }).catch(function(){
         document.getElementById('reg-cards').innerHTML = '<div class="empty">Could not load register.</div>';
+        document.getElementById('reg-tbody').innerHTML = '<tr><td colspan="9" class="empty">Could not load register.</td></tr>';
     });
 }
 function calc(){
@@ -174,43 +179,63 @@ function render(rows){
 }
 function renderCards(){
     var box = document.getElementById('reg-cards');
+    var tb = document.getElementById('reg-tbody');
     var q = (document.getElementById('reg-search').value || '').toLowerCase().trim();
     var rows = REG_ROWS.filter(function(e){
         if (!q) return true;
         return (String(e.customer || '').toLowerCase().indexOf(q) !== -1)
+            || (String(e.mobile || '').toLowerCase().indexOf(q) !== -1)
             || (String(e.vch_id || '').toLowerCase().indexOf(q) !== -1)
             || (String(e.old_gold_desc || '').toLowerCase().indexOf(q) !== -1);
     });
     document.getElementById('reg-count').textContent = rows.length + ' taken';
     if (!rows.length) {
-        box.innerHTML = '<div class="empty">' +
+        var none = '<div class="empty">' +
             (q ? 'No exchanges match your search.' : 'No old-gold exchanges recorded yet. They appear here automatically from POS billing.') + '</div>';
+        box.innerHTML = none;
+        tb.innerHTML = '<tr><td colspan="9" class="empty">' +
+            (q ? 'No exchanges match your search.' : 'No old-gold exchanges recorded yet.') + '</td></tr>';
         return;
     }
-    box.innerHTML = rows.map(function(e){
-        var cust = esc(e.customer || 'Walk-in');
-        var phone = esc(e.mobile || '');
-        var desc = esc(e.old_gold_desc || '');
-        var wt = parseFloat(e.old_gold_wt || 0).toFixed(3);
-        var touch = parseFloat(e.old_gold_touch || 0);
-        var rate = parseFloat(e.old_gold_rate || 0);
-        var val = '₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN');
-        var billT = parseFloat(e.total_amount || 0);
-        return '<div class="og-card">'
-            + '<div class="og-top"><div><div class="og-cust">' + cust + '</div>'
-            + (phone ? '<div class="og-phone">' + phone + '</div>' : '') + '</div>'
-            + '<span class="og-bill">' + esc(e.vch_id || '—') + '</span></div>'
-            + '<span class="og-date">' + fmtDate(e) + '</span>'
-            + (desc ? '<div class="og-desc">“' + desc + '”</div>' : '')
-            + '<div class="og-tags">'
-            + '<span class="tag">Wt <b>' + wt + ' g</b></span>'
-            + (touch > 0 ? '<span class="tag">Touch <b>' + touch.toFixed(2) + '%</b></span>' : '')
-            + (rate > 0 ? '<span class="tag">Rate <b>₹' + rate.toLocaleString('en-IN') + '/g</b></span>' : '')
-            + '<span class="tag val">Value <b>' + val + '</b></span>'
-            + '</div>'
-            + (billT > 0 ? '<div class="og-foot"><span>Bill total</span><b>₹' + Math.round(billT).toLocaleString('en-IN') + '</b></div>' : '')
-            + '</div>';
-    }).join('');
+    box.innerHTML = rows.map(cardHtml).join('');
+    tb.innerHTML = rows.map(rowHtml).join('');
+}
+function cardHtml(e){
+    var cust = esc(e.customer || 'Walk-in');
+    var phone = esc(e.mobile || '');
+    var desc = esc(e.old_gold_desc || '');
+    var wt = parseFloat(e.old_gold_wt || 0).toFixed(3);
+    var touch = parseFloat(e.old_gold_touch || 0);
+    var rate = parseFloat(e.old_gold_rate || 0);
+    var val = '₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN');
+    var billT = parseFloat(e.total_amount || 0);
+    return '<div class="og-card">'
+        + '<div class="og-top"><div><div class="og-cust">' + cust + '</div>'
+        + (phone ? '<div class="og-phone">' + phone + '</div>' : '') + '</div>'
+        + '<span class="og-bill">' + esc(e.vch_id || '—') + '</span></div>'
+        + '<span class="og-date">' + fmtDate(e) + '</span>'
+        + (desc ? '<div class="og-desc">“' + desc + '”</div>' : '')
+        + '<div class="og-tags">'
+        + '<span class="tag">Wt <b>' + wt + ' g</b></span>'
+        + (touch > 0 ? '<span class="tag">Touch <b>' + touch.toFixed(2) + '%</b></span>' : '')
+        + (rate > 0 ? '<span class="tag">Rate <b>₹' + rate.toLocaleString('en-IN') + '/g</b></span>' : '')
+        + '<span class="tag val">Value <b>' + val + '</b></span>'
+        + '</div>'
+        + (billT > 0 ? '<div class="og-foot"><span>Bill total</span><b>₹' + Math.round(billT).toLocaleString('en-IN') + '</b></div>' : '')
+        + '</div>';
+}
+function rowHtml(e){
+    var touch = parseFloat(e.old_gold_touch || 0);
+    var rate = parseFloat(e.old_gold_rate || 0);
+    return '<tr><td style="white-space:nowrap;">' + fmtDate(e) + '</td>'
+        + '<td style="font-family:Arial;color:var(--gold3);font-weight:600;">' + esc(e.vch_id || '—') + '</td>'
+        + '<td><b>' + esc(e.customer || 'Walk-in') + '</b></td>'
+        + '<td style="font-family:var(--mono);">' + (esc(e.mobile || '') || '—') + '</td>'
+        + '<td style="font-style:italic;">' + (esc(e.old_gold_desc || '') || '—') + '</td>'
+        + '<td class="num">' + parseFloat(e.old_gold_wt || 0).toFixed(3) + '</td>'
+        + '<td class="num">' + (touch > 0 ? touch.toFixed(2) : '—') + '</td>'
+        + '<td class="num">' + (rate > 0 ? '₹' + rate.toLocaleString('en-IN') : '—') + '</td>'
+        + '<td class="num">₹' + Math.round(parseFloat(e.old_gold_value || 0)).toLocaleString('en-IN') + '</td></tr>';
 }
 setInterval(function(){
     var c = document.getElementById('clock');
