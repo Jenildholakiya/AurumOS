@@ -267,6 +267,27 @@ header{
 .ov-sub{font-size:0.72rem;color:var(--muted);line-height:1.55;text-align:center;margin-bottom:18px;}
 .bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .bk-code{font-family:var(--mono);font-size:0.95rem;font-weight:600;color:var(--ink2);background:var(--cream);border:1px solid var(--rule);border-radius:8px;padding:10px;text-align:center;letter-spacing:1px;}
+
+/* ── DATA BACKUP ─────────────────────────────────────────────────── */
+.bk-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:900px){.bk-cols{grid-template-columns:1fr;}}
+.bk-col h4{font-size:0.72rem;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.bk-col p{font-size:0.68rem;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+.bk-prog{display:none;flex-direction:column;gap:6px;margin-top:12px;}
+.bk-prog.show{display:flex;}
+.bk-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.bk-msg{font-size:0.68rem;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bk-pct{font-family:var(--mono);font-size:0.74rem;font-weight:700;color:var(--blue3);}
+.bk-bar{height:9px;border-radius:99px;background:var(--cream2);border:1px solid var(--rule);overflow:hidden;}
+.bk-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--blue2),var(--blue3));transition:width 0.25s ease;}
+.bk-prog.done .bk-fill{background:linear-gradient(90deg,var(--green),#22c55e);}
+.bk-prog.failed .bk-fill{background:linear-gradient(90deg,var(--red),#ef4444);}
+.bk-done{display:none;font-size:0.7rem;line-height:1.6;padding:10px 13px;border-radius:8px;margin-top:12px;word-break:break-all;}
+.bk-done.show{display:block;background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
+.bk-done.show.warn{background:#fff7ed;color:var(--amber);border-color:rgba(217,119,6,0.25);}
+.bk-path{font-family:var(--mono);font-size:0.66rem;background:var(--cream);border:1px solid var(--rule);border-radius:8px;padding:9px 12px;color:var(--ink2);word-break:break-all;min-height:36px;margin-bottom:12px;}
+.bk-path.empty{color:var(--muted2);}
+.bk-warn{background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:10px 13px;font-size:0.7rem;color:var(--red);line-height:1.6;margin-bottom:12px;}
 .bk-warn{font-size:0.66rem;color:var(--red);background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:9px 12px;line-height:1.5;margin-bottom:16px;}
 .ov-actions{display:flex;gap:10px;}
 .ov-actions .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;}
@@ -668,6 +689,57 @@ body{
           <div class="btn-row">
             <button class="btn btn-primary" style="background:var(--red);" id="tfa-dis-confirm" onclick="tfaConfirmDisable()">Disable 2FA</button>
             <button class="btn btn-ghost" onclick="tfaHideDisable()">Keep 2FA On</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Data Backup</div></div>
+
+    <!-- Full Backup: export everything / restore from zip -->
+    <div class="card full-width-card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Full Software Backup</div>
+            <div class="card-sub">Export everything into one zip — or restore from one</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="bk-cols">
+          <div class="bk-col">
+            <h4>Export Backup</h4>
+            <p>Bills, stock, karigar orders, customers, accounts, settings and item photos — snapshotted safely even mid-billing, zipped to the <b>exports</b> folder.</p>
+            <div class="btn-row" style="margin-top:0;">
+              <button class="btn btn-primary" id="btn-export" onclick="startExport()">Export Now</button>
+              <button class="btn btn-ghost" id="btn-reveal" onclick="revealBackup()" disabled>Show File</button>
+            </div>
+            <div class="bk-prog" id="exp-prog">
+              <div class="bk-top"><span class="bk-msg" id="exp-msg">Starting…</span><span class="bk-pct" id="exp-pct">0%</span></div>
+              <div class="bk-bar"><div class="bk-fill" id="exp-fill"></div></div>
+            </div>
+            <div class="bk-done" id="exp-done"></div>
+          </div>
+          <div class="bk-col">
+            <h4>Restore Backup</h4>
+            <p>Pick a backup zip — it is validated, extracted and loaded automatically. Your present data is safety-copied first.</p>
+            <div class="bk-path empty" id="rest-path">No file chosen — click Browse…</div>
+            <div class="btn-row" style="margin-top:0;">
+              <button class="btn btn-ghost" onclick="browseBackup()">Browse…</button>
+              <button class="btn btn-primary" id="btn-restore" onclick="startRestore()" disabled>Restore</button>
+            </div>
+            <div class="bk-prog" id="rest-prog">
+              <div class="bk-top"><span class="bk-msg" id="rest-msg">Starting…</span><span class="bk-pct" id="rest-pct">0%</span></div>
+              <div class="bk-bar"><div class="bk-fill" id="rest-fill"></div></div>
+            </div>
+            <div class="bk-done" id="rest-done"></div>
+            <div class="btn-row" id="restart-row" style="display:none;">
+              <button class="btn btn-primary" onclick="restartApp()">Restart AurumOS Now</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1327,6 +1399,129 @@ function saveGst(){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
     else wire();
 })();
+
+// ── FULL BACKUP (export / restore with live progress) ───────────────
+var _expTimer = null, _restTimer = null, _zipPath = '', _lastBackupFile = '';
+function _bkApi(){ return window.pywebview && window.pywebview.api; }
+function setBar(prefix, pct, msg, state) {
+    var wrap = document.getElementById(prefix + '-prog');
+    if (!wrap) return;
+    wrap.classList.add('show');
+    wrap.classList.remove('done', 'failed');
+    if (state) wrap.classList.add(state);
+    document.getElementById(prefix + '-fill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    document.getElementById(prefix + '-pct').textContent = Math.round(pct) + '%';
+    document.getElementById(prefix + '-msg').textContent = msg || '';
+}
+function showDone(id, html, warn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = html;
+    el.className = 'bk-done show' + (warn ? ' warn' : '');
+}
+function startExport(){
+    if (!_bkApi()) return;
+    document.getElementById('btn-export').disabled = true;
+    document.getElementById('btn-reveal').disabled = true;
+    document.getElementById('exp-done').className = 'bk-done';
+    setBar('exp', 1, 'Starting export…');
+    _bkApi().export_backup().then(function(r){
+        if (!r || (r.status !== 'started' && r.status !== 'busy')) {
+            setBar('exp', 100, (r && r.message) || 'Could not start.', 'failed');
+            document.getElementById('btn-export').disabled = false;
+            return;
+        }
+        clearInterval(_expTimer);
+        _expTimer = setInterval(pollExport, 350);
+    }).catch(function(e){
+        setBar('exp', 100, 'Error: ' + e, 'failed');
+        document.getElementById('btn-export').disabled = false;
+    });
+}
+function pollExport(){
+    _bkApi().get_backup_progress().then(function(s){
+        s = s || {};
+        var pct = parseFloat(s.pct || 0);
+        if (s.done) {
+            clearInterval(_expTimer);
+            document.getElementById('btn-export').disabled = false;
+            if (s.ok) {
+                setBar('exp', 100, s.msg || 'Done.', 'done');
+                _lastBackupFile = s.file || '';
+                document.getElementById('btn-reveal').disabled = !_lastBackupFile;
+                showDone('exp-done', 'Backup ready:<br><b>' + escHtml(_lastBackupFile) + '</b>');
+            } else {
+                setBar('exp', 100, s.msg || 'Failed.', 'failed');
+            }
+            return;
+        }
+        setBar('exp', pct, s.msg || 'Working…');
+    }).catch(function(){});
+}
+function revealBackup(){
+    if (_bkApi() && _lastBackupFile && typeof _bkApi().reveal_backup === 'function') {
+        _bkApi().reveal_backup(_lastBackupFile).catch(function(){});
+    }
+}
+function browseBackup(){
+    if (!_bkApi()) return;
+    _bkApi().pick_backup_file().then(function(r){
+        if (r && r.status === 'success' && r.path) {
+            _zipPath = r.path;
+            var el = document.getElementById('rest-path');
+            el.textContent = _zipPath;
+            el.classList.remove('empty');
+            document.getElementById('btn-restore').disabled = false;
+        }
+    }).catch(function(){});
+}
+function startRestore(){
+    if (!_bkApi() || !_zipPath) return;
+    if (!confirm('Restore from this backup? Current data will be replaced (a safety copy is kept).')) return;
+    document.getElementById('btn-restore').disabled = true;
+    document.getElementById('rest-done').className = 'bk-done';
+    document.getElementById('restart-row').style.display = 'none';
+    setBar('rest', 1, 'Starting restore…');
+    _bkApi().import_backup(_zipPath).then(function(r){
+        if (!r || (r.status !== 'started' && r.status !== 'busy')) {
+            setBar('rest', 100, (r && r.message) || 'Could not start.', 'failed');
+            document.getElementById('btn-restore').disabled = false;
+            return;
+        }
+        clearInterval(_restTimer);
+        _restTimer = setInterval(pollRestore, 350);
+    }).catch(function(e){
+        setBar('rest', 100, 'Error: ' + e, 'failed');
+        document.getElementById('btn-restore').disabled = false;
+    });
+}
+function pollRestore(){
+    _bkApi().get_restore_progress().then(function(s){
+        s = s || {};
+        var pct = parseFloat(s.pct || 0);
+        if (s.done) {
+            clearInterval(_restTimer);
+            document.getElementById('btn-restore').disabled = false;
+            if (s.ok) {
+                setBar('rest', 100, s.msg || 'Done.', 'done');
+                var html = 'Restore complete.' +
+                    (s.backup_of_old ? '<br>Safety copy of your old data:<br><b>' + escHtml(s.backup_of_old) + '</b>' : '');
+                showDone('rest-done', html, true);
+                document.getElementById('restart-row').style.display = 'flex';
+            } else {
+                setBar('rest', 100, s.msg || 'Failed.', 'failed');
+            }
+            return;
+        }
+        setBar('rest', pct, s.msg || 'Working…');
+    }).catch(function(){});
+}
+function restartApp(){
+    if (_bkApi() && typeof _bkApi().restart_app === 'function') {
+        try { _bkApi().restart_app(); } catch(e){}
+    }
+}
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>
