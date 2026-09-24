@@ -60,6 +60,9 @@ jobs:
       - name: Tag scan pricing
         run: python test_tag_scan.py
 
+      - name: Full backup round trip
+        run: python test_backup.py
+
       - name: Release planner
         run: python test_release_plan.py
 
