@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Backup</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+  --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.04);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.06);--green-ln:rgba(22,163,74,0.18);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-ln:rgba(220,38,38,0.18);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,0.07);--amber-ln:rgba(217,119,6,0.2);
+  --serif:'DM Serif Display', Georgia, serif;
+  --mono:Arial,sans-serif;
+  --sans:'DM Sans', system-ui, sans-serif;
+  --sh-lux: 0 4px 20px rgba(14, 12, 9, 0.04), 0 1px 3px rgba(14, 12, 9, 0.02);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;}
+body{display:flex;flex-direction:row;height:100vh;width:100vw;font-family:var(--sans);cursor:default;}
+#sidebar-container{flex-shrink:0;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;height:100vh;}
+header{height:58px;background:var(--white);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:relative;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold-ln) 50%,transparent 95%);}
+.h-brand{font-family:var(--serif);font-size:1.25rem;font-weight:400;letter-spacing:-0.2px;}
+.h-brand em{font-style:italic;color:var(--gold3);}
+.h-clock{font-family:var(--mono);font-size:0.72rem;color:var(--muted2);background:var(--cream2);padding:5px 12px;border-radius:5px;border:1px solid var(--rule);}
+.content{flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;}
+.page-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;letter-spacing:-0.4px;}
+.page-title em{font-style:italic;color:var(--gold3);}
+.page-sub{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+@media(max-width:900px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--sh-lux);overflow:hidden;}
+.panel.export{border-top:3px solid var(--green);}
+.panel.restore{border-top:3px solid var(--amber);}
+.panel-head{padding:14px 20px;border-bottom:1px solid var(--rule);background:var(--cream2);display:flex;align-items:center;gap:12px;}
+.panel-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.panel.export .panel-ic{background:var(--green-bg);border:1px solid var(--green-ln);color:var(--green);}
+.panel.restore .panel-ic{background:var(--amber-bg);border:1px solid var(--amber-ln);color:var(--amber);}
+.panel-title{font-family:var(--serif);font-size:1.05rem;}
+.panel-sub{font-size:0.7rem;color:var(--muted);margin-top:1px;}
+.panel-body{padding:18px 20px;display:flex;flex-direction:column;gap:13px;}
+.desc{font-size:0.76rem;color:var(--ink3);line-height:1.65;}
+.desc b{color:var(--ink);}
+.btn{height:42px;padding:0 22px;border-radius:9px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s;font-family:var(--sans);border:1px solid transparent;}
+.btn-green{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(22,163,74,0.3);}
+.btn-green:hover{background:#15803d;transform:translateY(-1px);}
+.btn-amber{background:var(--amber);color:#fff;box-shadow:0 4px 14px rgba(217,119,6,0.3);}
+.btn-amber:hover{background:#b45309;transform:translateY(-1px);}
+.btn-ghost{background:var(--white);border-color:var(--rule);color:var(--ink3);}
+.btn-ghost:hover{background:var(--gold-bg);border-color:var(--gold);color:var(--gold3);}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.prog-wrap{display:none;flex-direction:column;gap:7px;}
+.prog-wrap.show{display:flex;}
+.prog-top{display:flex;justify-content:space-between;align-items:baseline;}
+.prog-msg{font-size:0.72rem;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prog-pct{font-family:var(--mono);font-size:0.78rem;font-weight:700;color:var(--gold3);}
+.prog-bar{height:10px;border-radius:99px;background:var(--cream2);border:1px solid var(--rule);overflow:hidden;}
+.prog-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--gold2),var(--gold3));transition:width 0.25s ease;}
+.prog-wrap.done .prog-fill{background:linear-gradient(90deg,var(--green),#22c55e);}
+.prog-wrap.failed .prog-fill{background:linear-gradient(90deg,var(--red),#ef4444);}
+.done-box{display:none;background:var(--green-bg);border:1px solid var(--green-ln);border-radius:9px;padding:11px 14px;font-size:0.75rem;color:var(--green);line-height:1.6;word-break:break-all;}
+.done-box.show{display:block;}
+.done-box.warn{background:var(--amber-bg);border-color:var(--amber-ln);color:var(--amber);}
+.path-box{font-family:var(--mono);font-size:0.68rem;background:var(--cream2);border:1px solid var(--rule);border-radius:8px;padding:9px 12px;color:var(--ink3);word-break:break-all;min-height:36px;}
+.path-box.empty{color:var(--muted2);}
+.warn-box{background:var(--red-bg);border:1px solid var(--red-ln);border-radius:9px;padding:11px 14px;font-size:0.74rem;color:var(--red);line-height:1.6;}
+</style>
+</head>
+<body>
+<script src="sidebar.js?v=3"></script>
+<div id="sidebar-container"></div>
+<main>
+  <header>
+    <div class="h-brand">Aurum<em>OS</em> &nbsp;·&nbsp; Backup</div>
+    <span class="h-clock" id="clock">-- : --</span>
+  </header>
+  <div class="content">
+    <div>
+      <div class="page-title">Full Software <em>Backup</em></div>
+      <div class="page-sub">Export everything into one zip — database, settings, photos — or restore from one. Owner only.</div>
+    </div>
+    <div class="grid">
+      <div class="panel export">
+        <div class="panel-head">
+          <span class="panel-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+          <div><div class="panel-title">Export Backup</div><div class="panel-sub">One zip with the whole shop</div></div>
+        </div>
+        <div class="panel-body">
+          <div class="desc">Saves <b>bills, stock, karigar orders, customers, accounts, settings and item photos</b> into a dated zip in the <b>exports</b> folder. The database is snapshotted safely even mid-billing.</div>
+          <div class="btn-row">
+            <button class="btn btn-green" id="btn-export" onclick="startExport()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Now
+            </button>
+            <button class="btn btn-ghost" id="btn-reveal" onclick="revealBackup()" disabled>Show File</button>
+          </div>
+          <div class="prog-wrap" id="exp-prog">
+            <div class="prog-top"><span class="prog-msg" id="exp-msg">Starting…</span><span class="prog-pct" id="exp-pct">0%</span></div>
+            <div class="prog-bar"><div class="prog-fill" id="exp-fill"></div></div>
+          </div>
+          <div class="done-box" id="exp-done"></div>
+        </div>
+      </div>
+      <div class="panel restore">
+        <div class="panel-head">
+          <span class="panel-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+          <div><div class="panel-title">Restore Backup</div><div class="panel-sub">Upload a zip, data loads itself</div></div>
+        </div>
+        <div class="panel-body">
+          <div class="warn-box">Restoring <b>replaces</b> the current data. Your present database is safety-copied first — nothing is ever lost silently.</div>
+          <div class="path-box empty" id="rest-path">No file chosen — click Browse…</div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="browseBackup()">Browse…</button>
+            <button class="btn btn-amber" id="btn-restore" onclick="startRestore()" disabled>Restore</button>
+          </div>
+          <div class="prog-wrap" id="rest-prog">
+            <div class="prog-top"><span class="prog-msg" id="rest-msg">Starting…</span><span class="prog-pct" id="rest-pct">0%</span></div>
+            <div class="prog-bar"><div class="prog-fill" id="rest-fill"></div></div>
+          </div>
+          <div class="done-box" id="rest-done"></div>
+          <div class="btn-row" id="restart-row" style="display:none;">
+            <button class="btn btn-green" onclick="restartApp()">Restart AurumOS Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+function api(){ return window.pywebview && window.pywebview.api; }
+(function boot(n){
+    if (api()) return;
+    if (n > 0) setTimeout(function(){ boot(n-1); }, 200);
+})(50);
+
+var _expTimer = null, _restTimer = null, _zipPath = '', _lastBackupFile = '';
+
+function setBar(prefix, pct, msg, state) {
+    var wrap = document.getElementById(prefix + '-prog');
+    wrap.classList.add('show');
+    wrap.classList.remove('done', 'failed');
+    if (state) wrap.classList.add(state);
+    document.getElementById(prefix + '-fill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    document.getElementById(prefix + '-pct').textContent = Math.round(pct) + '%';
+    document.getElementById(prefix + '-msg').textContent = msg || '';
+}
+function showDone(id, html, warn) {
+    var el = document.getElementById(id);
+    el.innerHTML = html;
+    el.className = 'done-box show' + (warn ? ' warn' : '');
+}
+
+// ── EXPORT ──
+function startExport(){
+    if (!api()) return;
+    document.getElementById('btn-export').disabled = true;
+    document.getElementById('btn-reveal').disabled = true;
+    document.getElementById('exp-done').className = 'done-box';
+    setBar('exp', 1, 'Starting export…');
+    api().export_backup().then(function(r){
+        if (!r || (r.status !== 'started' && r.status !== 'busy')) {
+            setBar('exp', 100, (r && r.message) || 'Could not start.', 'failed');
+            document.getElementById('btn-export').disabled = false;
+            return;
+        }
+        clearInterval(_expTimer);
+        _expTimer = setInterval(pollExport, 350);
+    }).catch(function(e){
+        setBar('exp', 100, 'Error: ' + e, 'failed');
+        document.getElementById('btn-export').disabled = false;
+    });
+}
+function pollExport(){
+    api().get_backup_progress().then(function(s){
+        s = s || {};
+        var pct = parseFloat(s.pct || 0);
+        if (s.done) {
+            clearInterval(_expTimer);
+            document.getElementById('btn-export').disabled = false;
+            if (s.ok) {
+                setBar('exp', 100, s.msg || 'Done.', 'done');
+                _lastBackupFile = s.file || '';
+                document.getElementById('btn-reveal').disabled = !_lastBackupFile;
+                showDone('exp-done', 'Backup ready:<br><b>' + escHtml(_lastBackupFile) + '</b>');
+            } else {
+                setBar('exp', 100, s.msg || 'Failed.', 'failed');
+            }
+            return;
+        }
+        setBar('exp', pct, s.msg || 'Working…');
+    }).catch(function(){});
+}
+function revealBackup(){
+    if (api() && _lastBackupFile && typeof api().reveal_backup === 'function') {
+        api().reveal_backup(_lastBackupFile).catch(function(){});
+    }
+}
+
+// ── RESTORE ──
+function browseBackup(){
+    if (!api()) return;
+    api().pick_backup_file().then(function(r){
+        if (r && r.status === 'success' && r.path) {
+            _zipPath = r.path;
+            var el = document.getElementById('rest-path');
+            el.textContent = _zipPath;
+            el.classList.remove('empty');
+            document.getElementById('btn-restore').disabled = false;
+        }
+    }).catch(function(){});
+}
+function startRestore(){
+    if (!api() || !_zipPath) return;
+    if (!confirm('Restore from this backup? Current data will be replaced (a safety copy is kept).')) return;
+    document.getElementById('btn-restore').disabled = true;
+    document.getElementById('rest-done').className = 'done-box';
+    document.getElementById('restart-row').style.display = 'none';
+    setBar('rest', 1, 'Starting restore…');
+    api().import_backup(_zipPath).then(function(r){
+        if (!r || (r.status !== 'started' && r.status !== 'busy')) {
+            setBar('rest', 100, (r && r.message) || 'Could not start.', 'failed');
+            document.getElementById('btn-restore').disabled = false;
+            return;
+        }
+        clearInterval(_restTimer);
+        _restTimer = setInterval(pollRestore, 350);
+    }).catch(function(e){
+        setBar('rest', 100, 'Error: ' + e, 'failed');
+        document.getElementById('btn-restore').disabled = false;
+    });
+}
+function pollRestore(){
+    api().get_restore_progress().then(function(s){
+        s = s || {};
+        var pct = parseFloat(s.pct || 0);
+        if (s.done) {
+            clearInterval(_restTimer);
+            document.getElementById('btn-restore').disabled = false;
+            if (s.ok) {
+                setBar('rest', 100, s.msg || 'Done.', 'done');
+                var html = 'Restore complete.' +
+                    (s.backup_of_old ? '<br>Safety copy of your old data:<br><b>' + escHtml(s.backup_of_old) + '</b>' : '');
+                showDone('rest-done', html, true);
+                document.getElementById('restart-row').style.display = 'flex';
+            } else {
+                setBar('rest', 100, s.msg || 'Failed.', 'failed');
+            }
+            return;
+        }
+        setBar('rest', pct, s.msg || 'Working…');
+    }).catch(function(){});
+}
+function restartApp(){
+    if (api() && typeof api().restart_app === 'function') {
+        try { api().restart_app(); } catch(e){}
+    }
+}
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+setInterval(function(){
+    var c = document.getElementById('clock');
+    if(c) c.textContent = new Date().toLocaleString('en-GB',{dateStyle:'short',timeStyle:'medium'});
+}, 1000);
+document.addEventListener('DOMContentLoaded', function(){ initSidebar('backup'); });
+</script>
+</body>
+</html>

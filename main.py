@@ -7389,6 +7389,434 @@ class AurumAPI:
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
 
+    # ── FULL BACKUP (export everything / restore from zip) ──────────
+    # Export: consistent DB snapshot (sqlite backup API, so WAL content is
+    # included) + config + subscription state + item photos + a manifest,
+    # zipped to exports/ with live progress. Restore: validates the zip
+    # (manifest, DB integrity, expected tables), safety-copies the current
+    # DB to database/backups/, swaps the files, and asks for a restart.
+    # Progress for both runs through _backup_state / _restore_state so the
+    # page can draw a bar while the work happens on a thread.
+    _backup_state = {"pct": 0, "msg": "", "done": False, "ok": False, "file": ""}
+    _restore_state = {"pct": 0, "msg": "", "done": False, "ok": False,
+                      "needs_restart": False, "backup_of_old": ""}
+
+    def _backup_set(self, pct, msg, done=False, ok=False, file=""):
+        try:
+            st = dict(getattr(self, '_backup_state', {}) or {})
+            st.update({"pct": int(pct), "msg": str(msg or ""),
+                       "done": bool(done), "ok": bool(ok)})
+            if file:
+                st["file"] = str(file)
+            self._backup_state = st
+        except Exception:
+            pass
+
+    def _restore_set(self, pct, msg, done=False, ok=False,
+                     needs_restart=False, backup_of_old=""):
+        try:
+            st = dict(getattr(self, '_restore_state', {}) or {})
+            st.update({"pct": int(pct), "msg": str(msg or ""),
+                       "done": bool(done), "ok": bool(ok),
+                       "needs_restart": bool(needs_restart)})
+            if backup_of_old:
+                st["backup_of_old"] = str(backup_of_old)
+            self._restore_state = st
+        except Exception:
+            pass
+
+    def get_backup_progress(self):
+        try:
+            return dict(getattr(self, '_backup_state', {}) or
+                        {"pct": 0, "msg": "", "done": False})
+        except Exception as e:
+            return {"pct": 0, "msg": str(e), "done": True, "ok": False}
+
+    def get_restore_progress(self):
+        try:
+            return dict(getattr(self, '_restore_state', {}) or
+                        {"pct": 0, "msg": "", "done": False})
+        except Exception as e:
+            return {"pct": 0, "msg": str(e), "done": True, "ok": False}
+
+    def _app_base_dir(self):
+        if getattr(sys, 'frozen', False):
+            return os.path.dirname(sys.executable)
+        return os.path.abspath('.')
+
+    def export_backup(self):
+        """Start a full export on a thread. Poll get_backup_progress."""
+        try:
+            if getattr(self, '_backup_running', False):
+                return {"status": "busy"}
+            self._backup_running = True
+            self._backup_set(1, "Starting export…")
+            threading.Thread(target=self._export_worker, daemon=True,
+                             name="AurumBackup").start()
+            return {"status": "started"}
+        except Exception as e:
+            try:
+                self._backup_running = False
+            except Exception:
+                pass
+            return {"status": "error", "message": str(e)}
+
+    def _export_worker(self):
+        import sqlite3 as _sq
+        import zipfile as _zf
+        from datetime import datetime as _dt
+        try:
+            base = self._app_base_dir()
+            stamp = _dt.now().strftime('%Y%m%d-%H%M%S')
+            out_dir = os.path.join(base, 'exports')
+            os.makedirs(out_dir, exist_ok=True)
+            zpath = os.path.join(out_dir, f'AurumOS-backup-{stamp}.zip')
+            self._backup_set(5, "Snapshotting database…")
+
+            # Consistent snapshot even mid-write (WAL included).
+            snap = os.path.join(out_dir, f'.backup-snap-{stamp}.db')
+            try:
+                src = _sq.connect(self.db.db_path, timeout=30)
+                dst = _sq.connect(snap, timeout=30)
+                try:
+                    src.backup(dst)
+                finally:
+                    dst.close()
+                    src.close()
+            except Exception as _se:
+                self._backup_set(100, f"Snapshot failed: {_se}", True, False)
+                try:
+                    self._backup_running = False
+                except Exception:
+                    pass
+                return
+
+            # Collect: snapshot DB, config, subscription state, photos.
+            files = []
+            files.append((snap, 'database/aurum_local.db'))
+            cfg = os.path.join(base, 'config.json')
+            if os.path.isfile(cfg):
+                files.append((cfg, 'config.json'))
+            db_dir = os.path.join(base, 'database')
+            for _n in ('.subscription_cache', '.subscription_state.json',
+                       '.sse_cache'):
+                _p = os.path.join(db_dir, _n)
+                if os.path.isfile(_p):
+                    files.append((_p, 'database/' + _n))
+            try:
+                photo_dir = self._photo_dir()
+            except Exception:
+                photo_dir = ''
+            if photo_dir and os.path.isdir(photo_dir):
+                for _dp, _dns, _fns in os.walk(photo_dir):
+                    for _f in _fns:
+                        _full = os.path.join(_dp, _f)
+                        _rel = os.path.relpath(_full, base).replace(os.sep, '/')
+                        files.append((_full, _rel))
+
+            manifest = {
+                'app': 'AurumOS', 'kind': 'full-backup', 'version': 1,
+                'created': _dt.now().isoformat(timespec='seconds'),
+                'aurum_version': str(CURRENT_VERSION),
+                'files': [a for _, a in files],
+            }
+            total = len(files) + 1
+            self._backup_set(10, f"Zipping {len(files)} files…")
+            try:
+                with _zf.ZipFile(zpath, 'w', _zf.ZIP_DEFLATED) as _z:
+                    _z.writestr('backup-manifest.json',
+                                json.dumps(manifest, indent=2))
+                    self._backup_set(12, "Manifest written…")
+                    for _i, (_full, _arc) in enumerate(files):
+                        try:
+                            _z.write(_full, _arc)
+                        except Exception as _we:
+                            LOG(f"[BACKUP] skip {_arc}: {_we}")
+                        self._backup_set(
+                            12 + int(85 * (_i + 1) / max(total, 1)),
+                            f"Adding {_arc} ({_i + 1}/{len(files)})…")
+            finally:
+                try:
+                    os.remove(snap)
+                except Exception:
+                    pass
+            size_mb = round(os.path.getsize(zpath) / 1048576, 2)
+            try:
+                self._audit('Backup exported', os.path.basename(zpath), 'backup')
+            except Exception:
+                pass
+            LOG(f"[BACKUP] exported {zpath} ({size_mb} MB)")
+            self._backup_set(100, f"Done — {size_mb} MB", True, True, zpath)
+        except Exception as e:
+            ERR(f"[BACKUP] export failed: {e}")
+            self._backup_set(100, f"Export failed: {e}", True, False)
+        finally:
+            try:
+                self._backup_running = False
+            except Exception:
+                pass
+
+    def reveal_backup(self, path=""):
+        """Open the folder containing the backup file."""
+        try:
+            p = str(path or (getattr(self, '_backup_state', {}) or {}).get('file') or '')
+            folder = os.path.dirname(p) if os.path.isfile(p) else self._app_base_dir()
+            os.startfile(folder)
+            return {"status": "success"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def pick_backup_file(self):
+        """Windows file picker limited to backup zips."""
+        import subprocess as _sp
+        try:
+            r = _sp.run(
+                ['powershell', '-Command',
+                 '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                 '$f=New-Object System.Windows.Forms.OpenFileDialog;'
+                 '$f.Filter="AurumOS backup (*.zip)|*.zip";'
+                 '$f.Title="Select AurumOS backup to restore";'
+                 'if($f.ShowDialog() -eq "OK"){$f.FileName}else{""}'],
+                capture_output=True, text=True, timeout=120)
+            chosen = (r.stdout or '').strip()
+            if not chosen or not os.path.isfile(chosen):
+                return {"status": "cancelled"}
+            return {"status": "success", "path": chosen}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def import_backup(self, zip_path):
+        """Validate + restore a backup zip on a thread. Poll get_restore_progress."""
+        try:
+            if getattr(self, '_restore_running', False):
+                return {"status": "busy"}
+            zpath = str(zip_path or '').strip()
+            if not zpath or not os.path.isfile(zpath):
+                return {"status": "error", "message": "Backup file not found."}
+            self._restore_running = True
+            self._restore_set(1, "Starting restore…")
+            threading.Thread(target=self._restore_worker, args=(zpath,),
+                             daemon=True, name="AurumRestore").start()
+            return {"status": "started"}
+        except Exception as e:
+            try:
+                self._restore_running = False
+            except Exception:
+                pass
+            return {"status": "error", "message": str(e)}
+
+    def _restore_worker(self, zpath):
+        import sqlite3 as _sq
+        import zipfile as _zf
+        from datetime import datetime as _dt
+        try:
+            base = self._app_base_dir()
+            self._restore_set(5, "Reading backup…")
+            try:
+                _z = _zf.ZipFile(zpath, 'r')
+                names = _z.namelist()
+            except Exception as _ze:
+                self._restore_set(100, f"Not a valid zip: {_ze}", True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            # 1) Manifest must declare a full backup.
+            try:
+                manifest = json.loads(_z.read('backup-manifest.json').decode('utf-8'))
+            except Exception:
+                manifest = {}
+            if not isinstance(manifest, dict) or manifest.get('kind') != 'full-backup' \
+                    or 'database/aurum_local.db' not in (names or []):
+                try:
+                    _z.close()
+                except Exception:
+                    pass
+                self._restore_set(100, "This zip is not an AurumOS full backup.", True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            # 2) Extract DB to temp and verify it opens + looks like ours.
+            self._restore_set(15, "Verifying backup database…")
+            tmpdir = os.path.join(base, 'exports', '.restore-tmp')
+            os.makedirs(tmpdir, exist_ok=True)
+            tmpdb = os.path.join(tmpdir, 'check.db')
+            try:
+                if os.path.exists(tmpdb):
+                    os.remove(tmpdb)
+                with open(tmpdb, 'wb') as _f:
+                    _f.write(_z.read('database/aurum_local.db'))
+            except Exception as _ee:
+                try:
+                    _z.close()
+                except Exception:
+                    pass
+                self._restore_set(100, f"Cannot read database from zip: {_ee}", True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            try:
+                _c = _sq.connect(tmpdb, timeout=10)
+                try:
+                    integ = _c.execute("PRAGMA integrity_check").fetchone()
+                    tables = {r[0] for r in _c.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+                finally:
+                    _c.close()
+                if not integ or str(integ[0]).lower() != 'ok':
+                    raise ValueError("integrity check failed")
+                for _need in ('stock_inventory', 'sales_history', 'app_config',
+                              'admin_creds', 'clients_master'):
+                    if _need not in tables:
+                        raise ValueError(f"missing table {_need}")
+            except Exception as _ve:
+                try:
+                    _z.close()
+                except Exception:
+                    pass
+                try:
+                    os.remove(tmpdb)
+                except Exception:
+                    pass
+                self._restore_set(100, f"Backup database is corrupt: {_ve}", True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            # 3) Safety-copy the live database first.
+            self._restore_set(35, "Safety copy of current data…")
+            live_db = self.db.db_path
+            bdir = os.path.join(base, 'database', 'backups')
+            os.makedirs(bdir, exist_ok=True)
+            stamp = _dt.now().strftime('%Y%m%d-%H%M%S')
+            safety = os.path.join(bdir, f'pre-restore-{stamp}.db')
+            try:
+                _src = _sq.connect(live_db, timeout=30)
+                _dst = _sq.connect(safety, timeout=30)
+                try:
+                    _src.backup(_dst)
+                finally:
+                    _dst.close()
+                    _src.close()
+            except Exception as _se:
+                try:
+                    _z.close()
+                except Exception:
+                    pass
+                self._restore_set(100, f"Could not safeguard current data: {_se}", True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            # 4) Swap files in (DB + companions), with progress per file.
+            self._restore_set(50, "Extracting backup…")
+            targets = [n for n in names
+                       if n == 'database/aurum_local.db'
+                       or n == 'config.json'
+                       or n.startswith('database/.subscription')
+                       or n.startswith('database/.sse_cache')
+                       or n.startswith('photos/')
+                       or '/photos/' in n]
+            # Photos may live under any folder containing a photos dir;
+            # accept them by name while refusing anything executable.
+            safe = []
+            for n in targets:
+                _low = n.lower()
+                if _low.endswith(('.exe', '.dll', '.bat', '.cmd', '.ps1',
+                                   '.py', '.pyc')):
+                    continue
+                if '..' in n or n.startswith('/'):
+                    continue
+                safe.append(n)
+            # DB file itself goes through sqlite (WAL-safe), never raw copy.
+            rest = [n for n in safe if n != 'database/aurum_local.db']
+            total = max(len(rest), 1)
+            for _i, _arc in enumerate(rest):
+                try:
+                    _dst_path = os.path.join(base, _arc.replace('/', os.sep))
+                    os.makedirs(os.path.dirname(_dst_path), exist_ok=True)
+                    with open(_dst_path, 'wb') as _f:
+                        _f.write(_z.read(_arc))
+                except Exception as _we:
+                    LOG(f"[RESTORE] skip {_arc}: {_we}")
+                self._restore_set(50 + int(35 * (_i + 1) / total),
+                                  f"Extracting {_arc} ({_i + 1}/{len(rest)})…")
+            try:
+                _z.close()
+            except Exception:
+                pass
+            try:
+                os.remove(tmpdb)
+            except Exception:
+                pass
+            # 5) Load into the LIVE file via the sqlite backup API: never by
+            # replacing the file itself, which Windows refuses while the
+            # running app holds the database open. backup() streams the
+            # verified content into place, WAL-safe, past any open reader.
+            self._restore_set(88, "Loading data…")
+            try:
+                # Re-read the verified DB bytes from the zip into place.
+                _z2 = _zf.ZipFile(zpath, 'r')
+                try:
+                    _blob = _z2.read('database/aurum_local.db')
+                finally:
+                    _z2.close()
+                _tmp2 = os.path.join(tmpdir, 'load.db')
+                with open(_tmp2, 'wb') as _f:
+                    _f.write(_blob)
+                _s2 = _sq.connect(_tmp2, timeout=30)
+                _d2 = _sq.connect(live_db, timeout=30)
+                try:
+                    try:
+                        _d2.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    except Exception:
+                        pass
+                    _s2.backup(_d2)
+                finally:
+                    try:
+                        _s2.close()
+                    except Exception:
+                        pass
+                    try:
+                        _d2.close()
+                    except Exception:
+                        pass
+                try:
+                    os.remove(_tmp2)
+                except Exception:
+                    pass
+            except Exception as _le:
+                self._restore_set(100, f"Could not load data: {_le}. "
+                                  f"Your current data is safe at {safety}.",
+                                  True, False)
+                try:
+                    self._restore_running = False
+                except Exception:
+                    pass
+                return
+            try:
+                self._audit('Backup restored', os.path.basename(zpath), 'backup')
+            except Exception:
+                pass
+            LOG(f"[RESTORE] done from {zpath}; safety copy at {safety}")
+            self._restore_set(100, "Done — restart AurumOS to use the restored data.",
+                              True, True, True, safety)
+        except Exception as e:
+            ERR(f"[RESTORE] failed: {e}")
+            self._restore_set(100, f"Restore failed: {e}", True, False)
+        finally:
+            try:
+                self._restore_running = False
+            except Exception:
+                pass
+
     # ── TAG AUDIT API ────────────────────────────────────────────────────
     def tag_audit_start(self, started_by='Admin', touch_filter='ALL'):
         try:    return self.db.tag_audit_start(started_by, touch_filter)

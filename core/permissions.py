@@ -81,6 +81,9 @@ OWNER_ONLY = frozenset([
     'renew_subscription', 'get_plans', 'verify_key',
     # Diagnostics that expose the whole install
     'get_recent_logs', 'get_log_path', 'open_log_folder', 'get_db_path',
+    # Full backup in/out: the whole database leaves or arrives here
+    'export_backup', 'get_backup_progress', 'reveal_backup',
+    'pick_backup_file', 'import_backup', 'get_restore_progress',
 ])
 
 
