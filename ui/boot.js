@@ -356,7 +356,7 @@
    * number on screen is right even on copies built before the bridge could
    * report it, which matters because main.py only changes on a reinstall.
    */
-  var VER_API = 'https://api.github.com/repos/Jenildholakiya/AurumOS/releases/latest';
+  var VER_API = 'https://api.github.com/repos/Jenildholakiya/AurumOS/releases?per_page=15';
   var VER_CACHE = 'aurum_version_state';
   var VER_TTL = 30 * 60 * 1000;          // ask GitHub at most twice an hour
   var SEMVER = /^\d+\.\d+\.\d+$/;
@@ -443,15 +443,27 @@
       fetch(VER_API, { headers: { 'Accept': 'application/vnd.github+json' },
                        signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (rel) {
+        .then(function (releases) {
           if (timer) clearTimeout(timer);
-          var v = rel && _verClean(rel.tag_name);
-          if (!v) { done(false); return; }
-          var changed = (v !== V.latest);
-          V.latest = v;
+          if (!Array.isArray(releases) || !releases.length) { done(false); return; }
+          var best = null, bestKey = [0,0,0];
+          for (var i = 0; i < releases.length; i++) {
+            var rel = releases[i];
+            if (rel.draft) continue;
+            var v = _verClean(rel.tag_name);
+            if (!v) continue;
+            var k = v.split('.').map(Number);
+            if (k[0] > bestKey[0] || (k[0]===bestKey[0] && k[1] > bestKey[1]) || (k[0]===bestKey[0] && k[1]===bestKey[1] && k[2] > bestKey[2])) {
+              best = rel; bestKey = k;
+            }
+          }
+          if (!best) { done(false); return; }
+          var bv = _verClean(best.tag_name);
+          var changed = (bv !== V.latest);
+          V.latest = bv;
           V.checkedAt = Date.now();
-          V.releaseDate = (rel.published_at || '').slice(0, 10) || V.releaseDate;
-          V.changelog = String(rel.body || '').split('\n')
+          V.releaseDate = (best.published_at || '').slice(0, 10) || V.releaseDate;
+          V.changelog = String(best.body || '').split('\n')
             .map(function (s) { return s.replace(/^[-*#\s]+/, '').trim(); })
             .filter(function (s) { return s && s.indexOf('Rebuild needed') === -1; })
             .slice(0, 8);
