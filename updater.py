@@ -48,7 +48,7 @@ FALLBACK_VERSION = "1.1.7"
 # so that folder must stay downloadable and is deliberately NOT listed here.
 PROTECTED_PATHS = {
     'database', 'logs', 'config.json', 'exe_trusted_hash.txt',
-    'AurumOS.exe', 'version.lock', 'build_version.txt',
+    'AurumOS.exe', 'version.lock', 'build_version.txt', 'build_stamp.txt',
 }
 
 
@@ -71,6 +71,24 @@ def _baked_version() -> str:
 
 
 CURRENT_VERSION = _baked_version()
+
+STAMP_RE = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$')
+
+
+def _baked_stamp() -> str:
+    """When this copy was built (build_stamp.txt, next to build_version.txt).
+    Anything else — missing, or from a hand build that skipped stamping —
+    reads as blank rather than a lie."""
+    try:
+        s = (_bundle_dir() / 'build_stamp.txt').read_text(encoding='utf-8').strip()
+        if STAMP_RE.match(s):
+            return s
+    except Exception:
+        pass
+    return ''
+
+
+BUILD_STAMP = _baked_stamp()
 
 
 def sha256(path: Path) -> str:
@@ -177,28 +195,64 @@ def _get_json(url: str, timeout: float):
 
 
 def fetch_latest_manifest(timeout=8):
-    """version.json of the newest release, or None when offline.
+    """version.json of the release with the highest version number, or None.
 
-    The direct link first (no API, no rate limit); the API second, for the
-    odd case where the redirect misbehaves."""
+    GitHub's "latest" tag follows publication date, not semver, so a
+    hotfix on an older branch can shadow a higher version.  We therefore
+    scan the first page of releases (up to 30) and pick the one whose
+    version.json carries the highest X.Y.Z number.
+
+    Fast path: the /latest redirect is tried first (no API quota). If its
+    version is already >= every tag we know about, we skip the full scan.
+    """
+    best, best_key = None, (0, 0, 0)
+
+    # ── fast path: GitHub "latest" redirect (no rate limit) ──────────
     try:
         m = _get_json(MANIFEST_URL, timeout)
         if isinstance(m, dict) and m.get('version'):
-            return m
+            v = str(m['version']).strip()
+            k = _version_key(v)
+            if k > best_key:
+                best, best_key = m, k
     except Exception:
         pass
+
+    # ── full scan: first page of releases sorted by semver ───────────
     try:
-        rel = _get_json(VERSION_URL, timeout)
-        for asset in rel.get('assets', []):
-            if asset.get('name') == 'version.json':
-                m = _get_json(asset.get('browser_download_url'), timeout)
-                if isinstance(m, dict) and m.get('version'):
-                    if not m.get('changelog') and rel.get('body'):
-                        m['changelog'] = [ln.strip() for ln in str(rel['body']).split('\n') if ln.strip()]
-                    return m
+        releases_url = (
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
+            f"/releases?per_page=30"
+        )
+        releases = _get_json(releases_url, timeout)
+        for rel in releases:
+            if rel.get('draft'):
+                continue
+            tag = str(rel.get('tag_name', ''))
+            k = _version_key(tag)
+            if k <= best_key:
+                continue
+            for asset in rel.get('assets', []):
+                if asset.get('name') == 'version.json':
+                    try:
+                        m = _get_json(asset['browser_download_url'], timeout)
+                        if isinstance(m, dict) and m.get('version'):
+                            mk = _version_key(m['version'])
+                            if mk > best_key:
+                                if not m.get('changelog') and rel.get('body'):
+                                    m['changelog'] = [
+                                        ln.strip()
+                                        for ln in str(rel['body']).split('\n')
+                                        if ln.strip()
+                                    ]
+                                best, best_key = m, mk
+                    except Exception:
+                        pass
+                    break
     except Exception:
         pass
-    return None
+
+    return best
 
 
 def decide(manifest, installed: str):
