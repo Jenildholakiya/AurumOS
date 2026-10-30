@@ -134,7 +134,7 @@ by a push, on machines whose EXE is months old.
 ## Checking a release before you push
 
 ```bash
-python release_plan.py
+python scripts/release/release_plan.py
 ```
 
 Prints the number it would pick, the notes it would write, and whether a
@@ -156,7 +156,7 @@ repository built for the test.
   `AurumOS.exe`. It is what the screens read. Missing or older than the EXE's
   own number means the EXE's number wins.
 - **The release published but nothing downloaded.** Open the release on GitHub
-  and check the assets are there, `version.json` included. `stage_release_assets.py`
+  and check the assets are there, `version.json` included. `scripts/release/stage_release_assets.py`
   fails the build rather than publishing a manifest whose files would 404.
 - **The number went down.** GitHub marks the most recently *published* release
   as "Latest", regardless of its number. That is why numbering runs from the

@@ -1177,10 +1177,12 @@
     body.sidebar-collapsed #sidebar-container {
         width: 66px;
     }
+/* Responsive: small laptops down to 1024 */
+@media (max-width:1100px){.billing-grid{grid-template-columns:1fr!important;}}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 
 <div class="modal-overlay" id="error-modal">
@@ -3779,12 +3781,16 @@ async function commitBillingTransactionPipeline(billMode) {
     };
     try {
         if (window.pywebview && window.pywebview.api) {
+            // The bill mode is chosen in the print selector before saving, so
+            // stamp it on the payload first: the sale record keeps it (with
+            // the tax breakup) and a later reprint renders the same bill.
+            data._billMode = billMode;
             var res = await window.pywebview.api.generate_bill(data);
             if (res.status === 'success') {
                 // Use the REAL saved voucher id (staff role gets an auto-generated id)
                 var savedVch = (res.vch_id && String(res.vch_id).trim()) ? res.vch_id : data.vch_id;
                 if (window.pywebview.api.trigger_print_window) {
-                    data._billMode = billMode;
+                    data._previewOnly = true;
                     await window.pywebview.api.trigger_print_window(savedVch, printCopiesConfigTarget, data);
                 }
                 try {

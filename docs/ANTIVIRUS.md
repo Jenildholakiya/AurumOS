@@ -67,7 +67,7 @@ customer notices.
 Then either put the `.pfx` path in `sign_config.json`, or — for any OV/EV
 certificate issued since June 2023, whose key lives on a hardware token and
 has no `.pfx` — put its thumbprint there instead. See
-`sign_config.json.example`.
+`config/sign_config.json.example`.
 
 **You do not need the Windows SDK.** The build used to require `signtool.exe`
 from it, which is a large download and was not installed, so the build kept

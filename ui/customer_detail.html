@@ -338,7 +338,7 @@ tbody tr:hover td{background:rgba(37,99,235,0.012);}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 <main>
   <!-- ── HEADER ── -->
@@ -792,18 +792,45 @@ function toast(msg, icon) {
 
 function getApi(){ return window.pywebview && window.pywebview.api; }
 
-function goBack(){
-  if (window.pywebview && window.pywebview.api) {
-    window.pywebview.api.navigate('party.html');
-  } else {
-    history.back();
+// ── Return to registry ───────────────────────────────────────────────
+// The registries are crm.html (CRM) and customer_account.html (the Account
+// Registry); party.html is the wholesale Party Terminal, a different book.
+// This used to hardcode party.html, which stranded every retail customer
+// on the wrong page, so the destination now resolves instead of being
+// fixed:
+//   1. an explicit ?from= caller param (from=party keeps legacy behavior),
+//   2. otherwise the Account Registry, which is where the customer rows
+//      that open this page live.
+// The bridge's navigate() takes a bare page and drops query strings, so a
+// target carrying one goes over location.href like crm.html's own jump out.
+function _registryTarget(){
+  var from = '';
+  try { from = String(params.get('from') || '').toLowerCase(); } catch(e){}
+  if (from === 'party') return 'party.html';
+  if (from === 'crm') return 'crm.html';
+  return 'customer_account.html';
+}
+
+function _goRegistry(page){
+  var bare = page.indexOf('?') < 0
+          && window.pywebview && window.pywebview.api
+          && typeof window.pywebview.api.navigate === 'function';
+  if (bare) {
+    window.pywebview.api.navigate(page);
+    return;
   }
+  var href = window.location.href;
+  var cut = Math.max(href.lastIndexOf('/'), href.lastIndexOf('\\'));
+  window.location.href = (cut >= 0 ? href.substring(0, cut + 1) : '') + page;
+}
+
+function goBack(){
+  _goRegistry(_registryTarget());
 }
 
 function doNewCustomer(){
-  if (window.pywebview && window.pywebview.api) {
-    window.pywebview.api.navigate('party.html?new=1');
-  }
+  var t = _registryTarget();
+  _goRegistry(t === 'party.html' ? 'party.html?new=1' : t);
 }
 
 // ── Tab Switcher ───────────────────────────────────────────────────────────

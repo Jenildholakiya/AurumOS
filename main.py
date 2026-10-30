@@ -391,6 +391,118 @@ def _log_ui_paths():
 _log_ui_paths()
 
 
+def _powershell_hidden(args, **kw):
+    """Run PowerShell without flashing a console window.
+
+    Every file/folder picker and clipboard call used to spawn a visible
+    powershell.exe console (the blue window that pops up behind the dialog).
+    Hiding it here, once, fixes all of them permanently — new callers must
+    use this instead of subprocess.run for powershell.
+    """
+    import subprocess
+    kw.setdefault('capture_output', True)
+    kw.setdefault('text', True)
+    if os.name == 'nt':
+        try:
+            kw.setdefault('creationflags', subprocess.CREATE_NO_WINDOW)
+        except Exception:
+            pass
+        try:
+            _si = subprocess.STARTUPINFO()
+            _si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            kw.setdefault('startupinfo', _si)
+        except Exception:
+            pass
+    return subprocess.run(args, **kw)
+
+
+def _sta_call(fn, timeout=120):
+    """Run fn on a dedicated STA thread (WinForms dialogs require STA).
+
+    Returns (value, err) where err is None on success, 'timeout' if the
+    user left the dialog open past the budget (treated as cancelled — no
+    second dialog is opened), or the exception on technical failure.
+    """
+    import threading
+    box = {}
+
+    def _run():
+        try:
+            import ctypes
+            try:
+                ctypes.windll.ole32.CoInitializeEx(None, 2)  # COINIT_APARTMENTTHREADED
+            except Exception:
+                pass
+            try:
+                box['value'] = fn()
+            finally:
+                try:
+                    ctypes.windll.ole32.CoUninitialize()
+                except Exception:
+                    pass
+        except Exception as e:
+            box['error'] = e
+
+    t = threading.Thread(target=_run, daemon=True, name='AurumSTA')
+    t.start()
+    t.join(timeout)
+    if t.is_alive():
+        return ('', 'timeout')
+    if 'error' in box:
+        return (None, box['error'])
+    return (box.get('value') or '', None)
+
+
+def _native_pick_file(file_filter, title, timeout=115):
+    """In-process Windows file dialog via WinForms (pythonnet).
+
+    No child process is ever started, so no console window can appear —
+    this is the permanent fix for the powershell.exe flash. Returns the
+    chosen path, '' if cancelled/timed-out, or None when native dialogs
+    are unavailable (caller falls back to hidden PowerShell).
+    """
+    def _show():
+        import clr
+        clr.AddReference('System.Windows.Forms')
+        from System.Windows.Forms import OpenFileDialog, DialogResult
+        dlg = OpenFileDialog()
+        dlg.Filter = file_filter
+        dlg.Title = title
+        dlg.CheckFileExists = True
+        return dlg.FileName if dlg.ShowDialog() == DialogResult.OK else ''
+    try:
+        value, err = _sta_call(_show, timeout)
+    except Exception:
+        return None
+    if err is None:
+        return value
+    if err == 'timeout':
+        return ''
+    return None
+
+
+def _native_pick_folder(description, timeout=55):
+    """In-process Windows folder dialog via WinForms. Same contract as
+    _native_pick_file: path, '' on cancel/timeout, None when unavailable."""
+    def _show():
+        import clr
+        clr.AddReference('System.Windows.Forms')
+        from System.Windows.Forms import FolderBrowserDialog, DialogResult
+        dlg = FolderBrowserDialog()
+        dlg.Description = description
+        dlg.ShowNewFolderButton = True
+        return dlg.SelectedPath if dlg.ShowDialog() == DialogResult.OK else ''
+    try:
+        value, err = _sta_call(_show, timeout)
+    except Exception:
+        return None
+    if err is None:
+        return value
+    if err == 'timeout':
+        return ''
+    return None
+
+
 def get_data_path(relative_path=""):
     if getattr(sys, 'frozen', False):
         base = os.path.dirname(sys.executable)
@@ -464,7 +576,11 @@ def decrypt_license_key(data: bytes) -> str:
     try:
         if not data.startswith(b'\xAA\x01'):
             return ''
-        enc = data[3:]
+        enc = data[2:]  # header is exactly the 2 bytes checked above — a
+        # previous build stripped 3 here, silently eating the first cipher
+        # byte. Every stored key then decoded to garbage, the except below
+        # swallowed it to '', and the whole subscription system sat on Lite
+        # forever despite a valid enterprise key on file.
         raw = _xor_cipher(enc, _get_machine_key())
         return raw.decode('utf-8')
     except Exception:
@@ -763,6 +879,40 @@ def normalize_tag_item(item_data: dict) -> dict:
     return item
 
 
+def _print_template_for(bill):
+    """Which print template renders this bill.
+
+    Wholesale normal bills keep the legacy (original) design. Everything
+    else — retail, uchak, and GST bills that need the tax machinery —
+    uses the current template. Retail is never routed to legacy.
+    Mirrors the buildSlip() dispatcher in ui/bill_print.html.
+    """
+    try:
+        b = bill or {}
+        if not b:
+            return 'bill_print.html'  # unknown payload: status quo
+        if b.get('is_uchak'):
+            return 'bill_print.html'
+        kind = str(b.get('kind') or '').strip().lower()
+        if kind in ('sale', 'estimate'):
+            return 'bill_print.html'
+        # Presence (not value) mirrors the template's `!== undefined` test.
+        if 'making_total' in b or 'makingTotal' in b:
+            return 'bill_print.html'
+        mode = str(b.get('_billMode') or b.get('bill_mode') or '').strip().lower()
+        if mode == 'gst':
+            return 'bill_print.html'
+        try:
+            for _k in ('gstAmount', 'gst_amount', 'cgst', 'sgst'):
+                if float(b.get(_k) or 0) > 0:
+                    return 'bill_print.html'
+        except Exception:
+            pass
+        return 'bill_print_legacy.html'
+    except Exception:
+        return 'bill_print.html'
+
+
 class AurumAPI:
     def __init__(self):
         # ── DB Path Resolution ────────────────────────────────────────
@@ -788,16 +938,19 @@ class AurumAPI:
                 # Use SHBrowseForFolder via shell32
                 from ctypes import wintypes
                 shell32 = ctypes.windll.shell32
-                # Simple fallback: use cmd input via subprocess
-                import subprocess
-                r = subprocess.run(
+                # In-process dialog first (no console flash), hidden
+                # powershell only if CLR dialogs are unavailable.
+                native = _native_pick_folder("Select folder to store AurumOS database")
+                if native is not None:
+                    return native if native else None
+                r = _powershell_hidden(
                     ['powershell', '-Command',
                      '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
                      '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
                      '$f.Description="Select folder to store AurumOS database";'
                      '$f.ShowNewFolderButton=$true;'
                      'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
-                    capture_output=True, text=True, timeout=60
+                    timeout=60
                 )
                 chosen = r.stdout.strip()
                 return chosen if chosen else None
@@ -1621,6 +1774,39 @@ class AurumAPI:
             dues_total = round(dues_total, 2)
             if not isinstance(retail, dict):
                 retail = {}
+            # Stock without a recorded purity cannot be valued by fine weight
+            # and is silently dropped from stock_value above. Report it
+            # separately (weight and pieces) instead of valuing it at zero.
+            try:
+                with self.db._get_connection() as _uc:
+                    urow = _uc.execute(
+                        "SELECT COALESCE(SUM(COALESCE(gr_wt,0)),0) AS g, "
+                        "COUNT(*) AS n FROM stock_inventory "
+                        "WHERE COALESCE(gr_wt,0)>0 AND COALESCE(touch,0)<=0"
+                        ).fetchone()
+                unvalued = {"gross": round(float(urow['g'] or 0), 3),
+                            "pcs": int(urow['n'] or 0)} if urow else \
+                           {"gross": 0.0, "pcs": 0}
+            except Exception:
+                unvalued = {"gross": 0.0, "pcs": 0}
+            # Hallmark summary for the dashboard widget: counts only, never
+            # the pending lists, so this stays cheap on every dashboard load.
+            try:
+                from core import hallmark as _hm
+                self.db.ensure_hallmark_tables()
+                _hm_out = _hm.dashboard(self.db.hm_pending_stock(2000),
+                                        self.db.hm_lots(True, 200))
+                hallmark = {
+                    "waiting": int(_hm_out['waiting']['pieces']),
+                    "out": int(_hm_out['out']['pieces']),
+                    "late": int(_hm_out['late']['pieces']),
+                    "failed": int(_hm_out['failed']['pieces']),
+                    "marked": int(_hm_out['marked']),
+                    "saleable_gap": int(_hm_out['saleable_gap']),
+                }
+            except Exception as _he:
+                ERR(f"[DASHBOARD-HM] {_he}")
+                hallmark = {}
             return {
                 "status":"success",
                 "accumulated_sales": rev_map.get(today_str,0.0),
@@ -1631,7 +1817,8 @@ class AurumAPI:
                 "chart":{"labels":chart_labels,"revenue":chart_revenue,"fine":chart_fine},
                 "inventory_chart":{"labels":[r['it_code'] for r in inv_rows],"weights":[round(float(r['total_wt']),3) for r in inv_rows]},
                 "risk_monitor":credit_risk_list,"audit_logs":live_audit_logs,
-                "retail": retail, "dues_total": round(dues_total, 2)
+                "retail": retail, "dues_total": round(dues_total, 2),
+                "hallmark": hallmark, "stock_unvalued": unvalued
             }
         except Exception as e:
             ERR(f"[DASHBOARD] {e}")
@@ -2611,12 +2798,9 @@ class AurumAPI:
                 except Exception:
                     pass
             if not key or not _is_valid_key_format(key):
-                from subscription_manager import LITE_FEATURES
-                return {'valid': False, 'status': 'unknown', 'effective_plan': 'lite',
-                        'features': list(LITE_FEATURES), 'subscription': {'status': 'unknown',
-                        'expires_at': None, 'remaining_days': 0, 'grace_remaining_days': 0,
-                        'renewal_amount': 0}, 'business': '', 'owner': '', 'plan': 'lite',
-                        'is_trial': False, 'trial_end_ms': None}
+                # No key here: Lite, or for a staff PC the main PC's plan.
+                self.sub.startup_check('')
+                return self.sub.get_state_json()
 
             self.sub.set_license_key(key)
             self.sub.set_window(self._window)
@@ -3567,6 +3751,118 @@ class AurumAPI:
             ERR(f"[SETTINGS] update_settings: {e}")
             return {'status':'error','message':str(e)}
 
+    def get_alert_settings(self) -> dict:
+        """Owner security-alert settings for the Settings card."""
+        try:
+            from database import bastion_ai as _b
+            return dict(_b.alert_prefs(self.db))
+        except Exception as e:
+            ERR(f"[SETTINGS] alert read: {e}")
+            return {'owner_alert_email': '', 'alert_min_severity': 'MEDIUM',
+                    'quiet_hours': '', 'conduct_watch_enabled': '1'}
+
+    def save_alert_settings(self, data: dict) -> dict:
+        """Validate and store the owner's alert settings.
+
+        Rejects a bad email or severity rather than storing what the
+        engine cannot use — a saved-but-broken address is how alerts go
+        quietly nowhere.
+        """
+        try:
+            d = dict(data or {})
+            email = str(d.get('owner_alert_email') or '').strip()
+            if email and '@' not in email:
+                return {'status': 'error',
+                        'message': 'That alert email does not look right.'}
+            sev = str(d.get('alert_min_severity') or 'MEDIUM').strip().upper()
+            if sev not in ('MEDIUM', 'HIGH', 'CRITICAL'):
+                return {'status': 'error',
+                        'message': 'Severity must be Medium, High or Critical.'}
+            quiet = str(d.get('quiet_hours') or '').strip()
+            if quiet:
+                import re as _re
+                _seen = _re.findall(r'(\d{1,2})(?::(\d{2}))?', quiet)
+                _hours = [int(x[0]) for x in _seen[:2]]
+                if len(_seen) < 2 or any(h > 23 for h in _hours):
+                    return {'status': 'error',
+                            'message': 'Quiet hours look like 22-7.'}
+            watch = '0' if str(d.get('conduct_watch_enabled',
+                                     '1')).strip() == '0' else '1'
+            self.db.set_config('owner_alert_email', email)
+            self.db.set_config('alert_min_severity', sev)
+            self.db.set_config('quiet_hours', quiet)
+            self.db.set_config('conduct_watch_enabled', watch)
+            LOG("[SETTINGS] Alert settings saved")
+            return {'status': 'success'}
+        except Exception as e:
+            ERR(f"[SETTINGS] alert save: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def _alert_smtp_creds(self):
+        """(sender, password) for alert mail, or ('', '').
+
+        The bastion env sender first; else the shop's own Gmail sender
+        from the centre page. One resolution both the test button and
+        the engine agree on.
+        """
+        try:
+            sender = str(os.environ.get('AURUM_ALERT_EMAIL_FROM', '') or '')
+            pw = str(os.environ.get('AURUM_ALERT_EMAIL_PASSWORD', '') or '')
+            if sender and '@' in sender and pw and 'xxxx' not in pw:
+                return sender, pw.replace(' ', '')
+        except Exception:
+            pass
+        try:
+            sender = str(self.db.get_config('hm_sender_email', '')
+                         or '').strip()
+            pw = str(self.db.get_config('hm_sender_apppw', '')
+                     or '').strip().replace(' ', '')
+            if sender and '@' in sender and pw:
+                return sender, pw
+        except Exception:
+            pass
+        return '', ''
+
+    def send_test_alert_email(self, email: str) -> dict:
+        """Send a real test alert to the given address.
+
+        Says plainly what is missing instead of reporting a sent mail
+        that never left.
+        """
+        try:
+            to_addr = str(email or '').strip()
+            if '@' not in to_addr:
+                return {'status': 'error',
+                        'message': 'Enter your alert email first.'}
+            sender, pw = self._alert_smtp_creds()
+            if not sender:
+                return {'status': 'error',
+                        'message': 'No sender saved. Save the shop Gmail '
+                                   'sender (centre page), then try again.'}
+            import smtplib
+            import ssl as _ssl
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            text = ('This is a test security alert from AurumOS.\n\n'
+                    'Your alert emails are working.')
+            msg = MIMEMultipart('alternative')
+            msg['From'] = sender
+            msg['To'] = to_addr
+            msg['Subject'] = 'AurumOS test alert'
+            msg.attach(MIMEText(text, 'plain'))
+            ctx = _ssl.create_default_context()
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx,
+                                  timeout=20) as server:
+                server.login(sender, pw)
+                server.sendmail(sender, to_addr, msg.as_string())
+            LOG(f"[SETTINGS] test alert sent to {to_addr}")
+            return {'status': 'success',
+                    'message': 'Test sent to %s.' % to_addr}
+        except Exception as e:
+            ERR(f"[SETTINGS] test alert: {e}")
+            return {'status': 'error',
+                    'message': 'Could not send: %s' % str(e)[:160]}
+
     def change_owner_password(self, current_password: str, new_password: str) -> dict:
         """Change the owner (admin) password after verifying the current one."""
         try:
@@ -3899,7 +4195,14 @@ class AurumAPI:
             shutil.copyfile(src, dest)
             self.db.set_item_photo(tag, name)
             LOG(f"[PHOTO] {tag} -> {name}")
-            return {'status': 'success', 'photo': name, 'path': dest}
+            try:
+                url = Path(dest).as_uri()
+            except Exception:
+                url = ''
+            # url is returned so the Receipt panel can preview instantly,
+            # even when the piece has no saved row yet (photo picked before
+            # Save Entry) and photo_path would otherwise find nothing.
+            return {'status': 'success', 'photo': name, 'path': dest, 'url': url}
         except Exception as e:
             ERR(f"[PHOTO] pick: {e}")
             return {'status': 'error', 'message': str(e)}
@@ -3914,15 +4217,37 @@ class AurumAPI:
         """Where a piece's picture is, for showing it on a screen."""
         try:
             from core import photos as _ph
-            row = self.db.get_item_by_tag(tag_id) or {}
+            tag = str(tag_id or '').strip()
+            row = self.db.get_item_by_tag(tag) or {}
             name = str(row.get('photo') or '')
-            if not name:
-                return {'status': 'none'}
-            p = _ph.path_for(_get_db_base(), name)
-            if not os.path.isfile(p):
-                return {'status': 'missing', 'path': p}
-            return {'status': 'success', 'path': p,
-                    'url': Path(p).as_uri()}
+            base = _get_db_base()
+            p = _ph.path_for(base, name) if name else ''
+            if p and os.path.isfile(p):
+                return {'status': 'success', 'path': p,
+                        'url': Path(p).as_uri()}
+            # Fallback: a photo picked for a piece before its row was saved
+            # (or whose row lost the name) still sits in the folder under the
+            # tag's name. Find it, heal the row, and serve it, so the file is
+            # never orphaned and the preview never blanks for want of a row.
+            try:
+                stem = _ph.safe_name(tag, 'x.jpg')[:-4]
+                d = _ph.folder(base)
+                if stem and stem != 'ITEM' and os.path.isdir(d):
+                    for f in sorted(os.listdir(d)):
+                        fn, ext = os.path.splitext(f)
+                        if ext.lower() in _ph.ALLOWED and (
+                                fn.upper() == stem or fn.upper().startswith(stem + '-')):
+                            fp = os.path.join(d, f)
+                            if os.path.isfile(fp):
+                                try:
+                                    self.db.set_item_photo(tag, f)
+                                except Exception:
+                                    pass
+                                return {'status': 'success', 'path': fp,
+                                        'url': Path(fp).as_uri()}
+            except Exception:
+                pass
+            return {'status': 'none' if not name else 'missing', 'path': p}
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
 
@@ -3939,12 +4264,11 @@ class AurumAPI:
                 return {'status': 'error',
                         'message': 'That piece has no picture saved.'}
             p = res['path']
-            import subprocess
-            r = subprocess.run(
+            r = _powershell_hidden(
                 ['powershell', '-NoProfile', '-NonInteractive', '-Command',
                  'Set-Clipboard -LiteralPath $env:AURUM_PHOTO'],
                 env=dict(os.environ, AURUM_PHOTO=p),
-                capture_output=True, text=True, timeout=30)
+                timeout=30)
             if r.returncode != 0:
                 return {'status': 'error',
                         'message': (r.stderr or 'Could not copy the picture.').strip()[:200]}
@@ -4132,6 +4456,15 @@ class AurumAPI:
             pending = self.db.hm_pending_stock(limit)
             lots = self.db.hm_lots(True, 200)
             out = _hm.dashboard(pending, lots)
+            try:
+                _sm = self.db.hm_stock_marked()
+                out['stock_marked'] = {
+                    'pieces': len(_sm),
+                    'gross_wt': round(sum(float(r['gr_wt'] or 0)
+                                          for r in _sm), 3),
+                }
+            except Exception:
+                out['stock_marked'] = {'pieces': 0, 'gross_wt': 0.0}
             out['status'] = 'success'
             out['pending'] = pending
             out['centres'] = self.db.hm_centres()
@@ -4348,9 +4681,11 @@ class AurumAPI:
     def _hm_portal_base(self):
         """Where portal links point.
 
-        The owner sets their own address (their domain once the shop PC is
-        reachable through it); until then it stays localhost for testing,
-        so no PC name or LAN address ever appears inside a link.
+        Defaults to the public domain, which the owner points at the shop
+        PC (DNS plus an open firewall port); the Portal address card holds
+        an override for testing or a custom domain. http, not https: the
+        shop server speaks plain HTTP, so https links would open nowhere
+        without a proxy terminating TLS in front of it.
         """
         try:
             base = str(self.db.get_config('hm_portal_base', '')
@@ -4358,11 +4693,7 @@ class AurumAPI:
         except Exception:
             base = ''
         if not base:
-            try:
-                port = int(os.environ.get('AURUM_CLUSTER_PORT') or 58903)
-            except ValueError:
-                port = 58903
-            base = f'http://localhost:{port}'
+            base = 'http://aurumos.in'
         return base
 
     def hm_portal_base_get(self):
@@ -4479,6 +4810,25 @@ class AurumAPI:
             ERR(f"[HM] centre pin: {e}")
             return {'status': 'error', 'message': str(e)}
 
+    def hm_centre_pin_history(self, centre_id):
+        """Saved logins table for the centre page."""
+        try:
+            from network import hm_share as _hms
+            return {'status': 'success',
+                    'pins': _hms.pin_history(self.db, centre_id)}
+        except Exception as e:
+            ERR(f"[HM] pin history: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def hm_centre_pin_forget(self, centre_id, pin=''):
+        """Delete one saved login; clears the active one too if it matches."""
+        try:
+            from network import hm_share as _hms
+            return _hms.pin_forget(self.db, centre_id, pin)
+        except Exception as e:
+            ERR(f"[HM] pin forget: {e}")
+            return {'status': 'error', 'message': str(e)}
+
     def hm_portal_link(self, centre_id):
         """Mint the centre's portal link without emailing it."""
         try:
@@ -4492,7 +4842,9 @@ class AurumAPI:
             if issued.get('status') != 'success':
                 # No email saved yet: the page asks for one first.
                 return issued
-            url = self._hm_portal_base() + f"/hm/c/{issued['token']}"
+            url = _hms.portal_url(self._hm_portal_base(),
+                                  _hms.shop_slug(self.db),
+                                  _hms.centre_public_uid(self.db, centre_id))
             return {'status': 'success', 'url': url,
                     'email': issued['email'],
                     'centre': issued.get('centre', '')}
@@ -4512,7 +4864,9 @@ class AurumAPI:
             issued = _hms.portal_issue(self.db, centre_id, email)
             if issued.get('status') != 'success':
                 return issued
-            url = self._hm_portal_base() + f"/hm/c/{issued['token']}"
+            url = _hms.portal_url(self._hm_portal_base(),
+                                  _hms.shop_slug(self.db),
+                                  _hms.centre_public_uid(self.db, centre_id))
             sent = self._hm_send_portal_email(
                 issued['email'], issued.get('centre', ''), url)
             out = {'status': 'success' if sent.get('sent') else 'error',
@@ -5028,8 +5382,14 @@ class AurumAPI:
 
     def post_to_ledger(self, entry_data):
         try:
-            return {"status":"success"} if self.db.post_ledger_entry(**entry_data) else {"status":"error"}
+            ok = self.db.post_ledger_entry(**entry_data)
+            if not ok:
+                ERR(f"[LEDGER] posting failed for {entry_data.get('vch_id')!r} "
+                    f"({entry_data.get('desc')!r}) — bill stands, ledger missing")
+                return {"status":"error","message":"Bill recorded but the ledger posting failed."}
+            return {"status":"success"}
         except Exception as e:
+            ERR(f"[LEDGER] posting raised for {entry_data.get('vch_id')!r}: {e}")
             return {"status":"error","message":str(e)}
 
     def get_ledger_statement(self, client_name):
@@ -5046,6 +5406,45 @@ class AurumAPI:
         except: return {"metal":0,"cash":0}
 
     # -- STOCK LEDGER ----------------------------------------------------------
+    def _relink_photo_file(self, tag, photo_name):
+        """Point a saved photo at the tag being saved under.
+
+        A photo is picked for the tag showing at the time, but the tag can be
+        edited before Save Entry. Saving the old filename under the new tag
+        left a file named for one piece pointing at another, which also
+        defeated the tag-stem fallback in photo_path. Copy it to the new
+        tag's name and return that instead. The original stays on disk.
+        """
+        try:
+            from core import photos as _ph
+            import shutil
+            tag = str(tag or '').strip()
+            name = str(photo_name or '').strip()
+            if not tag or not name:
+                return photo_name
+            stem = _ph.safe_name(tag, 'x.jpg')[:-4]
+            fn, ext = os.path.splitext(name)
+            if fn.upper() == stem or fn.upper().startswith(stem + '-'):
+                return name
+            src = _ph.path_for(_get_db_base(), name)
+            if not os.path.isfile(src):
+                return name
+            new_name = _ph.safe_name(tag, name)
+            dst = _ph.path_for(_get_db_base(), new_name)
+            i = 2
+            while os.path.isfile(dst):
+                new_name = _ph.safe_name(tag, name, i)
+                dst = _ph.path_for(_get_db_base(), new_name)
+                i += 1
+                if i > 50:
+                    return name
+            shutil.copyfile(src, dst)
+            LOG(f"[PHOTO] relinked {name} -> {new_name} for tag {tag}")
+            return new_name
+        except Exception as e:
+            ERR(f"[PHOTO] relink: {e}")
+            return photo_name
+
     def add_stock_entry(self, data):
         try:
             try: self.bastion.notify_write()
@@ -5055,6 +5454,8 @@ class AurumAPI:
             tag = str(data.get('tag_id') or '').strip()
             if not tag or tag in ('N/A','','---','-'):
                 data['tag_id'] = 'OPENING-'+str(int(_time.time()*1000))[-8:]
+            if data.get('photo'):
+                data['photo'] = self._relink_photo_file(data.get('tag_id'), data.get('photo'))
             # Strip fields not in DB schema
             DB_FIELDS = {'it_code','it_name','tag_id','pkg_wt','para_stone_wt','size','design',
                          'pcs','gr_wt','ls_wt','nt_wt','ghat_wt','touch','wastage','huid',
@@ -5063,7 +5464,13 @@ class AurumAPI:
                          # piece saved with a making charge arrived with none
                          # and nothing anywhere said so.
                          'category','karat','making_type','making_charge',
-                         'sale_price','stone_value'}
+                         'sale_price','stone_value',
+                         # Tag-print layout for the piece (RING/PARA/KATTI).
+                         'tag_variation',
+                         # A photo picked in the Receipt panel before the piece
+                         # is saved. Without this it was dropped here and the
+                         # file sat orphaned on disk with no row pointing at it.
+                         'photo'}
             clean = {k:v for k,v in data.items() if k in DB_FIELDS}
             success = self.db.add_stock_entry(**clean)
             if success:
@@ -5087,11 +5494,22 @@ class AurumAPI:
             return {"status":"error","message":str(e)}
 
     def update_stock_entry(self, entry_id, data):
+        # Routed through the database's own updater, which checks keys
+        # against the real table (PRAGMA) and drops `id`/unknowns. Building
+        # the SET clause from raw client keys here meant a mistyped key took
+        # the whole update down, and `id` itself could be overwritten.
         try:
-            cols   = ", ".join([f"{k}=?" for k in data.keys()])
-            values = list(data.values())+[entry_id]
-            return {"status":"success"} if self.db.execute_query(
-                f"UPDATE stock_inventory SET {cols} WHERE id=?", tuple(values)) else {"status":"error"}
+            data = dict(data or {})
+            if data.get('photo'):
+                try:
+                    row = self.db.fetch_one(
+                        "SELECT tag_id FROM stock_inventory WHERE id=?", (entry_id,))
+                    if row:
+                        data['photo'] = self._relink_photo_file(
+                            row.get('tag_id'), data.get('photo'))
+                except Exception:
+                    pass
+            return {"status":"success"} if self.db.update_stock_entry(entry_id, data) else {"status":"error"}
         except Exception as e:
             return {"status":"error","message":str(e)}
 
@@ -5150,6 +5568,7 @@ class AurumAPI:
     def get_items_by_bin(self, bin_id):            return self.db.get_items_by_bin(bin_id)
     def get_velocity_products(self):                 return self.db.get_velocity_products()
     def get_untagged_items(self):                    return self.db.get_untagged_items()
+    def get_uchak_stock(self):                       return self.db.get_uchak_stock()
 
     # -- KATTI -----------------------------------------------------------------
     def get_katti_vch_id(self):
@@ -5398,9 +5817,35 @@ class AurumAPI:
                    "discountAmount":float(sh_row.get('discount_amount') or 0.0),
                    "discount":float(sh_row.get('discount_amount') or 0.0),
                    "discount_type":sh_row.get('discount_type','none'),
-                   "discount_value":0.0,
+                   "discount_value":float(sh_row.get('discount_value') or 0.0),
                    "kind":'sale' if is_retail else 'bill',
+                   "is_uchak":'UCHAK' in str(sh_row.get('status','')).upper(),
                    "items":items_array}
+            # Bill mode + tax breakup as recorded at sale time. The template
+            # keys off these, so a GST bill reprints as a GST bill instead of
+            # silently falling back to a normal Invoice. dict.get keeps old
+            # rows (written before these columns existed) working.
+            try:
+                _mode = str(sh_row.get('bill_mode') or 'normal').strip().lower()
+                if _mode not in ('gst', 'normal'):
+                    _mode = 'normal'
+                _cgst = float(sh_row.get('cgst') or 0)
+                _sgst = float(sh_row.get('sgst') or 0)
+                _cgst_rate = float(sh_row.get('cgst_rate') or 0)
+                _sgst_rate = float(sh_row.get('sgst_rate') or 0)
+                _gst_amt = float(sh_row.get('gst_amount') or 0)
+                _gst_rate = float(sh_row.get('gst_rate') or 0)
+                bill["_billMode"] = _mode
+                bill["bill_mode"] = _mode
+                bill["cgst"] = _cgst
+                bill["sgst"] = _sgst
+                bill["cgst_rate"] = _cgst_rate
+                bill["sgst_rate"] = _sgst_rate
+                bill["gst_total"] = _cgst + _sgst
+                bill["gstAmount"] = _gst_amt
+                bill["gstRate"] = _gst_rate
+            except Exception:
+                pass
             try:
                 bill["shop_name"]=self.db.get_config("business_name","AurumOS")
                 bill["shop_owner"]=self.db.get_config("owner_name","")
@@ -5438,7 +5883,20 @@ class AurumAPI:
             }
             if str(g('gst_registered', '0')).strip() == '1':
                 from core.gst import DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, DEFAULT_HSN
-                block.update({
+                # The registration number itself is re-validated, not trusted:
+                # a shop whose stored GSTIN is missing or no longer checks
+                # out (legacy data, partial save) must not print Tax Invoices
+                # with blank registration detail.
+                try:
+                    from core.gst import validate as _gst_validate
+                    _gst_ok = bool(_gst_validate(g('gstin', ''))['ok'])
+                except Exception:
+                    _gst_ok = False
+                if not _gst_ok:
+                    ERR("[PRINT] shop claims registration but GSTIN is invalid -- treating as unregistered")
+                    block['shop_gst_registered'] = '0'
+                else:
+                    block.update({
                     'shop_gstin':      g('gstin', ''),
                     'shop_legal_name': g('gst_legal_name', ''),
                     'shop_state':      g('gst_state', ''),
@@ -5469,9 +5927,14 @@ class AurumAPI:
         try:
             copies=int(copies) if copies else 1
             ui_dir=get_asset_path("ui")
-            print_path=os.path.join(ui_dir,"bill_print.html")
+            template_name = _print_template_for(data if isinstance(data, dict) else {})
+            print_path=os.path.join(ui_dir, template_name)
+            if not os.path.exists(print_path):
+                template_name = "bill_print.html"
+                print_path=os.path.join(ui_dir, template_name)
             if not os.path.exists(print_path):
                 return {"status":"error","message":"bill_print.html not found"}
+            LOG(f"[PRINT] template={template_name} vch={voucher_id}")
             with open(print_path,'r',encoding='utf-8') as f:
                 html_content=f.read()
             inject = f"<script>window.__VCH_ID__='{voucher_id}';window.__COPIES__={copies};"
@@ -5600,9 +6063,14 @@ class AurumAPI:
             return {"status": "error", "message": "Bill not found"}
         bill = bill_res.get('bill', {})
         ui_dir = get_asset_path('ui')
-        template_path = os.path.join(ui_dir, 'bill_print.html')
+        template_name = _print_template_for(bill if isinstance(bill, dict) else {})
+        template_path = os.path.join(ui_dir, template_name)
+        if not os.path.exists(template_path):
+            template_name = 'bill_print.html'
+            template_path = os.path.join(ui_dir, template_name)
         if not os.path.exists(template_path):
             return {"status": "error", "message": "bill_print.html not found"}
+        LOG(f"[PDF] template={template_name} vch={voucher_id}")
 
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
@@ -5782,13 +6250,24 @@ class AurumAPI:
             disc_amount=float(bill_data.get('discountAmount') or 0.0)
             resolved_status=('UCHAK_UNPAID' if (status=='CREDIT' and is_uchak) else
                              'UCHAK_PAID'   if (status=='PAID'   and is_uchak) else status)
-            if not self.db.record_sale(vch_id,customer,mobile,resolved_status,l_fine,coll,f995,dhal,rem,rate,clean_cash_amt,items_json,disc_type,disc_touch,disc_fine,disc_amount):
+            stock_check = self.db.validate_wholesale_items(json.loads(items_json) if isinstance(items_json, str) else items_json)
+            if not stock_check.get("valid"):
+                return {"status":"error","code":"INVENTORY_VALIDATION",
+                        "message":"\n".join(stock_check.get("errors") or ["Inventory validation failed."])}
+            if not self.db.record_sale(vch_id,customer,mobile,resolved_status,l_fine,coll,f995,dhal,rem,rate,clean_cash_amt,items_json,disc_type,disc_touch,disc_fine,disc_amount,
+                                       pay_mode=str(bill_data.get('payment_mode') or bill_data.get('pay_mode') or 'cash'),
+                                       bill_mode=str(bill_data.get('_billMode') or bill_data.get('bill_mode') or 'normal'),
+                                       gst_amount=float(bill_data.get('gst_amount') or bill_data.get('gstAmount') or 0),
+                                       gst_rate=float(bill_data.get('gst_rate') or bill_data.get('gstRate') or 0)):
                 return {"status":"error","message":"Failed to record sale in database"}
             if resolved_status != 'ESTIMATE':
                 try:
-                    self.db.deduct_stock_after_sale(items_json)
+                    _deducted = self.db.deduct_stock_after_sale(items_json)
                 except Exception as _de:
                     LOG(f"[BILL] Stock deduction failed (sale still recorded): {_de}")
+                    _deducted = False
+                if not _deducted:
+                    return {"status":"error","message":"Sale was not completed because inventory could not be updated."}
             is_cash_settled=(status in ('PAID','CASH','UCHAK_PAID','UCHAK_MAINTAINED'))
             if resolved_status == 'ESTIMATE':
                 self._audit(f"Estimate: {vch_id}",f"Customer: {customer} | Status: ESTIMATE","billing")
@@ -5863,7 +6342,12 @@ class AurumAPI:
                 og_rate = float(inv.get('old_gold_rate') or inv.get('oldGoldRate') or 0)
             except (TypeError, ValueError):
                 og_rate = 0.0
-            if not self.db.record_sale(vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt, og_desc, og_touch, og_rate):
+            if not self.db.record_sale(vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt, og_desc, og_touch, og_rate,
+                                       bill_mode=str(inv.get('bill_mode') or inv.get('_billMode') or 'normal'),
+                                       cgst=float(inv.get('cgst') or 0), sgst=float(inv.get('sgst') or 0),
+                                       cgst_rate=float(inv.get('cgst_rate') or inv.get('cgstRate') or 0),
+                                       sgst_rate=float(inv.get('sgst_rate') or inv.get('sgstRate') or 0),
+                                       disc_value=float(inv.get('discount_value') or 0)):
                 return {"status":"error","message":"Failed to record retail sale."}
             if status != 'ESTIMATE':
                 if not self.db.deduct_stock_after_sale(items_json):
@@ -5916,6 +6400,7 @@ class AurumAPI:
                     "total_amount": float(res.get('total_amount') or 0.0),
                     "discount_type": res.get('discount_type', 'none'),
                     "discount_amount": float(res.get('discount_amount') or 0.0),
+                    "discount_value": float(res.get('discount_value') or 0.0),
                     "date": res.get('date'),
                     "time_stamp": res.get('time_stamp')
                 },
@@ -5925,12 +6410,32 @@ class AurumAPI:
             return {"status": "error", "message": str(e)}
 
     def convert_estimate_to_paid(self, data):
-        """Convert a saved estimate to PAID, deduct stock, and return for printing."""
+        """Convert a saved estimate to PAID, deduct stock, and return for printing.
+
+        Carries everything a direct bill carries — payment mode, rate,
+        discount, old gold and loyalty — because the customer pays now, not
+        when the estimate was written. Stock is validated BEFORE the bill
+        flips: an estimate outlives the shelf, and a PAID bill with nothing
+        deducted is money recorded for goods still sitting there.
+        """
         try:
             inv = data.get('invoice', data) if isinstance(data, dict) else {}
             vch_id = str(inv.get('vch_id', '')).strip()
             if not vch_id:
                 return {"status": "error", "message": "Missing voucher ID."}
+            # Only an estimate can be converted. Without this check a second
+            # convert of the same voucher (double-click, retry, Enter) would
+            # re-record the PAID bill, deduct the stock a second time and
+            # award loyalty again, because record_sale overwrites by voucher.
+            try:
+                _cur = self.db.fetch_one(
+                    "SELECT status FROM sales_history WHERE UPPER(TRIM(vch_id))=?",
+                    (vch_id.strip().upper(),))
+            except Exception:
+                _cur = None
+            if _cur and str(_cur.get('status') or '').strip().upper() != 'ESTIMATE':
+                return {"status": "error", "code": "ALREADY_PAID",
+                        "message": f"{vch_id} is already {_cur.get('status')}. Re-open it from history instead of converting again."}
             try:
                 self.bastion.notify_write()
             except Exception:
@@ -5938,11 +6443,18 @@ class AurumAPI:
             customer = str(inv.get('customer', 'Walk-in')).strip()
             mobile = str(inv.get('phone', '')).strip()
             items = inv.get('items', [])
+            stock_check = self.db.validate_retail_items(items)
+            if not stock_check.get("valid"):
+                return {"status": "error", "code": "INVENTORY_VALIDATION",
+                        "message": "\n".join(stock_check.get("errors") or ["Inventory validation failed."])}
             items_json = json.dumps(items, ensure_ascii=False)
             total_amount = float(inv.get('grand_total') or inv.get('sub_total') or 0)
             disc_type = str(inv.get('discount_type') or 'none')
+            disc_value = float(inv.get('discount_value') or 0)
             disc_amount = float(inv.get('discount') or 0)
-            gold_rate = 0
+            gold_rate = float(inv.get('gold_rate') or 0)
+            if not gold_rate and items:
+                gold_rate = float(items[0].get('rate') or items[0].get('gold_rate') or 0)
             try:
                 _rf = 0.0
                 for _it in items if isinstance(items, list) else []:
@@ -5954,14 +6466,48 @@ class AurumAPI:
             except (TypeError, ValueError):
                 _rf = 0.0
             l_fine = 0; coll = round(_rf, 3); f995 = 0; dhal = 0; rem = 0
-            if not self.db.record_sale(vch_id, customer, mobile, 'PAID', l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount):
+            pay_mode = str(inv.get('payment_mode') or inv.get('pay_mode') or 'cash').strip().lower()
+            try:
+                og_value = float(inv.get('old_gold') or inv.get('oldGold') or 0)
+            except (TypeError, ValueError):
+                og_value = 0.0
+            try:
+                og_wt = float(inv.get('old_gold_weight') or inv.get('oldGoldWt') or inv.get('old_gold_wt') or 0)
+            except (TypeError, ValueError):
+                og_wt = 0.0
+            og_desc = str(inv.get('old_gold_desc') or inv.get('oldGoldDesc') or '').strip()
+            try:
+                og_touch = float(inv.get('old_gold_touch') or inv.get('oldGoldTouch') or 0)
+            except (TypeError, ValueError):
+                og_touch = 0.0
+            try:
+                og_rate = float(inv.get('old_gold_rate') or inv.get('oldGoldRate') or 0)
+            except (TypeError, ValueError):
+                og_rate = 0.0
+            if not self.db.record_sale(vch_id, customer, mobile, 'PAID', l_fine, coll, f995, dhal, rem, gold_rate, total_amount, items_json, disc_type, 0, 0, disc_amount, pay_mode, og_value, og_wt, og_desc, og_touch, og_rate,
+                                       bill_mode=str(inv.get('bill_mode') or inv.get('_billMode') or 'normal'),
+                                       cgst=float(inv.get('cgst') or 0), sgst=float(inv.get('sgst') or 0),
+                                       cgst_rate=float(inv.get('cgst_rate') or inv.get('cgstRate') or 0),
+                                       sgst_rate=float(inv.get('sgst_rate') or inv.get('sgstRate') or 0),
+                                       disc_value=float(inv.get('discount_value') or 0)):
                 return {"status": "error", "message": "Failed to update estimate to PAID."}
             if not self.db.deduct_stock_after_sale(items_json):
                 return {"status": "error", "message": "Estimate was not completed because inventory could not be updated."}
+            loyalty = {}
+            if customer and customer.lower() != 'walk-in':
+                try:
+                    used = int(float(inv.get('loyalty_used') or 0))
+                    if used > 0:
+                        self.crm_redeem_loyalty(customer, used, total_amount, vch_id)
+                    loyalty = self.crm_award_loyalty(customer, total_amount, vch_id)
+                except Exception as _le:
+                    ERR(f"[ESTIMATE CONVERT] loyalty skipped: {_le}")
             self._audit(f"Estimate Converted: {vch_id}", f"Customer: {customer} | Status: PAID", "billing")
             self._notify_staff_bill(vch_id, customer, total_amount)
             LOG(f"[ESTIMATE] Converted {vch_id} to PAID")
-            return {"status": "success", "vch_id": vch_id}
+            return {"status": "success", "vch_id": vch_id,
+                    "loyalty_earned": loyalty.get('earned', 0),
+                    "loyalty_balance": loyalty.get('balance', 0)}
         except Exception as e:
             ERR(f"[ESTIMATE CONVERT] {e}")
             return {"status": "error", "message": str(e)}
@@ -6016,6 +6562,7 @@ class AurumAPI:
                     "total_amount": float(res.get('total_amount') or 0.0),
                     "discount_type": res.get('discount_type', 'none'),
                     "discount_amount": float(res.get('discount_amount') or 0.0),
+                    "discount_value": float(res.get('discount_value') or 0.0),
                     "date": res.get('date'),
                     "time_stamp": res.get('time_stamp')
                 },
@@ -6772,7 +7319,12 @@ class AurumAPI:
         directly when the bridge cannot answer, so the version on screen is
         right on copies built before this method was added.
         """
+        try:
+            from updater import BUILD_STAMP as _STAMP
+        except Exception:
+            _STAMP = ''
         info = {'installed': CURRENT_VERSION, 'built': CURRENT_VERSION,
+                'build': _STAMP,
                 'latest': '', 'available': False, 'release_date': '',
                 'changelog': [], 'checked': False}
         try:
@@ -6795,10 +7347,69 @@ class AurumAPI:
         return info
 
     def restart_app(self):
+        """Close this instance and start a fresh one (used after restore).
+
+        The old code spawned the new process then called sys.exit(0), which
+        only exits the API thread — the pywebview loop kept the old window
+        alive, so two copies ended up running against the same database.
+        Now: stop background services, destroy the window, launch the new
+        process detached, then hard-exit so the old one is definitely gone.
+        """
         import subprocess
-        LOG("[UPDATE] Restarting AurumOS...")
-        subprocess.Popen([sys.executable]+sys.argv[:])
-        sys.exit(0)
+        import time as _t
+        LOG("[RESTART] Restarting AurumOS...")
+        try:
+            # 1) Free ports/sockets first so the new instance can bind them.
+            try:
+                self._app_closing = True
+            except Exception:
+                pass
+            try:
+                from network import cluster_server as _cs, cluster_client as _cc
+                _cc.stop_sync()
+                _cs.stop_server()
+            except Exception:
+                pass
+            try:
+                self.bastion.notify_session_active(False)
+                self.bastion.stop()
+            except Exception:
+                pass
+            try:
+                self.db._cleanup_session()
+            except Exception:
+                pass
+            # 2) Close the window (fires the normal closing cleanup too).
+            try:
+                if getattr(self, '_window', None) is not None:
+                    self._window.destroy()
+            except Exception:
+                pass
+            _t.sleep(0.8)
+            # 3) Launch the replacement, detached from this process.
+            if getattr(sys, 'frozen', False):
+                cmd = [sys.executable]
+                cwd = os.path.dirname(os.path.abspath(sys.executable))
+            else:
+                script = os.path.abspath(sys.argv[0]) if sys.argv else os.path.abspath('main.py')
+                cmd = [sys.executable, script] + (list(sys.argv[1:]) if len(sys.argv) > 1 else [])
+                cwd = os.path.abspath('.')
+            kw = {}
+            if os.name == 'nt':
+                try:
+                    kw['creationflags'] = subprocess.DETACHED_PROCESS
+                except Exception:
+                    pass
+            subprocess.Popen(cmd, cwd=cwd, close_fds=True, **kw)
+            LOG(f"[RESTART] launched: {cmd}")
+        except Exception as e:
+            ERR(f"[RESTART] relaunch failed: {e}")
+            return {"status": "error", "message": str(e)}
+        # 4) Guarantee the old process is gone — sys.exit() alone only
+        # stops the calling thread and leaves the window running. Reached
+        # only when the replacement is already launched.
+        import os as _os
+        _os._exit(0)
 
     def get_stocksync_snapshot(self):
         try:    return self.db.get_stocksync_snapshot()
@@ -7332,18 +7943,27 @@ class AurumAPI:
 
     def change_db_location(self):
         """Show folder picker and move/repoint DB to new location."""
-        import subprocess, shutil as _sh
+        import shutil as _sh
         try:
-            r = subprocess.run(
-                ['powershell', '-Command',
-                 '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
-                 '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
-                 '$f.Description="Select folder for AurumOS database";'
-                 '$f.ShowNewFolderButton=$true;'
-                 'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
-                capture_output=True, text=True, timeout=60
-            )
-            chosen = r.stdout.strip()
+            chosen = None
+            try:
+                # In-process dialog first: no child process, no console flash.
+                native = _native_pick_folder("Select folder for AurumOS database")
+                if native is not None:
+                    chosen = native
+            except Exception as _ne:
+                LOG(f"[DB] native picker failed ({_ne}); using fallback")
+            if chosen is None:
+                r = _powershell_hidden(
+                    ['powershell', '-Command',
+                     '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
+                     '$f=New-Object System.Windows.Forms.FolderBrowserDialog;'
+                     '$f.Description="Select folder for AurumOS database";'
+                     '$f.ShowNewFolderButton=$true;'
+                     'if($f.ShowDialog() -eq "OK"){$f.SelectedPath}else{""}'],
+                    timeout=60
+                )
+                chosen = r.stdout.strip()
             if not chosen or not os.path.isdir(chosen):
                 return {'status': 'cancelled'}
 
@@ -7567,17 +8187,30 @@ class AurumAPI:
             return {"status": "error", "message": str(e)}
 
     def pick_backup_file(self):
-        """Windows file picker limited to backup zips."""
-        import subprocess as _sp
+        """Windows file picker limited to backup zips.
+
+        In-process WinForms dialog first: no child process exists, so no
+        console window can ever flash. Hidden PowerShell is only a fallback
+        for machines where pythonnet/CLR dialogs are unavailable.
+        """
         try:
-            r = _sp.run(
+            native = _native_pick_file('AurumOS backup (*.zip)|*.zip',
+                                       'Select AurumOS backup to restore')
+            if native is not None:
+                if native and os.path.isfile(native):
+                    return {"status": "success", "path": native}
+                return {"status": "cancelled"}
+        except Exception as _ne:
+            LOG(f"[BACKUP] native picker failed ({_ne}); using fallback")
+        try:
+            r = _powershell_hidden(
                 ['powershell', '-Command',
                  '[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")|Out-Null;'
                  '$f=New-Object System.Windows.Forms.OpenFileDialog;'
                  '$f.Filter="AurumOS backup (*.zip)|*.zip";'
                  '$f.Title="Select AurumOS backup to restore";'
                  'if($f.ShowDialog() -eq "OK"){$f.FileName}else{""}'],
-                capture_output=True, text=True, timeout=120)
+                timeout=120)
             chosen = (r.stdout or '').strip()
             if not chosen or not os.path.isfile(chosen):
                 return {"status": "cancelled"}
@@ -7988,9 +8621,447 @@ class AurumAPI:
         except Exception as e:
             return [f"Error reading log: {e}"]
 
+    def log_input_diag(self, source, msg):
+        """Input-health self-report from a page, written to the app log.
+
+        The page sends state and event COUNTS only (first focus, keydown /
+        input ordinals, value lengths) — never values, never key names — so
+        no credential can land in the log through this method. The bridge
+        appends which OS window holds the foreground at that moment: if the
+        foreground is not AurumOS while the user types, the keystrokes were
+        never ours to receive, and no page code could ever fix that.
+        """
+        try:
+            extra = ''
+            try:
+                import ctypes
+                from ctypes import wintypes
+                u32 = ctypes.windll.user32
+                u32.GetForegroundWindow.restype = wintypes.HWND
+                u32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+                u32.GetWindowTextLengthW.restype = ctypes.c_int
+                u32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR,
+                                               ctypes.c_int]
+                u32.GetWindowTextW.restype = ctypes.c_int
+                fg = u32.GetForegroundWindow()
+                n = u32.GetWindowTextLengthW(fg)
+                buf = ctypes.create_unicode_buffer(max(n + 1, 1))
+                if n > 0:
+                    u32.GetWindowTextW(fg, buf, n + 1)
+                extra = ' fg=' + (buf.value or '-')
+            except Exception:
+                pass
+            LOG(f"[INPUT-DIAG][{source}] {msg}{extra}")
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def ensure_web_focus(self):
+        """Re-aim keyboard focus at the WebView2 child (same process).
+
+        Called whenever an app window regains OS activation. If the host
+        form (or anything else in-process) ended up holding keyboard focus
+        instead of the web child, every keystroke dies while the page looks
+        ready — blinking caret, dead keys — on every input of that page.
+        Same-process windows only, no activation/z-order changes, best
+        effort: a no-op when focus is already correct.
+        """
+        try:
+            placed = _push_focus_to_webview()
+            return {'status': 'success', 'focused': bool(placed)}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+
+def _is_dev_mode():
+    """True when this copy is a developer run, not the shop's live copy.
+
+    PERMANENT RULE: only the frozen EXE is ever the live copy. Anything
+    run from source (`python main.py`, with or without flags) is dev, so
+    plain `python main.py` can never collide with the installed app — no
+    flag to remember. `--dev` / `AURUM_DEV=1` are kept as explicit
+    overrides. Two dev copies still block each other, same as two live
+    copies.
+    """
+    try:
+        if not getattr(sys, 'frozen', False):
+            return True
+    except Exception:
+        pass
+    try:
+        if '--dev' in (sys.argv or []):
+            return True
+    except Exception:
+        pass
+    try:
+        if str(os.environ.get('AURUM_DEV', '')).strip().lower() in (
+                '1', 'true', 'yes', 'dev'):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _focus_existing_window():
+    """Bring the already-running copy to the front; True if it worked.
+
+    A duplicate launch used to pop a modal "already running" dialog. Those
+    dialogs linger behind the main window holding OS keyboard focus while
+    the login screen *looks* focused (blinking caret, dead keys) — the
+    classic "can't type anything" trap. Focusing the live window instead
+    removes the whole class: no stray dialog ever traps the keyboard.
+
+    Matched by title *prefix* ("AurumOS Executive Dashboard…") via window
+    enumeration, so dev-suffixed titles ("· DEV") and any document-title
+    retitling still resolve. Our own (not yet created) windows cannot match
+    because this process owns none at guard time.
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u32 = ctypes.windll.user32
+        try:
+            u32.IsWindowVisible.argtypes = [wintypes.HWND]
+            u32.IsWindowVisible.restype = wintypes.BOOL
+            u32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+            u32.GetWindowTextLengthW.restype = ctypes.c_int
+            u32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR,
+                                           ctypes.c_int]
+            u32.GetWindowTextW.restype = ctypes.c_int
+        except Exception:
+            pass
+        found = []
+        _ENUM_CB = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND,
+                                      wintypes.LPARAM)
+
+        def _enum_cb(hwnd, _lp):
+            try:
+                if not u32.IsWindowVisible(hwnd):
+                    return True
+                n = u32.GetWindowTextLengthW(hwnd)
+                if n <= 0:
+                    return True
+                buf = ctypes.create_unicode_buffer(n + 1)
+                u32.GetWindowTextW(hwnd, buf, n + 1)
+                if (buf.value or '').startswith('AurumOS Executive Dashboard'):
+                    found.append(hwnd)
+            except Exception:
+                pass
+            return True
+
+        _enum_cb_c = _ENUM_CB(_enum_cb)
+        # Hold the callback for the duration of the enumeration.
+        _focus_existing_window._cb = _enum_cb_c
+        try:
+            u32.EnumWindows.argtypes = [_ENUM_CB, wintypes.LPARAM]
+            u32.EnumWindows.restype = wintypes.BOOL
+        except Exception:
+            pass
+        try:
+            u32.EnumWindows(_enum_cb_c, 0)
+        except Exception:
+            return False
+        finally:
+            try:
+                _focus_existing_window._cb = None
+            except Exception:
+                pass
+        if not found:
+            return False
+        hwnd = found[0]
+        try:
+            u32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+            u32.ShowWindow(hwnd, 9)  # SW_RESTORE: un-minimize if minimized
+        except Exception:
+            pass
+        try:
+            u32.SetForegroundWindow.argtypes = [wintypes.HWND]
+            u32.SetForegroundWindow.restype = wintypes.BOOL
+            u32.SetForegroundWindow(hwnd)
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+
+def _ensure_single_instance():
+    """Only one copy of the app per PC (per channel: live vs dev).
+
+    A second launch — the classic way a stale window survives next to a
+    new build, each believing it is the shop server — gets a message, not
+    a window. Named mutexes die with the process, so a crash can never
+    wedge this shut.
+    """
+    if os.name != 'nt':
+        return True
+    dev = _is_dev_mode()
+    mutex_name = ("AurumOS_SingleInstance_Dev" if dev
+                  else "AurumOS_SingleInstance")
+    try:
+        import ctypes
+        from ctypes import wintypes
+        _k = ctypes.windll.kernel32
+        _k.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL,
+                                    wintypes.LPCWSTR]
+        _k.CreateMutexW.restype = wintypes.HANDLE
+        h = _k.CreateMutexW(None, False, mutex_name)
+        if not h:
+            return True  # could not create: never block startup on it
+        if _k.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            # Usual case: focus the running copy and leave quietly. The old
+            # modal popup stayed on screen trapping keyboard focus, which
+            # read as "can't type in the login box". Only fall back to the
+            # popup when the live window cannot be found at all.
+            try:
+                if _focus_existing_window():
+                    return False
+            except Exception:
+                pass
+            try:
+                msg = ("A dev copy is already running.\n\nClose it first, "
+                       "then start dev again."
+                       if dev else
+                       "AurumOS is already running.\n\nClose the open window "
+                       "first, then open it again.")
+                ctypes.windll.user32.MessageBoxW(None, msg, "AurumOS", 0x40)
+            except Exception:
+                pass
+            return False
+        _ensure_single_instance._h = h  # hold it for the life of the process
+        return True
+    except Exception:
+        return True
+
+
+def _push_focus_to_webview(*_a, **_k):
+    """End every finished page load with keyboard focus inside web content.
+
+    If the host form (or anything else in our process) ever ends up holding
+    keyboard focus instead of the WebView2 child, every keystroke dies while
+    the page looks ready (caret blinking, dead keys) — on EVERY input of
+    that page, which reads exactly like "can't type anything here". There is
+    no page code that can fix that from the inside, so the host re-asserts
+    it on each load: at worst one page view, never a stuck box.
+
+    Same-process windows only (our PID), no activation or z-order changes —
+    this never yanks a background/minimized window forward, it only aims
+    focus at the web child for when the window is (or returns) active.
+    Best-effort: returns True when focus was placed or already correct.
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u32 = ctypes.windll.user32
+        try:
+            u32.GetWindowThreadProcessId.argtypes = [wintypes.HWND,
+                                                     ctypes.POINTER(wintypes.DWORD)]
+            u32.GetWindowThreadProcessId.restype = wintypes.DWORD
+            u32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+            u32.GetWindowTextLengthW.restype = ctypes.c_int
+            u32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR,
+                                           ctypes.c_int]
+            u32.GetWindowTextW.restype = ctypes.c_int
+            u32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR,
+                                           ctypes.c_int]
+            u32.GetClassNameW.restype = ctypes.c_int
+            u32.IsWindow.argtypes = [wintypes.HWND]
+            u32.IsWindow.restype = wintypes.BOOL
+            u32.IsWindowVisible.argtypes = [wintypes.HWND]
+            u32.IsWindowVisible.restype = wintypes.BOOL
+            u32.IsWindowEnabled.argtypes = [wintypes.HWND]
+            u32.IsWindowEnabled.restype = wintypes.BOOL
+            u32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD,
+                                              wintypes.BOOL]
+            u32.AttachThreadInput.restype = wintypes.BOOL
+            try:
+                u32.PeekMessageW.argtypes = [wintypes.LPVOID, wintypes.HWND,
+                                             ctypes.c_uint, ctypes.c_uint,
+                                             ctypes.c_uint]
+                u32.PeekMessageW.restype = wintypes.BOOL
+            except Exception:
+                pass
+        except Exception:
+            pass
+        me = os.getpid()
+        hosts = []
+
+        _ENUM = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+        def _collect(hwnd, _lp):
+            try:
+                pid = wintypes.DWORD()
+                u32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                if int(pid.value) != me:
+                    return True
+                n = u32.GetWindowTextLengthW(hwnd)
+                buf = ctypes.create_unicode_buffer(max(n + 1, 1))
+                if n > 0:
+                    u32.GetWindowTextW(hwnd, buf, n + 1)
+                if (buf.value or '').startswith('AurumOS Executive Dashboard'):
+                    hosts.append(hwnd)
+            except Exception:
+                pass
+            return True
+
+        _collect_c = _ENUM(_collect)
+        _push_focus_to_webview._cb = _collect_c
+        try:
+            u32.EnumWindows.argtypes = [_ENUM, wintypes.LPARAM]
+            u32.EnumWindows.restype = wintypes.BOOL
+            u32.EnumWindows(_collect_c, 0)
+        except Exception:
+            return False
+        finally:
+            try:
+                _push_focus_to_webview._cb = None
+            except Exception:
+                pass
+        if not hosts:
+            return False
+
+        _CHILD = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        children = []
+
+        def _collect_child(hwnd, _lp):
+            try:
+                buf = ctypes.create_unicode_buffer(256)
+                u32.GetClassNameW(hwnd, buf, 256)
+                if (buf.value or '') == 'Chrome_WidgetWin_1':
+                    children.append(hwnd)
+            except Exception:
+                pass
+            return True
+
+        _collect_child_c = _CHILD(_collect_child)
+        _push_focus_to_webview._cb2 = _collect_child_c
+        try:
+            u32.EnumChildWindows.argtypes = [wintypes.HWND, _CHILD, wintypes.LPARAM]
+            u32.EnumChildWindows.restype = wintypes.BOOL
+            u32.SetFocus.argtypes = [wintypes.HWND]
+            u32.SetFocus.restype = wintypes.HWND
+            for h in hosts:
+                try:
+                    u32.EnumChildWindows(h, _collect_child_c, 0)
+                except Exception:
+                    continue
+        except Exception:
+            return False
+        finally:
+            try:
+                _push_focus_to_webview._cb2 = None
+            except Exception:
+                pass
+        placed = False
+        try:
+            u32.GetWindowThreadProcessId.argtypes = [wintypes.HWND,
+                                                     ctypes.POINTER(wintypes.DWORD)]
+            u32.GetWindowThreadProcessId.restype = wintypes.DWORD
+            u32.GetFocus.restype = wintypes.HWND
+            _k32 = ctypes.windll.kernel32
+            _k32.GetCurrentThreadId.argtypes = []
+            _k32.GetCurrentThreadId.restype = wintypes.DWORD
+            u32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD,
+                                              wintypes.BOOL]
+            u32.AttachThreadInput.restype = wintypes.BOOL
+        except Exception:
+            _k32 = None
+        for ch in children:
+            # Bridge calls typically run on a worker thread, but SetFocus
+            # only lands from the target window's own input queue. Attach
+            # first or the call silently no-ops — the exact false
+            # confidence this fix exists to remove. Verified via GetFocus.
+            attached = False
+            diag = ''
+            got = 0
+            # One shot is not enough: right after load/activation the
+            # window may not be ready for focus yet. Retry briefly.
+            for _try in range(3):
+                try:
+                    try:
+                        target_tid = int(u32.GetWindowThreadProcessId(ch, None))
+                    except Exception:
+                        target_tid = 0
+                    try:
+                        me_tid = int(_k32.GetCurrentThreadId()) if _k32 is not None else 0
+                    except Exception:
+                        me_tid = 0
+                    try:
+                        valid = bool(u32.IsWindow(ch))
+                    except Exception:
+                        valid = '?'
+                    try:
+                        vis = bool(u32.IsWindowVisible(ch))
+                    except Exception:
+                        vis = '?'
+                    try:
+                        enb = bool(u32.IsWindowEnabled(ch))
+                    except Exception:
+                        enb = '?'
+                    diag = ('me=%s target=%s valid=%s vis=%s enb=%s'
+                            % (me_tid, target_tid, valid, vis, enb))
+                    if me_tid and target_tid and me_tid != target_tid:
+                        try:
+                            # A thread with no message queue yet cannot
+                            # attach - prime ours first or the call fails
+                            # silently.
+                            try:
+                                u32.PeekMessageW(None, 0, 0, 0, 0)
+                            except Exception:
+                                pass
+                            attached = bool(u32.AttachThreadInput(me_tid, target_tid, True))
+                        except Exception:
+                            attached = False
+                    elif me_tid and target_tid:
+                        attached = 'same-thread'
+                    try:
+                        u32.SetFocus(ch)
+                    except Exception:
+                        pass
+                    try:
+                        got = int(u32.GetFocus() or 0)
+                    except Exception:
+                        got = 0
+                    if got and got == int(ch):
+                        break
+                    try:
+                        import time as _ft
+                        _ft.sleep(0.3)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                finally:
+                    if attached is True:
+                        try:
+                            u32.AttachThreadInput(me_tid, target_tid, False)
+                        except Exception:
+                            pass
+                        attached = False
+            if got and got == int(ch):
+                placed = True
+            else:
+                try:
+                    LOG(f"[FOCUS] SetFocus unverified for child={int(ch)} "
+                        f"(focus={got}, attached={attached}) {diag}")
+                except Exception:
+                    pass
+        try:
+            if placed and not getattr(_push_focus_to_webview, '_ok_once', False):
+                _push_focus_to_webview._ok_once = True
+                LOG("[FOCUS] WebView2 child focus verified")
+        except Exception:
+            pass
+        return placed
+    except Exception:
+        return False
+
 
 def run_aur_os():
     global webview
+    if not _ensure_single_instance():
+        LOG("[STARTUP] another copy is already running — exiting")
+        raise SystemExit(0)
     LOG("[STARTUP] run_aur_os() called")
     _ensure_webview()
     api      = AurumAPI()
@@ -8026,8 +9097,13 @@ def run_aur_os():
     LOG(f"[STARTUP] Loading: {initial_url}")
 
     _wv = webview if webview is not None else __import__('webview')
+    # A dev copy next to the live copy must be unmistakable at a glance —
+    # two identical login windows are how keystrokes end up aimed at the
+    # wrong one while the other one "can't type".
+    _title = ("AurumOS Executive Dashboard"
+              + ("" if getattr(sys, 'frozen', False) else " · DEV"))
     window = _wv.create_window(
-        "AurumOS Executive Dashboard", initial_url, js_api=api,
+        _title, initial_url, js_api=api,
         width=1350, height=950, background_color='#ffffff'
     )
     api.set_window(window)
@@ -8089,6 +9165,15 @@ def run_aur_os():
             LOG("[STARTUP] Silent auto-update loop started")
         except Exception as _au:
             ERR(f"[STARTUP] auto-update loop failed to start: {_au}")
+
+        # ── Silent encrypted recovery backup (every 5 minutes) ──
+        try:
+            from core import auto_backup as _abk
+            _abk.start(lambda: api.db.db_path, api._app_base_dir(),
+                       api._photo_dir)
+            LOG("[STARTUP] Encrypted recovery backup started")
+        except Exception as _bk:
+            ERR(f"[STARTUP] recovery backup failed to start: {_bk}")
 
         if initial_file=="revoked.html" and startup_reason:
             import time as _ti; _ti.sleep(1.2)
@@ -8242,6 +9327,13 @@ def run_aur_os():
         except Exception:
             pass
     window.events.closing += _on_closing
+    # Every finished page load ends with keyboard focus inside the web
+    # content — see _push_focus_to_webview. Without this, a host-side
+    # focus slip reads as "can't type anything" on every input of the page.
+    try:
+        window.events.loaded += _push_focus_to_webview
+    except Exception:
+        pass
 
     # Persistent WebView2 profile — reuse the browser profile/cache across
     # launches instead of building a throwaway temp profile every time. Creating
@@ -8249,9 +9341,15 @@ def run_aur_os():
     # (and caused the "Failed to delete user data folder" warnings on exit).
     # private_mode=False + a fixed storage_path makes startup much faster after
     # the first run.
+    #
+    # Every page's localStorage (cached plan, session, software type) lives in
+    # this profile, and all file:// pages share one origin. A dev copy running
+    # beside the installed EXE on the same PC must not share it, or each copy
+    # overwrites the other's plan and every sidebar click flips it.
     try:
         _wv_store = os.path.join(
-            os.environ.get('LOCALAPPDATA') or _get_db_base(), 'AurumOS', 'webview')
+            os.environ.get('LOCALAPPDATA') or _get_db_base(), 'AurumOS',
+            'webview-dev' if _is_dev_mode() else 'webview')
         os.makedirs(_wv_store, exist_ok=True)
     except Exception:
         _wv_store = None

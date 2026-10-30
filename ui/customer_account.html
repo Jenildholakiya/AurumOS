@@ -228,7 +228,7 @@ tbody tr:hover td{background:rgba(37,99,235,0.015)!important;}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 <main>
   <header>
@@ -292,10 +292,10 @@ tbody tr:hover td{background:rgba(37,99,235,0.015)!important;}
             <tr>
               <th style="width:50px;">#</th>
               <th>Customer Name</th>
-              <th>Metal Due</th>
-              <th>Cash Due</th>
-              <th>Lifetime Purchase</th>
-              <th>Txns</th>
+              <th class="num">Metal Due</th>
+              <th class="num">Cash Due</th>
+              <th class="num">Lifetime Purchase</th>
+              <th class="num">Txns</th>
               <th>Status</th>
               <th class="num">Metal Limit</th>
               <th class="num">Cash Limit</th>
@@ -310,13 +310,6 @@ tbody tr:hover td{background:rgba(37,99,235,0.015)!important;}
 </main>
 
 <div class="itm-popover" id="itmPop"></div>
-
-<div class="modal-bg" id="itmModBg" onclick="closeItemMod()">
-  <div class="itm-mod" onclick="event.stopPropagation()">
-    <div class="itm-mod-head"><div class="itm-mod-title" id="itmModTitle">Purchase Metrics</div><button class="itm-mod-x" onclick="closeItemMod()">&#10005;</button></div>
-    <div class="itm-mod-body" id="itmModBody"></div>
-  </div>
-</div>
 
 <div class="row-menu" id="rowMenu">
   <button onclick="ACT.view()">&#128065; View Profile Details</button>
@@ -372,6 +365,7 @@ function api(){
 var allCustomers = [];
 var allMetalDue = {};
 var allCashDue = {};
+var allPurchaseStats = {};
 var filter = '';
 var currentStatusFilter = 'all';
 
@@ -391,6 +385,7 @@ async function loadAll(){
   try {
     allCustomers = await api().get_client_list() || [];
     await fetchBalances();
+    await fetchPurchaseStats();
   } catch(e){}
   render();
 }
@@ -404,6 +399,23 @@ async function fetchBalances(){
       allCashDue[c.id] = parseFloat(b.cash || 0);
     }).catch(function(){});
   }));
+}
+
+/* Lifetime purchase + bill count per customer, from the same CRM aggregate
+   the detail page reads, so the two can never disagree. One call covers all
+   rows; a customer with no bills keeps the dash. */
+async function fetchPurchaseStats(){
+  allPurchaseStats = {};
+  if (!api() || typeof api().crm_customers !== 'function') return;
+  try {
+    var rows = await api().crm_customers() || [];
+    rows.forEach(function (r) {
+      allPurchaseStats[r.id] = {
+        total: parseFloat(r.lifetime_value || 0),
+        txns: parseInt(r.bill_count || 0, 10)
+      };
+    });
+  } catch(e){}
 }
 
 function applyFilter(){ filter = (document.getElementById('search').value || '').toLowerCase().trim(); render(); }
@@ -447,13 +459,18 @@ function render(){
     var cash = allCashDue[c.id] || 0;
     var pill = statusOf(c.id) === 'credit' ? '<span class="pill red">Credit</span>' : '<span class="pill green">Clean</span>';
     var idx = allCustomers.indexOf(c);
+    var st = allPurchaseStats[c.id] || { total: 0, txns: 0 };
+    var lifeCell = st.txns > 0
+      ? 'Rs. ' + st.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '—';
+    var txnCell = st.txns > 0 ? st.txns : '—';
     return '<tr onclick="openDetail('+c.id+')">'
       + '<td class="mono">' + (idx+1).toString().padStart(2,'0') + '</td>'
       + '<td><div class="t-name">'+esc(c.name)+'</div><div class="t-phone">'+esc(c.phone||'—')+'</div></td>'
-      + '<td class="mono num-txt '+(m>0.0005?'txt-dr':'txt-cr')+'">'+m.toFixed(3)+' g</td>'
+      + '<td class="mono num-txt num '+(m>0.0005?'txt-dr':'txt-cr')+'">'+m.toFixed(3)+' g</td>'
       + '<td class="mono num-txt '+(cash>0.01?'txt-dr':'txt-cr')+'" style="text-align:right;">Rs. '+cash.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
-      + '<td class="mono num">—</td>'
-      + '<td class="mono num">—</td>'
+      + '<td class="mono num-txt" style="text-align:right;">'+lifeCell+'</td>'
+      + '<td class="mono num">'+txnCell+'</td>'
       + '<td>'+pill+'</td>'
       + '<td class="mono num-txt" style="text-align:right;">'+parseFloat(c.metal_limit||0).toFixed(3)+' g</td>'
       + '<td class="mono num-txt" style="text-align:right;">Rs. '+parseFloat(c.cash_limit||0).toLocaleString('en-IN')+'</td>'
@@ -466,8 +483,9 @@ function render(){
 function openDetail(id){
   var c = allCustomers.find(function(x){ return parseInt(x.id,10) === parseInt(id,10); });
   if (!c) return;
-  // Dispatches query strings safely over to the standalone page matrix
-  window.location.href = 'Customer_detail.html?id=' + c.id + '&name=' + encodeURIComponent(c.name || '');
+  // Dispatches query strings safely over to the standalone page matrix.
+  // ?from=accounts tells the detail page which registry to return to.
+  window.location.href = 'Customer_detail.html?id=' + c.id + '&name=' + encodeURIComponent(c.name || '') + '&from=accounts';
 }
 
 /* ── CUSTOM DROPDOWN MECHANICS ── */

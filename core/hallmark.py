@@ -151,6 +151,16 @@ def validate_huid(raw):
     return True, ''
 
 
+def has_huid(raw):
+    """The one rule for 'is this piece hallmarked', used by every screen.
+
+    The stock table's huid column also carries bin labels (B-001) and
+    blanks, so 'not blank' is not an answer. Only a valid six-character
+    number counts — everything else is waiting, wherever it sleeps.
+    """
+    return validate_huid(raw)[0]
+
+
 def huid_warning(raw):
     """Not an error. A HUID may legitimately contain O, 0, I or 1; this
     only says which characters are worth a second look before saving."""
@@ -166,9 +176,11 @@ def duplicate_huids(rows):
     cannot share one, so this is a typing mistake caught before it lands."""
     seen, dupes = {}, []
     for r in rows:
-        h = normalise_huid(r.get('huid'))
-        if not h:
+        # Only real numbers collide: two pieces sharing a bin label is
+        # normal storage, not a typing mistake.
+        if not has_huid(r.get('huid')):
             continue
+        h = normalise_huid(r.get('huid'))
         seen[h] = seen.get(h, 0) + 1
     for h, n in seen.items():
         if n > 1:
@@ -297,7 +309,7 @@ def summarise(items):
             out['failed'] += 1
         else:
             out['pending'] += 1
-        if normalise_huid(it.get('huid')):
+        if has_huid(it.get('huid')):
             out['marked'] += 1
     out['gross_wt'] = round(out['gross_wt'], 3)
     return out
@@ -309,7 +321,7 @@ def can_send(item):
     A piece already marked must not go again, and a piece with no weight is
     a stock record that was never finished, which the centre would reject.
     """
-    if normalise_huid(item.get('huid')):
+    if has_huid(item.get('huid')):
         return False, 'Already hallmarked.'
     if _num(item.get('gr_wt'), 0) <= 0:
         return False, 'No weight recorded.'

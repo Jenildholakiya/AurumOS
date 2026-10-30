@@ -51,13 +51,23 @@ var PAGE_META = {
     'inventory.html':       { id:'inventory', label:'Inventory',    icon:'box',       section:'Main'    },
     'karigar.html':         { id:'karigar',   label:'Karigar',      icon:'orders',    section:'Main'    },
     'katti_entry.html':     { id:'katti',     label:'Katti Batches', icon:'box',       section:'Main'    },
-    'uchak_stock_entry.html':{ id:'uchak',   label:'Uchak Inward',  icon:'box',       section:'Main'    },
+    // Uchak inward lives inside the Inventory dashboard (no separate sidebar
+    // entry). Meta maps to Inventory so the guard lets it through and the
+    // sidebar highlights Inventory while it is open.
+    'uchak_stock_entry.html':{ id:'inventory', label:'Uchak Inward',  icon:'box',       section:'Main'    },
     'stock_ledger.html':    { id:'stock',     label:'Stock Ledger', icon:'box',       section:'Main'    },
     'history.html':         { id:'history',   label:'History',      icon:'clock',     section:'Main'    },
     'voucher_history.html': { id:'vouchers',  label:'Voucher History', icon:'receipt', section:'Main'    },
     'party.html':           { id:'party',     label:'Party',        icon:'users',     section:'Finance' },
     'crm.html':             { id:'crm',       label:'CRM',          icon:'crm',       section:'Business' },
     'hallmark.html':        { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  section:'Main'     },
+    // hm_centre.html needs ?id= so it takes no top-level nav entry, but it
+    // needs meta + bundle pages so the staff guard lets it through and the
+    // sidebar highlights correctly when opened from the hallmark panel.
+    'hm_centre.html':        { id:'hallmark',  label:'Centre Detail', icon:'hallmark',  section:'Main'     },
+    // Reached from the panel's View all, not the menu — but it needs meta
+    // so the staff guard lets it through and the sidebar marks Hallmark.
+    'hm_pending.html':       { id:'hallmark',  label:'Waiting for HUID', icon:'hallmark', section:'Main'     },
     'dead_stock.html':      { id:'deadstock', label:'Dead Stock',   icon:'deadstock', section:'Main'     },
     'crm_schemes.html':     { id:'crm',       label:'Savings Plans', icon:'wallet',   section:'Business' },
     'accounting.html':      { id:'accounting',label:'Accounting',   icon:'book',      section:'Finance' },
@@ -65,6 +75,10 @@ var PAGE_META = {
     'chart_of_accounts.html':{id:'coa',       label:'Chart of Accounts', icon:'list',  section:'Finance' },
     'ledger.html':          { id:'ledger',    label:'Ledger',       icon:'book',      section:'Finance' },
     'customer_account.html':{ id:'customers', label:'Customers',    icon:'users',     section:'Business'},
+    // Opened with ?name= from the registries, never from the menu — but it
+    // needs meta so the staff guard lets it through (same as hm_centre).
+    'customer_detail.html':{ id:'customers', label:'Customer Detail', icon:'users', section:'Business'},
+    'client_ledger.html':  { id:'party',     label:'Client Ledger', icon:'users',   section:'Finance' },
     'old_gold.html':        { id:'old-gold',  label:'Old Gold',     icon:'old-gold',  section:'Business'},
     'reports.html':         { id:'reports',   label:'Reports',      icon:'bar-chart', section:'Business'},
     'staff.html':           { id:'staff',     label:'Staff',        icon:'user',      section:'System'  },
@@ -276,6 +290,16 @@ setTimeout(_reapplyFeatureLocks, 5000);
 
 function _buildNav(items, activePage, compact) {
     if (!items || !items.length) return '<nav class="sb-nav"></nav>';
+    // Permanent: Uchak inward lives inside the Inventory dashboard. Even if
+    // a stale cached sidebar.js (or stale localStorage staff pages) hands us
+    // an Uchak item, never render it as its own nav entry.
+    items = items.filter(function(item) {
+        var pg = String((item && item.page) || '').replace(/.*[\\/]/, '').toLowerCase().trim();
+        if (pg === 'uchak_stock_entry.html') return false;
+        if (String((item && item.id) || '').toLowerCase() === 'uchak') return false;
+        return true;
+    });
+    if (activePage === 'uchak') activePage = 'inventory';
     var sections = {}, order = [];
     items.forEach(function(item) {
         var sec = item.section || 'Main';
@@ -291,6 +315,11 @@ function _buildNav(items, activePage, compact) {
         h += '<div class="sb-section-label">' + sec + '</div>';
         sections[sec].forEach(function(item) {
             var cur = activePage || _cacheGet('aurum_active_page', '');
+            if (cur === 'uchak') cur = 'inventory';
+            // While the Uchak inward page is open, highlight Inventory.
+            if (_currentPage() === 'uchak_stock_entry.html' && (item.page === 'inventory.html' || item.id === 'inventory')) {
+                cur = item.id;
+            }
             var isActive = item.id === cur || item.page === cur || _currentPage() === item.page;
             var locked = _isFeatureLocked(item.page);
             var cls = 'sb-item' + (isActive ? ' active' : '') + (locked ? ' feature-locked' : '');
@@ -316,8 +345,15 @@ function _buildNav(items, activePage, compact) {
 
 function _pagesNavItems(pages) {
     var items = [];
+    var seen = {};
     (pages || []).forEach(function(p) {
         var fname = String(p).replace(/.*[\\/]/, '').toLowerCase().trim();
+        // Uchak inward is opened from inside the Inventory dashboard, never
+        // as its own sidebar entry — but it stays in allowed pages so the
+        // staff guard below still lets it through.
+        if (fname === 'uchak_stock_entry.html') return;
+        if (seen[fname]) return;
+        seen[fname] = true;
         var meta  = PAGE_META[fname];
         if (meta) {
             items.push({ id: meta.id, label: meta.label, icon: meta.icon, page: fname, section: meta.section });
@@ -352,6 +388,9 @@ function _enforceStaffAccess(pages) {
 // ── RENDER NAV IN SIDEBAR CONTAINER ─────────────────────────────────────────
 
 function _replaceNav(items, activePage) {
+    // Never wipe a good nav with an empty one: an empty staff list means
+    // "bundles not arrived yet", never "this user may see nothing".
+    if (!items || !items.length) return;
     var container = document.getElementById('sidebar-container');
     if (!container) return;
     var navEl = container.querySelector('.sb-nav');
@@ -373,8 +412,19 @@ function _renderSidebar(activePage) {
     var container = document.getElementById('sidebar-container');
     if (!container) return;
 
+    // Permanent: stale caches may still pass 'uchak' as the active page.
+    // Uchak now lives under Inventory, so highlight that instead.
+    if (activePage === 'uchak') {
+        activePage = 'inventory';
+        _cacheSet('aurum_active_page', 'inventory');
+    }
+
     var role = _getRole();
     var page = (typeof _currentPage === 'function') ? _currentPage() : '';
+    if (page === 'uchak_stock_entry.html') {
+        _cacheSet('aurum_active_page', 'inventory');
+        if (!activePage) activePage = 'inventory';
+    }
 
     // Staff-only pages: render the sidebar for staff only. Non-staff roles
     // (admin / owner) get the page full-width with no sidebar.
@@ -408,6 +458,15 @@ function _renderSidebar(activePage) {
         });
     }
     var items = isStaff ? _pagesNavItems(staffPages) : (isRetail ? NAV_RETAIL : NAV_ADMIN);
+    if (isStaff && !items.length) {
+        // Staff with no cached pages yet (fresh login racing the async
+        // bundle fetch, e.g. right after a bill reload): paint the billing
+        // home rather than an empty shell. The fetch replaces it moments
+        // later, and _replaceNav refuses empty lists anyway.
+        var home = isRetail ? 'pos_billing.html' : 'billing.html';
+        var meta = PAGE_META[home] || { id: 'billing', label: 'Billing', icon: 'pos', section: 'Main' };
+        items = [{ id: meta.id, label: meta.label, icon: meta.icon, page: home, section: meta.section }];
+    }
 
     var ownerName = _cacheGet('aurum_owner_name', 'Director');
     var ownerInit = _initials(ownerName);
@@ -557,9 +616,107 @@ function _fillDynamic() {
             if (_getRole() === 'staff') {
                 _loadStaffAccess();
             }
+            _verifySessionAuthority();
         }
         if (attempts > 120) clearInterval(t);
     }, 100);
+}
+
+// ── SESSION AUTHORITY ──────────────────────────────────────────────
+// Pages that need no signed-in session. Everywhere else (all of these load
+// this file), the cached role must agree with the backend session.
+var _SESSION_FREE_PAGES = ['login.html', 'setup.html', 'agreement.html',
+    'splash.html', 'expiry.html', 'revoked.html', 'update_notify.html',
+    'trial_portal.html', 'bastion_keygen.html'];
+
+function _normSessionRole(r) {
+    return (String(r == null ? '' : r).toLowerCase() === 'staff') ? 'staff' : 'admin';
+}
+
+// Backend role, but honest about unknowns: explicit 'staff' or
+// 'admin'/'owner' only — null/missing/anything-else means "no usable
+// session", NEVER admin. (An earlier version normalized unknowns to
+// admin, so one transient empty session wiped the staff keys and stranded
+// the sidebar with an empty nav after the next reload.)
+function _backendRoleOf(sess) {
+    if (!sess) return '';
+    var r = String(sess.role == null ? '' : sess.role).toLowerCase().trim();
+    if (r === 'staff') return 'staff';
+    if (r === 'admin' || r === 'owner') return 'admin';
+    return '';
+}
+
+function _clearStaffKeys() {
+    try { localStorage.removeItem('aurum_staff_pages'); } catch(e) {}
+    try { localStorage.removeItem('aurum_staff_name'); } catch(e) {}
+}
+
+function _navigateAs(page, role) {
+    var type = _getSoftwareType();
+    var user = _getUsername();
+    try {
+        var base = location.href.replace(/[^\/\\]*(\?.*)?$/, '');
+        location.href = base + page + '?role=' + role + '&type=' + type + (user ? '&user=' + user : '');
+    } catch(e) {}
+}
+
+function _verifySessionAuthority() {
+    // file:// localStorage is SHARED by every copy on one PC (proven: the
+    // dev copy and the installed EXE read/write the same store), and
+    // history-back resurrects old ?role= URLs. So a cached 'staff' must
+    // never outrank the live backend session: otherwise an owner opening
+    // the app lands in someone else's staff view with zero authentication.
+    var api = (window.pywebview && window.pywebview.api) || null;
+    if (!api || typeof api.get_session !== 'function') return;
+    var page = _currentPage();
+    if (_SESSION_FREE_PAGES.indexOf(page) !== -1) return;
+    try {
+        api.get_session().then(function(sess) {
+            var backend = _backendRoleOf(sess);
+            var cached  = _normSessionRole(_getRole());
+            if (!backend) {
+                // No signed-in session on a protected page: never render a
+                // cached staff view — back to the gate.
+                if (cached === 'staff') {
+                    _dbg('No backend session; cached staff view refused — login');
+                    try {
+                        var base = location.href.replace(/[^\/\\]*(\?.*)?$/, '');
+                        location.href = base + 'login.html';
+                    } catch(e2) {}
+                }
+                return;
+            }
+            if (backend !== cached) {
+                _dbg('Role mismatch backend=' + backend + ' cached=' + cached + ' — repairing');
+                _cacheSet('aurum_user_role', backend);
+                if (backend !== 'staff') _clearStaffKeys();
+                var staffList = [];
+                try { staffList = JSON.parse(_cacheGet('aurum_staff_pages', '[]')) || []; } catch(e3) { staffList = []; }
+                var items;
+                if (backend === 'staff') {
+                    if (!staffList.length) {
+                        // Never paint an empty nav: the permission bundles
+                        // may simply not have arrived yet (post-bill reload
+                        // races the async fetch). Refetch and keep the old
+                        // nav meanwhile.
+                        _dbg('Staff list empty during repair — refetching, keeping nav');
+                        try { _staffAccessLoaded = false; _loadStaffAccess(); } catch(e4) {}
+                        return;
+                    }
+                    items = _pagesNavItems(staffList);
+                } else {
+                    items = (_getSoftwareType() === 'retail' ? NAV_RETAIL : NAV_ADMIN);
+                }
+                _replaceNav(items, _cacheGet('aurum_active_page', ''));
+                var dest = (backend === 'staff')
+                    ? (_getSoftwareType() === 'retail' ? 'pos_billing.html' : 'billing.html')
+                    : 'dashboard.html';
+                if (page !== dest || _getRole() !== backend) {
+                    _navigateAs(dest, backend);
+                }
+            }
+        }).catch(function(){});
+    } catch(e) {}
 }
 
 var _staffAccessLoaded = false;
@@ -629,8 +786,11 @@ function _applyStaffAccess(res) {
     var expandedPages = [];
 
     if (hasInventory || hasKarigar) {
+        // Uchak inward is part of the Inventory dashboard in both modes, so
+        // it stays in the allowed set for the guard (never rendered as its
+        // own sidebar item — see _pagesNavItems).
         if (swType === 'retail') {
-            expandedPages = expandedPages.concat(['inventory.html', 'karigar.html']);
+            expandedPages = expandedPages.concat(['inventory.html', 'karigar.html', 'uchak_stock_entry.html']);
         } else {
             expandedPages = expandedPages.concat(['inventory.html', 'karigar.html', 'uchak_stock_entry.html']);
         }
@@ -643,6 +803,17 @@ function _applyStaffAccess(res) {
             expandedPages = expandedPages.concat(['billing.html', 'tag_audit.html']);
         }
     }
+
+    // Union every explicitly granted page: the clusters above decide the
+    // sidebar sections, but enforcement must never bounce a page the policy
+    // itself allows. A CRM-only operator was forwarded off crm.html onto a
+    // billing screen they may not even hold.
+    (rawPages || []).forEach(function(p) {
+        var f = String(p).replace(/.*[\\/]/, '').toLowerCase().trim().split('?')[0];
+        if (f && /\.html$/.test(f) && expandedPages.indexOf(f) === -1) {
+            expandedPages.push(f);
+        }
+    });
 
     if (!expandedPages.length) {
         expandedPages = swType === 'retail' ? ['pos_billing.html'] : ['billing.html'];
@@ -721,7 +892,8 @@ function sbLogout() {
     } catch(e) {}
     try {
         ['aurum_user_role','aurum_active_user','aurum_software_type',
-         'aurum_active_page','aurum_owner_name','aurum_2fa_enabled'].forEach(function(k){
+         'aurum_active_page','aurum_owner_name','aurum_2fa_enabled',
+         'aurum_staff_pages','aurum_staff_name'].forEach(function(k){
             localStorage.removeItem(k);
         });
     } catch(e) {}

@@ -283,6 +283,28 @@ class SubscriptionManager:
             s['subscription'] = dict(s['subscription'])
         return s
 
+    def _terminal_state(self):
+        """State for a staff PC joined to a main PC, or None on any other PC."""
+        try:
+            from network import cluster_client
+            if not cluster_client.is_terminal():
+                return None
+            plan = cluster_client.shop_plan()
+        except Exception as e:
+            _err(f'Shop plan lookup failed: {e}')
+            return None
+        if plan not in PLAN_FEATURES:
+            return None
+        return {
+            'valid': True, 'status': 'active',
+            'effective_plan': plan, 'plan': plan,
+            'features': list(PLAN_FEATURES[plan]),
+            'subscription': {'status': 'active', 'expires_at': None,
+                             'remaining_days': 0, 'grace_remaining_days': 0,
+                             'renewal_amount': 0},
+            'is_trial': False, 'trial_end_ms': None,
+        }
+
     # ── Startup validation ──────────────────────────────────────────────
     def startup_check(self, key=None, network=True):
         """
@@ -291,6 +313,17 @@ class SubscriptionManager:
         """
         k = key or self._license_key
         if not k or not _is_valid_key_format(k):
+            terminal = self._terminal_state()
+            if terminal:
+                # A staff PC: the licence lives on the main PC, so its plan is
+                # the shop's plan. Only rewrite when it changed, because the
+                # state file's timestamp is what pages poll for plan changes.
+                current = self.get_state_json()
+                if (current.get('effective_plan') != terminal['effective_plan']
+                        or not current.get('valid')):
+                    _log(f"Staff PC — using the shop's {terminal['effective_plan']} plan")
+                    self._set_state(terminal)
+                return None, 'shop'
             _log('No valid license key — using Lite features')
             self._set_state({
                 'valid': False, 'status': 'unknown',

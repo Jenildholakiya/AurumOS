@@ -38,6 +38,17 @@ ROOT = os.path.abspath('.')
 DIST = os.path.join(ROOT, 'dist')
 BAK  = '.orig'
 
+# Everything build.py generates for PyInstaller (spec, hooks, version files)
+# goes here rather than into the project root. build/ is git-ignored and is
+# already where PyInstaller keeps its work files.
+GEN = os.path.join(ROOT, 'build', 'generated')
+
+
+def gen_path(name):
+    """Path of a generated build file inside GEN, creating GEN if needed."""
+    os.makedirs(GEN, exist_ok=True)
+    return os.path.join(GEN, name)
+
 # ── Runtime hook: initialize the .NET CLR (pythonnet) EARLY ────────────────────
 # The frozen crash "Failed to resolve Python.Runtime.Loader.Initialize" happens
 # because pywebview's winforms backend lazily does `import clr` deep inside
@@ -227,10 +238,10 @@ TARGETS = [
 # SET COMPANY to the registered business name BEFORE buying a code-signing
 # certificate: a certificate is issued to a legal entity, and CompanyName here
 # should be the same name, or the two disagree in front of the customer.
-COMPANY     = "AurumOS"
+COMPANY     = "Pentarch"
 PRODUCT     = "AurumOS"
-DESCRIPTION = "AurumOS Jewellery Retail and Wholesale Management"
-COPYRIGHT   = "Copyright (c) AurumOS. All rights reserved."
+DESCRIPTION = "AurumOS by Pentarch — Jewellery Retail and Wholesale Management"
+COPYRIGHT   = "Copyright (c) 2026 Pentarch. All rights reserved."
 SUPPORT_URL = "aurumos.software@gmail.com"
 
 
@@ -301,7 +312,7 @@ def write_hooks():
     print("\n[2/7] Writing hook files...")
 
     # Runtime hook - fixes http circular import (most critical)
-    open(os.path.join(ROOT, 'rthook_fix_http.py'), 'w').write('''\
+    open(gen_path('rthook_fix_http.py'), 'w').write('''\
 # Runtime hook: pre-load stdlib http before webview imports anything
 # Fixes: circular import crash in frozen EXE
 import sys, importlib
@@ -320,14 +331,14 @@ for _m in [
 ''')
 
     # Collection hook for webview
-    open(os.path.join(ROOT, 'hook_webview.py'), 'w').write('''\
+    open(gen_path('hook_webview.py'), 'w').write('''\
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 datas, binaries, hiddenimports = collect_all("webview")
 hiddenimports += collect_submodules("webview")
 ''')
 
     # Collection hook for win32
-    open(os.path.join(ROOT, 'hook_win32.py'), 'w').write('''\
+    open(gen_path('hook_win32.py'), 'w').write('''\
 from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = collect_submodules("win32") + ["pywintypes","win32con","win32api","win32print","win32gui"]
 ''')
@@ -337,7 +348,7 @@ hiddenimports = collect_submodules("win32") + ["pywintypes","win32con","win32api
     # PyInstaller cannot statically see main.py's lazy imports. This hook
     # force-bundles every local submodule so nothing import-time is missing
     # (this is what caused the "stuck at banner / missing module" crash).
-    open(os.path.join(ROOT, 'hook_local.py'), 'w').write('''\
+    open(gen_path('hook_local.py'), 'w').write('''\
 from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = (
     collect_submodules("database") +
@@ -349,7 +360,7 @@ hiddenimports = (
     print("  OK - rthook_fix_http.py, hook_webview.py, hook_win32.py, hook_local.py")
 
     # Runtime hook - fix stdout encoding + pre-load serial
-    open(os.path.join(ROOT, 'rthook_serial.py'), 'w').write('''\
+    open(gen_path('rthook_serial.py'), 'w').write('''\
 import sys, os
 
 # Force UTF-8 stdout so print() never crashes with charmap error
@@ -382,7 +393,7 @@ except Exception:
     # is not on the OS loader search path the assembly fails to load and
     # pythonnet raises "Failed to resolve ...Loader.Initialize". Preloading it
     # here pins it into the process so any later LoadLibrary finds it.
-    open(os.path.join(ROOT, 'rthook_pythonnet.py'), 'w', encoding='utf-8').write(_PYTHONNET_RTHOOK)
+    open(gen_path('rthook_pythonnet.py'), 'w', encoding='utf-8').write(_PYTHONNET_RTHOOK)
 
 
 # ── STEP 3: Write AurumOS.spec ────────────────────────────────────────────────
@@ -428,9 +439,17 @@ def stamp_version():
         version, source = '0.0.0', 'nothing found'
         print("  WARNING: no git tags and no fallback -- this EXE will report 0.0.0")
 
-    with open(os.path.join(ROOT, 'build_version.txt'), 'w', encoding='utf-8') as f:
+    with open(gen_path('build_version.txt'), 'w', encoding='utf-8') as f:
         f.write(version)
     print(f"  OK -- v{version} (from {source}) -> build_version.txt")
+    # When the number was built: every build today reports the same vX.Y.Z,
+    # so the number alone can never say which build is running. The stamp
+    # rides in the bundle next to it and is shown in Settings → System.
+    import datetime as _dt
+    stamp = _dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+    with open(gen_path('build_stamp.txt'), 'w', encoding='utf-8') as f:
+        f.write(stamp)
+    print(f"  OK -- {stamp} -> build_stamp.txt")
     return version
 
 
@@ -449,7 +468,7 @@ def write_version_resource(version):
     print("")
     print("[2c/7] Writing version resource...")
     parts = tuple(int(x) for x in version.split('.')[:3]) + (0,)
-    out = os.path.join(ROOT, 'version_info.txt')
+    out = gen_path('version_info.txt')
     body = f"""# Generated by build.py -- edit COMPANY/PRODUCT at the top of build.py, not here.
 VSVersionInfo(
   ffi=FixedFileInfo(
@@ -522,6 +541,13 @@ def write_spec(venv_site, webview_dir, arch):
     serial_pyds = glob.glob(os.path.join(serial_dir, '*.pyd')) if os.path.isdir(serial_dir) else []
     serial_bin_str = '\n'.join(f'        ({repr(f)}, "serial"),' for f in serial_pyds if os.path.isfile(f))
 
+    # ── Guarantee python312.dll is bundled (fixes "Failed to load Python DLL" on client PCs) ──
+    python_dll = os.path.join(sys.prefix, 'python312.dll')
+    if os.path.isfile(python_dll):
+        python_bin_str = f'        ({repr(python_dll)}, "."),\n'
+    else:
+        python_bin_str = ''
+
     # win32 binaries
     win32_pdyds  = glob.glob(os.path.join(win32_dir, '*.pyd'))
     system_dlls  = glob.glob(os.path.join(pywin32_sys_dir, '*.dll'))
@@ -555,20 +581,22 @@ def _strip(name):
     return any(fnmatch.fnmatch(n, p.lower()) for p in STRIP_DLLS)
 
 a = Analysis(
-    ["main.py"],
+    [{repr(os.path.join(ROOT, "main.py"))}],
     pathex=[{repr(ROOT)}, {repr(venv_site)}, {repr(win32_dir)}, {repr(win32_lib_dir)}],
     binaries=[
+{python_bin_str}
 {win32_bin_str}
 {sysdll_str}
 {winspool_str}{serial_bin_str}
     ],
     datas=[
-        ("build_version.txt", "."),
-        ("ui",    "ui"),
-        ("fonts", "fonts"),
-        ("assets", "assets"),
-        ("core",  "core"),
-        ("network", "network"),
+        ({repr(gen_path("build_version.txt"))}, "."),
+        ({repr(gen_path("build_stamp.txt"))}, "."),
+        ({repr(os.path.join(ROOT, "ui"))}, "ui"),
+        ({repr(os.path.join(ROOT, "fonts"))}, "fonts"),
+        ({repr(os.path.join(ROOT, "assets"))}, "assets"),
+        ({repr(os.path.join(ROOT, "core"))}, "core"),
+        ({repr(os.path.join(ROOT, "network"))}, "network"),
         ("{serial_dir_str}", "serial"),
 {win32lib_str}
 {wv_datas_str}
@@ -577,6 +605,12 @@ a = Analysis(
     hiddenimports=[
         "pythonnet","clr_loader","clr_loader.netfx","clr_loader.hostfxr","clr_loader.ffi", # ── FIXED: CLR host for pywebview winforms
         "requests", "urllib3", "charset_normalizer", "idna", # ── FIXED: FORCE INJECTED REQUESTS BINARIES
+        # Dashboard temp passwords are AES-GCM. main.py imports these inside a
+        # function and is obfuscated before analysis, so PyInstaller cannot
+        # see them; without them the EXE falls back to a decrypt that fails.
+        "cryptography","cryptography.hazmat.primitives.ciphers.aead",
+        "cryptography.hazmat.primitives.kdf.pbkdf2","cryptography.hazmat.primitives.hashes",
+        "cryptography.hazmat.backends","cryptography.hazmat.bindings._rust",
         "updater","subscription_manager","database","database.db_manager","core","core.tag_engine",
         "serial","serial.tools","serial.tools.list_ports","serial.serialutil",
         "serial.serialwin32","serial.win32","serial.win32con","serial.win32file",
@@ -610,13 +644,14 @@ a = Analysis(
         "database.cluster_store","core.permissions","core.cluster_api",
         "database.bastion_ai","database.bastion_report","database.aurum_health",
         "core.bastion_sync","core.ai_support","core.io_safety","core.security_lock","core.print_bridge",
+        "core.auto_backup","cryptography.hazmat.primitives.kdf.scrypt",
     ],
-    hookspath=["."],
+    hookspath=[{repr(GEN)}],
     hooksconfig={{}},
     runtime_hooks=[
-    "rthook_fix_http.py",
-    "rthook_serial.py",
-    "rthook_pythonnet.py",
+    {repr(gen_path("rthook_fix_http.py"))},
+    {repr(gen_path("rthook_serial.py"))},
+    {repr(gen_path("rthook_pythonnet.py"))},
 ],
     excludes=["tkinter","matplotlib","numpy","pandas","scipy","test"],
     win_no_prefer_redirects=False,
@@ -634,8 +669,8 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz, a.scripts, [],
     name="AurumOS",
-    icon="AurumOS.ico" if os.path.exists("AurumOS.ico") else None,
-    version="version_info.txt",
+    icon={repr(os.path.join(ROOT, "AurumOS.ico"))} if os.path.exists({repr(os.path.join(ROOT, "AurumOS.ico"))}) else None,
+    version={repr(gen_path("version_info.txt"))},
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -688,7 +723,7 @@ coll = COLLECT(
     name="AurumOS",
 )
 '''
-    open(os.path.join(ROOT, 'AurumOS.spec'), 'w', encoding='utf-8').write(spec)
+    open(gen_path('AurumOS.spec'), 'w', encoding='utf-8').write(spec)
     print("  OK - AurumOS.spec written")
 
 # ── STEP 4: Symmetrically Encrypted Obfuscation Pass ───────────────────────────
@@ -717,13 +752,16 @@ def obfuscate():
             continue
         try:
             src  = open(full, 'r', encoding='utf-8').read()
-            # Skip files that are ALREADY obfuscated stubs (e.g. left stubbed by
-            # a previously interrupted build). Re-wrapping a stub only nests
-            # another decrypt layer; the existing single-layer stub already runs
-            # the real code at import, so leave it untouched and don't back it up.
+            # A stub here means a previous build died between obfuscating
+            # and restoring. Shipping that stub into an EXE — or backing
+            # the stub up as the "original" — would destroy the real
+            # source. Refuse loudly instead; recover with:
+            #   git checkout -- <file>
             if src.lstrip().startswith('import marshal') and 'exec(marshal.loads(zlib.decompress(' in src:
-                print(f"  SKIP (already obfuscated - left as-is): {rel}")
-                continue
+                raise RuntimeError(
+                    f"{rel} is still an obfuscated stub from an interrupted "
+                    f"build. Restore it first (git checkout -- {rel}), then "
+                    f"rebuild. Refusing to bake a stub into the EXE.")
             code = compile(src, full, 'exec')
             serialized = marshal.dumps(code)
             compressed = zlib.compress(serialized, level=9)
@@ -766,6 +804,36 @@ def restore(backed):
             os.remove(bak)
             print(f"  Restored: {os.path.relpath(orig, ROOT)}")
 
+
+def verify_sources(backed):
+    """After restore, prove no target is still a stub.
+
+    A crashed or killed build used to leave obfuscated stubs in the tree,
+    silently — the next build then baked stubs into the EXE. If anything
+    is still a stub here, stop before signing/finalizing so the damage is
+    loud and local instead of shipped.
+    """
+    print("\n[6b/7] Verifying restored sources...")
+    bad = []
+    for bak in backed:
+        orig = bak[:-len(BAK)]
+        try:
+            with open(orig, 'r', encoding='utf-8') as f:
+                head = f.read(400)
+        except OSError:
+            bad.append(orig + ' (missing)')
+            continue
+        if head.lstrip().startswith('import marshal') \
+                and 'exec(marshal.loads(zlib.decompress(' in head:
+            bad.append(orig)
+    if bad:
+        print("  BUILD REFUSED — still stubbed:")
+        for b in bad:
+            print(f"    - {os.path.relpath(b, ROOT) if os.path.exists(b) else b}")
+        print("  Restore them (git checkout -- <file>) and rebuild.")
+        sys.exit(1)
+    print("  OK -- all sources are real code")
+
 # ── STEP 5: Run PyInstaller ───────────────────────────────────────────────────
 def run_pyinstaller():
     print("\n[5/7] Running PyInstaller...")
@@ -805,7 +873,8 @@ def run_pyinstaller():
             print(f"  (warning) could not free dist\\_internal: {e}")
 
     r = subprocess.run(
-        [sys.executable, '-m', 'PyInstaller', 'AurumOS.spec', '--clean', '--noconfirm'],
+        [sys.executable, '-m', 'PyInstaller', gen_path('AurumOS.spec'), '--clean', '--noconfirm',
+         '--distpath', DIST, '--workpath', os.path.join(ROOT, 'build')],
         cwd=ROOT
     )
     if r.returncode != 0:
@@ -817,7 +886,7 @@ def run_pyinstaller():
 # SmartScreen flags an UNSIGNED exe as "unknown publisher / suspicious".
 # Signing with a certificate from a trusted CA (Sectigo/GlobalSign/DigiCert/...)
 # proves the publisher identity and removes that warning. This step is a NO-OP
-# until you provide a cert - see sign_config.json.example.
+# until you provide a cert - see config/sign_config.json.example.
 def _locate_signtool():
     """Find signtool.exe (part of the Windows SDK)."""
     from glob import glob as _glob
@@ -1270,6 +1339,14 @@ def finalize_dist():
     top_exe = os.path.join(dist, 'AurumOS.exe')
     top_int = os.path.join(dist, '_internal')
 
+    # Never leave stale _internal_old / _internal_tmp behind: they were only
+    # ever a locked-folder fallback, not something to ship or keep.
+    for _stale in (top_int + '_old', top_int + '_tmp'):
+        if os.path.isdir(_stale):
+            shutil.rmtree(_stale, ignore_errors=True)
+            if not os.path.isdir(_stale):
+                print(f"  Removed stale: dist\\{os.path.basename(_stale)}\\")
+
     # Clear any _internal / stale EXE from a previous build so the move is clean.
     if os.path.isdir(top_int):
         shutil.rmtree(top_int, ignore_errors=True)
@@ -1290,7 +1367,7 @@ def finalize_dist():
                 shutil.rmtree(_bak, ignore_errors=True)
             try: os.rename(top_int, _bak)
             except OSError:
-                print(f"  WARNING: Could not remove {_bak} — previous build may be running")
+                print(f"  WARNING: dist\\_internal\\ is locked — close AurumOS and rebuild")
     if os.path.isfile(top_exe):
         try:
             os.remove(top_exe)
@@ -1324,6 +1401,16 @@ def finalize_dist():
         else:
             shutil.move(src_int, top_int)
         print("  Moved deps    -> dist\\_internal\\")
+        # The rename-aside fallback above must not leave dist\_internal_old
+        # behind: retry the delete now that the new tree is in place.
+        _leftover = top_int + '_old'
+        if os.path.isdir(_leftover):
+            shutil.rmtree(_leftover, ignore_errors=True)
+            if os.path.isdir(_leftover):
+                print(f"  NOTE: dist\\_internal_old\\ is still locked by a running app"
+                      f" and will be removed by the next build — close AurumOS first")
+            else:
+                print("  Removed fallback: dist\\_internal_old\\")
 
     # ... then the EXE (last, so its _internal is already beside it).
     exe_src = os.path.join(nested, 'AurumOS.exe')
@@ -1438,6 +1525,211 @@ def finalize_dist():
         print(f"  (warning) pythonnet runtime copy skipped: {_pne}")
 
 
+# ── STEP 8: Client-clean folder ──────────────────────────────────────────
+# dist/ is the developer's own install: live database, license marker,
+# backups, logs, photos, machine paths. Shipping it as-is would hand a
+# client your business data. stage_client() builds dist-client/ instead:
+# the program plus empty shelves, nothing private. Safe to zip and send.
+CLIENT_EXCLUDE_DIRS = {
+    'database', 'exports', 'logs', 'photos', 'Reports',
+    '_restore_test_safety',
+    # Stray legacy copy: the exe only ever reads _internal/ui.
+    'ui',
+}
+CLIENT_EXCLUDE_FILES = {
+    'config.json', 'db_path.txt', '.update_applied', 'version.lock',
+    'AurumOS_debug.exe',
+}
+CLIENT_EMPTY_DIRS = (
+    'database', 'exports', 'logs', 'photos', 'Reports',
+)
+
+
+def stage_client(src_dist=None, dst=None):
+    """Copy a shippable, private-data-free tree. Returns dst.
+
+    src_dist defaults to dist/, dst to dist-client/. Pure paths-in,
+    paths-out so the test suite can stage a fake tree in temp.
+    """
+    import shutil as _sh
+    src = src_dist or DIST
+    out = dst or os.path.join(ROOT, 'dist-client')
+    print("\n[8/7] Staging client-clean folder...")
+    if os.path.isdir(out):
+        shutil.rmtree(out, ignore_errors=True)
+    os.makedirs(out, exist_ok=True)
+    for name in sorted(os.listdir(src)):
+        if name in CLIENT_EXCLUDE_DIRS or name in CLIENT_EXCLUDE_FILES:
+            continue
+        s = os.path.join(src, name)
+        d = os.path.join(out, name)
+        try:
+            if os.path.isdir(s):
+                _sh.copytree(s, d, ignore=shutil.ignore_patterns(
+                    '.git', '__pycache__'))
+            else:
+                _sh.copy2(s, d)
+        except Exception as e:
+            print(f"  (warning) could not stage {name}: {e}")
+    for name in CLIENT_EMPTY_DIRS:
+        try:
+            os.makedirs(os.path.join(out, name), exist_ok=True)
+        except Exception:
+            pass
+    # Clean default config from the example: no cluster role, no machine
+    # paths, no secrets. The app fills in its own on first setup.
+    try:
+        ex = os.path.join(ROOT, 'config', 'config.example.json')
+        if os.path.isfile(ex):
+            _sh.copy2(ex, os.path.join(out, 'config.json'))
+            print("  config.json   -> clean default from example")
+    except Exception as e:
+        print(f"  (warning) clean config not staged: {e}")
+    print(f"  Client folder -> {out}")
+    return out
+
+
+def zip_client(src_dir=None, out_dir=None, version='', stamp=''):
+    """Zip a staged client folder into CLIENTS BUILD, ready to send.
+
+    Only ever zips the staged dist-client/ tree — never the repo root —
+    so Admin Credential/, CLIENTS BUILD/ itself and every private file
+    are structurally unable to enter the zip. Returns the zip path.
+    """
+    import shutil as _sh
+    import datetime as _dt
+    src = src_dir or os.path.join(ROOT, 'dist-client')
+    dest_dir = out_dir or os.path.join(ROOT, 'CLIENTS BUILD')
+    os.makedirs(dest_dir, exist_ok=True)
+    safe_stamp = (_dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+                  if not stamp else str(stamp).replace(' ', '-').replace(':', ''))
+    name = 'AurumOS-client-%s-%s' % (
+        ('v' + str(version)) if version else 'vX', safe_stamp)
+    # Never zip a zip loop: skip any CLIENTS BUILD content or stray zips.
+    dest_base = os.path.join(dest_dir, name)
+    _sh.make_archive(dest_base, 'zip', root_dir=src)
+    out_zip = dest_base + '.zip'
+    print(f"  Client zip    -> {out_zip}")
+    return out_zip
+
+
+# Full main-folder zip: the whole project for handoff, minus everything
+# private or regenerable. Same guarantee as stage_client, wider net.
+FULL_EXCLUDE_DIRS = {
+    '.git', '.venv', '__pycache__', '.idea', '.claude',
+    'build', 'dist', 'dist-client', 'CLIENTS BUILD', 'Admin Credential',
+    '_internal', '_restore_test_safety', 'pythonnet_runtime_backup_20260919',
+}
+FULL_EXCLUDE_FILES = {
+    'config.json', 'db_path.txt', 'sign_config.json',
+    'build_version.txt', 'build_stamp.txt', 'version_info.txt',
+    'AurumOS.spec', '.update_applied', 'version.lock',
+    'exe_trusted_hash.txt',
+}
+FULL_EXCLUDE_EXTS = {
+    '.db', '.db-shm', '.db-wal', '.db-journal', '.log', '.pyc', '.pyo',
+}
+FULL_KEEP_EMPTY_DIRS = (
+    'database', 'exports', 'logs', 'photos', 'Reports',
+)
+
+
+def zip_full(version='', stamp='', out_dir=None):
+    """Zip the whole main folder (source + assets + docs) into
+    CLIENTS BUILD, minus private data, secrets, environments, caches,
+    databases, logs and prior builds. Returns the zip path."""
+    import datetime as _dt
+    import zipfile as _zf
+    dest_dir = out_dir or os.path.join(ROOT, 'CLIENTS BUILD')
+    os.makedirs(dest_dir, exist_ok=True)
+    safe_stamp = (_dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+                  if not stamp else str(stamp).replace(' ', '-').replace(':', ''))
+    name = 'AurumOS-full-%s-%s.zip' % (
+        ('v' + str(version)) if version else 'vX', safe_stamp)
+    out_zip = os.path.join(dest_dir, name)
+
+    def _excluded_dir(rel):
+        parts = rel.split(os.sep)
+        return any(p in FULL_EXCLUDE_DIRS for p in parts)
+
+    def _excluded_file(fname):
+        if fname in FULL_EXCLUDE_FILES:
+            return True
+        _root, ext = os.path.splitext(fname)
+        return ext.lower() in FULL_EXCLUDE_EXTS
+
+    count = 0
+    with _zf.ZipFile(out_zip, 'w', _zf.ZIP_DEFLATED) as zf:
+        for dp, dns, fns in os.walk(ROOT):
+            rel = os.path.relpath(dp, ROOT)
+            if rel == '.':
+                rel = ''
+            # Prune excluded dirs so we never descend into them.
+            dns[:] = sorted(
+                d for d in dns
+                if not _excluded_dir(os.path.join(rel, d) if rel else d))
+            if rel and _excluded_dir(rel):
+                continue
+            for f in sorted(fns):
+                if _excluded_file(f):
+                    continue
+                full = os.path.join(dp, f)
+                arc = os.path.relpath(full, ROOT)
+                try:
+                    zf.write(full, arc)
+                    count += 1
+                except Exception as e:
+                    print(f"  (warning) could not zip {arc}: {e}")
+        for d in FULL_KEEP_EMPTY_DIRS:
+            try:
+                zf.writestr(d + '/', '')
+            except Exception:
+                pass
+    print(f"  Full zip      -> {out_zip} ({count} files)")
+    return out_zip
+
+
+def prune_client_builds(keep=2):
+    """Keep only the newest few zips per kind in CLIENTS BUILD.
+
+    Old zips pile up and the wrong one gets sent. Anything beyond the
+    newest `keep` of each prefix is deleted.
+    """
+    import glob as _glob
+    dest_dir = os.path.join(ROOT, 'CLIENTS BUILD')
+    if not os.path.isdir(dest_dir):
+        return
+    for prefix in ('AurumOS-client-', 'AurumOS-full-'):
+        zips = sorted(_glob.glob(os.path.join(dest_dir, prefix + '*.zip')),
+                      key=os.path.getmtime)
+        for old in zips[:-keep] if len(zips) > keep else []:
+            try:
+                os.remove(old)
+                print(f"  Pruned old: {os.path.basename(old)}")
+            except Exception as e:
+                print(f"  (warning) could not prune {old}: {e}")
+
+
+# Generated files that older builds wrote into the project root. They now live
+# in GEN; copies left in the root are stale and only clutter it.
+ROOT_LEFTOVERS = (
+    'AurumOS.spec', 'version_info.txt', 'build_version.txt', 'build_stamp.txt',
+    'hook_local.py', 'hook_webview.py', 'hook_win32.py',
+    'rthook_fix_http.py', 'rthook_serial.py', 'rthook_pythonnet.py',
+)
+
+
+def remove_root_leftovers():
+    for name in ROOT_LEFTOVERS:
+        path = os.path.join(ROOT, name)
+        if os.path.isfile(path):
+            try:
+                os.remove(path)
+                print(f"  Removed old root copy: {name}")
+            except Exception as e:
+                print(f"  (warning) could not remove {name}: {e}")
+
+
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     t0 = time.time()
@@ -1448,22 +1740,31 @@ if __name__ == '__main__':
     check_env()
     kill_running_exe()
     venv_site, webview_dir, arch = get_paths()
+    remove_root_leftovers()
     built_version = stamp_version()
     write_version_resource(built_version)
     write_hooks()
     write_spec(venv_site, webview_dir, arch)
 
     backed = obfuscate()
-    ok     = run_pyinstaller()
-    restore(backed)
+    try:
+        ok = run_pyinstaller()
+    finally:
+        # Restore runs even when PyInstaller raises or the step fails:
+        # skipping it is how stubs survive in the tree.
+        restore(backed)
+    verify_sources(backed)
 
     if not ok:
-        print("\n�- Build FAILED - originals restored")
+        print("\nBuild FAILED - originals restored")
         sys.exit(1)
 
     sign_exe()
     write_trusted_hash()
     finalize_dist()
+    stage_client()
+    # No zips during build: CLIENTS BUILD zips are made on demand only
+    # (zip_client / zip_full in this file). Normal build ends here.
     report(built_version)
     print(f"\n  Total time: {time.time()-t0:.0f}s")
     print("=" * 50)

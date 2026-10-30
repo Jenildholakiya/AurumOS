@@ -3,6 +3,7 @@
 <head>
 <script src="boot.js"></script>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Sign In</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -44,6 +45,7 @@ body::before{
 .ln{font-family:"DM Sans",system-ui,sans-serif;font-size:1.4rem;font-weight:700;color:var(--ink);letter-spacing:-.4px;}
 .ln em{color:var(--blue);font-style:normal;font-weight:700;}
 .ls{font-size:.58rem;font-weight:500;color:var(--muted2);text-transform:uppercase;letter-spacing:1.4px;margin-top:4px;}
+.ls-by{font-size:.56rem;font-weight:600;color:var(--muted2);letter-spacing:1px;margin-top:3px;opacity:.85;}
 
 /* ── LAST LOGIN STRIP ── */
 .last-login{
@@ -94,12 +96,11 @@ body::before{
     transition: all .14s;
 }
 .inp:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff;}
-/* Masked like a password box, but a plain text control underneath: security
-   software on counter PCs hooks real password fields and can swallow every
-   keystroke in embedded browsers while the mouse keeps working. Dots stay
-   dots; the keys just reach the page again. */
-#inp{-webkit-text-security:disc;}
-#inp.plain{-webkit-text-security:none;}
+/* Native password box. This was once a text box with -webkit-text-security
+   masking to dodge counter-PC hooks, but that exotic combo became the prime
+   suspect when keys died in this one field while every normal input typed
+   fine — so the box is 100% conventional now. The eye button below flips
+   the real input type, giving both modes as an escape hatch either way. */
 .inp:disabled{opacity:.45;cursor:not-allowed;}
 .eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;padding:4px;color:var(--muted2);transition:color 0.13s;font-size:0.9rem;}
 .eye-btn:hover{color:var(--blue);}
@@ -279,6 +280,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <div class="lm"><span>Au</span></div>
         <div class="ln">Aurum<em>OS</em></div>
         <div class="ls">Jewelry ERP · Secure Access</div>
+        <div class="ls-by">by Pentarch</div>
     </div>
 
     <!-- Last login strip -->
@@ -305,8 +307,8 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <div id="pass-mode" style="display:none">
             <label class="lbl">Password</label>
             <div class="pass-wrap">
-                <input type="text" id="inp" class="inp"
-                       placeholder="••••••••" autocomplete="off" spellcheck="false"
+                <input type="password" id="inp" class="inp"
+                       placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;" autocomplete="off" spellcheck="false"
                         oninput="onPassInput(this.value)"
                         onkeydown="if(event.key==='Enter')login()">
                 <button class="eye-btn" id="eye-btn" onclick="toggleEye()" type="button" tabindex="-1">
@@ -508,11 +510,72 @@ function onPassInput(val) {
 }
 
 // ── Show / hide password ───────────────────────────────────────────
+// Flips the REAL input type (not a CSS mask class), so both modes are
+// genuinely available: if anything on a PC ever swallows keys in one
+// mode, one tap on the eye gives the other.
 function toggleEye() {
     var inp = document.getElementById('inp');
     if (!inp) return;
-    inp.classList.toggle('plain');
+    try {
+        var pos = (inp.selectionStart == null) ? inp.value.length : inp.selectionStart;
+        inp.type = (inp.type === 'password') ? 'text' : 'password';
+        inp.focus();
+        try { inp.setSelectionRange(pos, pos); } catch (e2) {}
+    } catch (e) {}
 }
+
+// ── INPUT HEALTH LOG ─────────────────────────────────────────────
+// Self-report into the app log ([INPUT-DIAG] lines) so a "can't type"
+// report carries facts. Counts and lengths only — never the password,
+// never which key was pressed. Capped per page load; the bridge also
+// records which OS window holds the foreground at that moment.
+var _diagN = 0, _diagF = 0, _diagB = 0, _diagK = 0, _diagI = 0, _diagWb = 0, _diagWf = 0;
+function inputDiag(m) {
+    try {
+        if (_diagN >= 12) return;
+        _diagN++;
+        var a = window.pywebview && window.pywebview.api;
+        if (a && typeof a.log_input_diag === 'function') a.log_input_diag('login-pass', m);
+    } catch (e) {}
+}
+function inputDiagBoot() {
+    try {
+        var inp = document.getElementById('inp');
+        var pm = document.getElementById('pass-mode');
+        inputDiag('snapshot box=' + (inp ? 1 : 0)
+            + ' type=' + (inp ? inp.type : '-')
+            + ' dis=' + (inp ? !!inp.disabled : '-')
+            + ' ro=' + (inp ? !!inp.readOnly : '-')
+            + ' passmode=' + (pm ? pm.style.display : '-')
+            + ' hasFocus=' + document.hasFocus()
+            + ' active=' + ((document.activeElement && document.activeElement.id) || '-'));
+        if (!inp || inp.__diag) return;
+        inp.__diag = true;
+        inp.addEventListener('focus', function () { _diagF++; inputDiag('focus n=' + _diagF); });
+        inp.addEventListener('blur', function () { _diagB++; inputDiag('blur n=' + _diagB); });
+        inp.addEventListener('keydown', function () {
+            if (_diagK >= 3) return;
+            _diagK++; inputDiag('keydown n=' + _diagK);
+        });
+        inp.addEventListener('input', function () {
+            if (_diagI >= 5) return;
+            _diagI++; inputDiag('input n=' + _diagI + ' len=' + ((inp.value || '').length));
+        });
+        // OS-window activation: if another window/dialog steals activation
+        // mid-typing, keys go there while this page looks focused. Two lines
+        // each, then silent.
+        window.addEventListener('blur', function () {
+            if (_diagWb >= 4) return;
+            _diagWb++; inputDiag('win-blur n=' + _diagWb + ' vis=' + document.visibilityState);
+        });
+        window.addEventListener('focus', function () {
+            if (_diagWf >= 4) return;
+            _diagWf++; inputDiag('win-focus n=' + _diagWf + ' vis=' + document.visibilityState);
+        });
+    } catch (e) {}
+}
+if (window.apiReady) { window.apiReady(function () { setTimeout(inputDiagBoot, 400); }); }
+else { setTimeout(inputDiagBoot, 1500); }
 
 // ── Terminal: re-point at the main PC ──────────────────────────────
 // Shop routers reassign addresses, and setup typos happen. Either way the
@@ -642,7 +705,13 @@ var _pt = setInterval(function() {
 }, 100);
 
 setTimeout(function() {
-    if (!READY) { clearInterval(_pt); setSt('er','Timeout — restart app'); }
+    if (!READY) {
+        // On a staff PC this almost always means the main PC is off and the
+        // app is waiting on it. Keep polling for the bridge (so it recovers on
+        // its own) and show the centred message, never "Timeout — restart app".
+        if (_gateKnownTerminal()) { _gateSet('offline'); }
+        else { clearInterval(_pt); setSt('er','Timeout — restart app'); }
+    }
 }, 20000);
 
 function onReady() {
@@ -746,6 +815,11 @@ function myRole() {
                 IDENTITY_DONE = true;
                 IS_TERMINAL = !!(me && me.role === 'terminal');
                 if (IS_TERMINAL) {
+                    // A staff PC is useless without the main PC. If it is off,
+                    // show one centred message and nothing else — not a login
+                    // box that can only fail. This continues on its own the
+                    // moment the main PC answers.
+                    try { startTerminalGate(me); } catch (e) {}
                     try {
                         var note = document.getElementById('terminal-note');
                         if (note) {
@@ -759,6 +833,8 @@ function myRole() {
                         var rl = document.getElementById('reset-link');
                         if (rl) rl.style.display = 'block';
                     } catch (e) {}
+                } else {
+                    try { clearTerminalGate(); } catch (e) {}
                 }
                 resolve((me && me.role) || '');
             }
@@ -776,6 +852,111 @@ function myRole() {
     return IDENTITY_PROMISE;
 }
 myRole();
+
+// ── TERMINAL GATE — main PC off → one centred message, no login ──────
+// A staff PC is useless without the main PC. When the main PC can't be
+// reached, this covers the whole screen with one centred message — no login
+// card, no "Timeout", nothing else — and continues to the login on its own
+// the moment the main PC answers. The staff role is remembered in
+// localStorage so the message shows the instant the app opens, before the
+// bridge is even ready, so the card never flashes.
+var _gateOv = null, _gateTimer = null, _gateIp = '', _gateState = '';
+function _buildGate() {
+    if (_gateOv) return _gateOv;
+    var ov = document.createElement('div');
+    ov.id = 'term-offline';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;display:none;'
+        + 'flex-direction:column;align-items:center;justify-content:center;'
+        + 'text-align:center;padding:32px;background:#0f172a;'
+        + 'font-family:var(--sans),system-ui,Arial,sans-serif;';
+    ov.innerHTML =
+        '<div id="gate-ic" style="width:72px;height:72px;border-radius:20px;display:flex;'
+        + 'align-items:center;justify-content:center;margin-bottom:22px;font-size:34px;'
+        + 'background:rgba(148,163,184,0.14);border:1px solid rgba(148,163,184,0.3);">🖥️</div>'
+        + '<div id="gate-ttl" style="font-size:1.35rem;font-weight:700;color:#fff;margin-bottom:10px;">'
+        + 'Connecting to the main PC…</div>'
+        + '<div id="gate-sub" style="font-size:0.9rem;color:#cbd5e1;line-height:1.6;max-width:420px;">'
+        + 'One moment.</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-top:26px;color:#64748b;font-size:0.78rem;">'
+        + '<span style="width:13px;height:13px;border:2px solid #334155;'
+        + 'border-top-color:#94a3b8;border-radius:50%;display:inline-block;'
+        + 'animation:gatespin 0.8s linear infinite;"></span>'
+        + '<span id="gate-status">Checking…</span></div>'
+        + '<style>@keyframes gatespin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(ov);
+    _gateOv = ov;
+    return ov;
+}
+function _gateSet(state) {
+    _buildGate();
+    _gateState = state;
+    var ic = document.getElementById('gate-ic');
+    var ttl = document.getElementById('gate-ttl');
+    var sub = document.getElementById('gate-sub');
+    var stt = document.getElementById('gate-status');
+    if (state === 'offline') {
+        ic.style.background = 'rgba(239,68,68,0.14)';
+        ic.style.borderColor = 'rgba(239,68,68,0.3)';
+        ttl.innerText = 'Main PC is switched off';
+        sub.innerHTML = 'This computer connects to the shop’s main PC. Please switch it on '
+            + 'and open AurumOS there.<br>This screen will continue on its own once it is ready.';
+        if (stt) stt.innerText = 'Waiting for the main PC…';
+    } else {
+        ic.style.background = 'rgba(148,163,184,0.14)';
+        ic.style.borderColor = 'rgba(148,163,184,0.3)';
+        ttl.innerText = 'Connecting to the main PC…';
+        sub.innerHTML = 'One moment.';
+        if (stt) stt.innerText = 'Checking…';
+    }
+    _gateOv.style.display = 'flex';
+}
+function _hideGate() {
+    if (_gateOv) _gateOv.style.display = 'none';
+    _gateState = 'hidden';
+    if (_gateTimer) { clearInterval(_gateTimer); _gateTimer = null; }
+}
+function _gateKnownTerminal() {
+    try { return localStorage.getItem('aurum_is_terminal') === '1'; } catch (e) { return false; }
+}
+// Show the message immediately on a PC we already know is a staff terminal,
+// before the bridge is ready — so the login card and any "Timeout" never show.
+if (_gateKnownTerminal()) {
+    try { _gateIp = localStorage.getItem('aurum_server_ip') || ''; } catch (e) {}
+    if (document.body) _gateSet('connecting');
+    else document.addEventListener('DOMContentLoaded', function () { _gateSet('connecting'); });
+}
+function _pingServer() {
+    return new Promise(function (resolve) {
+        if (!_gateIp || !window.pywebview || !window.pywebview.api) { resolve(false); return; }
+        try {
+            window.pywebview.api.cluster('verify_server', { ip: _gateIp })
+                .then(function (r) { resolve(!!(r && r.status === 'success')); })
+                .catch(function () { resolve(false); });
+        } catch (e) { resolve(false); }
+    });
+}
+function startTerminalGate(me) {
+    _gateIp = (me && me.server_ip) || _gateIp;
+    try {
+        localStorage.setItem('aurum_is_terminal', '1');
+        if (_gateIp) localStorage.setItem('aurum_server_ip', _gateIp);
+    } catch (e) {}
+    if (!_gateIp) { _hideGate(); return; }   // no saved main PC — leave login as-is
+    function tick() {
+        _pingServer().then(function (up) {
+            if (up) { _hideGate(); }
+            else if (_gateState !== 'offline') { _gateSet('offline'); }
+        });
+    }
+    tick();
+    if (!_gateTimer) _gateTimer = setInterval(tick, 4000);
+}
+// This PC is NOT a terminal (host, or a terminal that was reset): forget the
+// flag and never show the gate here.
+function clearTerminalGate() {
+    try { localStorage.removeItem('aurum_is_terminal'); } catch (e) {}
+    _hideGate();
+}
 
 // ── LOGIN ──────────────────────────────────────────────────────────
 function login() {
@@ -848,10 +1029,10 @@ function login() {
 // setup. Setup's join overwrites the saved address and secret, and the
 // running sync loop picks them up on its next tick — no typing, no file
 // hunting, no restart. Terminals only; the link itself is hidden otherwise.
-function resetTerminal() {
+async function resetTerminal() {
     if (!IS_TERMINAL) return;
-    if (!confirm('Remove this PC\u2019s shop connection and open setup?\n\n' +
-                 'You will join again as a Client Node. Nothing on the main PC is affected.')) return;
+    if (!await window.auConfirm('Remove this PC\u2019s shop connection and open setup?\n\n' +
+                 'You will join again from the Client tab. Nothing on the main PC is affected.', {danger:true, okText:'Remove'})) return;
     goSetupJoin('');
 }
 
@@ -972,6 +1153,13 @@ function handleResult(res) {
         try {
             localStorage.setItem('aurum_user_role',   role);
             localStorage.setItem('aurum_active_user', username);
+            if (role !== 'staff') {
+                // Owner login must never inherit a previous staff session:
+                // stale staff pages plus any role mix-up would resurrect a
+                // staff view with zero authentication. Drop them outright.
+                localStorage.removeItem('aurum_staff_pages');
+                localStorage.removeItem('aurum_staff_name');
+            }
         } catch(e) {}
 
         // Detect software type + business name from license key and persist to localStorage

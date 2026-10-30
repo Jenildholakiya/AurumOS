@@ -352,11 +352,16 @@
   }
 
   // ── Redirect to revoked/expiry.html for expired/revoked ─────────────
+  // ONLY on an explicit server verdict. An unknown/offline state (stale
+  // cache, hiccup, key being typed) must NEVER route here: that is exactly
+  // how a valid shop stared at "Access Suspended" after signing in. Those
+  // states keep the page with fail-closed feature locks instead.
   function _redirectToRevokeScreen() {
-    var shouldRedirect = _state.status === 'expired' || _state.status === 'revoked' || !_state.valid;
+    var st = _state.status;
+    var shouldRedirect = st === 'expired' || st === 'revoked';
     if (!shouldRedirect) return;
 
-    var target = _state.status === 'expired' ? 'expiry.html' : 'revoked.html';
+    var target = st === 'expired' ? 'expiry.html' : 'revoked.html';
 
     // Don't redirect if already on the CORRECT page
     try {
@@ -437,7 +442,7 @@
     if (_state.status === 'grace') {
       _applyGraceDegradation();
       _showGraceBanner();
-    } else if (_state.status === 'expired' || _state.status === 'revoked' || !_state.valid) {
+    } else if (_state.status === 'expired' || _state.status === 'revoked') {
       _redirectToRevokeScreen();
     }
 

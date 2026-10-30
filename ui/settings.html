@@ -4,6 +4,7 @@
 <script src="boot.js"></script>
 <script src="gst.js"></script>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AurumOS | Settings</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -61,10 +62,11 @@ header{
 
 .layout{
   display:grid;
-  grid-template-columns:340px 1fr;
+  grid-template-columns:340px minmax(0,1fr);
   gap:20px;
   max-width:1400px;
   margin:0 auto;
+  align-items:start;
 }
 
 .left-deck{
@@ -142,10 +144,19 @@ header{
 .upd-notes span::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;
   border-radius:50%;background:var(--blue);opacity:0.55;}
 
-.right-col{display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;align-items:start;align-content:start;}
-.full-width-card{grid-column:1 / -1;}
+/* ── RIGHT WORKSPACE: single-column section blocks ─────────────────
+   Permanent empty-space fix: half-width cards always left a void on the
+   right (see screenshot: Business Profile alone in a row, Fine Gold alone
+   below GST). Every card is now full-width inside stacked .sec-block
+   sections. .duo is kept as a single-column stack so no 2-col orphan cell
+   can ever be reintroduced. */
+.right-col{display:flex;flex-direction:column;gap:0;min-width:0;}
+.sec-block{display:flex;flex-direction:column;gap:16px;margin-bottom:28px;}
+.sec-block:last-child{margin-bottom:0;}
+.duo{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch;}
+.full-width-card{width:100%;}
 
-.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;grid-column:1 / -1;}
+.sec-hdr{display:flex;align-items:center;gap:10px;margin:0;padding:2px 2px 0;}
 .sec-dot{width:7px;height:7px;border-radius:50%;background:var(--blue-bg);border:2px solid var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
 .sec-ttl{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.7px;color:var(--blue3);}
 
@@ -157,6 +168,7 @@ header{
   box-shadow:var(--sh);
   transition:transform .2s cubic-bezier(.34,1.4,.64,1),box-shadow .2s;
   display:flex;flex-direction:column;justify-content:flex-start;
+  height:100%;min-width:0;
 }
 .card:hover{transform:translateY(-2px);box-shadow:var(--sh-hover);}
 .card-hdr{padding:15px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule2);background:rgba(248,250,251,0.5);}
@@ -166,10 +178,13 @@ header{
   box-shadow:0 3px 10px rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .card-title{font-size:0.92rem;font-weight:600;color:var(--ink);}
 .card-sub{font-size:0.63rem;color:var(--muted2);margin-top:1px;}
-.card-body{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:4px;}
+.card-body{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:14px;}
 
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.fld{display:flex;flex-direction:column;gap:5px;}
+/* GST inner grid used class="grid" with no CSS rule — fields stacked with
+   no rhythm. Single canonical rule so both grids always match. */
+.gst-body .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .fld.full{grid-column:1/-1;}
 /* ── GST ─────────────────────────────────────────────────────────── */
 .gst-note{min-height:14px;font-size:0.6rem;color:var(--muted2);}
@@ -178,7 +193,7 @@ header{
 .inp.gst-ok{border-color:rgba(22,163,74,0.35);}
 .inp.gst-bad{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg);}
 #g-gstin{font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;}
-.gst-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--cream);margin-bottom:16px;}
+.gst-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--cream);margin-bottom:0;}
 .gst-toggle-txt{font-size:0.74rem;font-weight:600;color:var(--ink);}
 .gst-toggle-sub{font-size:0.62rem;color:var(--muted);margin-top:2px;font-weight:400;}
 .gst-sw{position:relative;width:42px;height:24px;flex-shrink:0;}
@@ -188,7 +203,7 @@ header{
 .gst-sw input:checked + span{background:var(--blue);}
 .gst-sw input:checked + span::after{transform:translateX(18px);}
 .gst-body[hidden]{display:none;}
-.gst-read{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule2);}
+.gst-read{display:flex;gap:18px;flex-wrap:wrap;margin-top:0;padding-top:14px;border-top:1px solid var(--rule2);}
 .gst-read div{font-size:0.62rem;color:var(--muted);}
 .gst-read b{display:block;font-family:var(--mono);font-size:0.74rem;color:var(--ink);font-weight:500;margin-top:2px;}
 .fld label{font-size:0.54rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);}
@@ -215,14 +230,14 @@ header{
   align-items:center;
   gap:8px;
   line-height:1.5;
-  margin-top:10px;
+  margin-top:0;
   opacity:1;
   transition:opacity 0.3s ease;
 }
 .alert.err{background:var(--red-bg);color:var(--red);border:1px solid rgba(220,38,38,0.15);display:flex;}
 .alert.ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);display:flex;}
 
-.btn-row{display:flex;gap:10px;margin-top:14px;}
+.btn-row{display:flex;gap:10px;margin-top:2px;flex-wrap:wrap;}
 .btn{height:44px;padding:0 22px;border:none;border-radius:11px;font-family:inherit;font-size:0.8rem;font-weight:600;letter-spacing:0.2px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .16s cubic-bezier(.34,1.4,.64,1);}
 .btn-primary{background:linear-gradient(180deg,var(--blue2),var(--blue3));color:#fff;box-shadow:0 4px 14px rgba(37,99,235,0.22);}
 .btn-primary:hover:not(:disabled){background:linear-gradient(180deg,var(--blue),#1e40af);box-shadow:0 6px 18px rgba(37,99,235,0.35);transform:translateY(-1px);}
@@ -230,13 +245,13 @@ header{
 .btn-ghost{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);border-radius:11px;}
 .btn-ghost:hover{background:var(--cream3);}
 
-.tfa-status{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.tfa-status{display:flex;align-items:center;gap:12px;margin-bottom:0;flex-wrap:wrap;}
 .tfa-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:99px;font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;flex-shrink:0;}
 .tfa-badge.off{background:var(--cream2);color:var(--muted);border:1px solid var(--rule);}
 .tfa-badge.on{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
 .tfa-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
 .tfa-desc{font-size:0.72rem;color:var(--muted);line-height:1.5;flex:1;min-width:180px;}
-.tfa-enroll{display:none;margin-top:8px;border-top:1px solid var(--rule2);padding-top:18px;}
+.tfa-enroll{display:none;margin-top:0;border-top:1px solid var(--rule2);padding-top:18px;}
 .tfa-enroll.on{display:block;animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .tfa-steps{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;}
@@ -253,7 +268,7 @@ header{
 .tfa-code-inp{width:100%;height:46px;margin-top:8px;border:1.5px solid var(--rule);border-radius:99px;background:var(--cream);font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--ink);text-align:center;letter-spacing:8px;padding-left:8px;outline:none;transition:all .14s;}
 .tfa-code-inp:focus{border-color:var(--blue2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
 .tfa-code-inp::placeholder{color:var(--muted2);letter-spacing:6px;font-weight:400;}
-.tfa-disable{display:none;margin-top:14px;border-top:1px solid var(--rule2);padding-top:16px;}
+.tfa-disable{display:none;margin-top:0;border-top:1px solid var(--rule2);padding-top:16px;}
 .tfa-disable.on{display:block;animation:fadeUp .3s ease both;}
 
 .ov{position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;}
@@ -268,12 +283,32 @@ header{
 .bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .bk-code{font-family:var(--mono);font-size:0.95rem;font-weight:600;color:var(--ink2);background:var(--cream);border:1px solid var(--rule);border-radius:8px;padding:10px;text-align:center;letter-spacing:1px;}
 
-/* ── DATA BACKUP ─────────────────────────────────────────────────── */
-.bk-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-@media(max-width:900px){.bk-cols{grid-template-columns:1fr;}}
-.bk-col h4{font-size:0.72rem;font-weight:700;color:var(--ink);margin-bottom:4px;}
-.bk-col p{font-size:0.68rem;color:var(--muted);line-height:1.6;margin-bottom:12px;}
-.bk-prog{display:none;flex-direction:column;gap:6px;margin-top:12px;}
+/* ── DATA BACKUP (designed split panels) ─────────────────────────── */
+.bk-cols{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--rule);
+  border-radius:14px;overflow:hidden;background:var(--cream);}
+.bk-col{padding:20px 22px;display:flex;flex-direction:column;gap:12px;min-width:0;
+  background:var(--white);}
+.bk-col + .bk-col{border-left:1px solid var(--rule);background:linear-gradient(180deg,#fff,var(--cream));}
+.bk-col.flash{animation:bkFlash 1.6s ease;}
+@keyframes bkFlash{0%,40%{box-shadow:inset 0 0 0 2px var(--blue2);background:#eff4ff;}100%{box-shadow:none;}}
+.bk-step{display:flex;align-items:center;gap:10px;}
+.bk-num{width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;
+  font-size:0.66rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 3px 8px rgba(37,99,235,0.3);}
+.bk-col + .bk-col .bk-num{background:var(--green);box-shadow:0 3px 8px rgba(22,163,74,0.3);}
+.bk-col h4{font-size:0.82rem;font-weight:700;color:var(--ink);margin-bottom:0;}
+.bk-col p{font-size:0.68rem;color:var(--muted);line-height:1.6;margin-bottom:0;}
+.bk-col .btn-row{margin-top:0;}
+.bk-fileline{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:0.66rem;
+  color:var(--blue3);background:var(--blue-bg);border:1px dashed var(--blue-ln);border-radius:8px;
+  padding:8px 11px;word-break:break-all;line-height:1.5;}
+.bk-hint{font-size:0.66rem;color:var(--green);font-weight:600;line-height:1.5;display:none;}
+.bk-hint.show{display:block;animation:fadeUp .3s ease both;}
+.bk-use-link{align-self:flex-start;border:none;background:none;cursor:pointer;
+  font-family:inherit;font-size:0.68rem;font-weight:700;color:var(--blue3);
+  padding:0;text-decoration:underline;text-underline-offset:3px;}
+.bk-use-link:hover{color:var(--blue);}
+.bk-prog{display:none;flex-direction:column;gap:6px;margin-top:0;}
 .bk-prog.show{display:flex;}
 .bk-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
 .bk-msg{font-size:0.68rem;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -282,13 +317,12 @@ header{
 .bk-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--blue2),var(--blue3));transition:width 0.25s ease;}
 .bk-prog.done .bk-fill{background:linear-gradient(90deg,var(--green),#22c55e);}
 .bk-prog.failed .bk-fill{background:linear-gradient(90deg,var(--red),#ef4444);}
-.bk-done{display:none;font-size:0.7rem;line-height:1.6;padding:10px 13px;border-radius:8px;margin-top:12px;word-break:break-all;}
+.bk-done{display:none;font-size:0.7rem;line-height:1.6;padding:10px 13px;border-radius:8px;margin-top:0;word-break:break-all;}
 .bk-done.show{display:block;background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
 .bk-done.show.warn{background:#fff7ed;color:var(--amber);border-color:rgba(217,119,6,0.25);}
 .bk-path{font-family:var(--mono);font-size:0.66rem;background:var(--cream);border:1px solid var(--rule);border-radius:8px;padding:9px 12px;color:var(--ink2);word-break:break-all;min-height:36px;margin-bottom:12px;}
 .bk-path.empty{color:var(--muted2);}
-.bk-warn{background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:10px 13px;font-size:0.7rem;color:var(--red);line-height:1.6;margin-bottom:12px;}
-.bk-warn{font-size:0.66rem;color:var(--red);background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:9px 12px;line-height:1.5;margin-bottom:16px;}
+.bk-warn{font-size:0.66rem;color:var(--red);background:var(--red-bg);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:9px 12px;line-height:1.5;margin-bottom:0;}
 .ov-actions{display:flex;gap:10px;}
 .ov-actions .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;}
 
@@ -298,6 +332,27 @@ body{
     radial-gradient(900px 520px at -10% 112%, rgba(37,99,235,0.04), transparent 55%),
     var(--cream);
 }
+
+/* ── RESPONSIVE: single source of truth so cards never squeeze ───────── */
+@media(max-width:1220px){
+  .scroll{padding:26px 26px 52px;}
+  .layout{grid-template-columns:300px minmax(0,1fr);}
+}
+@media(max-width:980px){
+  .layout{grid-template-columns:1fr;}
+  .left-deck{position:static;}
+}
+@media(max-width:640px){
+  .scroll{padding:18px 14px 44px;}
+  header{padding:0 16px;}
+  .form-grid,.gst-body .grid{grid-template-columns:1fr;}
+  .sys-grid{grid-template-columns:1fr;}
+  .bk-cols{grid-template-columns:1fr;}
+  .bk-col + .bk-col{border-left:none;border-top:1px solid var(--rule);}
+  .sec-block{margin-bottom:22px;}
+}
+/* Responsive: small laptops down to 1024 */
+@media (max-width:900px){.layout{grid-template-columns:1fr!important;}.sys-grid,.form-grid,.grid,.bk-grid{grid-template-columns:1fr!important;}}
 </style>
 </head>
 <body>
@@ -394,7 +449,7 @@ body{
           </div>
           <div>
             <div class="card-title">System Information</div>
-            <div class="card-sub">AurumOS installation details</div>
+            <div class="card-sub">AurumOS by Pentarch — installation details</div>
           </div>
         </div>
       </div>
@@ -403,6 +458,10 @@ body{
           <div class="sys-row">
             <div class="sys-lbl">Version</div>
             <div class="sys-val" id="sys-ver" data-aurum-version>—</div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-lbl">Build</div>
+            <div class="sys-val muted" id="sys-build">—</div>
           </div>
           <div class="sys-row">
             <div class="sys-lbl">Latest Released</div>
@@ -424,6 +483,13 @@ body{
             <div class="sys-lbl">Machine ID</div>
             <div class="sys-val muted" id="sys-mid">—</div>
           </div>
+          <div class="sys-row">
+            <div class="sys-lbl">Built by</div>
+            <div class="sys-val">Pentarch</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);font-size:0.68rem;color:var(--muted2);text-align:center;">
+          AurumOS by Pentarch · © 2026 Pentarch
         </div>
       </div>
     </div>
@@ -432,8 +498,10 @@ body{
   <!-- RIGHT MAIN WORKSPACE GRID -->
   <div class="right-col">
 
+   <section class="sec-block">
     <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Core Business & Calculation Rules</div></div>
 
+    <div class="duo">
     <!-- Edit Profile Card -->
     <div class="card">
       <div class="card-hdr">
@@ -476,6 +544,45 @@ body{
         </div>
       </div>
     </div>
+
+    <!-- Fine Gold Threshold & Discount Rules Card (stacked full-width below Business Profile — never side-by-side) -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-hdr-left">
+          <div class="card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div>
+            <div class="card-title">Fine Gold Threshold & Discount</div>
+            <div class="card-sub">Automatically apply discount when bill fine gold crosses limit</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fld">
+            <label>Fine Gold Limit (g)</label>
+            <div class="inp-wrap">
+              <input class="inp" id="e-fine-limit" type="number" step="0.001" min="0" placeholder="10.100">
+            </div>
+          </div>
+          <div class="fld">
+            <label>Discount Rate (%)</label>
+            <div class="inp-wrap">
+              <input class="inp" id="e-fine-discount-pct" type="number" step="0.01" min="0" placeholder="1">
+            </div>
+          </div>
+        </div>
+        <div style="font-size:0.68rem;color:var(--muted2);line-height:1.5;">
+          If a customer's total bill fine gold is above <b>Fine Gold Limit</b> (e.g. <code>10.100</code> g), the system automatically applies <b>Discount Rate</b> (e.g. <code>1%</code> = <code>0.01</code>) to the bill.
+        </div>
+        <div class="alert" id="bill-rule-alert"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="save-bill-rule-btn" onclick="saveBillingRules()">Save Billing Rules</button>
+        </div>
+      </div>
+    </div>
+    </div><!-- /duo -->
 
     <!-- GST Registration. One card for both retail and wholesale: the two
          modes bill on different screens but file the same returns. -->
@@ -545,46 +652,12 @@ body{
       </div>
     </div>
 
-    <!-- Fine Gold Threshold & Discount Rules Card -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-hdr-left">
-          <div class="card-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </div>
-          <div>
-            <div class="card-title">Fine Gold Threshold & Discount</div>
-            <div class="card-sub">Automatically apply discount when bill fine gold crosses limit</div>
-          </div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="fld">
-            <label>Fine Gold Limit (g)</label>
-            <div class="inp-wrap">
-              <input class="inp" id="e-fine-limit" type="number" step="0.001" min="0" placeholder="10.100">
-            </div>
-          </div>
-          <div class="fld">
-            <label>Discount Rate (%)</label>
-            <div class="inp-wrap">
-              <input class="inp" id="e-fine-discount-pct" type="number" step="0.01" min="0" placeholder="1">
-            </div>
-          </div>
-        </div>
-        <div style="font-size:0.68rem;color:var(--muted2);margin-top:12px;line-height:1.5;">
-          If a customer's total bill fine gold is above <b>Fine Gold Limit</b> (e.g. <code>10.100</code> g), the system automatically applies <b>Discount Rate</b> (e.g. <code>1%</code> = <code>0.01</code>) to the bill.
-        </div>
-        <div class="alert" id="bill-rule-alert"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="save-bill-rule-btn" onclick="saveBillingRules()">Save Billing Rules</button>
-        </div>
-      </div>
-    </div>
+   </section><!-- /core -->
 
+   <section class="sec-block">
     <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Security & Account Protection</div></div>
 
+    <div class="duo">
     <!-- Change Password -->
     <div class="card">
       <div class="card-hdr">
@@ -694,6 +767,10 @@ body{
       </div>
     </div>
 
+    </div><!-- /duo -->
+   </section><!-- /security -->
+
+   <section class="sec-block">
     <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Data Backup</div></div>
 
     <!-- Full Backup: export everything / restore from zip -->
@@ -712,7 +789,7 @@ body{
       <div class="card-body">
         <div class="bk-cols">
           <div class="bk-col">
-            <h4>Export Backup</h4>
+            <div class="bk-step"><span class="bk-num">1</span><h4>Export Backup</h4></div>
             <p>Bills, stock, karigar orders, customers, accounts, settings and item photos — snapshotted safely even mid-billing, zipped to the <b>exports</b> folder.</p>
             <div class="btn-row" style="margin-top:0;">
               <button class="btn btn-primary" id="btn-export" onclick="startExport()">Export Now</button>
@@ -723,11 +800,13 @@ body{
               <div class="bk-bar"><div class="bk-fill" id="exp-fill"></div></div>
             </div>
             <div class="bk-done" id="exp-done"></div>
+            <button class="bk-use-link" id="btn-use-latest" style="display:none;" onclick="useLatestBackup()">Use this file for restore ↓</button>
           </div>
-          <div class="bk-col">
-            <h4>Restore Backup</h4>
+          <div class="bk-col" id="restore-col">
+            <div class="bk-step"><span class="bk-num">2</span><h4>Restore Backup</h4></div>
             <p>Pick a backup zip — it is validated, extracted and loaded automatically. Your present data is safety-copied first.</p>
             <div class="bk-path empty" id="rest-path">No file chosen — click Browse…</div>
+            <div class="bk-hint" id="rest-hint">✓ Just-exported backup selected — press Restore.</div>
             <div class="btn-row" style="margin-top:0;">
               <button class="btn btn-ghost" onclick="browseBackup()">Browse…</button>
               <button class="btn btn-primary" id="btn-restore" onclick="startRestore()" disabled>Restore</button>
@@ -738,13 +817,16 @@ body{
             </div>
             <div class="bk-done" id="rest-done"></div>
             <div class="btn-row" id="restart-row" style="display:none;">
-              <button class="btn btn-primary" onclick="restartApp()">Restart AurumOS Now</button>
+              <button class="btn btn-primary" id="btn-restart" onclick="restartApp()">Restart AurumOS Now</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
+   </section><!-- /backup -->
+
+   <section class="sec-block">
     <div class="sec-hdr"><div class="sec-dot"></div><div class="sec-ttl">Monitoring & Audit Logs</div></div>
 
     <!-- Staff Activity Alerts -->
@@ -791,6 +873,7 @@ body{
       </div>
     </div>
 
+   </section><!-- /monitoring -->
   </div><!-- /right-col -->
 </div><!-- /layout -->
 </div><!-- /scroll -->
@@ -850,6 +933,11 @@ function loadAll() {
 
     api.get_machine_id && api.get_machine_id().then(function(m){
         if (m) el('sys-mid').innerText = m;
+    }).catch(function(){});
+
+    // Build stamp: same number all day, so this row says which build.
+    api.get_version_info && api.get_version_info().then(function(v){
+        if (v && v.build) el('sys-build').innerText = v.build;
     }).catch(function(){});
 
     tfaLoadStatus();
@@ -1370,6 +1458,24 @@ function saveGst(){
         payload.gst_state = r.state;
         payload.gst_state_code = r.state_code;
     }
+    // Rates are refused loudly here: the backend silently falls back to
+    // 1.5% on junk, so a typo like 150 would otherwise save as 1.5% with a
+    // success message and nobody the wiser. An empty box still means
+    // "use the default" and is allowed through.
+    if (on) {
+        var _badRate = null;
+        [['g-cgst', 'CGST'], ['g-sgst', 'SGST']].forEach(function(pair) {
+            var raw = String(el(pair[0]).value || '').trim().replace('%', '');
+            if (raw === '') return;
+            var num = parseFloat(raw);
+            if (isNaN(num) || num < 0 || num > 100) _badRate = pair[1];
+        });
+        if (_badRate) {
+            setAlert('gst-alert', _badRate + ' must be a number between 0 and 100.', 'err');
+            setBtn('gst-btn', 'Save GST Details', false);
+            return;
+        }
+    }
     setBtn('gst-btn', 'Saving...', true);
     window.pywebview.api.update_settings(payload).then(function(res){
         if (res && res.status === 'success') {
@@ -1450,6 +1556,11 @@ function pollExport(){
                 _lastBackupFile = s.file || '';
                 document.getElementById('btn-reveal').disabled = !_lastBackupFile;
                 showDone('exp-done', 'Backup ready:<br><b>' + escHtml(_lastBackupFile) + '</b>');
+                // After a fresh export the restore side is auto-filled with
+                // this exact file, so Restore is one click away.
+                if (_lastBackupFile) _selectRestoreFile(_lastBackupFile, true);
+                var _ul = document.getElementById('btn-use-latest');
+                if (_ul) _ul.style.display = _lastBackupFile ? 'block' : 'none';
             } else {
                 setBar('exp', 100, s.msg || 'Failed.', 'failed');
             }
@@ -1466,18 +1577,38 @@ function revealBackup(){
 function browseBackup(){
     if (!_bkApi()) return;
     _bkApi().pick_backup_file().then(function(r){
-        if (r && r.status === 'success' && r.path) {
-            _zipPath = r.path;
-            var el = document.getElementById('rest-path');
-            el.textContent = _zipPath;
-            el.classList.remove('empty');
-            document.getElementById('btn-restore').disabled = false;
-        }
+        if (r && r.status === 'success' && r.path) _selectRestoreFile(r.path, false);
     }).catch(function(){});
 }
-function startRestore(){
+// Single place that points the restore side at a file: updates the path
+// box, enables Restore, and (for a just-finished export) flashes the panel
+// so the user sees where the file went.
+function _selectRestoreFile(path, auto){
+    _zipPath = path;
+    var el = document.getElementById('rest-path');
+    el.textContent = path;
+    el.classList.remove('empty');
+    document.getElementById('btn-restore').disabled = false;
+    var hint = document.getElementById('rest-hint');
+    if (hint) hint.classList.toggle('show', !!auto);
+    if (auto) {
+        var col = document.getElementById('restore-col');
+        if (col) {
+            col.classList.remove('flash');
+            void col.offsetWidth;
+            col.classList.add('flash');
+            try { col.scrollIntoView({behavior:'smooth', block:'nearest'}); } catch(e){}
+        }
+    } else if (hint) {
+        hint.classList.remove('show');
+    }
+}
+function useLatestBackup(){
+    if (_lastBackupFile) _selectRestoreFile(_lastBackupFile, true);
+}
+async function startRestore(){
     if (!_bkApi() || !_zipPath) return;
-    if (!confirm('Restore from this backup? Current data will be replaced (a safety copy is kept).')) return;
+    if (!await window.auConfirm('Restore from this backup? Current data will be replaced (a safety copy is kept).', {danger:true, okText:'Restore'})) return;
     document.getElementById('btn-restore').disabled = true;
     document.getElementById('rest-done').className = 'bk-done';
     document.getElementById('restart-row').style.display = 'none';
@@ -1518,6 +1649,10 @@ function pollRestore(){
 }
 function restartApp(){
     if (_bkApi() && typeof _bkApi().restart_app === 'function') {
+        // The old window closes ~1s after the click and a fresh app opens;
+        // this promise never resolves because the process exits.
+        var b = document.getElementById('btn-restart');
+        if (b) { b.disabled = true; b.innerText = 'Restarting…'; }
         try { _bkApi().restart_app(); } catch(e){}
     }
 }

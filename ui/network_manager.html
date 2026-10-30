@@ -279,7 +279,7 @@ tr.dev.other .pc-name{color:var(--text-muted);font-weight:600;}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div class="page-wrap">
 <div id="sidebar-container"></div>
 
@@ -346,7 +346,7 @@ tr.dev.other .pc-name{color:var(--text-muted);font-weight:600;}
         <div class="addr-val" id="my-ip">--</div>
       </div>
       <div class="addr-note">
-        Type this into the <b>Client Node</b> card when setting up a staff computer,
+        Type this into the <b>Client</b> tab when setting up a staff computer,
         then press Check. If a staff PC cannot reach it, Windows Firewall is
         usually the reason.
       </div>
@@ -598,7 +598,7 @@ function render() {
             '<div class="empty-mark">&#128225;</div>' +
             '<div class="empty-ttl">No staff computers yet</div>' +
             '<div class="empty-sub">On the staff computer, run AurumOS and pick ' +
-            '<b>Client Node</b> at Step 2 of setup. Enter this PC\'s address, ' +
+            'the <b>Client</b> tab at Step 1 of setup. Enter this PC\'s address, ' +
             'shown above, and press Check. It will appear here straight away.</div></div>';
         return;
     }
@@ -747,10 +747,10 @@ function saveAssign() {
     });
 }
 
-function blockPc(id) {
+async function blockPc(id) {
     var t = findTerminal(id);
-    if (!confirm('Disconnect ' + ((t && t.hostname) || 'this computer') +
-                 '?\n\nIt will not be able to sign in. Its seat is freed for another PC.')) return;
+    if (!await window.auConfirm('Disconnect ' + ((t && t.hostname) || 'this computer') +
+                 '?\n\nIt will not be able to sign in. Its seat is freed for another PC.', {danger:true, okText:'Disconnect'})) return;
     api().cluster('block_terminal', { terminal_id: id }).then(function () {
         toast('Computer disconnected'); loadTerminals();
     }).catch(function () {});
@@ -762,10 +762,10 @@ function unblockPc(id) {
         .catch(function () {});
 }
 
-function removePc(id) {
+async function removePc(id) {
     var t = findTerminal(id);
-    if (!confirm('Remove ' + ((t && t.hostname) || 'this computer') +
-                 ' completely?\n\nIt frees a seat. That PC would have to run setup again to return.')) return;
+    if (!await window.auConfirm('Remove ' + ((t && t.hostname) || 'this computer') +
+                 ' completely?\n\nIt frees a seat. That PC would have to run setup again to return.', {danger:true, okText:'Remove'})) return;
     api().cluster('remove_terminal', { terminal_id: id }).then(function () {
         toast('Computer removed'); loadTerminals();
     }).catch(function () {});
@@ -778,11 +778,11 @@ var DEVICE_KINDS = {
     joined:  { pill: 'pill ok',   label: 'Staff PC',
                note: 'Already connected to this shop' },
     aurum:   { pill: 'pill wait', label: 'Ready to connect',
-               note: 'AurumOS is running. On that PC pick <b>Client Node</b> '
+               note: 'AurumOS is running. On that PC pick the <b>Client</b> tab '
                      + 'and enter this PC\'s address.' },
     pc:      { pill: 'pill wait', label: 'Can be connected',
                note: 'Windows PC without AurumOS. Install it there, pick '
-                     + '<b>Client Node</b>, enter this PC\'s address.' },
+                     + 'the <b>Client</b> tab, enter this PC\'s address.' },
     device:  { pill: 'pill idle', label: 'Other device',
                note: 'Phone, printer or router' }
 };
@@ -864,10 +864,10 @@ function renderDevices(res) {
         { kind: 'joined',  cls: 'ok',   title: 'Staff PCs',
           hint: 'Already connected to this shop.' },
         { kind: 'aurum',   cls: 'cand', title: 'Ready to connect',
-          hint: 'AurumOS is already running on these. On that PC pick <b>Client Node</b> ' +
-                'at Step 2 of setup and enter <b>' + me + '</b>.' },
+          hint: 'AurumOS is already running on these. On that PC pick the <b>Client</b> tab ' +
+                'at Step 1 of setup and enter <b>' + me + '</b>.' },
         { kind: 'pc',      cls: 'cand', title: 'Can be connected',
-          hint: 'Windows PCs with no AurumOS yet. Install it there, pick <b>Client Node</b>, ' +
+          hint: 'Windows PCs with no AurumOS yet. Install it there, pick the <b>Client</b> tab, ' +
                 'and enter <b>' + me + '</b>.' },
         { kind: 'device',  cls: '',     title: 'Other devices',
           hint: 'Phones, printers and routers. Not something a till runs on.' }
@@ -1000,7 +1000,7 @@ function terminalForDevice(d) {
 // (Connect / Disconnect now live directly on each row as buttons.)
 
 // ── Connect dialog for a discovered PC ───────────────────────────────
-// The join itself always happens on the other PC (it picks Client Node and
+// The join itself always happens on the other PC (it picks the Client tab and
 // enters this PC's address), because only that PC can enrol itself. So
 // Connect guides that step, then watches the terminal list: the moment the
 // other PC joins, the dialog flips to "Set up now" and finishes the job
@@ -1022,8 +1022,8 @@ function openConnect(d) {
     document.getElementById('connect-steps').innerHTML =
         'On <b>' + h(d.hostname || d.ip || 'that PC') + '</b>: ' +
         (d.kind === 'aurum'
-            ? 'open AurumOS, pick <b>Client Node</b> at Step 2 of setup and enter <b>' + h(myIp) + '</b>, then press Check.'
-            : 'install AurumOS, pick <b>Client Node</b> at Step 2 of setup and enter <b>' + h(myIp) + '</b>, then press Check.') +
+            ? 'open AurumOS, pick the <b>Client</b> tab at Step 1 of setup and enter <b>' + h(myIp) + '</b>, then press Check.'
+            : 'install AurumOS, pick the <b>Client</b> tab at Step 1 of setup and enter <b>' + h(myIp) + '</b>, then press Check.') +
         ' It will appear under Computers on this shop straight away.' +
         (!freeSeats
             ? '<br><br><b>No seats free:</b> your plan connects ' + STATE.licensed +
@@ -1114,7 +1114,7 @@ function checkConnectTarget() {
         } else {
             msg.className = 'msg err show';
             msg.innerText = (res && res.message) ||
-                'That PC did not answer as a main PC. If AurumOS is open there as a Client Node waiting to join, that is expected — just follow the steps above.';
+                'That PC did not answer as a main PC. If AurumOS is open there on the Client tab waiting to join, that is expected — just follow the steps above.';
         }
     }).catch(function () {
         btn.disabled = false;

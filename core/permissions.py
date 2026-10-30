@@ -68,7 +68,9 @@ OWNER_ONLY = frozenset([
     'admin_lockout_reset', 'verify_unlock_key', 'verify_web_unlock_key',
     'bastion_unlock', 'generate_protected_pdf', 'get_machine_id',
     # Configuration
-    'save_setup', 'update_settings', 'set_metal_rates', 'set_default_printer',
+    'save_setup', 'update_settings', 'get_alert_settings',
+    'save_alert_settings', 'send_test_alert_email',
+    'set_metal_rates', 'set_default_printer',
     'save_network_config', 'change_db_location', 'reset_db_location',
     'ai_save_config',
     # Destructive
@@ -167,14 +169,24 @@ BUNDLES = {
     'hallmark': {
         'label': 'Hallmarking',
         'pages': {
-            'wholesale': ['hallmark.html'],
-            'retail':    ['hallmark.html'],
+            # hm_centre.html is the per-centre detail page opened with ?id=
+            # from the hallmark panel; hm_pending.html is the waiting wall
+            # behind the panel's View all. Both ride the hallmark bundle so
+            # staff holding it are not bounced off by the sidebar guard.
+            # Neither takes a top-level nav entry: the centre needs ?id=,
+            # the wall is reached from the panel — see sidebar.js PAGE_META.
+            # (hm_register.html removed with the register page itself.)
+            'wholesale': ['hallmark.html', 'hm_centre.html',
+                            'hm_pending.html'],
+            'retail':    ['hallmark.html', 'hm_centre.html',
+                            'hm_pending.html'],
         },
         'methods': frozenset([
             'hallmark_dashboard', 'hallmark_quote', 'hallmark_save_centre',
             'hallmark_set_registration', 'hallmark_check_pieces',
             'hallmark_create_lot', 'hallmark_lot', 'hallmark_receive',
             'hallmark_cancel_lot', 'hallmark_find', 'hm_share_url',
+            'hm_centre_pin_history', 'hm_centre_pin_forget',
             'hm_centre_overview', 'hm_centre_detail', 'hm_save_centre_full',
             'hm_email_settings_get', 'hm_email_settings_save',
             'hm_portal_base_get', 'hm_portal_base_save',
@@ -196,14 +208,14 @@ BUNDLES = {
             'crm_schemes', 'crm_save_scheme', 'crm_enrol', 'crm_enrolments',
             'crm_add_payment', 'crm_scheme_schedule',
             'crm_loyalty_balance', 'crm_award_loyalty', 'crm_redeem_loyalty',
-            'update_new_client',
+            'update_new_client', 'add_new_client',
             'print_customer_credit', 'print_customer_purchases',
             'photo_pick', 'photo_remove', 'photo_path', 'photo_to_clipboard',
             'photo_reveal', 'wa_send_item', 'items_with_photos',
             'wa_message', 'wa_wishes_today', 'wa_campaign', 'wa_mark_sent',
             'wa_opt_out', 'wa_history', 'wa_open',
             'get_client_list', 'get_client_balances', 'get_customer_purchases',
-            'get_ledger_statement',
+            'get_ledger_statement', 'get_stock_ledger',
         ]),
     },
     'inventory': {
@@ -216,15 +228,16 @@ BUNDLES = {
             # Create Item without it left staff holding a permission for a
             # screen they had no route to.
             'retail':    ['inventory.html', 'stock_ledger.html',
-                          'create_item.html', 'sold_tags.html',
-                          'bin_viewer.html'],
+                          'uchak_stock_entry.html', 'create_item.html',
+                          'sold_tags.html', 'bin_viewer.html'],
         },
         'methods': frozenset([
             'add_stock_entry', 'add_uchak_stock_entry', 'update_stock_entry',
             'get_stock_ledger', 'get_opening_stock', 'get_stock_ledger_by_date',
             'get_ledger_dates', 'get_product_by_tag', 'get_pos_stock',
             'get_item_by_tag', 'get_sold_tags',
-            'get_inventory_stats', 'get_items_by_bin', 'get_untagged_items',
+            'get_inventory_stats', 'get_items_by_bin',             'get_untagged_items',
+            'get_uchak_stock',
             'get_low_stock_items', 'get_low_stock_uchak_items',
             'get_out_of_stock_items', 'get_velocity_products',
             'get_weight_stock_it_codes', 'get_touch_ledger_details',
@@ -235,6 +248,10 @@ BUNDLES = {
             'get_touch_groups', 'add_product_master', 'get_products',
             'validate_touch_value', 'get_uchak_price_by_code',
             'get_uchak_item_details',
+            # Uchak inward register. The entry screen lives in this bundle,
+            # so its three calls must be callable from it in both modes.
+            'get_next_uchak_inward_vch_id',
+            'get_uchak_inward_voucher_details', 'save_uchak_inward_batch',
             'print_tag', 'print_tag_local', 'print_tag_network',
             'print_multiple_tags',
             'get_tag_preview', 'get_available_printers', 'get_printers',

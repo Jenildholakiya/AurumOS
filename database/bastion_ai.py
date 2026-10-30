@@ -57,6 +57,58 @@ SEV_MEDIUM   = 'MEDIUM'
 SEV_HIGH     = 'HIGH'
 SEV_CRITICAL = 'CRITICAL'
 
+_SEV_RANK = {SEV_LOW: 0, SEV_MEDIUM: 1, SEV_HIGH: 2, SEV_CRITICAL: 3}
+
+
+def sev_rank(sev):
+    """LOW 0 … CRITICAL 3. Unknown reads as MEDIUM, never as silent."""
+    return _SEV_RANK.get(str(sev or '').strip().upper(), 1)
+
+
+def in_quiet_hours(quiet, now=None):
+    """True while the shop asked for no mail. Accepts '22-7' and
+    '22:00-07:00'; blank or unparseable means no quiet hours."""
+    try:
+        import re as _re
+        from datetime import datetime as _dt
+        parts = _re.findall(r'(\d{1,2})(?::(\d{2}))?', str(quiet or ''))
+        if len(parts) < 2:
+            return False
+        start = int(parts[0][0]) % 24
+        end = int(parts[1][0]) % 24
+        if start == end:
+            return False
+        hour = (now or _dt.now()).hour
+        if start < end:
+            return start <= hour < end
+        return hour >= start or hour < end
+    except Exception:
+        return False
+
+
+def alert_prefs(db):
+    """The owner's alert settings from the Settings card, with sane
+    defaults. Env-based bastion mail predates the card; the card wins
+    where it speaks, the env stays as fallback. Never raises."""
+    prefs = {'owner_alert_email': '', 'alert_min_severity': SEV_MEDIUM,
+             'quiet_hours': '', 'conduct_watch_enabled': '1'}
+    try:
+        get = getattr(db, 'get_config', None)
+        if not callable(get):
+            return prefs
+        email = str(get('owner_alert_email', '') or '').strip()
+        if '@' in email:
+            prefs['owner_alert_email'] = email
+        sev = str(get('alert_min_severity', '') or '').strip().upper()
+        if sev in _SEV_RANK:
+            prefs['alert_min_severity'] = sev
+        prefs['quiet_hours'] = str(get('quiet_hours', '') or '').strip()
+        prefs['conduct_watch_enabled'] = \
+            '0' if str(get('conduct_watch_enabled', '1')).strip() == '0' else '1'
+    except Exception:
+        pass
+    return prefs
+
 
 def _log(msg):
     try:
@@ -660,6 +712,7 @@ class BastionAI:
                         pass
                     self._queue_alert(
                         subject = 'AurumOS BASTION: DB Corruption — Auto-Restored',
+                        severity = SEV_CRITICAL,
                         body    = (
                             f"CRITICAL: Database integrity check failed.\n"
                             f"BASTION AI automatically restored from backup.\n"
@@ -793,16 +846,29 @@ class BastionAI:
             self.push_to_health_dashboard()
 
         try:
+            prefs = alert_prefs(self.db)
+            if in_quiet_hours(prefs['quiet_hours']):
+                _log("alert sender paused for quiet hours — queue keeps growing")
+                return
+            min_rank = sev_rank(prefs['alert_min_severity'])
             with self.db._get_connection() as conn:
-                # Older DBs may not have the 'recipient' column yet — select defensively.
+                # Older DBs may lack the newer columns — select defensively.
                 try:
                     pending = conn.execute(
-                        "SELECT id, subject, body, html_body, recipient FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
+                        "SELECT id, subject, body, html_body, recipient, severity "
+                        "FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 20"
                     ).fetchall()
                 except Exception:
-                    pending = conn.execute(
-                        "SELECT id, subject, body, html_body FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 5"
-                    ).fetchall()
+                    try:
+                        pending = conn.execute(
+                            "SELECT id, subject, body, html_body, recipient "
+                            "FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 20"
+                        ).fetchall()
+                    except Exception:
+                        pending = conn.execute(
+                            "SELECT id, subject, body, html_body "
+                            "FROM bastion_alerts WHERE sent=0 ORDER BY id ASC LIMIT 20"
+                        ).fetchall()
 
             if not pending:
                 return
@@ -818,6 +884,14 @@ class BastionAI:
                     recipient = alert['recipient']
                 except (IndexError, KeyError):
                     recipient = None
+                try:
+                    sev = alert['severity']
+                except (IndexError, KeyError):
+                    sev = SEV_MEDIUM
+                if sev_rank(sev) < min_rank:
+                    continue  # below the owner's threshold: stays queued
+                if not recipient and prefs['owner_alert_email']:
+                    recipient = prefs['owner_alert_email']
                 success = self._send_email(alert['subject'], alert['body'],
                                            alert['html_body'] or None, recipient)
                 if success:
@@ -951,6 +1025,7 @@ class BastionAI:
             )
             self._queue_alert(
                 subject = 'AurumOS BASTION: Restricted Mode Engaged',
+                severity = SEV_HIGH,
                 body    = (
                     f"Threat: {attack_type}\nEscalation level: {level}\n\n"
                     f"BASTION entered RESTRICTED mode — sensitive actions are "
@@ -971,6 +1046,7 @@ class BastionAI:
         )
         self._queue_alert(
             subject = 'AurumOS BASTION: Suspicious Activity (Watch)',
+            severity = SEV_MEDIUM,
             body    = (
                 f"Threat: {attack_type}\nEscalation level: {level}\n\n"
                 f"No auto-suspend (single signal / low confidence).\n"
@@ -1164,24 +1240,48 @@ class BastionAI:
 
             self._queue_alert(
                 subject   = "AurumOS BASTION ALERT: Account Auto-Suspended",
+                severity  = SEV_CRITICAL,
                 body      = plain_body,
                 html_body = html_body
             )
         except Exception as e:
             _err(f"auto_suspend: {e}")
 
-    def _queue_alert(self, subject, body, html_body=''):
-        """Save alert to DB — sent when internet available."""
+    def _queue_alert(self, subject, body, html_body='', severity=SEV_MEDIUM):
+        """Save alert to DB — sent when internet available.
+
+        severity rides along so the owner's threshold means something.
+        With monitoring switched off, only HIGH and CRITICAL break
+        through; corruption and suspension always qualify, so switching
+        monitoring off can never silence those.
+        """
         # Grace period: skip all alerts for first 2 minutes after startup
         elapsed = time.time() - self._startup_time
         if elapsed < self._grace_period:
             _log(f'Skipping alert — grace period ({int(elapsed)}s/{self._grace_period}s)')
             return
+        severity = str(severity or SEV_MEDIUM).strip().upper()
+        if severity not in _SEV_RANK:
+            severity = SEV_MEDIUM
+        try:
+            prefs = alert_prefs(self.db)
+            if prefs['conduct_watch_enabled'] == '0' \
+                    and sev_rank(severity) < sev_rank(SEV_HIGH):
+                _log(f"Alert held — monitoring off ({subject[:40]})")
+                return
+        except Exception:
+            pass
         try:
             with self.db._get_connection() as conn:
+                try:
+                    conn.execute("ALTER TABLE bastion_alerts "
+                                 "ADD COLUMN severity TEXT DEFAULT 'MEDIUM'")
+                except Exception:
+                    pass
                 conn.execute(
-                    "INSERT INTO bastion_alerts (subject, body, html_body) VALUES (?,?,?)",
-                    (subject, body, html_body)
+                    "INSERT INTO bastion_alerts (subject, body, html_body, severity) "
+                    "VALUES (?,?,?,?)",
+                    (subject, body, html_body, severity)
                 )
                 conn.commit()
             _log(f"Alert queued: {subject[:40]}")
@@ -1198,13 +1298,19 @@ class BastionAI:
         if not ALERT_EMAIL_PASSWORD or 'xxxx' in ALERT_EMAIL_PASSWORD:
             _err("!!! EMAIL NOT SENT -- set AURUM_ALERT_EMAIL_PASSWORD !!!")
             return False
-        if not ALERT_EMAIL_TO or '@' not in str(ALERT_EMAIL_TO):
-            _err("!!! EMAIL NOT SENT -- set AURUM_ALERT_EMAIL_TO !!!")
-            return False
-        # Choose recipient: per-alert owner email if valid, else the default.
+        # Recipient: the call wins, then the card's owner email, then env.
         to_addr = str(recipient).strip() if recipient else ''
         if '@' not in to_addr:
+            try:
+                to_addr = str(alert_prefs(self.db).get('owner_alert_email') or '')
+            except Exception:
+                to_addr = ''
+        if '@' not in to_addr:
             to_addr = ALERT_EMAIL_TO
+        if '@' not in str(to_addr):
+            _err("!!! EMAIL NOT SENT -- no owner alert email (Settings card) "
+                 "and no AURUM_ALERT_EMAIL_TO !!!")
+            return False
         try:
             pw = str(ALERT_EMAIL_PASSWORD).replace(' ', '')  # App Passwords often pasted with spaces
 
@@ -1212,6 +1318,8 @@ class BastionAI:
             msg['From']    = ALERT_EMAIL_FROM
             msg['To']      = to_addr
             msg['Subject'] = subject
+            # Maker attribution on every alert email.
+            body = str(body or '') + '\n\n— AurumOS by Pentarch'
             msg.attach(MIMEText(body, 'plain'))
             if html_body:
                 msg.attach(MIMEText(html_body, 'html'))

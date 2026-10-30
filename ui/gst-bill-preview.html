@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST Bill Preview - ANILBHAI (KALAVAD')</title>
+    <style>
+        @page { size: A4; margin: 0; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: Arial, 'Noto Sans Gujarati', sans-serif;
+            background: #e5e7eb;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 14px; gap: 10px; min-height: 100vh;
+        }
+
+        .slip-wrap {
+            width: 780px; max-width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+            border-radius: 4px;
+        }
+
+        .slip { padding: 0; background: #fff; }
+
+        .shop-header {
+            display: flex; align-items: center; gap: 16px;
+            padding: 20px 28px 14px;
+            border-bottom: 2.5px solid #000;
+        }
+        .shop-logo {
+            width: 58px; height: 58px; object-fit: contain;
+            border-radius: 6px; flex-shrink: 0;
+            background: #ddd;
+        }
+        .shop-brand { flex: 1; display: flex; align-items: center; gap: 20px; }
+        .shop-brand-left { flex: 1; }
+        .shop-name {
+            font-size: 18pt; font-weight: 800; color: #000;
+            letter-spacing: 0.5px; line-height: 1.1;
+            font-family: Arial, 'Noto Sans Gujarati', sans-serif;
+        }
+        .shop-sub {
+            font-size: 8.5pt; color: #444; margin-top: 2px;
+            font-weight: 500; letter-spacing: 0.3px;
+        }
+
+        .aurumos-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 28px;
+            background: #000;
+            color: #fff;
+            font-size: 7.5pt;
+            letter-spacing: 0.3px;
+        }
+
+        .shop-contact {
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+            gap: 6px 12px;
+            padding: 7px 28px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+            font-size: 8pt; color: #444;
+        }
+        .sc-item { white-space: nowrap; display: inline-flex; align-items: center; }
+        .contact-icon {
+            display: inline-block; margin-right: 5px; color: #122238;
+            font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700;
+        }
+        .sc-val { font-weight: 600; color: #222; letter-spacing: 0.3px; }
+        .sc-sep { color: #bbb; font-weight: 700; font-size: 9pt; }
+
+        .shop-gstbar {
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+            gap: 6px 10px;
+            padding: 7px 28px;
+            background: #fff;
+            border-bottom: 1.5px solid #000;
+            font-size: 8pt;
+        }
+        .gst-chip, .state-chip, .pan-chip {
+            display: inline-block; white-space: nowrap;
+            border: 1px solid #000; border-radius: 20px;
+            padding: 2px 12px;
+            background: #f5f5f5; color: #000;
+            font-weight: 700; letter-spacing: 0.6px;
+        }
+
+        .invoice-banner {
+            text-align: center;
+            padding: 5px 28px;
+            font-size: 10pt; font-weight: 800; color: #000;
+            letter-spacing: 2px; text-transform: uppercase;
+            border-bottom: 1.5px solid #000;
+            background: #f5f5f5;
+        }
+
+        .invoice-meta {
+            display: flex; justify-content: space-between;
+            padding: 12px 28px;
+            border-bottom: 1px solid #ddd;
+            font-size: 9pt; color: #222;
+        }
+        .meta-left div, .meta-right div { margin-bottom: 3px; }
+        .meta-left { font-weight: 500; }
+        .meta-right { text-align: right; }
+        .meta-right div { color: #444; }
+        .inv-label { font-weight: 700; color: #000; }
+        .inv-vch { font-size: 11pt; font-weight: 800; color: #000; }
+        .inv-status {
+            display: inline-block; padding: 1px 8px; border-radius: 3px;
+            font-size: 7.5pt; font-weight: 700; letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .inv-status.paid { background: #f0f0f0; color: #000; border: 1px solid #ccc; }
+
+        .bt {
+            width: 100%; border-collapse: collapse; table-layout: fixed;
+            border: 1.5px solid #000;
+            margin: 12px 28px 0;
+        }
+        .bt thead th {
+            height: 30px; padding: 0 4px; font-size: 8pt; font-weight: 700; color: #000;
+            text-align: center !important; background: #f0f0f0; vertical-align: middle;
+            white-space: nowrap; border-bottom: 1.5px solid #000; border-right: 1px solid #ccc;
+        }
+        .bt thead th:last-child { border-right: none; }
+        .bt td {
+            height: 22px; padding: 2px 4px; font-size: 9pt; font-weight: 500; color: #111;
+            text-align: center !important; vertical-align: middle;
+            border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
+        }
+        .bt td:last-child { border-right: none; }
+        .cb { font-weight: 400 !important; }
+
+        .slip-footer-block {
+            margin: 12px 28px 28px;
+            border-top: 1.5px solid #000;
+        }
+        .ft-summary { width: 100%; border-collapse: collapse; }
+        .ft-summary td {
+            padding: 3px 0; font-size: 9pt; color: #222;
+        }
+        .ft-summary td:first-child { color: #555; }
+        .ft-summary td:last-child {
+            text-align: right; font-weight: 700;
+            width: 130px;
+        }
+        .ft-summary .ft-sub td {
+            font-size: 8pt; color: #888; padding-left: 20px;
+        }
+        .ft-summary .ft-subtotal td {
+            font-size: 8pt; font-weight: 700; letter-spacing: 1.5px; color: #555;
+            padding-top: 6px;
+        }
+        .ft-summary .ft-adj td { color: #555; }
+        .ft-summary .ft-adj td:last-child { font-weight: 600; }
+        .ft-summary .ft-total td {
+            font-size: 12pt; font-weight: 800; color: #000;
+            border-top: 3px double #000;
+            padding: 6px 0 4px;
+        }
+        .ft-summary .ft-total td:first-child {
+            font-size: 9pt; letter-spacing: 2px; vertical-align: middle;
+        }
+        .ft-summary .ft-payment td { padding-top: 6px; }
+        .pay-pill {
+            display: inline-block;
+            border: 1px solid #000; border-radius: 4px;
+            padding: 1px 12px;
+            font-size: 8pt; font-weight: 700; letter-spacing: 1.5px;
+        }
+
+        .ft-terms {
+            border-top: 1px solid #ccc;
+            padding: 5px 0;
+            font-size: 7pt; color: #666;
+            line-height: 1.5;
+        }
+        .ft-terms-title {
+            font-weight: 700; color: #000; font-size: 7.5pt;
+            margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .ft-terms-list { list-style: none; padding: 0; }
+        .ft-terms-list li { margin-bottom: 1px; }
+        .ft-terms-list li::before { content: "\2022"; margin-right: 6px; color: #999; }
+
+        .ft-signature {
+            display: flex;
+            border-top: 1px solid #ccc;
+        }
+        .ft-sig-box {
+            flex: 1; text-align: center; padding: 10px 0;
+        }
+        .ft-sig-box:first-child { border-right: 1px solid #ddd; }
+        .ft-sig-line {
+            border-top: 1px solid #000;
+            margin-top: 28px;
+            padding-top: 4px;
+            font-size: 7.5pt; font-weight: 600; color: #000;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        .ft-thanks {
+            padding: 8px 0;
+            text-align: center;
+        }
+        .ft-thanks-text {
+            font-size: 9pt; color: #222; font-weight: 500; margin-bottom: 3px;
+        }
+
+        .print-bar {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .print-btn {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .print-btn:hover { background: #333; }
+
+        @media print {
+            body { padding: 0; background: #fff; display: block; }
+            .slip-wrap { box-shadow: none; border-radius: 0; width: 100%; }
+            .print-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="slip-wrap">
+        <div class="slip">
+
+            <!-- SHOP HEADER -->
+            <div class="shop-header">
+                <div class="shop-logo"></div>
+                <div class="shop-brand">
+                    <div class="shop-brand-left">
+                        <div class="shop-name">ANILBHAI (KALAVAD ')</div>
+                        <div class="shop-sub">Kalavad, Gujarat - 361160</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GST BAR -->
+            <div class="shop-gstbar">
+                <span class="sc-item gst-chip">GSTIN: 24ABCDE1234F1Z5</span>
+                <span class="sc-sep">&middot;</span>
+                <span class="sc-item state-chip">State: Gujarat (24)</span>
+                <span class="sc-sep">&middot;</span>
+                <span class="sc-item pan-chip">PAN: ABCDE1234F</span>
+            </div>
+
+            <!-- TAX INVOICE BANNER -->
+            <div class="invoice-banner">Tax Invoice &middot; HSN 7113</div>
+
+            <!-- INVOICE META -->
+            <div class="invoice-meta">
+                <div class="meta-left">
+                    <div><span class="inv-label">Invoice # </span><span class="inv-vch">001</span></div>
+                    <div><span class="inv-label">Customer: </span>Walk-in Customer</div>
+                    <div><span class="inv-label">Phone: </span>+91 98765 43210</div>
+                </div>
+                <div class="meta-right">
+                    <div>16:57:20 PM &nbsp; (2026-10-10)</div>
+                    <div><span class="inv-status paid">Paid</span></div>
+                </div>
+            </div>
+
+            <!-- ITEM TABLE -->
+            <table class="bt">
+                <colgroup>
+                    <col style="width:28px;"><col style="width:140px;"><col style="width:60px;"><col style="width:55px;"><col style="width:45px;"><col style="width:60px;"><col style="width:32px;"><col style="width:70px;"><col style="width:85px;">
+                </colgroup>
+                <thead><tr>
+                    <th>#</th><th>Description</th><th>Weight (g)</th><th>Fine (g)</th><th>Touch</th><th>Rate/10g</th><th>Qty</th><th>Making</th><th>Amount</th>
+                </tr></thead>
+                <tbody>
+                    <tr>
+                        <td class="cb">1</td>
+                        <td class="cb" style="text-align:left !important;padding-left:8px;">22K Gold Ring</td>
+                        <td class="cb">4.500</td>
+                        <td class="cb">4.410</td>
+                        <td class="cb">22.0</td>
+                        <td class="cb">6,500</td>
+                        <td class="cb">1</td>
+                        <td class="cb">&#8377;300.00</td>
+                        <td class="cb" style="font-weight:700;">&#8377;29,550.00</td>
+                    </tr>
+                    <tr>
+                        <td class="cb">2</td>
+                        <td class="cb" style="text-align:left !important;padding-left:8px;">22K Gold Chain</td>
+                        <td class="cb">10.200</td>
+                        <td class="cb">9.996</td>
+                        <td class="cb">22.0</td>
+                        <td class="cb">6,500</td>
+                        <td class="cb">1</td>
+                        <td class="cb">&#8377;800.00</td>
+                        <td class="cb" style="font-weight:700;">&#8377;65,774.00</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- FOOTER BLOCK -->
+            <div class="slip-footer-block">
+                <table class="ft-summary">
+                    <tr class="ft-subtotal"><td>TOTAL</td><td>&#8377;95,324.00</td></tr>
+                    <tr><td>CGST @ 1.5%</td><td>+&#8377;1,429.86</td></tr>
+                    <tr><td>SGST @ 1.5%</td><td>+&#8377;1,429.86</td></tr>
+                    <tr class="ft-total"><td>GRAND TOTAL</td><td>&#8377;98,183.72</td></tr>
+                    <tr class="ft-payment"><td>PAYMENT METHOD</td><td><span class="pay-pill">CASH</span></td></tr>
+                </table>
+
+                <div class="ft-terms">
+                    <div class="ft-terms-title">Terms &amp; Conditions</div>
+                    <ul class="ft-terms-list">
+                        <li>Goods once sold will not be taken back or exchanged.</li>
+                        <li>All disputes are subject to local jurisdiction only.</li>
+                        <li>Please check the items at the time of purchase.</li>
+                        <li>This is a computer-generated invoice.</li>
+                        <li>E. &amp; O.E (Errors and Omissions Excepted).</li>
+                    </ul>
+                </div>
+
+                <div class="ft-signature">
+                    <div class="ft-sig-box"><div class="ft-sig-line">Customer Signature</div></div>
+                    <div class="ft-sig-box"><div class="ft-sig-line">ANILBHAI (KALAVAD ')</div></div>
+                </div>
+
+                <div class="ft-thanks">
+                    <div class="ft-thanks-text">Thank you for shopping with us!</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="print-bar">
+        <button class="print-btn" onclick="window.print()">Print GST Bill</button>
+    </div>
+
+</body>
+</html>
