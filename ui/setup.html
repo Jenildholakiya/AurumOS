@@ -144,6 +144,18 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .provision-title{font-size:0.82rem;font-weight:700;color:var(--ink);transition:color 0.2s;}
 .provision-card:hover .provision-title{color:var(--blue);}
 .provision-card.selected .provision-title{color:var(--blue);}
+
+/* ── HOST / CLIENT TABS (step 1) ── */
+.mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--light);border:1px solid var(--rule);border-radius:10px;margin-bottom:22px;}
+.mode-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 12px;border:0;border-radius:7px;background:transparent;font-family:var(--sans);cursor:pointer;transition:background 0.2s ease,box-shadow 0.2s ease;}
+.mode-tab-title{font-size:0.82rem;font-weight:700;color:var(--ink3);transition:color 0.2s;}
+.mode-tab-sub{font-size:0.62rem;color:var(--muted2);}
+.mode-tab:hover .mode-tab-title{color:var(--blue);}
+.mode-tab.active{background:var(--white);box-shadow:var(--sh2);}
+.mode-tab.active .mode-tab-title{color:var(--blue);}
+.mode-tab:focus-visible{outline:2px solid var(--blue2);outline-offset:1px;}
+.mode-pane{display:none;animation:panelIn 0.3s ease;}
+.mode-pane.active{display:block;}
 .provision-desc{font-size:0.66rem;color:var(--muted);line-height:1.5;transition:color 0.2s;}
 .provision-card:hover .provision-desc{color:var(--ink3);}
 .provision-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted2);display:flex;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);flex-shrink:0;}
@@ -278,6 +290,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
     <div class="sb-logo"><span>Au</span></div>
     <div class="sb-brand">Aurum<em>OS</em></div>
     <div class="sb-tag">Setup Wizard</div>
+    <div class="sb-tag" style="margin-top:2px;opacity:0.8;">by Pentarch</div>
 </div>
 
 <main>
@@ -303,7 +316,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
     </div>
 
     <!-- STEP TRACK -->
-    <div class="step-track">
+    <div class="step-track" id="step-track">
         <div class="step-item active" id="si-1">
             <div class="step-num" id="sn-1">1</div>
             <div class="step-label">License</div>
@@ -311,7 +324,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
         <div class="step-line" id="sl-1"></div>
         <div class="step-item" id="si-2">
             <div class="step-num" id="sn-2">2</div>
-            <div class="step-label">Topology</div>
+            <div class="step-label">Business</div>
         </div>
         <div class="step-line" id="sl-2"></div>
         <div class="step-item" id="si-3">
@@ -322,6 +335,21 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 
     <!-- ══ STEP 1 — LICENSE ══ -->
     <div class="step-panel active" id="panel-1">
+        <div class="mode-tabs" role="tablist" aria-label="This computer is">
+            <button type="button" class="mode-tab active" id="tab-host" role="tab" aria-selected="true"
+                    aria-controls="host-pane" onclick="setSetupMode('local')">
+                <span class="mode-tab-title">Host</span>
+                <span class="mode-tab-sub">Main PC that holds the shop data</span>
+            </button>
+            <button type="button" class="mode-tab" id="tab-client" role="tab" aria-selected="false"
+                    aria-controls="client-pane" onclick="setSetupMode('network')">
+                <span class="mode-tab-title">Client</span>
+                <span class="mode-tab-sub">Staff PC that connects to the host</span>
+            </button>
+        </div>
+
+        <!-- HOST: activate the licence, then business details and admin -->
+        <div class="mode-pane active" id="host-pane" role="tabpanel" aria-labelledby="tab-host">
         <div class="panel-head">
             <div class="panel-title">Activate <em>License</em></div>
             <div class="panel-sub">Enter the key provided after purchase. BASTION™ verifies every installation against our secure server.</div>
@@ -362,41 +390,43 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
         <p style="font-size:0.63rem;color:var(--muted2);text-align:center;line-height:1.5;">
             Don't have a key? Contact your AurumOS provider to get one.
         </p>
+        </div>
+
+        <!-- CLIENT: no licence here, the host's licence covers this PC -->
+        <div class="mode-pane" id="client-pane" role="tabpanel" aria-labelledby="tab-client">
+            <div class="panel-head">
+                <div class="panel-title">Connect to <em>Host PC</em></div>
+                <div class="panel-sub">Enter the IP address of the main PC running AurumOS. Its address is shown on that PC under Network.</div>
+            </div>
+
+            <div class="fg">
+                <label>Host PC Address (IP) <span class="req">*</span></label>
+                <div style="display:flex;gap:8px;align-items:stretch;">
+                    <input type="text" id="inp-server-ip" placeholder="e.g. 192.168.1.15" style="flex:1;min-width:0;"
+                           autocomplete="off" inputmode="decimal"
+                           oninput="resetHostCheck()" onkeydown="if(event.key==='Enter')verifyHostAddress()">
+                    <button type="button" class="btn btn-outline" id="btn-verify-host"
+                            style="flex:0 0 auto;white-space:nowrap;" onclick="verifyHostAddress()">Check</button>
+                </div>
+                <div class="status-box" id="host-status" style="margin-top:12px;"></div>
+            </div>
+
+            <button class="btn btn-blue" id="btn-connect" onclick="connectClient()" style="width:100%;">
+                &#128279; Connect this Computer
+            </button>
+
+            <div class="divider"></div>
+            <p style="font-size:0.63rem;color:var(--muted2);text-align:center;line-height:1.5;">
+                Both PCs must be on the same network, and AurumOS must be open on the host.
+            </p>
+        </div>
     </div>
 
-    <!-- ══ STEP 2 — PROVISION ══ -->
+    <!-- ══ STEP 2 — BUSINESS (host only) ══ -->
     <div class="step-panel" id="panel-2">
         <div class="panel-head">
-            <div class="panel-title">System <em>Topology Setup</em></div>
-            <div class="panel-sub">Select the network identity for this computer node within your retail showroom configuration.</div>
-        </div>
-
-        <div class="provision-grid">
-            <div class="provision-card selected" id="prov-master" onclick="mutateProvisionMode('local')">
-                <div class="provision-head">
-                    <span class="provision-title">Host Core</span>
-                    <div class="provision-radio"></div>
-                </div>
-                <p class="provision-desc">Acts as the central authority. Hosts the primary SQLite database and broadcasts live network telemetry updates.</p>
-            </div>
-            <div class="provision-card" id="prov-satellite" onclick="mutateProvisionMode('network')">
-                <div class="provision-head">
-                    <span class="provision-title">Client Node</span>
-                    <div class="provision-radio"></div>
-                </div>
-                <p class="provision-desc">Intercepts direct database queries. Reads and records live metrics directly off your shop's Host Core IP.</p>
-            </div>
-        </div>
-
-        <div class="fg" id="network-ip-group" style="display: none; animation: panelIn 0.3s ease;">
-            <label>Main PC Address (IP) <span class="req">*</span></label>
-            <div style="display:flex;gap:8px;align-items:stretch;">
-                <input type="text" id="inp-server-ip" placeholder="e.g. 192.168.1.15" style="flex:1;min-width:0;"
-                       oninput="resetHostCheck()" onkeydown="if(event.key==='Enter')verifyHostAddress()">
-                <button type="button" class="btn btn-outline" id="btn-verify-host"
-                        style="flex:0 0 auto;white-space:nowrap;" onclick="verifyHostAddress()">Check</button>
-            </div>
-            <div class="status-box" id="host-status" style="margin-top:12px;"></div>
+            <div class="panel-title">Business <em>Details</em></div>
+            <div class="panel-sub">These appear on your bills and reports. You can change them later in Settings.</div>
         </div>
 
         <div id="local-details-container">
@@ -546,12 +576,8 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
             <div style="font-size:0.57rem;font-weight:600;text-transform:uppercase;letter-spacing:0.9px;color:var(--muted);margin-bottom:10px;">Setup Summary</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div>
-                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Topology Node Role</div>
-                    <div style="font-size:0.78rem;font-weight:600;color:var(--blue);" id="sum-topology">Host Core</div>
-                </div>
-                <div id="sum-block-address" style="display:none;">
-                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Target Host IP</div>
-                    <div style="font-size:0.78rem;font-weight:600;color:var(--ink);" id="sum-ip">127.0.0.1</div>
+                    <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">This PC</div>
+                    <div style="font-size:0.78rem;font-weight:600;color:var(--blue);">Host (Main PC)</div>
                 </div>
                 <div class="local-sum-field">
                     <div style="font-size:0.57rem;color:var(--muted2);margin-bottom:1px;">Business</div>
@@ -617,35 +643,38 @@ var verifiedBiz   = '';
 var verifiedOwner = '';
 var currentStep   = 1;
 var _fetchedData  = {};
+// 'local' = Host (main PC: licence, business details, admin password).
+// 'network' = Client (staff PC: only the host's address, then join).
 var selectedProvisionMode = 'local';
 
-function mutateProvisionMode(mode) {
+function setSetupMode(mode) {
     selectedProvisionMode = mode;
-    var masterCard = document.getElementById('prov-master');
-    var satelliteCard = document.getElementById('prov-satellite');
-    var ipGroup = document.getElementById('network-ip-group');
-    var detailsContainer = document.getElementById('local-details-container');
+    var isHost = mode === 'local';
+    var tabHost = document.getElementById('tab-host');
+    var tabClient = document.getElementById('tab-client');
+    tabHost.classList.toggle('active', isHost);
+    tabClient.classList.toggle('active', !isHost);
+    tabHost.setAttribute('aria-selected', String(isHost));
+    tabClient.setAttribute('aria-selected', String(!isHost));
+    document.getElementById('host-pane').classList.toggle('active', isHost);
+    document.getElementById('client-pane').classList.toggle('active', !isHost);
+    // The three steps belong to the host; a client finishes on this screen.
+    document.getElementById('step-track').style.display = isHost ? '' : 'none';
+    document.getElementById('step-counter').innerText = isHost ? 'Step 1 of 3' : 'Client Setup';
 
-    if (mode === 'local') {
-        masterCard.classList.add('selected');
-        satelliteCard.classList.remove('selected');
-        ipGroup.style.display = 'none';
-        detailsContainer.style.display = 'block';
-    } else {
-        satelliteCard.classList.add('selected');
-        masterCard.classList.remove('selected');
-        ipGroup.style.display = 'block';
-        detailsContainer.style.display = 'none';
-        if (window.pywebview && window.pywebview.api && window.pywebview.api.fetch_live_network_nodes) {
-            window.pywebview.api.fetch_live_network_nodes().then(function(res) {
-                if (res && res.status === 'success' && res.nodes && res.nodes.length > 0) {
-                    var pendingNodes = res.nodes.filter(function(n) { return n.status === 'pending'; });
-                    if (pendingNodes.length > 0) {
-                        document.getElementById('inp-server-ip').value = pendingNodes[0].id;
-                    }
-                }
-            }).catch(function(){});
-        }
+    if (isHost) {
+        setTimeout(function () { document.getElementById('inp-key').focus(); }, 50);
+        return;
+    }
+    var ipInp = document.getElementById('inp-server-ip');
+    setTimeout(function () { ipInp.focus(); }, 50);
+    if (!ipInp.value && window.pywebview && window.pywebview.api && window.pywebview.api.fetch_live_network_nodes) {
+        window.pywebview.api.fetch_live_network_nodes().then(function(res) {
+            if (res && res.status === 'success' && res.nodes && res.nodes.length > 0) {
+                var pendingNodes = res.nodes.filter(function(n) { return n.status === 'pending'; });
+                if (pendingNodes.length > 0 && !ipInp.value) ipInp.value = pendingNodes[0].id;
+            }
+        }).catch(function(){});
     }
 }
 
@@ -679,6 +708,55 @@ function updateVerifyBtn() {
     var valid   = /^(AU|AR)-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
     document.getElementById('btn-verify').disabled = !(valid && checked);
 }
+
+// ── INPUT HEALTH LOG ─────────────────────────────────────────────
+// Self-report into the app log ([INPUT-DIAG] lines) so a "can't type"
+// report carries facts. Counts and lengths only — never the key itself,
+// never which key was pressed. Capped per page load; the bridge also
+// records which OS window holds the foreground at that moment.
+var _diagN = 0, _diagF = 0, _diagB = 0, _diagK = 0, _diagI = 0, _diagWb = 0, _diagWf = 0;
+function inputDiag(m) {
+    try {
+        if (_diagN >= 12) return;
+        _diagN++;
+        var a = window.pywebview && window.pywebview.api;
+        if (a && typeof a.log_input_diag === 'function') a.log_input_diag('setup-license', m);
+    } catch (e) {}
+}
+function inputDiagBoot() {
+    try {
+        var inp = document.getElementById('inp-key');
+        inputDiag('snapshot box=' + (inp ? 1 : 0)
+            + ' type=' + (inp ? inp.type : '-')
+            + ' dis=' + (inp ? !!inp.disabled : '-')
+            + ' ro=' + (inp ? !!inp.readOnly : '-')
+            + ' maxlen=' + (inp ? inp.maxLength : '-')
+            + ' hasFocus=' + document.hasFocus()
+            + ' active=' + ((document.activeElement && document.activeElement.id) || '-'));
+        if (!inp || inp.__diag) return;
+        inp.__diag = true;
+        inp.addEventListener('focus', function () { _diagF++; inputDiag('focus n=' + _diagF); });
+        inp.addEventListener('blur', function () { _diagB++; inputDiag('blur n=' + _diagB); });
+        inp.addEventListener('keydown', function () {
+            if (_diagK >= 3) return;
+            _diagK++; inputDiag('keydown n=' + _diagK);
+        });
+        inp.addEventListener('input', function () {
+            if (_diagI >= 5) return;
+            _diagI++; inputDiag('input n=' + _diagI + ' len=' + ((inp.value || '').length));
+        });
+        window.addEventListener('blur', function () {
+            if (_diagWb >= 4) return;
+            _diagWb++; inputDiag('win-blur n=' + _diagWb + ' vis=' + document.visibilityState);
+        });
+        window.addEventListener('focus', function () {
+            if (_diagWf >= 4) return;
+            _diagWf++; inputDiag('win-focus n=' + _diagWf + ' vis=' + document.visibilityState);
+        });
+    } catch (e) {}
+}
+if (window.apiReady) { window.apiReady(function () { setTimeout(inputDiagBoot, 400); }); }
+else { setTimeout(inputDiagBoot, 1500); }
 
 function clearKey() {
     var inp = document.getElementById('inp-key');
@@ -809,35 +887,13 @@ function goToStep(n) {
     });
     if (n === 2) { setTimeout(fetchBusinessDetailsFromServer, 200); }
     if (n === 3) {
-        var sumTopology = document.getElementById('sum-topology');
-        var sumBlockIp  = document.getElementById('sum-block-address');
-        var localFields = document.querySelectorAll('.local-sum-field');
-        var heading     = document.getElementById('admin-panel-heading');
-        var subheading  = document.getElementById('admin-panel-subheading');
-        var pwBlock     = document.getElementById('admin-password-block');
-        if (selectedProvisionMode === 'local') {
-            sumTopology.innerText = "Host Core";
-            sumBlockIp.style.display = 'none';
-            localFields.forEach(function(f) { f.style.display = 'block'; });
-            heading.innerHTML = "Admin <em>Account</em>";
-            subheading.innerText = "Create the owner login password. This is used to access AurumOS on this PC.";
-            pwBlock.style.display = 'block';
-            document.getElementById('sum-biz').innerText   = document.getElementById('inp-biz').value   || '—';
-            document.getElementById('sum-owner').innerText = document.getElementById('inp-owner').value || '—';
-            document.getElementById('sum-city').innerText  = document.getElementById('inp-city').value  || '—';
-        } else {
-            sumTopology.innerText = "Client Node";
-            sumBlockIp.style.display = 'block';
-            document.getElementById('sum-ip').innerText = document.getElementById('inp-server-ip').value || '127.0.0.1';
-            localFields.forEach(function(f) { f.style.display = 'none'; });
-            heading.innerHTML = "Provision <em>Terminal Node</em>";
-            subheading.innerText = "Confirm your network settings below to bond this machine into your showroom database.";
-            pwBlock.style.display = 'none';
-        }
+        document.getElementById('sum-biz').innerText   = document.getElementById('inp-biz').value   || '—';
+        document.getElementById('sum-owner').innerText = document.getElementById('inp-owner').value || '—';
+        document.getElementById('sum-city').innerText  = document.getElementById('inp-city').value  || '—';
         document.getElementById('sum-plan').innerText = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
     }
     setTimeout(function() {
-        var focus = {2: (selectedProvisionMode === 'local' ? 'inp-biz' : 'inp-server-ip'), 3:'inp-pw'};
+        var focus = {2: 'inp-biz', 3: 'inp-pw'};
         if (focus[n]) { var el = document.getElementById(focus[n]); if(el && !el.classList.contains('auto-filled')) el.focus(); }
     }, 200);
 }
@@ -890,20 +946,48 @@ async function verifyHostAddress() {
 }
 
 function goToStep3() {
-    if (selectedProvisionMode === 'local') {
-        var biz   = document.getElementById('inp-biz').value.trim();
-        var owner = document.getElementById('inp-owner').value.trim();
-        if (!biz)   { markErr('inp-biz');   shakeCard(); return; }
-        if (!owner) { markErr('inp-owner'); shakeCard(); return; }
-    } else {
-        var ipVal = document.getElementById('inp-server-ip').value.trim();
-        if (!ipVal) { markErr('inp-server-ip'); shakeCard(); return; }
-        if (!hostVerified || hostVerified.ip !== ipVal) {
-            verifyHostAddress().then(function(ok) { if (ok) goToStep(3); });
-            return;
-        }
-    }
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    if (!biz)   { markErr('inp-biz');   shakeCard(); return; }
+    if (!owner) { markErr('inp-owner'); shakeCard(); return; }
     goToStep(3);
+}
+
+// Client tab: check the host answers (unless that exact address already
+// did), then enrol this PC as a terminal of it.
+async function connectClient() {
+    var ipVal = document.getElementById('inp-server-ip').value.trim();
+    if (!ipVal) { markErr('inp-server-ip'); shakeCard(); return; }
+    if (!hostVerified || hostVerified.ip !== ipVal) {
+        if (!(await verifyHostAddress())) return;
+    }
+    var btn = document.getElementById('btn-connect');
+    var label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin"></div> Connecting...';
+    var res;
+    try {
+        res = await window.pywebview.api.cluster('join', { ip: ipVal });
+    } catch (e) {
+        res = { status: 'error', message: String(e) };
+    }
+    if (res && res.status === 'success') {
+        document.getElementById('success-headline').innerText = "Connected!";
+        document.getElementById('success-subline').innerText =
+            "This computer is now part of " + (res.business || "your shop") +
+            ". Sign in with your staff password to start.";
+        document.getElementById('success-biz-name').innerText = res.business || "Staff Terminal";
+        document.getElementById('success-plan-pill').innerText = "Staff Terminal";
+        document.getElementById('panel-1').classList.remove('active');
+        document.getElementById('success-state').classList.add('show');
+        setTimeout(goLogin, 3500);
+        return;
+    }
+    btn.disabled = false;
+    btn.innerHTML = label;
+    showStatus('host-status', 'error', '&#9888;', 'Could not join',
+               (res && res.message) || 'The host did not accept this computer.');
+    shakeCard();
 }
 
 function goLogin() {
@@ -940,101 +1024,78 @@ async function finishSetup() {
         btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard(); return;
     }
     var res = null;
-    if (selectedProvisionMode === 'network') {
-        var ipAddress = document.getElementById('inp-server-ip').value.trim();
-        try {
-            res = await window.pywebview.api.cluster('join', { ip: ipAddress });
-        } catch(netErr) { res = {status: 'error', message: String(netErr)}; }
-        if (res && res.status === 'success') {
-            document.getElementById('success-headline').innerText = "Connected!";
-            document.getElementById('success-subline').innerText =
-                "This computer is now part of " + (res.business || "your shop") +
-                ". Sign in with your staff password to start.";
-            document.getElementById('success-biz-name').innerText = res.business || "Staff Terminal";
-            document.getElementById('success-plan-pill').innerText = "Staff Terminal";
-            [1,2,3].forEach(function(i){
-                document.getElementById('panel-'+i).classList.remove('active');
-                document.getElementById('si-'+i).className = 'step-item done';
-                document.getElementById('sn-'+i).innerHTML = '&#10003;';
-            });
-            document.getElementById('success-state').classList.add('show');
-            setTimeout(goLogin, 3500);
-            return;
-        }
-    } else {
-        var pw  = document.getElementById('inp-pw').value;
-        var pw2 = document.getElementById('inp-pw2').value;
-        if (pw.length < 6) {
-            document.getElementById('pw-label').innerText = 'Minimum 6 characters required';
-            document.getElementById('pw-label').style.color = 'var(--red)';
-            markErr('inp-pw'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard(); return;
-        }
-        if (pw !== pw2) {
-            markErr('inp-pw2'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard();
-            document.getElementById('inp-pw2').placeholder = 'Passwords do not match!';
-            setTimeout(function(){ document.getElementById('inp-pw2').placeholder = 'Re-enter password'; }, 1500);
-            return;
-        }
-        var gstBlock = collectGst();
-        if (gstBlock.error) {
+    var pw  = document.getElementById('inp-pw').value;
+    var pw2 = document.getElementById('inp-pw2').value;
+    if (pw.length < 6) {
+        document.getElementById('pw-label').innerText = 'Minimum 6 characters required';
+        document.getElementById('pw-label').style.color = 'var(--red)';
+        markErr('inp-pw'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard(); return;
+    }
+    if (pw !== pw2) {
+        markErr('inp-pw2'); btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup'; shakeCard();
+        document.getElementById('inp-pw2').placeholder = 'Passwords do not match!';
+        setTimeout(function(){ document.getElementById('inp-pw2').placeholder = 'Re-enter password'; }, 1500);
+        return;
+    }
+    var gstBlock = collectGst();
+    if (gstBlock.error) {
+        markErr('inp-gstin');
+        var gn = document.getElementById('gst-note');
+        if (gn) { gn.textContent = gstBlock.error; gn.className = 'gst-note bad'; }
+        btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup';
+        shakeCard();
+        return;
+    }
+    var biz   = document.getElementById('inp-biz').value.trim();
+    var owner = document.getElementById('inp-owner').value.trim();
+    var city  = document.getElementById('inp-city').value.trim();
+    var phone = document.getElementById('inp-phone').value.trim();
+    try {
+        var setupPayload = {
+            businessName: biz, ownerName: owner,
+            adminPass: pw, licenseKey: verifiedKey,
+            city: city, phone: phone,
+            address: document.getElementById('inp-address').value.trim()
+        };
+        Object.keys(gstBlock.fields).forEach(function(k){ setupPayload[k] = gstBlock.fields[k]; });
+        res = await window.pywebview.api.save_setup(setupPayload);
+        if (res && res.status === 'error' && res.field === 'gstin') {
             markErr('inp-gstin');
-            var gn = document.getElementById('gst-note');
-            if (gn) { gn.textContent = gstBlock.error; gn.className = 'gst-note bad'; }
+            var gn2 = document.getElementById('gst-note');
+            if (gn2) { gn2.textContent = res.message || 'Check the GSTIN.'; gn2.className = 'gst-note bad'; }
             btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup';
             shakeCard();
             return;
         }
-        var biz   = document.getElementById('inp-biz').value.trim();
-        var owner = document.getElementById('inp-owner').value.trim();
-        var city  = document.getElementById('inp-city').value.trim();
-        var phone = document.getElementById('inp-phone').value.trim();
-        try {
-            var setupPayload = {
-                businessName: biz, ownerName: owner,
-                adminPass: pw, licenseKey: verifiedKey,
-                city: city, phone: phone,
-                address: document.getElementById('inp-address').value.trim()
-            };
-            Object.keys(gstBlock.fields).forEach(function(k){ setupPayload[k] = gstBlock.fields[k]; });
-            res = await window.pywebview.api.save_setup(setupPayload);
-            if (res && res.status === 'error' && res.field === 'gstin') {
-                markErr('inp-gstin');
-                var gn2 = document.getElementById('gst-note');
-                if (gn2) { gn2.textContent = res.message || 'Check the GSTIN.'; gn2.className = 'gst-note bad'; }
-                btn.disabled = false; btn.innerHTML = '<span>&#10003;</span> Complete Setup';
-                shakeCard();
-                return;
-            }
-            if (res && res.status === 'success') {
-                // Marks this PC as the one holding the shop and starts serving
-                // straight away, so a staff PC can be joined without restarting.
-                await window.pywebview.api.cluster("become_server");
-            }
-        } catch(e) { res = {status:'error', message:String(e)}; }
         if (res && res.status === 'success') {
-            try { localStorage.setItem('aurum_owner_name', owner); } catch(e) {}
-            try { localStorage.setItem('aurum_biz_name', biz); } catch(e) {}
-            try { localStorage.setItem('aurum_owner_phone', phone); } catch(e) {}
-            try { localStorage.setItem('aurum_city', city); } catch(e) {}
-            try { localStorage.setItem('aurum_address', document.getElementById('inp-address').value.trim()); } catch(e) {}
-            var plan = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
-            document.getElementById('success-biz-name').innerText = biz;
-            document.getElementById('success-plan-pill').innerText = plan;
-            [1,2,3].forEach(function(i){
-                document.getElementById('panel-'+i).classList.remove('active');
-                document.getElementById('si-'+i).className = 'step-item done';
-                document.getElementById('sn-'+i).innerHTML = '&#10003;';
-            });
-            document.getElementById('success-state').classList.add('show');
-            launchConfetti();
-            setTimeout(goLogin, 4000);
-            return;
+            // Marks this PC as the one holding the shop and starts serving
+            // straight away, so a staff PC can be joined without restarting.
+            await window.pywebview.api.cluster("become_server");
         }
+    } catch(e) { res = {status:'error', message:String(e)}; }
+    if (res && res.status === 'success') {
+        try { localStorage.setItem('aurum_owner_name', owner); } catch(e) {}
+        try { localStorage.setItem('aurum_biz_name', biz); } catch(e) {}
+        try { localStorage.setItem('aurum_owner_phone', phone); } catch(e) {}
+        try { localStorage.setItem('aurum_city', city); } catch(e) {}
+        try { localStorage.setItem('aurum_address', document.getElementById('inp-address').value.trim()); } catch(e) {}
+        var plan = _fetchedData.plan || (verifiedKey.startsWith('AR-') ? 'Retail Plan' : 'Standard Plan');
+        document.getElementById('success-biz-name').innerText = biz;
+        document.getElementById('success-plan-pill').innerText = plan;
+        [1,2,3].forEach(function(i){
+            document.getElementById('panel-'+i).classList.remove('active');
+            document.getElementById('si-'+i).className = 'step-item done';
+            document.getElementById('sn-'+i).innerHTML = '&#10003;';
+        });
+        document.getElementById('success-state').classList.add('show');
+        launchConfetti();
+        setTimeout(goLogin, 4000);
+        return;
     }
     btn.disabled = false;
     btn.innerHTML = '<span>&#10003;</span> Complete Setup';
     shakeCard();
-    alert('Setup failed: ' + ((res && res.message) || 'Unknown error mapping topology parameters.'));
+    alert('Setup failed: ' + ((res && res.message) || 'Unknown error.'));
 }
 
 function showStatus(id, type, icon, title, sub) {

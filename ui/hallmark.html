@@ -160,6 +160,9 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .pick-list{max-height:44vh;overflow-y:auto;scrollbar-width:thin;}
 .pick-list::-webkit-scrollbar{width:5px;}
 .pick-list::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+.viewmore{padding:11px 17px;text-align:center;font-size:0.72rem;font-weight:700;
+      color:var(--blue3);cursor:pointer;background:var(--blue-bg);}
+.viewmore:hover{text-decoration:underline;}
 
 .bar{padding:12px 17px;border-top:1px solid var(--rule2);background:var(--bg-main);
      display:flex;flex-direction:column;gap:9px;}
@@ -217,6 +220,20 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
       border-radius:9px;padding:10px 12px;font-size:0.67rem;color:#8a5a08;
       line-height:1.55;margin-bottom:12px;}
 .hint.plain{background:var(--blue-bg);border-color:var(--blue-ln);color:var(--blue3);}
+.bulk{border:1px dashed var(--blue-ln);border-radius:10px;background:var(--blue-bg);
+      padding:9px 12px;margin-bottom:10px;}
+.bulk summary{cursor:pointer;font-size:0.72rem;font-weight:700;color:var(--blue3);
+      list-style:none;}
+.bulk summary::-webkit-details-marker{display:none;}
+.bulk .hint{margin:8px 0;}
+.bulk textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--border);
+      border-radius:8px;font-family:var(--mono);font-size:0.78rem;letter-spacing:1px;
+      padding:8px 10px;outline:none;background:var(--white);color:var(--text-main);}
+.bulk textarea:focus{border-color:var(--blue2);}
+.bulk .bar-row{margin-top:8px;}
+.hidefilled{display:flex;align-items:center;gap:7px;font-size:0.7rem;font-weight:600;
+      color:var(--text-muted);cursor:pointer;margin-bottom:8px;user-select:none;}
+.hidefilled input{width:14px;height:14px;accent-color:var(--blue);cursor:pointer;}
 
 .toast{position:fixed;right:20px;bottom:20px;background:var(--primary);color:#fff;
        padding:11px 16px;border-radius:10px;font-size:0.73rem;box-shadow:var(--sh2);
@@ -235,6 +252,20 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 .ctable tbody tr:last-child td{border-bottom:none;}
 .ctable tbody tr.row-click{cursor:pointer;}
 .ctable tbody tr.row-click:hover{background:var(--bg-main);}
+/* ── paused page: full blur + centered banner, reversible later ───── */
+/* The menu stays above the blur on purpose: a paused page with no way
+   out is a trap. Page content sits under the overlay, navigation above. */
+#sidebar-container{position:relative;z-index:100000;}
+.soon-page{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;
+      justify-content:center;background:rgba(248,250,251,0.55);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.soon-box{text-align:center;padding:48px 80px;background:rgba(255,255,255,0.75);
+      border:1px solid var(--blue-ln);border-radius:24px;
+      box-shadow:0 30px 80px rgba(15,23,42,0.2);}
+.soon-pill{display:inline-block;font-size:0.6rem;font-weight:800;letter-spacing:2.5px;
+      text-transform:uppercase;color:#fff;background:linear-gradient(90deg,var(--blue),var(--blue3));
+      border-radius:99px;padding:6px 16px;margin-bottom:16px;}
+.soon-box h1{font-size:2.6rem;letter-spacing:-1px;font-weight:800;color:var(--text-main);margin:0;}
 .ctable .c-name{font-weight:700;}
 .ctable .c-sub{font-size:0.64rem;color:var(--text-muted);margin-top:1px;}
 .ctable .c-num{font-family:var(--mono);font-weight:600;}
@@ -242,9 +273,10 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 
+<div class="soon-page"><div class="soon-box"><div class="soon-pill">AurumOS</div><h1>Coming Soon</h1></div></div>
 <main>
 <header>
     <div class="header-left">
@@ -260,7 +292,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
             <span class="live-dot"></span><span id="live-text">live</span>
         </div>
         <button class="btn btn-ghost" onclick="showCentres()">Centres</button>
-        <button class="btn btn-ghost" onclick="copyBoardLink()">Centre board</button>
+        <button class="btn btn-ghost" id="board-btn" onclick="copyBoardLink()" disabled title="Paused for now">Centre board · paused</button>
         <button class="icon-btn" onclick="loadAll(true)" title="Refresh now">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
@@ -401,8 +433,20 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                 Type the six-character number struck on each piece. Tick
                 <b>failed</b> for any piece the centre would not mark: it keeps
                 no number and comes back into the queue. Leave a row blank to
-                deal with it later.
+                deal with it later. A full box jumps to the next row by itself.
             </div>
+            <details class="bulk">
+                <summary>Paste HUIDs in bulk — for big lots</summary>
+                <div class="hint">Paste a column of numbers (Excel, WhatsApp, the
+                centre's list — one per line; spaces and commas are fine). They
+                fill the blank rows top to bottom.</div>
+                <textarea id="rc-paste" rows="4" placeholder="AB12CD&#10;EF34GH&#10;…"></textarea>
+                <div class="bar-row">
+                    <button class="btn btn-primary btn-sm" onclick="applyPaste()">Fill blank rows</button>
+                    <span class="quote" id="rc-paste-msg"></span>
+                </div>
+            </details>
+            <label class="hidefilled"><input type="checkbox" id="rc-hidefilled" onchange="toggleFilled()"> Hide filled rows</label>
             <div id="rc-rows"></div>
         </div>
         <div class="ov-foot">
@@ -582,9 +626,12 @@ function loadAll(manual){
 // ── the counters ─────────────────────────────────────────────────────
 function renderTiles(d){
     var w = d.waiting || {}, o = d.out || {}, l = d.late || {}, f = d.failed || {};
+    var sm = d.stock_marked || {};
     var tiles = [
         { label:'Waiting to go', value:(w.pieces || 0), sub:grams(w.gross_wt),
           cls:'is-gold', go:'sec-waiting' },
+        { label:'Already marked in stock', value:(sm.pieces || 0), sub:grams(sm.gross_wt),
+          cls:'is-ok', go:'sec-waiting' },
         { label:'At the centre', value:(o.pieces || 0),
           sub:(o.lots || 0) + ' lot' + ((o.lots === 1) ? '' : 's') + ' · ' + grams(o.gross_wt),
           cls:'is-blue', go:'sec-out' },
@@ -625,7 +672,10 @@ function renderWaiting(){
         updateQuote();
         return;
     }
-    el('waiting').innerHTML = rows.map(function(r){
+    // The panel shows five; the full card wall with category filters and
+    // multi-lot sending lives on hm_pending.html behind View all.
+    var shown = rows.slice(0, 5);
+    el('waiting').innerHTML = shown.map(function(r){
         var tag = r.tag_id || '';
         var on = !!PICKED[tag];
         return '<label class="pick' + (on ? ' on' : '') + '">'
@@ -639,8 +689,19 @@ function renderWaiting(){
              + '</div>'
              + '<div class="row-right">' + grams(r.gr_wt) + '</div>'
              + '</label>';
-    }).join('');
+    }).join('')
+    + (rows.length > 5
+        ? '<div class="viewmore" onclick="goPending()">View all '
+          + rows.length + ' waiting →</div>'
+        : '');
     updateQuote();
+}
+
+function goPending(){
+    if (typeof sideNavigate === 'function') { sideNavigate('hm_pending.html'); return; }
+    var a = window.pywebview && window.pywebview.api;
+    if (a && typeof a.navigate === 'function') { a.navigate('hm_pending.html'); return; }
+    window.location.href = 'hm_pending.html';
 }
 
 function togglePick(tag, on){
@@ -869,7 +930,7 @@ function openReceive(id){
         });
         el('rc-rows').innerHTML = rows.length ? rows.map(function(i, n){
             var tag = i.tag_id || '';
-            return '<div class="rc">'
+            return '<div class="rc" id="rc-r' + n + '">'
                  + '<div class="row-main">'
                  +   '<div class="row-name">' + esc(i.it_name || 'Item') + '</div>'
                  +   '<div class="row-sub">' + esc(tag) + ' · ' + grams(i.gr_wt)
@@ -877,7 +938,8 @@ function openReceive(id){
                  +   '</div>'
                  + '</div>'
                  + '<input type="text" maxlength="6" id="rc-h' + n + '" data-tag="' + escAttr(tag) + '"'
-                 +   ' placeholder="HUID" oninput="onHuid(' + n + ')">'
+                 +   ' placeholder="HUID" oninput="onHuid(' + n + ')"'
+                 +   ' onkeydown="rcKey(event,' + n + ')">'
                  + '<label class="rc-fail"><input type="checkbox" id="rc-f' + n + '"'
                  +   ' onchange="onFail(' + n + ')">failed</label>'
                  + '<div class="rc-note" id="rc-n' + n + '"></div>'
@@ -886,6 +948,9 @@ function openReceive(id){
                                  'Every piece in this lot has already been dealt with.');
         el('rc-save').disabled = !rows.length;
         RC._rows = rows;
+        el('rc-paste').value = '';
+        el('rc-paste-msg').textContent = '';
+        el('rc-hidefilled').checked = false;
         updateReceiveState();
         el('rc-ov').hidden = false;
         var first = el('rc-h0');
@@ -902,6 +967,7 @@ function onFail(n){
     if (failed) box.value = '';
     el('rc-n' + n).textContent = '';
     updateReceiveState();
+    toggleFilled();
 }
 
 // O against 0 and I against 1 are the whole reason a shop rings the centre
@@ -917,7 +983,89 @@ function onHuid(n){
     if (v.indexOf('I') >= 0 || v.indexOf('1') >= 0) hits.push('I and 1');
     if (hits.length) note = 'Check ' + hits.join(', ') + ' against the piece.';
     el('rc-n' + n).textContent = note;
+    // A full box walks to the next row by itself: on a 1500-piece lot the
+    // hand never leaves the keyboard for Tab, Enter or the mouse.
+    if (v.length >= 6) focusRow(n + 1);
     updateReceiveState();
+}
+
+// Next row that still wants typing: not failed, box empty.
+function focusRow(n){
+    var rows = (RC && RC._rows) || [];
+    for (var k = n; k < rows.length; k++) {
+        var box = el('rc-h' + k), fail = el('rc-f' + k);
+        if (!box) continue;
+        if (fail && fail.checked) continue;
+        if (String(box.value || '').trim() !== '') continue;
+        try { box.focus(); } catch (e) {}
+        return;
+    }
+}
+
+function rcKey(e, n){
+    if (e && (e.key === 'Enter' || e.keyCode === 13)) {
+        if (e.preventDefault) e.preventDefault();
+        focusRow(n + 1);
+    }
+}
+
+// Bulk fill for big lots: a column of numbers pasted from Excel, WhatsApp
+// or the centre's own list becomes row values top to bottom. Pure splitter
+// so the test suite pins it without a DOM.
+function parseHuidList(text){
+    return String(text || '').split(/[\s,;]+/).map(function(s){
+        return s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }).filter(function(s){ return !!s; });
+}
+
+function blankRowIndexes(){
+    var out = [], rows = (RC && RC._rows) || [];
+    for (var n = 0; n < rows.length; n++) {
+        var box = el('rc-h' + n), fail = el('rc-f' + n);
+        if (!box) continue;
+        if (fail && fail.checked) continue;
+        if (String(box.value || '').trim() !== '') continue;
+        out.push(n);
+    }
+    return out;
+}
+
+function applyPaste(){
+    var msg = el('rc-paste-msg');
+    var codes = parseHuidList(el('rc-paste').value);
+    var blanks = blankRowIndexes();
+    if (!codes.length) { msg.textContent = 'Paste the numbers first.'; return; }
+    if (!blanks.length) { msg.textContent = 'No blank rows left.'; return; }
+    var m = Math.min(codes.length, blanks.length), n;
+    for (n = 0; n < m; n++) {
+        var box = el('rc-h' + blanks[n]);
+        box.value = codes[n];
+        onHuid(blanks[n]);
+    }
+    var line = m + ' filled';
+    if (codes.length > blanks.length) {
+        line += ' · ' + (codes.length - blanks.length)
+              + ' numbers left over (more numbers than blank rows)';
+    } else if (blanks.length > m) {
+        line += ' · ' + (blanks.length - m) + ' rows still blank';
+    }
+    msg.textContent = line + '.';
+    el('rc-paste').value = '';
+    updateReceiveState();
+    toggleFilled();
+}
+
+// Hide rows that are done so a big lot shrinks as it is worked. Hidden is
+// display only: Book in still reads every row, filled or not.
+function toggleFilled(){
+    var hide = el('rc-hidefilled') && el('rc-hidefilled').checked;
+    var rows = (RC && RC._rows) || [];
+    for (var n = 0; n < rows.length; n++) {
+        var box = el('rc-h' + n), fail = el('rc-f' + n), wrap = el('rc-r' + n);
+        if (!box || !wrap) continue;
+        var done = (fail && fail.checked) || String(box.value || '').trim() !== '';
+        wrap.style.display = (hide && done) ? 'none' : '';
+    }
 }
 
 function receiveRows(){

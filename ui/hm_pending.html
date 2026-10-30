@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Waiting for HUID</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--white:#fff;--ink:#0f172a;
+  --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+  --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
+  --border:rgba(15,23,42,0.1);--rule:rgba(15,23,42,0.08);--rule2:rgba(15,23,42,0.04);
+  --text-main:#0f172a;--text-muted:#64748b;--muted2:#94a3b8;
+  --bg-main:#f8fafb;--success:#16a34a;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(15,23,42,0.04),0 4px 16px rgba(15,23,42,0.06);
+}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--ink);}
+body{display:flex;font-family:"DM Sans",system-ui,sans-serif;}
+main{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+header{height:58px;flex-shrink:0;background:rgba(255,255,255,0.92);
+  border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:14px;padding:0 24px;}
+.h-back{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;
+  border:1px solid var(--rule);background:var(--cream);font-size:0.75rem;color:var(--text-muted);
+  cursor:pointer;font-family:inherit;font-weight:500;text-decoration:none;}
+.h-back:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.h-title{font-size:1rem;font-weight:700;letter-spacing:-0.3px;}
+.h-title em{color:var(--blue);font-style:normal;}
+.h-sub{font-size:0.66rem;color:var(--muted2);}
+.h-spacer{flex:1;}
+.filterbar{flex-shrink:0;background:var(--white);border-bottom:1px solid var(--rule);
+  padding:12px 24px;display:flex;flex-direction:column;gap:10px;}
+.searchrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.searchrow input{flex:1;min-width:200px;height:36px;padding:0 12px;border:1px solid var(--border);
+  border-radius:9px;font-family:inherit;font-size:0.78rem;outline:none;background:var(--white);}
+.searchrow input:focus{border-color:var(--blue2);}
+.linkbtn{border:none;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;
+  font-weight:700;color:var(--blue3);padding:6px 4px;white-space:nowrap;}
+.linkbtn:hover{text-decoration:underline;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{border:1px solid var(--border);background:var(--white);border-radius:99px;
+  padding:6px 13px;font-size:0.7rem;font-weight:700;color:var(--text-muted);
+  cursor:pointer;font-family:inherit;transition:all .13s;}
+.chip:hover{border-color:var(--blue2);color:var(--blue3);}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff;
+  box-shadow:0 3px 10px rgba(37,99,235,0.3);}
+.chip .n{opacity:0.7;font-family:var(--mono);font-weight:400;}
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 120px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;
+  max-width:1400px;margin:0 auto;}
+.pcard{display:flex;gap:10px;align-items:flex-start;background:var(--white);
+  border:1px solid var(--border);border-radius:12px;padding:13px 14px;cursor:pointer;
+  box-shadow:var(--sh);transition:all .13s;}
+.pcard:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,0.1);}
+.pcard.on{border-color:var(--blue2);background:var(--blue-bg);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.13);}
+.pcard input{width:16px;height:16px;margin-top:2px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;}
+.pcard .nm{font-size:0.8rem;font-weight:700;}
+.pcard .sb{font-size:0.66rem;color:var(--text-muted);margin-top:2px;}
+.pcard .wt{font-size:0.7rem;font-weight:700;color:var(--blue3);margin-top:4px;font-family:var(--mono);}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted2);font-size:0.8rem;padding:40px 0;}
+.sendbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,0.96);
+  backdrop-filter:blur(10px);border-top:1px solid var(--rule);padding:12px 24px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:50;}
+.sendbar .sum{font-size:0.78rem;font-weight:700;}
+.sendbar .sum span{color:var(--muted2);font-weight:400;}
+.sendbar select{height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;
+  font-family:inherit;font-size:0.76rem;background:var(--white);min-width:170px;}
+.btn{height:38px;padding:0 18px;border:none;border-radius:10px;font-family:inherit;font-size:0.76rem;
+  font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:linear-gradient(180deg,var(--blue2),var(--blue3));color:#fff;
+  box-shadow:0 4px 14px rgba(37,99,235,0.25);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;box-shadow:none;}
+.btn-ghost{background:var(--cream);color:var(--text-muted);border:1px solid var(--rule);}
+.btn-ghost:disabled{opacity:0.45;cursor:not-allowed;}
+.toast{position:fixed;right:20px;bottom:86px;background:#0f172a;color:#fff;padding:11px 16px;
+  border-radius:10px;font-size:0.74rem;box-shadow:0 12px 30px rgba(15,23,42,0.3);
+  opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;z-index:700;max-width:360px;}
+.toast.show{opacity:1;transform:none;}
+.toast.bad{background:#dc2626;}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <a class="h-back" href="hallmark.html" onclick="go(event,'hallmark.html')">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Hallmark
+  </a>
+  <div>
+    <div class="h-title">Waiting for <em>HUID</em></div>
+    <div class="h-sub" id="h-sub">Every piece with no number on it yet.</div>
+  </div>
+  <div class="h-spacer"></div>
+</header>
+<div class="filterbar">
+  <div class="searchrow">
+    <input type="text" id="q" placeholder="Filter by tag, name or purity…" oninput="render()">
+    <button class="linkbtn" onclick="selVisible(true)">Select shown</button>
+    <button class="linkbtn" onclick="selVisible(false)">Clear</button>
+  </div>
+  <div class="chips" id="chips"></div>
+</div>
+<div class="scroll">
+  <div class="grid" id="grid"><div class="empty">Loading…</div></div>
+</div>
+<div class="sendbar">
+  <div class="sum" id="sel-sum">0 pcs <span>chosen</span></div>
+  <select id="centre"><option value="">Choose a centre…</option></select>
+  <div style="flex:1;"></div>
+  <button class="btn btn-ghost" id="btn-multi" onclick="sendLots('percat')" disabled>One lot per category</button>
+  <button class="btn btn-primary" id="btn-one" onclick="sendLots('single')" disabled>Send as one lot</button>
+</div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+// ── pure helpers (the test suite pins these directly) ─────────────────
+function normCat(r){
+    var c = r ? String(r.category || '') : '';
+    c = c.trim();
+    return c || 'Uncategorised';
+}
+function categories(all){
+    var map = {};
+    (all || []).forEach(function(r){ var c = normCat(r); map[c] = (map[c] || 0) + 1; });
+    return Object.keys(map).sort().map(function(c){ return { name: c, count: map[c] }; });
+}
+function visibleItems(all, cat, q){
+    q = String(q || '').trim().toLowerCase();
+    return (all || []).filter(function(r){
+        if (cat && cat !== '__all' && normCat(r) !== cat) return false;
+        if (!q) return true;
+        var hay = ((r.tag_id || '') + ' ' + (r.it_name || '') + ' '
+                 + (r.karat || '') + ' ' + (r.category || '')).toLowerCase();
+        return hay.indexOf(q) >= 0;
+    });
+}
+// One entry per lot to pack: single mode is everything together,
+// percat mode is one lot per category present, categories A–Z so the
+// lot numbers come out in a repeatable order.
+function groupLots(items, mode){
+    items = items || [];
+    if (mode === 'percat') {
+        var byCat = {};
+        items.forEach(function(r){
+            var c = normCat(r);
+            (byCat[c] = byCat[c] || []).push(r.tag_id);
+        });
+        return Object.keys(byCat).sort().map(function(c){
+            return { label: c, tags: byCat[c] };
+        });
+    }
+    return [{ label: 'all', tags: items.map(function(r){ return r.tag_id; }) }];
+}
+// ── page state ────────────────────────────────────────────────────────
+var ALL = [], CENTRES = [], CAT = '__all', PICKED = {};
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return esc(s).replace(/'/g, '&#39;'); }
+function toast(msg, bad){
+    var t = el('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (bad ? ' bad' : '');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.className = 'toast'; }, bad ? 5200 : 3200);
+}
+function go(e, page){
+    if (e) e.preventDefault();
+    if (typeof sideNavigate === 'function') { sideNavigate(page); return; }
+    var a = window.pywebview && window.pywebview.api;
+    if (a && typeof a.navigate === 'function') { a.navigate(page); return; }
+    window.location.href = page;
+}
+function api(){
+    try {
+        if (window.__aurumApi) return window.__aurumApi;
+        if (window.pywebview && window.pywebview.api) return window.pywebview.api;
+    } catch (e) {}
+    return null;
+}
+(function boot(n){
+    try {
+        if (typeof _getRole === 'function' && _getRole() === 'staff') {
+            var sp = [];
+            try { sp = JSON.parse(localStorage.getItem('aurum_staff_pages') || '[]'); } catch (e) {}
+            if (sp.indexOf('hm_pending.html') === -1 && sp.indexOf('hallmark.html') === -1) {
+                location.replace(sp.length ? sp[0] : 'billing.html');
+                return;
+            }
+        }
+    } catch (e) {}
+    if (window.pywebview && window.pywebview.api) { load(); return; }
+    if (n > 0) setTimeout(function(){ boot(n - 1); }, 200);
+})(60);
+function load(){
+    var a = api();
+    if (!a || typeof a.hallmark_dashboard !== 'function') {
+        el('grid').innerHTML = '<div class="empty">Close and reopen AurumOS to finish updating.</div>';
+        return;
+    }
+    a.hallmark_dashboard(5000).then(function(d){
+        if (!d || d.status !== 'success') {
+            el('grid').innerHTML = '<div class="empty">' + esc((d && d.message) || 'Could not load.') + '</div>';
+            return;
+        }
+        ALL = d.pending || [];
+        CENTRES = d.centres || [];
+        el('h-sub').textContent = ALL.length + ' pieces with no number on them yet.';
+        el('centre').innerHTML = '<option value="">Choose a centre…</option>' + CENTRES.map(function(c){
+            return '<option value="' + c.id + '">' + esc(c.name || ('Centre ' + c.id)) + '</option>';
+        }).join('');
+        renderChips();
+        render();
+    }).catch(function(e){
+        el('grid').innerHTML = '<div class="empty">Could not load: ' + esc(e) + '</div>';
+    });
+}
+function renderChips(){
+    var cats = categories(ALL);
+    el('chips').innerHTML = '<button class="chip' + (CAT === '__all' ? ' on' : '') + '" onclick="setCat(\'__all\')">All <span class="n">' + ALL.length + '</span></button>'
+        + cats.map(function(c){
+            return '<button class="chip' + (CAT === c.name ? ' on' : '') + '" onclick="setCat(\'' + escAttr(c.name) + '\')">' + esc(c.name) + ' <span class="n">' + c.count + '</span></button>';
+        }).join('');
+}
+function setCat(c){ CAT = c; renderChips(); render(); }
+function toggle(tag, on){
+    if (on) PICKED[tag] = true; else delete PICKED[tag];
+    paintSel();
+}
+function paintSel(){
+    var boxes = document.querySelectorAll('#grid .pcard input');
+    for (var i = 0; i < boxes.length; i++) {
+        var card = boxes[i].closest ? boxes[i].closest('.pcard') : null;
+        if (card) card.className = 'pcard' + (boxes[i].checked ? ' on' : '');
+    }
+    updateBar();
+}
+function selItems(){
+    var byTag = {};
+    ALL.forEach(function(r){ byTag[r.tag_id] = r; });
+    return Object.keys(PICKED).map(function(t){ return byTag[t]; })
+        .filter(function(r){ return !!r; });
+}
+function selVisible(on){
+    visibleItems(ALL, CAT, el('q').value).forEach(function(r){
+        if (on) PICKED[r.tag_id] = true; else delete PICKED[r.tag_id];
+    });
+    render();
+}
+function render(){
+    var vis = visibleItems(ALL, CAT, el('q').value);
+    if (!vis.length) {
+        el('grid').innerHTML = '<div class="empty">Nothing here — try another category or filter.</div>';
+        updateBar();
+        return;
+    }
+    el('grid').innerHTML = vis.map(function(r){
+        var tag = r.tag_id || '';
+        var on = !!PICKED[tag];
+        return '<label class="pcard' + (on ? ' on' : '') + '">'
+            + '<input type="checkbox" ' + (on ? 'checked' : '')
+            + ' onchange="toggle(\'' + escAttr(tag) + '\', this.checked)">'
+            + '<div><div class="nm">' + esc(r.it_name || 'Item') + '</div>'
+            + '<div class="sb">' + esc(tag)
+            + (r.karat ? ' · ' + esc(r.karat) : '')
+            + ' · ' + esc(normCat(r)) + '</div>'
+            + '<div class="wt">' + esc(r.gr_wt == null ? '' : r.gr_wt) + ' g</div>'
+            + '</div></label>';
+    }).join('');
+    updateBar();
+}
+function updateBar(){
+    var sel = selItems();
+    var cats = {};
+    sel.forEach(function(r){ cats[normCat(r)] = 1; });
+    var nc = Object.keys(cats).length;
+    el('sel-sum').innerHTML = sel.length + ' pcs <span>chosen'
+        + (sel.length ? ' · ' + nc + ' categor' + (nc === 1 ? 'y' : 'ies') : '') + '</span>';
+    var ok = sel.length > 0;
+    el('btn-one').disabled = !ok;
+    el('btn-multi').disabled = !(ok && nc > 1);
+}
+function sendLots(mode){
+    var a = api();
+    if (!a || typeof a.hallmark_create_lot !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    var cid = parseInt(el('centre').value || '0', 10);
+    if (!cid) { toast('Choose which centre the lots are going to.', true); return; }
+    var groups = groupLots(selItems(), mode).filter(function(g){ return g.tags.length; });
+    if (!groups.length) { toast('Choose at least one piece.', true); return; }
+    el('btn-one').disabled = true;
+    el('btn-multi').disabled = true;
+    var made = [], failed = [], chain = Promise.resolve();
+    groups.forEach(function(g){
+        chain = chain.then(function(){
+            return a.hallmark_create_lot(cid, g.tags, '', '').then(function(r){
+                if (r && r.status === 'success') made.push((r.lot_no || 'lot') + ' (' + g.tags.length + ')');
+                else failed.push(g.label + ': ' + ((r && r.message) || 'refused'));
+            }).catch(function(e){ failed.push(g.label + ': ' + e); });
+        });
+    });
+    chain.then(function(){
+        PICKED = {};
+        if (made.length) toast(made.join(', ') + ' sent.');
+        if (failed.length) toast('Not sent — ' + failed.join('; '), true);
+        load();
+    }).catch(function(e){ toast('Could not send: ' + e, true); load(); });
+}
+</script>
+</body>
+</html>

@@ -1611,12 +1611,28 @@ class DBManager:
             return []
 
     def get_pos_stock(self):
-        """Return live inventory rows used by retail billing."""
+        """Return live inventory rows used by retail billing.
+
+        Carries the per-piece retail pricing the product master stores
+        (category, karat, making, sale price, stone value, HSN), so the
+        till prices from the same numbers the shelf was entered with.
+        Columns are probed first: older databases without the retail
+        migration still get rows, with blanks instead of a failure.
+        """
         try:
             with self._get_connection() as conn:
-                rows = conn.execute("""
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(stock_inventory)").fetchall()]
+                extra = []
+                for _c, _dflt in (('category', "''"), ('karat', "''"),
+                                  ('making_type', "''"), ('making_charge', '0'),
+                                  ('sale_price', '0'), ('stone_value', '0'),
+                                  ('hsn', "''")):
+                    extra.append(f"COALESCE({_c},{_dflt}) AS {_c}"
+                                 if _c in cols else f"{_dflt} AS {_c}")
+                rows = conn.execute(f"""
                     SELECT id, TRIM(it_code) AS it_code, it_name, tag_id, pcs,
-                           gr_wt, nt_wt, touch, huid
+                           gr_wt, nt_wt, touch, huid, {', '.join(extra)}
                     FROM stock_inventory
                     WHERE TRIM(COALESCE(it_code, '')) != ''
                       AND (COALESCE(gr_wt, 0) > 0 OR COALESCE(pcs, 0) > 0)
@@ -1628,19 +1644,48 @@ class DBManager:
             return []
 
     def validate_retail_items(self, items):
-        """Validate item identity, touch, and available stock before a retail sale."""
+        """Validate item identity, touch, and available stock before a retail sale.
+
+        Touch 0 is a real sale (category pieces recorded without a purity,
+        which the stock snapshot explicitly supports): it matches only
+        touch-0 rows of the same code, never borrows another purity.
+
+        A real tag is checked by tag, not by weight: the sale removes that
+        exact row, so code-level availability would bless a bill for a
+        piece that is already gone.
+        """
         try:
             errors = []
             requirements = {}
             with self._get_connection() as conn:
                 for item in items if isinstance(items, list) else []:
                     code = str(item.get('code') or item.get('it_code') or '').strip()
-                    touch = float(item.get('touch') or 0)
+                    tag = str(item.get('tag_id') or '').strip()
+                    is_real_tag = (
+                        tag and tag not in ('N/A', '-', '', 'undefined', 'null')
+                        and not tag.startswith('KATTI-') and len(tag) >= 8)
+                    try:
+                        touch = float(item.get('touch') or 0)
+                    except (TypeError, ValueError):
+                        errors.append(f"Touch is required for IT code {code}.")
+                        continue
                     required = float(item.get('weight') or item.get('gr_wt') or 0) * max(int(item.get('qty') or 1), 1)
                     if not code:
                         errors.append("IT code is required.")
                         continue
-                    if touch <= 0:
+                    if is_real_tag:
+                        row = conn.execute(
+                            "SELECT COALESCE(gr_wt,0) AS w FROM stock_inventory "
+                            "WHERE LOWER(TRIM(tag_id))=LOWER(?)",
+                            (tag,)).fetchone()
+                        if not row:
+                            errors.append(f"Tag {tag} is no longer in stock.")
+                        elif float(row['w'] or 0) + 0.001 < required:
+                            errors.append(
+                                f"Tag {tag} holds {float(row['w'] or 0):.3f}g, "
+                                f"required {required:.3f}g.")
+                        continue
+                    if touch < 0:
                         errors.append(f"Touch is required for IT code {code}.")
                         continue
                     requirements[(code, round(touch, 2))] = requirements.get((code, round(touch, 2)), 0.0) + required
@@ -1653,7 +1698,7 @@ class DBManager:
                     if not rows:
                         errors.append(f"IT code {code} is not available in inventory.")
                         continue
-                    touches = [float(row['touch'] or 0) for row in rows if float(row['touch'] or 0) > 0]
+                    touches = [float(row['touch'] or 0) for row in rows]
                     if not any(abs(stock_touch - touch) <= 0.01 for stock_touch in touches):
                         errors.append(f"Touch {touch:.2f}% is not available for IT code {code}.")
                         continue
@@ -1666,6 +1711,133 @@ class DBManager:
             return {"valid": not errors, "errors": errors}
         except Exception as e:
             _dberr(f"[POS STOCK VALIDATION ERROR] {e}")
+            return {"valid": False, "errors": [f"Unable to validate inventory: {e}"]}
+
+    def validate_wholesale_items(self, items):
+        """Validate wholesale lines before a bill is recorded.
+
+        Mirrors deduct_stock_after_sale's resolution exactly — real tag by
+        tag (existence plus weight fit), uchak pieces by code/name count,
+        weight lines by touch resolved from stock rows first and the
+        numeric code-as-purity fallback second, summed FIFO-style. Anything
+        deduct would short-change or skip is refused here, before the bill
+        exists, so a recorded bill never describes stock that did not move.
+        """
+        try:
+            errors = []
+            tag_need = {}
+            touch_need = {}
+            uchak_need = {}
+            with self._get_connection() as conn:
+                for item in items if isinstance(items, list) else []:
+                    if not isinstance(item, dict):
+                        continue
+                    tag = str(item.get('tag_id') or '').strip()
+                    code = str(item.get('it_code') or item.get('code') or '').strip()
+                    try:
+                        gross_wt = float(item.get('weight') or item.get('gr_wt') or 0)
+                    except (TypeError, ValueError):
+                        gross_wt = 0.0
+                    is_real_tag = (
+                        tag and tag not in ('N/A', '-', '', 'undefined', 'null')
+                        and not tag.startswith('KATTI-') and len(tag) >= 8)
+                    if is_real_tag:
+                        row = conn.execute(
+                            "SELECT COALESCE(gr_wt,0) AS w FROM stock_inventory "
+                            "WHERE LOWER(TRIM(tag_id))=LOWER(?)",
+                            (tag,)).fetchone()
+                        if not row:
+                            errors.append(f"Tag {tag} is no longer in stock.")
+                        elif float(row['w'] or 0) + 0.001 < gross_wt:
+                            errors.append(
+                                f"Tag {tag} holds {float(row['w'] or 0):.3f}g, "
+                                f"required {gross_wt:.3f}g.")
+                        continue
+                    if 'amount' in item or 'price' in item:
+                        piece_code = str(
+                            item.get('it_code') or item.get('code')
+                            or item.get('name') or '').strip()
+                        try:
+                            qty = int(item.get('pcs') or item.get('qty') or 1)
+                        except (TypeError, ValueError):
+                            qty = 1
+                        if not piece_code:
+                            errors.append("Item code is required.")
+                            continue
+                        uchak_need[piece_code] = uchak_need.get(piece_code, 0) + max(qty, 1)
+                        continue
+                    if gross_wt <= 0:
+                        continue
+                    touch_val = None
+                    if code:
+                        ref = conn.execute(
+                            """SELECT touch FROM stock_inventory
+                               WHERE TRIM(it_code)=?
+                                 AND (tag_id IS NULL OR tag_id=''
+                                      OR tag_id='N/A' OR tag_id LIKE 'KATTI-%')
+                                 AND tag_id NOT LIKE 'OPENING-%'
+                               ORDER BY id ASC LIMIT 1""",
+                            (code,)).fetchone()
+                        if not ref:
+                            ref = conn.execute(
+                                """SELECT touch FROM stock_inventory
+                                   WHERE LOWER(TRIM(it_code))=LOWER(?)
+                                     AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A'
+                                          OR tag_id LIKE 'KATTI-%')
+                                     AND tag_id NOT LIKE 'OPENING-%'
+                                   ORDER BY id ASC LIMIT 1""",
+                                (code,)).fetchone()
+                        if not ref:
+                            ref = conn.execute(
+                                """SELECT touch FROM stock_inventory
+                                   WHERE TRIM(it_code)=?
+                                     AND tag_id NOT LIKE 'OPENING-%'
+                                   ORDER BY id ASC LIMIT 1""",
+                                (code,)).fetchone()
+                        if ref and ref['touch']:
+                            touch_val = float(ref['touch'])
+                    if touch_val is None and code:
+                        try:
+                            parsed = float(code)
+                            if 1.0 <= parsed <= 100.0:
+                                touch_val = parsed
+                        except ValueError:
+                            pass
+                    if touch_val is None:
+                        errors.append(
+                            f"Cannot resolve purity for IT code {code or '—'}: "
+                            f"no such stock and not a number.")
+                        continue
+                    touch_need[touch_val] = touch_need.get(touch_val, 0.0) + gross_wt
+                for piece_code, qty in uchak_need.items():
+                    row = conn.execute(
+                        """SELECT COALESCE(SUM(pcs),0) AS n FROM stock_inventory
+                           WHERE (TRIM(it_code)=? OR TRIM(it_name)=?)
+                             AND COALESCE(pcs,0)>0
+                             AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A')""",
+                        (piece_code, piece_code)).fetchone()
+                    have = int((row and row['n']) or 0)
+                    if have < qty:
+                        errors.append(
+                            f"Only {have} pcs of {piece_code} in stock, "
+                            f"required {qty}.")
+                for touch_val, required in touch_need.items():
+                    row = conn.execute(
+                        """SELECT COALESCE(SUM(gr_wt),0) AS w FROM stock_inventory
+                           WHERE touch=?
+                             AND (tag_id IS NULL OR tag_id=''
+                                  OR tag_id='N/A' OR tag_id LIKE 'KATTI-%')
+                             AND tag_id NOT LIKE 'OPENING-%'
+                             AND COALESCE(gr_wt,0) > 0""",
+                        (touch_val,)).fetchone()
+                    have = float((row and row['w']) or 0)
+                    if have + 0.001 < required:
+                        errors.append(
+                            f"Stock over for {touch_val:g} touch: available "
+                            f"{have:.3f}g, required {required:.3f}g.")
+            return {"valid": not errors, "errors": errors}
+        except Exception as e:
+            _dberr(f"[WHOLESALE VALIDATION ERROR] {e}")
             return {"valid": False, "errors": [f"Unable to validate inventory: {e}"]}
 
     def delete_master_entry(self, data_type, entry_id):
@@ -1715,8 +1887,8 @@ class DBManager:
                 conn.execute(sql + """
                         (it_code,it_name,tag_id,pkg_wt,para_stone_wt,size,design,
                          pcs,gr_wt,ls_wt,nt_wt,ghat_wt,touch,wastage,huid,is_tagged,entry_date,
-                         category,karat,making_type,making_charge,sale_price,stone_value)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,date('now'),?,?,?,?,?,?)""",
+                         category,karat,making_type,making_charge,sale_price,stone_value,photo,tag_variation)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,date('now'),?,?,?,?,?,?,?,?)""",
                              (str(kwargs.get('it_code', '')).strip(),
                               str(kwargs.get('it_name', '')),
                               str(tag_id),
@@ -1738,8 +1910,10 @@ class DBManager:
                               str(kwargs.get('karat') or ''),
                               str(kwargs.get('making_type') or 'percent'),
                               float(kwargs.get('making_charge') or 0.0),
-                              float(kwargs.get('sale_price') or 0.0),
-                              float(kwargs.get('stone_value') or 0.0))
+                               float(kwargs.get('sale_price') or 0.0),
+                               float(kwargs.get('stone_value') or 0.0),
+                               str(kwargs.get('photo') or ''),
+                               str(kwargs.get('tag_variation') or 'RING'))
                              )
                 conn.commit()
                 new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -1848,17 +2022,32 @@ class DBManager:
             return False
 
     def post_ledger_entry(self, **kwargs):
+        """One double-entry line. Accepts both key spellings because callers
+        have used cash_credit and cash_cr interchangeably — and the old code
+        silently posted 0 whenever the spelling missed. A dropped side here
+        is lost money, so unknown spellings fail loudly instead.
+        """
         if self._bastion_block():
             _dberr("[BASTION] Write blocked -- account suspended")
             return False
+
+        def _num(*names):
+            for _n in names:
+                if kwargs.get(_n) not in (None, ''):
+                    try:
+                        return float(kwargs.get(_n))
+                    except (TypeError, ValueError):
+                        pass
+            return 0.0
+
         return self.execute_query(
             """INSERT INTO credit_ledger
                    (client_name,vch_reference,description,metal_dr,metal_cr,cash_dr,cash_cr,gold_rate)
                VALUES (?,?,?,?,?,?,?,?)""",
             (kwargs.get('client_name'), kwargs.get('vch_id'), kwargs.get('desc'),
-             float(kwargs.get('metal_dr') or 0), float(kwargs.get('metal_cr') or 0),
-             float(kwargs.get('cash_dr') or 0), float(kwargs.get('cash_cr') or 0),
-             float(kwargs.get('gold_rate') or 0))
+             _num('metal_dr', 'metal_debit'), _num('metal_cr', 'metal_credit'),
+             _num('cash_dr', 'cash_debit'), _num('cash_cr', 'cash_credit'),
+             _num('gold_rate'))
         )
 
     def get_client_statement(self, client_name):
@@ -2140,7 +2329,7 @@ class DBManager:
                             """INSERT INTO stock_inventory
                                    (it_code,it_name,pcs,design,gr_wt,ls_wt,nt_wt,
                                     touch,wastage,tag_id,is_tagged,entry_date)
-                               VALUES (?,?,?,?,0,0,0,0,0,'N/A',0,date('now'))""",
+                               VALUES (?,?,?,?,0,0,0,0,0,NULL,0,date('now'))""",
                             (code, name, pcs, str(price))
                         )
                 conn.commit()
@@ -2182,7 +2371,7 @@ class DBManager:
                         """INSERT INTO stock_inventory
                                (it_code,it_name,pcs,design,gr_wt,ls_wt,nt_wt,
                                 touch,wastage,tag_id,is_tagged,entry_date)
-                           VALUES (?,?,?,?,0,0,0,0,0,'N/A',0,date('now'))""",
+                           VALUES (?,?,?,?,0,0,0,0,0,NULL,0,date('now'))""",
                         (it_code, it_name, pcs, str(price))
                     )
                 conn.commit()
@@ -2293,6 +2482,10 @@ class DBManager:
                     it_code = str(item.get('it_code') or item.get('code') or '').strip()
                     gross_wt = float(item.get('weight') or item.get('gr_wt') or 0.0)
                     sold_pcs = int(item.get('pcs') or 1)
+                    try:
+                        line_qty = max(int(item.get('qty') or item.get('pcs') or 1), 1)
+                    except (TypeError, ValueError):
+                        line_qty = 1
 
                     # -- Case 1: Physical tag (10-digit, NOT KATTI- prefix) ----
                     is_real_tag = (
@@ -2394,7 +2587,11 @@ class DBManager:
                                 (touch_val,)
                             ).fetchall()
 
-                            remaining_to_deduct = round(gross_wt, 3)
+                            # A tagged piece leaves whole by its tag (qty is
+                            # meaningless there); a weight line deducts
+                            # weight x qty, exactly what validation required,
+                            # or repeated sales silently oversell phantom stock.
+                            remaining_to_deduct = round(gross_wt * line_qty, 3)
                             deducted_total = 0.0
 
                             for row in rows:
@@ -2550,7 +2747,10 @@ class DBManager:
     def record_sale(self, vch_id, customer, mobile, status, l_fine, coll, f995, dhal, rem, rate, amt, items_json,
                     disc_type='none', disc_touch=0.0, disc_fine=0.0, disc_amount=0.0,
                     pay_mode='cash', og_value=0.0, og_wt=0.0,
-                    og_desc='', og_touch=0.0, og_rate=0.0):
+                    og_desc='', og_touch=0.0, og_rate=0.0,
+                    bill_mode='normal', cgst=0.0, sgst=0.0,
+                    cgst_rate=0.0, sgst_rate=0.0,
+                    gst_amount=0.0, gst_rate=0.0, disc_value=0.0):
         try:
             safe_vch_id = str(vch_id).strip()
             safe_mobile = str(mobile or '').strip()
@@ -2584,9 +2784,11 @@ class DBManager:
                             remaining_fine,gold_rate,total_amount,items,date,time_stamp,
                             discount_type,discount_touch,discount_fine,discount_amount,
                             payment_mode,old_gold_value,old_gold_wt,
-                            old_gold_desc,old_gold_touch,old_gold_rate)
+                            old_gold_desc,old_gold_touch,old_gold_rate,
+                            bill_mode,cgst,sgst,cgst_rate,sgst_rate,
+                            gst_amount,gst_rate,discount_value)
                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,date('now'),time('now'),?,?,?,?,
-                                ?,?,?,?,?,?)""",
+                                ?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (safe_vch_id, customer, safe_mobile, resolved,
                      0.0 if is_uchak else float(l_fine or 0),
                      0.0 if is_uchak else float(coll or 0),
@@ -2604,7 +2806,12 @@ class DBManager:
                      0.0 if is_uchak else float(og_wt or 0),
                      '' if is_uchak else str(og_desc or ''),
                      0.0 if is_uchak else float(og_touch or 0),
-                     0.0 if is_uchak else float(og_rate or 0))
+                     0.0 if is_uchak else float(og_rate or 0),
+                     str(bill_mode or 'normal').strip().lower(),
+                     float(cgst or 0), float(sgst or 0),
+                     float(cgst_rate or 0), float(sgst_rate or 0),
+                     float(gst_amount or 0), float(gst_rate or 0),
+                     float(disc_value or 0))
                 )
                 _dblog(f"[SALE] INSERT OR REPLACE succeeded for vch_id={safe_vch_id}")
                 # NOTE: stock_inventory modifications are handled exclusively by
@@ -3049,7 +3256,7 @@ class DBManager:
             with self._get_connection() as conn:
                 return [dict(r) for r in conn.execute("""
                     SELECT id,it_code,it_name,pcs,touch,size,design,
-                           gr_wt,para_stone_wt,ls_wt,nt_wt,ghat_wt,huid,entry_date,tag_id,
+                           gr_wt,para_stone_wt,ls_wt,nt_wt,ghat_wt,pkg_wt,huid,entry_date,tag_id,
                            wastage,
                            COALESCE(category,'')      AS category,
                            COALESCE(karat,'')         AS karat,
@@ -3058,6 +3265,7 @@ class DBManager:
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
                            COALESCE(photo,'')         AS photo,
+                           COALESCE(tag_variation,'RING') AS tag_variation,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE entry_date=?
@@ -3105,6 +3313,8 @@ class DBManager:
         Look up Uchak opening stock by IT Code for billing auto-fill.
         Uchak opening rows are tag_id LIKE 'OPENING-UCH-%' with price
         stored in the 'design' column (text) -- see opening_stock.html.
+        Falls back to live untagged inward stock (same price column), so
+        pieces entered through the inward register also auto-fill.
         Returns {found, it_code, it_name, price, pcs} or {found:false}.
         """
         try:
@@ -3119,6 +3329,14 @@ class DBManager:
                       AND UPPER(TRIM(it_code)) = ?
                     ORDER BY id DESC LIMIT 1
                 """, (code,)).fetchone()
+                if not res:
+                    res = conn.execute("""
+                        SELECT it_code, it_name, design, pcs
+                        FROM stock_inventory
+                        WHERE UPPER(TRIM(it_code)) = ?
+                          AND (tag_id IS NULL OR tag_id='' OR tag_id='N/A')
+                        ORDER BY id DESC LIMIT 1
+                    """, (code,)).fetchone()
                 if not res:
                     return {'found': False, 'it_code': code}
                 r = dict(res)
@@ -3659,6 +3877,11 @@ class DBManager:
                     SET value = ''
                     WHERE key = 'machine_fingerprint'
                 """)
+                conn.execute("""
+                    UPDATE app_config
+                    SET value = ''
+                    WHERE key = 'machine_identity'
+                """)
                 # Clear business_profile sensitive data
                 try:
                     conn.execute("""
@@ -3721,6 +3944,89 @@ class DBManager:
             _dberr(f"[WIPE] db_path.txt delete error: {e}")
 
         _dblog("[WIPE] complete — DB is fresh for new PC setup")
+
+    def _wipe_ancillary_files(self):
+        """Remove every non-DB artefact that ties the install to the old shop.
+        Called alongside _wipe_business_data when a foreign machine is detected."""
+        import shutil as _sh, json as _json, glob as _glob
+
+        def _rm(path, label):
+            try:
+                if os.path.isfile(path):
+                    os.remove(path)
+                    _dblog(f"[WIPE] deleted {label}: {path}")
+                elif os.path.isdir(path):
+                    _sh.rmtree(path, ignore_errors=True)
+                    _dblog(f"[WIPE] removed dir {label}: {path}")
+            except Exception as e:
+                _dberr(f"[WIPE] {label} error: {e}")
+
+        # ── Photos folder ──
+        photos_dir = os.path.join(self.db_dir, 'photos')
+        _rm(photos_dir, 'photos')
+
+        # ── Subscription / SSE caches beside the DB ──
+        for name in ('.subscription_cache', '.subscription_state.json', '.sse_cache'):
+            _rm(os.path.join(self.db_dir, name), name)
+
+        # ── Exports folder ──
+        _rm(os.path.join(self.db_dir, 'exports'), 'exports')
+
+        # ── Hidden ProgramData mirror ──
+        _rm(r"C:\ProgramData\AurumOS", 'ProgramData mirror')
+
+        # ── Encrypted recovery vault ──
+        try:
+            vault = os.path.join(
+                os.environ.get('LOCALAPPDATA', ''), 'AurumOS', 'recovery')
+            if os.path.isdir(vault):
+                _sh.rmtree(vault, ignore_errors=True)
+                _dblog(f"[WIPE] removed recovery vault: {vault}")
+        except Exception as e:
+            _dberr(f"[WIPE] recovery vault error: {e}")
+
+        # ── Reset config.json cluster fields (keep api_base_url & port) ──
+        try:
+            if getattr(sys, 'frozen', False):
+                base = os.path.dirname(sys.executable)
+            else:
+                base = os.path.abspath('.')
+            cfg_path = os.path.join(base, 'config.json')
+            if os.path.isfile(cfg_path):
+                with open(cfg_path, 'r', encoding='utf-8') as f:
+                    cfg = _json.load(f)
+                for k in ('cluster_role', 'terminal_id', 'terminal_secret',
+                          'server_ip', 'is_server', 'shop_business',
+                          'provisioned_at'):
+                    cfg.pop(k, None)
+                cfg['mode'] = 'standalone'
+                with open(cfg_path, 'w', encoding='utf-8') as f:
+                    _json.dump(cfg, f, indent=2)
+                _dblog("[WIPE] config.json reset to standalone")
+        except Exception as e:
+            _dberr(f"[WIPE] config.json reset error: {e}")
+
+        # ── Logs folder ──
+        try:
+            if getattr(sys, 'frozen', False):
+                base = os.path.dirname(sys.executable)
+            else:
+                base = os.path.abspath('.')
+            _rm(os.path.join(base, 'logs'), 'logs')
+        except Exception:
+            pass
+
+        # ── Webview storage (localStorage / cookies / cache) ──
+        try:
+            wv_dir = os.path.join(
+                os.environ.get('LOCALAPPDATA', ''), 'AurumOS', 'webview')
+            if os.path.isdir(wv_dir):
+                _sh.rmtree(wv_dir, ignore_errors=True)
+                _dblog(f"[WIPE] cleared webview storage: {wv_dir}")
+        except Exception as e:
+            _dberr(f"[WIPE] webview storage error: {e}")
+
+        _dblog("[WIPE] ancillary cleanup complete")
 
     def _setup_marker_path(self):
         """Path to the permanent setup-complete marker file (backup to DB flag)."""
@@ -3794,15 +4100,14 @@ class DBManager:
                    f"verdict={verdict} -> {call['screen']} ({call['reason']})")
 
             if call['screen'] == _mid.FOREIGN:
-                # The folder really does look copied from another machine.
-                # It still does not get the wizard: the wizard would write a
-                # new shop over the one already in here. The flag is left
-                # for the licence check, which is where a per-machine rule
-                # belongs. Nothing is deleted either way.
-                self._foreign = True
-                _dblog('[SETUP] this database was set up on another machine; '
-                       'opening the login and leaving the data alone')
-                return True
+                # Database belongs to a different machine — the EXE was
+                # transferred to a new client PC.  Auto-format: wipe all
+                # business data so the new owner starts with a clean setup.
+                _dblog('[SETUP] foreign machine detected — auto-formatting '
+                       'for new client')
+                self._wipe_business_data()
+                self._wipe_ancillary_files()
+                return False          # → setup.html
 
             if call['screen'] == _mid.SETUP:
                 return False
@@ -4060,6 +4365,21 @@ class DBManager:
                     ('old_gold_desc', "ALTER TABLE sales_history ADD COLUMN old_gold_desc TEXT DEFAULT ''"),
                     ('old_gold_touch', "ALTER TABLE sales_history ADD COLUMN old_gold_touch REAL DEFAULT 0"),
                     ('old_gold_rate', "ALTER TABLE sales_history ADD COLUMN old_gold_rate REAL DEFAULT 0"),
+                    # Bill mode + tax breakup, so a reprint renders exactly
+                    # what was printed live. Without these a GST bill
+                    # reprinted as normal, and its tax rows were
+                    # unrecoverable; wholesale gst_amount/gst_rate likewise.
+                    ('bill_mode', "ALTER TABLE sales_history ADD COLUMN bill_mode TEXT DEFAULT 'normal'"),
+                    ('cgst', "ALTER TABLE sales_history ADD COLUMN cgst REAL DEFAULT 0"),
+                    ('sgst', "ALTER TABLE sales_history ADD COLUMN sgst REAL DEFAULT 0"),
+                    ('cgst_rate', "ALTER TABLE sales_history ADD COLUMN cgst_rate REAL DEFAULT 0"),
+                    ('sgst_rate', "ALTER TABLE sales_history ADD COLUMN sgst_rate REAL DEFAULT 0"),
+                    ('gst_amount', "ALTER TABLE sales_history ADD COLUMN gst_amount REAL DEFAULT 0"),
+                    ('gst_rate', "ALTER TABLE sales_history ADD COLUMN gst_rate REAL DEFAULT 0"),
+                    # The percent behind a percent discount. Only the rupee
+                    # amount was stored, so reloading an estimate recomputed
+                    # the discount from value 0 and inflated the grand.
+                    ('discount_value', "ALTER TABLE sales_history ADD COLUMN discount_value REAL DEFAULT 0"),
                 ):
                     if col not in cols:
                         conn.execute(ddl)
@@ -4090,19 +4410,19 @@ class DBManager:
                            COALESCE(l.points, 0)         AS loyalty_points
                     FROM clients_master c
                     LEFT JOIN (
-                        SELECT TRIM(customer) AS cust,
+                        SELECT LOWER(TRIM(customer)) AS cust,
                                COUNT(*) AS bill_count,
                                SUM(COALESCE(total_amount,0)) AS lifetime_value,
                                MAX(date) AS last_purchase
                         FROM sales_history
                         WHERE TRIM(COALESCE(customer,'')) != ''
-                        GROUP BY TRIM(customer)
-                    ) s ON TRIM(c.name) = s.cust
+                        GROUP BY LOWER(TRIM(customer))
+                    ) s ON LOWER(TRIM(c.name)) = s.cust
                     LEFT JOIN (
-                        SELECT TRIM(customer) AS cust,
+                        SELECT LOWER(TRIM(customer)) AS cust,
                                SUM(COALESCE(earned,0)) - SUM(COALESCE(used,0)) AS points
-                        FROM loyalty_ledger GROUP BY TRIM(customer)
-                    ) l ON TRIM(c.name) = l.cust
+                        FROM loyalty_ledger GROUP BY LOWER(TRIM(customer))
+                    ) l ON LOWER(TRIM(c.name)) = l.cust
                     ORDER BY c.name
                 """).fetchall()
                 return [dict(r) for r in rows]
@@ -4231,10 +4551,13 @@ class DBManager:
             return False
 
     def crm_loyalty_balance(self, customer):
+        """One customer, however the name is typed: 'Asha', 'ASHA' and
+        '  asha ' share a single balance. Names are stored as typed;
+        grouping folds case and padding so points never strand."""
         try:
             v = self.get_scalar(
                 "SELECT COALESCE(SUM(earned),0) - COALESCE(SUM(used),0) "
-                "FROM loyalty_ledger WHERE TRIM(customer)=?",
+                "FROM loyalty_ledger WHERE LOWER(TRIM(customer))=LOWER(TRIM(?))",
                 (str(customer or '').strip(),))
             return int(v or 0)
         except Exception:
@@ -4768,6 +5091,10 @@ class DBManager:
                     # database rather than in it, so the file stays a normal
                     # file a shopkeeper can open, and the database stays small.
                     ('photo',         "ALTER TABLE stock_inventory ADD COLUMN photo TEXT"),
+                    # Tag-print layout for the piece (RING/PARA/KATTI). The
+                    # ledger displayed it from row data that could never
+                    # exist, so every row read RING.
+                    ('tag_variation', "ALTER TABLE stock_inventory ADD COLUMN tag_variation TEXT DEFAULT 'RING'"),
                 ))
                 add('product_master', (
                     ('making_type',   "ALTER TABLE product_master ADD COLUMN making_type TEXT DEFAULT 'percent'"),
@@ -5261,7 +5588,7 @@ class DBManager:
             with self._get_connection() as conn:
                 rows = conn.execute("""
                     SELECT id, it_code, it_name, tag_id, pcs, touch, gr_wt, nt_wt,
-                           para_stone_wt, ls_wt, huid, entry_date,
+                           para_stone_wt, ls_wt, pkg_wt, huid, entry_date,
                            COALESCE(category,'')      AS category,
                            COALESCE(karat,'')         AS karat,
                            COALESCE(making_type,'')   AS making_type,
@@ -5269,6 +5596,7 @@ class DBManager:
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
                            COALESCE(photo,'')         AS photo,
+                           COALESCE(tag_variation,'RING') AS tag_variation,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE UPPER(TRIM(huid)) = ?
@@ -5286,7 +5614,7 @@ class DBManager:
             with self._get_connection() as conn:
                 return [dict(r) for r in conn.execute("""
                     SELECT id, it_code, it_name, tag_id, pcs, touch, gr_wt, nt_wt,
-                           para_stone_wt, ls_wt, huid, entry_date,
+                           para_stone_wt, ls_wt, pkg_wt, huid, entry_date,
                            COALESCE(category,'')      AS category,
                            COALESCE(karat,'')         AS karat,
                            COALESCE(making_type,'')   AS making_type,
@@ -5294,6 +5622,7 @@ class DBManager:
                            COALESCE(sale_price,0)     AS sale_price,
                            COALESCE(stone_value,0)    AS stone_value,
                            COALESCE(photo,'')         AS photo,
+                           COALESCE(tag_variation,'RING') AS tag_variation,
                            CASE WHEN is_tagged=1 THEN 'TAGGED' ELSE 'PENDING' END as live_status
                     FROM stock_inventory
                     WHERE tag_id IS NOT NULL
@@ -5361,6 +5690,51 @@ class DBManager:
                 """).fetchall()]
         except Exception as e:
             print(f"? [UNTAGGED ITEMS ERROR] {e}");
+            return []
+
+    def get_uchak_stock(self):
+        """Live fixed-price (uchak) stock, grouped by code.
+
+        Reads the same untagged rows the counter deducts from (tag blank or
+        N/A, pieces remaining), so the dashboard can never disagree with a
+        sale. Price is the latest inward price for the code; value is
+        pieces x that price. Katti bulk and tagged pieces are excluded.
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT t.it_code AS it_code, t.it_name AS it_name,
+                           t.pcs AS pcs,
+                           (SELECT CAST(COALESCE(s.design,'0') AS REAL)
+                              FROM stock_inventory s
+                             WHERE TRIM(COALESCE(s.it_code,'')) = t.it_code
+                               AND COALESCE(s.tag_id,'') IN ('','N/A')
+                             ORDER BY s.id DESC LIMIT 1) AS price
+                      FROM (SELECT TRIM(COALESCE(it_code,'')) AS it_code,
+                                   MAX(it_name) AS it_name,
+                                   SUM(COALESCE(pcs,0)) AS pcs
+                              FROM stock_inventory
+                             WHERE COALESCE(pcs,0) > 0
+                               AND COALESCE(tag_id,'') IN ('','N/A')
+                             GROUP BY TRIM(COALESCE(it_code,''))) t
+                     WHERE t.it_code != ''
+                     ORDER BY t.it_code
+                """).fetchall()
+                out = []
+                for r in rows:
+                    d = dict(r)
+                    pcs = int(d.get('pcs') or 0)
+                    try:
+                        price = float(d.get('price') or 0)
+                    except (TypeError, ValueError):
+                        price = 0.0
+                    d['pcs'] = pcs
+                    d['price'] = price
+                    d['value'] = round(pcs * price, 2)
+                    out.append(d)
+                return out
+        except Exception as e:
+            print(f"? [UCHAK STOCK ERROR] {e}");
             return []
 
     def get_touch_ledger_details(self, touch_value, mode='weight', from_date='', to_date=''):
@@ -6500,13 +6874,14 @@ class DBManager:
                     )
 
                 # CARRY-FORWARD: full closing balance (all stock per touch)
-                # Matches EXACTLY what do_year_close will transfer
+                # Matches EXACTLY what do_year_close will transfer —
+                # including touch-0 stock, which has weight but no purity.
                 # Tagged pieces + bulk opening + unsold katti = total closing weight
                 carry_rows = conn.execute("""
                     SELECT COUNT(DISTINCT ROUND(touch,2)) as n,
                            COALESCE(SUM(gr_wt),0) as wt
                     FROM stock_inventory
-                    WHERE touch IS NOT NULL AND touch > 0
+                    WHERE touch IS NOT NULL AND touch >= 0
                       AND gr_wt > 0
                 """).fetchone()
 
@@ -6576,6 +6951,21 @@ class DBManager:
 
                 _dblog(f"[YEAR] Starting year close: {current_year} -> {new_year}")
 
+                # Nothing to close means this already happened (or the year
+                # is empty): archiving now would snapshot an empty shop over
+                # the real archive and carry opening rows into themselves,
+                # doubling the stock. Refuse instead.
+                _leftovers = conn.execute(
+                    "SELECT COUNT(*) AS n FROM stock_inventory "
+                    "WHERE tag_id NOT LIKE 'OPENING-%'").fetchone()
+                _old_sales = conn.execute(
+                    "SELECT COUNT(*) AS n FROM sales_history").fetchone()
+                if (not _leftovers or not _leftovers['n']) and \
+                        (not _old_sales or not _old_sales['n']):
+                    return {'status': 'error',
+                            'message': 'Nothing to close: no sales and no '
+                                       'stock outside opening rows.'}
+
                 # ── Step 1: Archive current DB ────────────────────────
                 base = _os.path.dirname(self.db_path)
                 arch_dir = _os.path.join(base, 'archives', current_year)
@@ -6624,6 +7014,8 @@ class DBManager:
                 #   TAG-002 Chain               =  8.10g
                 #   ─────────────────────────────────────
                 #   New year OPENING-WT         = 158.42g  ← full closing balance
+                # Touch 0 carries like everything else: weight without a
+                # purity is still metal the new year owns.
                 live_stock = conn.execute("""
                     SELECT ROUND(touch,2) as touch,
                            COALESCE(SUM(gr_wt),0) as total_wt,
@@ -6631,7 +7023,7 @@ class DBManager:
                            COUNT(*) as pcs
                     FROM stock_inventory
                     WHERE touch IS NOT NULL
-                      AND touch > 0
+                      AND touch >= 0
                       AND gr_wt > 0
                     GROUP BY ROUND(touch,2)
                     HAVING COALESCE(SUM(gr_wt),0) > 0
@@ -7655,13 +8047,19 @@ class DBManager:
     # ── stock waiting to go ──────────────────────────────────────────
 
     def hm_pending_stock(self, limit=500):
-        """Tagged pieces with no number on them that are not already away.
+        """Tagged pieces with no valid number on them, not already away.
 
         A piece sitting in an open lot must not be offered again, which is
         the whole reason this is a query rather than a column: cancelling a
         lot releases its pieces with nothing left over to clean up.
+
+        'No number' means no *valid* HUID (core.hallmark.has_huid): the
+        column also carries bin labels like B-001, and blank-or-bin is
+        still waiting. The validity check lives in Python because SQLite
+        cannot run the rule; the lot-away filter stays in SQL.
         """
         try:
+            from core import hallmark as _hm
             with self._get_connection() as conn:
                 cols = [r[1] for r in conn.execute(
                     "PRAGMA table_info(stock_inventory)").fetchall()]
@@ -7669,21 +8067,38 @@ class DBManager:
                 cat = "COALESCE(s.category,'')" if 'category' in cols else "''"
                 rows = conn.execute(
                     "SELECT s.tag_id, s.it_name, s.it_code, s.gr_wt, s.nt_wt, "
-                    "       s.touch, " + karat + " AS karat, "
+                    "       s.touch, s.huid, " + karat + " AS karat, "
                     + cat + " AS category, s.entry_date "
                     "FROM stock_inventory s "
                     "WHERE COALESCE(s.tag_id,'') <> '' "
-                    "  AND COALESCE(s.huid,'') = '' "
                     "  AND s.tag_id NOT IN ("
                     "      SELECT i.tag_id FROM hallmark_lot_items i "
                     "      JOIN hallmark_lots l ON l.id = i.lot_id "
                     "      WHERE l.status <> 'cancelled' "
                     "        AND COALESCE(l.received_date,'') = '') "
-                    "ORDER BY s.entry_date, s.tag_id LIMIT ?",
-                    (int(limit or 500),)).fetchall()
-                return [dict(r) for r in rows]
+                    "ORDER BY s.entry_date, s.tag_id").fetchall()
+                out = [dict(r) for r in rows
+                       if not _hm.has_huid(r['huid'])]
+                return out[:int(limit or 500)]
         except Exception as e:
             _dberr(f"[HM] pending stock: {e}")
+            return []
+
+    def hm_stock_marked(self):
+        """Tagged stock already carrying a valid HUID — marked before any
+        lot (opening stock, supplier-marked pieces), so the panel and the
+        register can say so instead of showing a zero that contradicts
+        the inventory cards."""
+        try:
+            from core import hallmark as _hm
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT s.nt_wt, s.gr_wt, s.huid "
+                    "FROM stock_inventory s "
+                    "WHERE COALESCE(s.tag_id,'') <> ''").fetchall()
+            return [dict(r) for r in rows if _hm.has_huid(r['huid'])]
+        except Exception as e:
+            _dberr(f"[HM] stock marked: {e}")
             return []
 
     # ── lots ─────────────────────────────────────────────────────────
@@ -8285,8 +8700,13 @@ class DBManager:
                         customer    TEXT DEFAULT '',
                         grand_total REAL DEFAULT 0,
                         items       TEXT DEFAULT '[]',
+                        meta        TEXT DEFAULT '{}',
                         created_at  DATETIME DEFAULT CURRENT_TIMESTAMP);
                 """)
+                cols = [r[1] for r in conn.execute(
+                    "PRAGMA table_info(held_bills)").fetchall()]
+                if 'meta' not in cols:
+                    conn.execute("ALTER TABLE held_bills ADD COLUMN meta TEXT DEFAULT '{}'")
                 conn.commit()
             return True
         except Exception as e:
@@ -8301,14 +8721,25 @@ class DBManager:
             if not vch:
                 return {'status': 'error', 'message': 'Bill id is required.'}
             items = d.get('items') or []
+            # Everything the counter needs to resume exactly: discount, old
+            # gold, payment, phone, loyalty and GST. Items alone recomputed a
+            # different grand than the chip showed.
+            meta = d.get('meta')
+            if not isinstance(meta, dict):
+                meta = {k: d.get(k) for k in (
+                    'phone', 'payment_mode', 'discount', 'discount_type',
+                    'discount_value', 'old_gold', 'old_gold_desc',
+                    'loyalty_redeem', 'loyalty_value',
+                    'cgst_rate', 'sgst_rate') if d.get(k) is not None}
             self.ensure_held_bills_table()
             with self._get_connection() as conn:
                 conn.execute(
                     "INSERT OR REPLACE INTO held_bills(vch_id,customer,"
-                    "grand_total,items) VALUES(?,?,?,?)",
+                    "grand_total,items,meta) VALUES(?,?,?,?,?)",
                     (vch, str(d.get('customer') or 'Walk-in'),
                      float(d.get('grand_total') or 0),
-                     _j.dumps(items, ensure_ascii=False)))
+                     _j.dumps(items, ensure_ascii=False),
+                     _j.dumps(meta, ensure_ascii=False)))
                 conn.commit()
             return {'status': 'success', 'vch_id': vch}
         except Exception as e:
@@ -8321,7 +8752,7 @@ class DBManager:
             self.ensure_held_bills_table()
             with self._get_connection() as conn:
                 rows = conn.execute(
-                    "SELECT vch_id,customer,grand_total,items,created_at "
+                    "SELECT vch_id,customer,grand_total,items,meta,created_at "
                     "FROM held_bills ORDER BY created_at").fetchall()
             out = []
             for r in rows:
@@ -8330,8 +8761,15 @@ class DBManager:
                     d['items'] = _j.loads(d.get('items') or '[]')
                 except Exception:
                     d['items'] = []
-                out.append({k: d[k] for k in
-                            ('vch_id', 'customer', 'grand_total', 'items')})
+                try:
+                    meta = _j.loads(d.get('meta') or '{}')
+                except Exception:
+                    meta = {}
+                bill = {k: d[k] for k in
+                        ('vch_id', 'customer', 'grand_total', 'items')}
+                if isinstance(meta, dict):
+                    bill.update(meta)
+                out.append(bill)
             return {'status': 'success', 'bills': out}
         except Exception as e:
             _dberr(f"[HELD] list: {e}")

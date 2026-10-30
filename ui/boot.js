@@ -37,6 +37,119 @@
     } catch (e) { /* a page without a head yet is not worth an error */ }
   })();
 
+  // ── Custom dialogs (replace the browser's alert / confirm) ────────────
+  // The native popups say "This page says" and "localhost:8777", look nothing
+  // like the app, and can't be styled. This draws one AurumOS-styled modal and
+  // routes every alert() through it. confirm() can't be made async in place, so
+  // call sites use window.auConfirm(...) which returns a Promise<boolean>.
+  (function installDialogs() {
+    try {
+      var css =
+        '#aurum-dlg-ov{position:fixed;inset:0;z-index:2147482000;display:none;'
+        + 'align-items:center;justify-content:center;background:rgba(15,23,42,0.55);'
+        + 'backdrop-filter:blur(2px);font-family:"DM Sans",system-ui,Arial,sans-serif;}'
+        + '#aurum-dlg-ov.show{display:flex;}'
+        + '#aurum-dlg{width:400px;max-width:calc(100vw - 48px);background:#fff;'
+        + 'border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,0.32);'
+        + 'padding:22px 22px 18px;transform:translateY(8px) scale(0.98);opacity:0;'
+        + 'transition:transform .18s cubic-bezier(.22,1,.36,1),opacity .18s ease;}'
+        + '#aurum-dlg-ov.show #aurum-dlg{transform:none;opacity:1;}'
+        + '#aurum-dlg .adlg-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}'
+        + '#aurum-dlg .adlg-ic{width:34px;height:34px;flex:0 0 auto;border-radius:9px;'
+        + 'display:flex;align-items:center;justify-content:center;font-size:17px;'
+        + 'background:rgba(37,99,235,0.1);}'
+        + '#aurum-dlg.danger .adlg-ic{background:rgba(220,38,38,0.1);}'
+        + '#aurum-dlg .adlg-ttl{font-size:0.95rem;font-weight:700;color:#0f172a;}'
+        + '#aurum-dlg .adlg-msg{font-size:0.83rem;line-height:1.55;color:#475569;'
+        + 'white-space:pre-line;margin:2px 0 18px;}'
+        + '#aurum-dlg .adlg-btns{display:flex;gap:8px;justify-content:flex-end;}'
+        + '#aurum-dlg .adlg-b{font:600 0.8rem "DM Sans",system-ui,Arial,sans-serif;'
+        + 'padding:9px 18px;border-radius:8px;border:1px solid transparent;cursor:pointer;'
+        + 'transition:filter .15s ease,background .15s ease;}'
+        + '#aurum-dlg .adlg-cancel{background:#f1f5f9;color:#334155;border-color:#e2e8f0;}'
+        + '#aurum-dlg .adlg-cancel:hover{background:#e2e8f0;}'
+        + '#aurum-dlg .adlg-ok{background:#2563eb;color:#fff;}'
+        + '#aurum-dlg .adlg-ok:hover{filter:brightness(1.07);}'
+        + '#aurum-dlg.danger .adlg-ok{background:#dc2626;}';
+      var st = document.createElement('style');
+      st.id = 'aurum-dlg-css';
+      st.appendChild(document.createTextNode(css));
+      (document.head || document.documentElement).appendChild(st);
+    } catch (e) { /* ignore */ }
+
+    var ov = null, elIc, elTtl, elMsg, elOk, elCancel, elCard, _resolve = null;
+
+    function build() {
+      if (ov) return;
+      ov = document.createElement('div');
+      ov.id = 'aurum-dlg-ov';
+      ov.innerHTML =
+        '<div id="aurum-dlg" role="dialog" aria-modal="true">'
+        + '<div class="adlg-head"><div class="adlg-ic"></div>'
+        + '<div class="adlg-ttl"></div></div>'
+        + '<div class="adlg-msg"></div>'
+        + '<div class="adlg-btns">'
+        + '<button type="button" class="adlg-b adlg-cancel"></button>'
+        + '<button type="button" class="adlg-b adlg-ok"></button>'
+        + '</div></div>';
+      (document.body || document.documentElement).appendChild(ov);
+      elCard = ov.querySelector('#aurum-dlg');
+      elIc = ov.querySelector('.adlg-ic');
+      elTtl = ov.querySelector('.adlg-ttl');
+      elMsg = ov.querySelector('.adlg-msg');
+      elOk = ov.querySelector('.adlg-ok');
+      elCancel = ov.querySelector('.adlg-cancel');
+      elOk.addEventListener('click', function () { done(true); });
+      elCancel.addEventListener('click', function () { done(false); });
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov && elCancel.style.display !== 'none') done(false);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (!ov.classList.contains('show')) return;
+        if (e.key === 'Enter') { e.preventDefault(); done(true); }
+        else if (e.key === 'Escape' && elCancel.style.display !== 'none') { e.preventDefault(); done(false); }
+      });
+    }
+
+    function done(val) {
+      if (!ov) return;
+      ov.classList.remove('show');
+      var r = _resolve; _resolve = null;
+      if (r) setTimeout(function () { r(val); }, 120);
+    }
+
+    function show(opts) {
+      opts = opts || {};
+      build();
+      var isConfirm = !!opts.confirm;
+      elTtl.textContent = opts.title || 'AurumOS';
+      elMsg.textContent = String(opts.message == null ? '' : opts.message);
+      elIc.textContent = opts.icon || (opts.danger ? '⚠️' : (isConfirm ? '❓' : 'ℹ️'));
+      elCard.className = opts.danger ? 'danger' : '';
+      elOk.textContent = opts.okText || (isConfirm ? 'OK' : 'OK');
+      elCancel.textContent = opts.cancelText || 'Cancel';
+      elCancel.style.display = isConfirm ? 'block' : 'none';
+      return new Promise(function (resolve) {
+        _resolve = resolve;
+        ov.classList.add('show');
+        setTimeout(function () { try { elOk.focus(); } catch (e) {} }, 30);
+      });
+    }
+
+    // Public API
+    window.auAlert = function (message, opts) {
+      opts = opts || {}; opts.message = message; opts.confirm = false;
+      return show(opts);
+    };
+    window.auConfirm = function (message, opts) {
+      opts = opts || {}; opts.message = message; opts.confirm = true;
+      return show(opts);
+    };
+    // Every native alert() becomes the styled one. It no longer blocks, but no
+    // AurumOS alert() reads a return value, so nothing depends on that.
+    try { window.alert = function (message) { window.auAlert(message); }; } catch (e) {}
+  })();
+
   function apiLive() {
     return !!(window.pywebview && window.pywebview.api &&
               Object.keys(window.pywebview.api).length > 0);
@@ -59,6 +172,147 @@
       else if (++n > 150) { clearInterval(timer); go(); } // ~15s hard stop
     }, 100);
   };
+
+  // ── Terminal watchdog — main PC drops mid-work → 2-minute countdown ────
+  // While a staff PC is being used, it quietly checks the main PC every few
+  // seconds. The moment the main PC goes off, a full-screen 2:00 countdown
+  // starts, ticking in real time. If the main PC returns before 0 the
+  // countdown clears and work continues; if it hits 0 the PC signs out to the
+  // login screen (which then shows the "Main PC is switched off" message).
+  // Only staff PCs, and only on real working screens.
+  (function terminalWatchdog() {
+    try {
+      var page = (location.pathname.split('/').pop() || '').toLowerCase();
+      var SKIP = { 'login.html': 1, 'setup.html': 1, 'splash.html': 1,
+                   'revoked.html': 1, 'agreement.html': 1, 'update_notify.html': 1,
+                   'bastion_popup.html': 1, 'trial_portal.html': 1 };
+      if (SKIP[page]) return;
+      function isTerminal() { try { return localStorage.getItem('aurum_is_terminal') === '1'; } catch (e) { return false; } }
+      function serverIp() { try { return localStorage.getItem('aurum_server_ip') || ''; } catch (e) { return ''; } }
+      if (!isTerminal()) return;
+
+      var GRACE = 120, POLL_OK = 10000, POLL_DOWN = 4000;
+      var ip = serverIp();
+      var ov = null, secEl = null, countTimer = null, pollTimer = null, remaining = 0, counting = false;
+
+      function ping() {
+        return new Promise(function (res) {
+          if (!ip || !window.pywebview || !window.pywebview.api) { res(false); return; }
+          try {
+            window.pywebview.api.cluster('verify_server', { ip: ip })
+              .then(function (r) { res(!!(r && r.status === 'success')); })
+              .catch(function () { res(false); });
+          } catch (e) { res(false); }
+        });
+      }
+      function build() {
+        if (ov) return;
+        ov = document.createElement('div');
+        ov.id = 'aurum-term-watch';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2147483500;display:none;'
+          + 'flex-direction:column;align-items:center;justify-content:center;text-align:center;'
+          + 'padding:32px;background:rgba(15,23,42,0.97);'
+          + 'font-family:"DM Sans",system-ui,Arial,sans-serif;';
+        ov.innerHTML =
+          '<div style="width:64px;height:64px;border-radius:18px;display:flex;align-items:center;'
+          + 'justify-content:center;margin-bottom:20px;font-size:30px;background:rgba(239,68,68,0.14);'
+          + 'border:1px solid rgba(239,68,68,0.3);">⚠️</div>'
+          + '<div style="font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:8px;">'
+          + 'Main PC disconnected</div>'
+          + '<div style="font-size:0.88rem;color:#cbd5e1;line-height:1.6;max-width:440px;margin-bottom:18px;">'
+          + 'Trying to reconnect to the shop’s main PC. If it does not come back in time, '
+          + 'this computer will sign out to keep your data safe.</div>'
+          + '<div id="aurum-watch-sec" style="font-variant-numeric:tabular-nums;font-size:2.8rem;'
+          + 'font-weight:800;color:#fff;letter-spacing:1px;line-height:1;">2:00</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-top:12px;color:#64748b;font-size:0.74rem;">'
+          + '<span style="width:12px;height:12px;border:2px solid #334155;border-top-color:#94a3b8;'
+          + 'border-radius:50%;display:inline-block;animation:gatespin 0.8s linear infinite;"></span>'
+          + '<span>reconnecting…</span></div>'
+          + '<style>@keyframes gatespin{to{transform:rotate(360deg)}}</style>';
+        (document.body || document.documentElement).appendChild(ov);
+        secEl = ov.querySelector('#aurum-watch-sec');
+      }
+      function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+      function startCountdown() {
+        if (counting) return;
+        counting = true; remaining = GRACE;
+        build(); secEl.textContent = fmt(remaining); ov.style.display = 'flex';
+        countTimer = setInterval(function () {
+          remaining--;
+          if (secEl) secEl.textContent = fmt(Math.max(0, remaining));
+          if (remaining <= 0) { clearInterval(countTimer); countTimer = null; lockOut(); }
+        }, 1000);
+        restartPoll(POLL_DOWN);
+      }
+      function stopCountdown() {
+        counting = false;
+        if (countTimer) { clearInterval(countTimer); countTimer = null; }
+        if (ov) ov.style.display = 'none';
+        restartPoll(POLL_OK);
+      }
+      function lockOut() { try { window.location.href = 'login.html'; } catch (e) {} }
+      function restartPoll(interval) {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(doPoll, interval);
+      }
+      function doPoll() {
+        ping().then(function (up) {
+          if (up) { if (counting) stopCountdown(); }
+          else { if (!counting) startCountdown(); }
+        });
+      }
+      window.apiReady(function () {
+        if (!ip) ip = serverIp();
+        restartPoll(POLL_OK);
+        setTimeout(doPoll, 3000);   // first check soon after the page settles
+      });
+    } catch (e) { /* never let the watchdog break a page */ }
+  })();
+
+  // ── Responsive baseline — reaches every screen ────────────────────────
+  // The app is built for a counter PC but shops run it on every size of
+  // monitor and laptop. This does the two global wins: nothing wider than the
+  // screen, and the sidebar collapses to icons on narrow widths (reusing the
+  // existing collapsed CSS) to free ~190px. Per-screen grid/table breakpoints
+  // live in each page.
+  (function responsiveBaseline() {
+    try {
+      var css =
+        'img{max-width:100%;height:auto;}'
+        + 'html,body{max-width:100%;}'
+        // On a narrow window a data table scrolls inside its own box instead of
+        // pushing the whole page sideways.
+        + '@media (max-width:1100px){.aurum-rtable{display:block;overflow-x:auto;'
+        + '-webkit-overflow-scrolling:touch;}}';
+      var st = document.createElement('style');
+      st.id = 'aurum-responsive-css';
+      st.appendChild(document.createTextNode(css));
+      (document.head || document.documentElement).appendChild(st);
+    } catch (e) {}
+
+    // Auto-collapse the sidebar under 1100px; above it, honour the user's own
+    // choice (sidebar.js stores it in 'sb_collapsed'). sidebar.js only ever
+    // ADDS the collapsed class, so forcing it here never fights that.
+    try {
+      var mq = window.matchMedia('(max-width: 1100px)');
+      function applySb() {
+        try {
+          var b = document.body;
+          if (!b) return;
+          if (mq.matches) { b.classList.add('sidebar-collapsed'); return; }
+          var pref = null;
+          try { pref = localStorage.getItem('sb_collapsed'); } catch (e) {}
+          if (pref === '1') b.classList.add('sidebar-collapsed');
+          else b.classList.remove('sidebar-collapsed');
+        } catch (e) {}
+      }
+      if (document.body) applySb();
+      else document.addEventListener('DOMContentLoaded', applySb);
+      if (mq.addEventListener) mq.addEventListener('change', applySb);
+      else if (mq.addListener) mq.addListener(applySb);
+      window.addEventListener('resize', applySb);
+    } catch (e) {}
+  })();
 
   // ── Shared live gold rate (/10g): any billing page publishes the moment
   // the rate is typed; the dashboard subscribes. Survives navigation via
@@ -235,6 +489,49 @@
     if (e && e.detail && e.detail.success) {
       setTimeout(function () { window.AurumOS.refreshVersion(true); }, 1500);
     }
+  });
+
+  // ── Re-aim keyboard focus into web content on window activation ──
+  // If the host form ever ends up holding keyboard focus instead of the
+  // WebView2 child, every keystroke dies while the page looks ready
+  // (blinking caret, dead keys). Re-assert on each activation so that
+  // state can never persist: at worst one background stretch, never a
+  // stuck box. Gated on the page believing it is active, same-process
+  // only, best effort — a no-op when focus is already correct.
+  window.addEventListener('focus', function () {
+    try {
+      if (!document.hasFocus || !document.hasFocus()) return;
+      var api = (window.pywebview && window.pywebview.api) || null;
+      if (api && typeof api.ensure_web_focus === 'function') {
+        try { api.ensure_web_focus(); } catch (e) {}
+      }
+    } catch (e) {}
+  });
+
+  // ── Re-aim keyboard focus on every field click ────────────────────
+  // Same trap, finer net: the first click into a field lands while the
+  // host still holds OS focus, so that click's keystrokes die even though
+  // the caret shows. The click itself heals it (throttled): everything
+  // typed after lands. Gated on editable targets + active page.
+  var _refocusAt = 0;
+  document.addEventListener('focusin', function (e) {
+    try {
+      var now = Date.now();
+      if (now - _refocusAt < 2000) return;
+      var t = (e && e.target) || null;
+      if (!t) return;
+      var tag = String((t.tagName || '')).toLowerCase();
+      var editable = tag === 'input' || tag === 'textarea' ||
+        t.isContentEditable === true;
+      if (!editable) return;
+      if (t.readOnly || t.disabled) return;
+      if (!document.hasFocus || !document.hasFocus()) return;
+      _refocusAt = now;
+      var api = (window.pywebview && window.pywebview.api) || null;
+      if (api && typeof api.ensure_web_focus === 'function') {
+        try { api.ensure_web_focus(); } catch (e2) {}
+      }
+    } catch (e3) {}
   });
 
   // ── Auto-defer window.onload (16+ pages use this) ─────────────────────

@@ -461,6 +461,7 @@ function _updateWeight(wt, stable) {
         },
 
         connect: function() {
+            _self._ensureInit();
             var sel  = document.getElementById('sw-port-sel');
             var bsel = document.getElementById('sw-baud-sel');
             var btn  = document.getElementById('sw-conn-btn');
@@ -524,7 +525,17 @@ function _updateWeight(wt, stable) {
             }).catch(function() {});
         },
 
+        // Self-healing entry points: any page that forgets init() (or
+        // loads this script late) still gets a working popup instead of a
+        // dead button. Never throws when the DOM is not ready yet.
+        _ensureInit: function() {
+            if (_inited) return;
+            if (!document || !document.body) return;
+            try { _self.init(); } catch (e) {}
+        },
+
         openPopup: function() {
+            _self._ensureInit();
             _self._scanPorts();
             _self._setPortSelFromSaved();
             var popup = document.getElementById('sw-popup');
@@ -559,6 +570,7 @@ function _updateWeight(wt, stable) {
          * Renders the compact topbar button into given element
          */
         renderBtn: function(containerId) {
+            _self._ensureInit();
             var el = document.getElementById(containerId);
             if (!el) return;
             var btn = document.createElement('button');
@@ -575,6 +587,7 @@ function _updateWeight(wt, stable) {
          * autoFillFieldId: if provided, fills that input on stable weight
          */
         renderMini: function(containerId, autoFillFieldId) {
+            _self._ensureInit();
             var el = document.getElementById(containerId);
             if (!el) return;
             var wt  = _lastWeight ? _lastWeight.toFixed(3) + 'g' : '\u2014';

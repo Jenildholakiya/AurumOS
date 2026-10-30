@@ -361,7 +361,7 @@ def generate_bastion_report(db, attack_type, detail, timestamp,
         canv.setFont('Helvetica', 6.5)
         canv.setFillColor(RC(0.55, 0.52, 0.46))
         canv.drawString(MARGIN, 4.5*mm,
-            f'Generated: {gen_time}  ·  {data["biz_name"]}  ·  CONFIDENTIAL')
+            f'Generated: {gen_time}  ·  {data["biz_name"]}  ·  CONFIDENTIAL  ·  AurumOS by Pentarch')
         canv.setFont('Helvetica-Bold', 7)
         canv.setFillColor(RL_GOLD)
         canv.drawRightString(PAGE_W - MARGIN, 4.5*mm, f'Page {doc.page}')

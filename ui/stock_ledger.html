@@ -97,6 +97,21 @@ td{padding:8px 12px;font-size:0.76rem;font-weight:500;border-bottom:1px solid va
 .btn-save{width:100%;height:42px;background:var(--ink);color:#fff;border:none;border-radius:7px;font-family:var(--sans);font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.15s;margin-top:2px;}
 .btn-save:hover:not(:disabled){background:var(--gold3);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3);}
 .btn-save:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* Photo picker: framed thumbnail + pill button. The thumbnail itself is
+   clickable; the gold ring appears once a photo is set (has-photo). */
+.photo-pick{display:flex;align-items:center;gap:0;}
+.photo-thumb{width:58px;height:58px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--cream2);border:1.5px dashed var(--muted2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;color:var(--muted2);}
+.photo-thumb:hover{border-color:var(--gold2);color:var(--gold3);background:var(--gold-bg);}
+.photo-thumb.has-photo{border-style:solid;border-color:var(--gold-ln);box-shadow:0 3px 10px rgba(37,99,235,0.16);}
+.photo-thumb.has-photo:hover{box-shadow:0 4px 14px rgba(37,99,235,0.22);}
+#panel-photo-prev{width:100%;height:100%;object-fit:cover;}
+.photo-empty{display:flex;align-items:center;justify-content:center;}
+.photo-thumb.has-photo .photo-empty{display:none;}
+.photo-meta{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-left:6px;}
+#panel-photo-btn{padding:7px 18px;border-radius:99px;border:1px solid var(--rule);background:#fff;font-size:0.72rem;font-weight:700;color:var(--ink3);cursor:pointer;font-family:inherit;transition:all 0.14s;white-space:nowrap;}
+#panel-photo-btn:hover{border-color:var(--gold2);color:var(--gold3);background:var(--gold-bg);box-shadow:0 2px 8px rgba(37,99,235,0.12);transform:translateY(-1px);}
+.photo-hint{font-size:0.6rem;color:var(--muted2);font-family:var(--mono);letter-spacing:0.2px;}
 .del-modal{width:400px;max-width:95vw;}
 .del-inner{padding:26px 24px 22px;text-align:center;}
 .del-icon{font-size:2rem;margin-bottom:14px;}
@@ -106,7 +121,6 @@ td{padding:8px 12px;font-size:0.76rem;font-weight:500;border-bottom:1px solid va
 .btn-dc{padding:10px;border:1px solid var(--rule);border-radius:6px;background:var(--white);font-family:var(--sans);font-size:0.76rem;color:var(--muted);cursor:pointer;}
 .btn-dc:hover{background:var(--cream2);}
 .btn-dd{padding:10px;border:none;border-radius:6px;background:#dc2626;font-family:var(--sans);font-size:0.76rem;font-weight:700;color:#fff;cursor:pointer;}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:10px 18px;border-radius:7px;font-size:0.76rem;font-weight:600;box-shadow:var(--sh2);z-index:99999;display:none;}
 .srch-wrap{position:relative;display:flex;align-items:center;flex:1;}
 .srch-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;transition:color 0.15s ease;z-index:1;}
 .srch-wrap.has-value .srch-ico{color:var(--gold3);}
@@ -153,7 +167,7 @@ tbody tr.row-enter{animation:rowEnter 0.22s cubic-bezier(0.16,1,0.3,1) both;}
 
 /* Calendar */
 @keyframes calIn{from{opacity:0;transform:translateY(-10px) scale(0.96)}to{opacity:1;transform:none}}
-.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:0.78rem;font-weight:500;cursor:pointer;color:var(--ink);transition:all 0.12s;border:1px solid transparent;font-family:var(--mono);position:relative;}
+.cal-day{height:38px;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:0.78rem;font-weight:500;cursor:pointer;color:var(--ink);transition:all 0.12s;border:1px solid transparent;font-family:var(--mono);position:relative;box-sizing:border-box;}
 .cal-day:hover:not(.cal-empty):not(.cal-future){background:var(--gold-bg);border-color:var(--gold-ln);color:var(--gold3);}
 .cal-day.cal-today{border-color:var(--gold-ln);background:var(--gold-bg);color:var(--gold3);font-weight:700;}
 .cal-day.cal-selected{background:var(--ink)!important;color:#fff!important;font-weight:700;border-color:var(--ink)!important;}.cal-day.cal-selected.cal-has-entry{background:var(--green)!important;border-color:var(--green)!important;}
@@ -165,15 +179,27 @@ tbody tr.row-enter{animation:rowEnter 0.22s cubic-bezier(0.16,1,0.3,1) both;}
 .cal-yr-btn:hover{background:var(--gold-bg);border-color:var(--gold-ln);color:var(--gold3);}
 .cal-yr-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-#ep-label{display:block;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted2);margin-bottom:3px;}
-#entryPanel input:not([type="hidden"]),#entryPanel select{width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--cream);font-family:var(--mono);font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;min-height:32px;}
-#entryPanel input:not([type="hidden"]):focus,#entryPanel select:focus{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-bg);}
+/* ── Entry panel form ── */
+#ep-label{display:block;font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted2);margin-bottom:4px;}
+#entryPanel input:not([type="hidden"]),#entryPanel select{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--white);font-family:var(--mono);font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;min-height:36px;transition:border-color 0.15s,box-shadow 0.15s,background 0.15s;}
+#entryPanel input:not([type="hidden"]):focus,#entryPanel select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(37,99,235,0.08);background:var(--white);}
 #entryPanel input[readonly]{background:var(--cream2);color:var(--gold3);font-weight:600;}
-#entryPanel .calc-out{background:var(--green-bg)!important;border-color:rgba(22,163,74,0.2)!important;color:var(--green)!important;font-weight:600;}
-#panelFormGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px;align-content:start;}
-#panelSaveBtn{padding:7px 20px;border:none;border-radius:6px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;font-family:var(--sans);font-weight:700;font-size:0.78rem;cursor:pointer;min-height:32px;transition:all 0.15s;}
-#panelSaveBtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3);}
-#panelSaveBtn:disabled{opacity:0.4;cursor:not-allowed;}
+#entryPanel .calc-out{background:rgba(22,163,74,0.06)!important;border-color:rgba(22,163,74,0.22)!important;color:var(--green)!important;font-weight:700;}
+#panelFormGrid{display:flex;flex-direction:column;gap:0;align-content:start;}
+.ep-section{padding:14px 4px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px 14px;}
+.ep-section:not(:last-child){border-bottom:1px solid var(--rule2);}
+.ep-section-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.ep-section-head span{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--gold3);}
+.ep-section-head::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--gold-ln),transparent);}
+.ep-section.ep-results{grid-template-columns:repeat(2,1fr);gap:10px 14px;}
+.ep-result-card{padding:10px 14px;border-radius:10px;background:linear-gradient(135deg,rgba(22,163,74,0.04),rgba(22,163,74,0.08));border:1px solid rgba(22,163,74,0.15);}
+.ep-result-card #ep-label{color:var(--green);margin-bottom:2px;}
+.ep-result-card input{background:transparent!important;border:none!important;padding:0!important;font-size:1rem!important;font-weight:800!important;color:var(--green)!important;min-height:unset!important;box-shadow:none!important;}
+.ep-footer{display:flex;align-items:center;gap:14px;padding:12px 4px 4px;border-top:1px solid var(--rule2);}
+.ep-footer .photo-pick{flex:1;}
+#panelSaveBtn{padding:10px 28px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--ink),var(--ink2));color:#fff;font-family:var(--sans);font-weight:700;font-size:0.82rem;cursor:pointer;min-height:40px;transition:all 0.18s;letter-spacing:0.3px;box-shadow:0 2px 8px rgba(14,12,9,0.15);}
+#panelSaveBtn:hover:not(:disabled){background:linear-gradient(135deg,var(--gold),var(--gold2));transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,0.25);}
+#panelSaveBtn:disabled{opacity:0.35;cursor:not-allowed;transform:none;box-shadow:none;}
 
 </style>
 </head>
@@ -446,6 +472,7 @@ function scInsertToGrWt() {
                     <th style="width:110px;">HU ID</th>
                     <th style="width:95px;">Status</th>
                     <th style="width:65px;">Var.</th>
+                    <th style="width:64px;">Photo</th>
                 </tr>
             </thead>
             <tbody id="ledger-body">
@@ -456,7 +483,7 @@ function scInsertToGrWt() {
 </div>
 
 <!-- STICKY RECEIPT ENTRY PANEL (4-col grid, draggable) -->
-<div id="entryPanel" style="display:none;position:fixed;bottom:0;left:0;right:0;height:25vh;min-height:120px;z-index:9990;background:#fff;border-top:3px solid var(--gold);box-shadow:0 -6px 24px rgba(14,12,9,0.12);flex-direction:column;overflow:hidden;border-radius:12px 12px 0 0;">
+<div id="entryPanel" style="display:none;position:fixed;bottom:0;left:0;right:0;height:46vh;min-height:440px;max-height:72vh;z-index:9990;background:#fff;border-top:3px solid var(--gold);box-shadow:0 -6px 24px rgba(14,12,9,0.12);flex-direction:column;overflow:hidden;border-radius:12px 12px 0 0;">
     <input type="hidden" id="panel-entry-it-name">
     <input type="hidden" id="panel-entry-it-code">
     <div id="panelDragHandle" style="height:14px;cursor:n-resize;background:linear-gradient(180deg,var(--cream),#fff);flex-shrink:0;border-bottom:1px solid var(--rule);position:relative;display:flex;align-items:center;justify-content:center;border-radius:12px 12px 0 0;" onmousedown="panelDragStart(event)"><div style="width:44px;height:4px;border-radius:2px;background:var(--rule);"></div></div>
@@ -470,28 +497,61 @@ function scInsertToGrWt() {
         <span style="flex:1;"></span>
         <div onclick="closeEntryPanel()" style="cursor:pointer;padding:4px 12px;border-radius:6px;border:1px solid var(--rule);background:#fff;color:var(--muted2);font-size:0.7rem;font-weight:600;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--rule)';this.style.color='var(--muted2)'">&#10005;</div>
     </div>
-    <div id="panelFormGrid" style="flex:1;overflow-y:auto;padding:12px 20px 14px;align-content:start;">
-        <div><label id="ep-label">Tag ID</label><input type="text" id="panel-entry-tag-id" placeholder="Auto" class="gold"></div>
-        <div><label id="ep-label">PCS *</label><input type="number" id="panel-entry-pcs" class="panel-entry-input nav-target" oninput="validatePanelForm()" placeholder="0" style="text-align:center;"></div>
-        <div><label id="ep-label">Size</label><input type="text" id="panel-entry-size" class="panel-entry-input nav-target" placeholder="-"></div>
-        <div><label id="ep-label">Design Name</label><input type="text" id="panel-entry-ds" class="panel-entry-input nav-target" placeholder="Design or lot info"></div>
-        <div><label id="ep-label">GR WT *</label><input type="number" id="panel-gr-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" oninput="validatePanelForm()" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();if(typeof _scW!=='undefined'&&_scW!==null&&parseFloat(_scW)>0){this.value=parseFloat(_scW).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}"></div>
-        <div><label id="ep-label">Para Wt</label><input type="number" id="panel-para-stone-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-        <div><label id="ep-label">Less WT</label><input type="number" id="panel-ls-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-        <div><label id="ep-label">Pkg WT</label><input type="number" id="panel-pkg-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
-        <div id="panel-huid-field"><label id="ep-label">HU ID</label><input type="text" id="panel-entry-huid" class="panel-entry-input nav-target" oninput="validatePanelForm()" placeholder="HUID"></div>
-        <div><label id="ep-label">Touch %</label><input type="text" id="panel-entry-touch" readonly placeholder="-" style="background:var(--cream2);color:var(--gold3);font-weight:600;text-align:center;"></div>
-        <div id="panel-wastage-field"><label id="ep-label">Wast %</label><input type="number" id="panel-entry-wastage" class="panel-entry-input nav-target calc-trigger" placeholder="0"></div>
-        <div id="panel-ghat-field"><label id="ep-label">Ghat WT</label><input type="number" id="panel-entry-ghat" class="panel-entry-input nav-target" step="0.001" placeholder="0.000"></div>
-        <div><label id="ep-label">Net Wt</label><input type="text" id="panel-nt-wt" readonly class="calc-out" placeholder="0.000" style="background:var(--green-bg);border-color:rgba(22,163,74,0.2);color:var(--green);font-weight:600;"></div>
-        <div id="panel-fine-wt-field"><label id="ep-label">Fine Gold</label><input type="text" id="panel-entry-fine-wt" readonly placeholder="0.000" style="background:var(--green-bg);border-color:rgba(22,163,74,0.2);color:var(--green);font-weight:600;"></div>
-        <div id="panel-making-charge-field"><label id="ep-label">Making Charge</label><input type="number" id="panel-entry-making-charge" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
-        <div id="panel-making-type-field"><label id="ep-label">Making Type</label><select id="panel-entry-making-type"><option value="percent">% of metal value</option><option value="per_gram">Rs per gram</option><option value="fixed">Flat Rs</option></select></div>
-        <div id="panel-sale-price-field"><label id="ep-label">Sale Price / MRP</label><input type="number" id="panel-entry-sale-price" class="panel-entry-input nav-target" step="0.01" placeholder="0 = use today's rate" title="Leave 0 to work the price out from today's rate"></div>
-        <div id="panel-karat-field"><label id="ep-label">Karat</label><input type="text" id="panel-entry-karat" class="panel-entry-input nav-target" placeholder="22K"></div>
-        <div id="panel-category-field"><label id="ep-label">Category</label><input type="text" id="panel-entry-category" class="panel-entry-input nav-target" placeholder="Ring, chain..."></div>
-        <div id="panel-stone-value-field"><label id="ep-label">Stone Value</label><input type="number" id="panel-entry-stone-value" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
-        <div style="display:flex;align-items:flex-end;"><button id="panelSaveBtn" onclick="savePanelEntry()" disabled>Save</button></div>
+    <div id="panelFormGrid" style="flex:1;overflow-y:auto;padding:8px 20px 14px;align-content:start;">
+
+        <!-- ── Section 1: Identity ── -->
+        <div class="ep-section">
+            <div class="ep-section-head"><span>Identity</span></div>
+            <div><label id="ep-label">Tag ID</label><input type="text" id="panel-entry-tag-id" placeholder="Auto" class="gold"></div>
+            <div><label id="ep-label">PCS *</label><input type="number" id="panel-entry-pcs" class="panel-entry-input nav-target" oninput="validatePanelForm()" placeholder="0"></div>
+            <div id="panel-huid-field"><label id="ep-label">HU ID</label><input type="text" id="panel-entry-huid" class="panel-entry-input nav-target" oninput="validatePanelForm()" placeholder="HUID"></div>
+            <div><label id="ep-label">Design Name</label><input type="text" id="panel-entry-ds" class="panel-entry-input nav-target" placeholder="Design or lot info"></div>
+            <div><label id="ep-label">Size</label><input type="text" id="panel-entry-size" class="panel-entry-input nav-target" placeholder="-"></div>
+            <div id="panel-karat-field"><label id="ep-label">Karat</label><input type="text" id="panel-entry-karat" class="panel-entry-input nav-target" placeholder="22K"></div>
+            <div id="panel-category-field"><label id="ep-label">Category</label><input type="text" id="panel-entry-category" class="panel-entry-input nav-target" placeholder="Ring, chain..."></div>
+            <div><label id="ep-label">Touch %</label><input type="text" id="panel-entry-touch" readonly placeholder="-"></div>
+        </div>
+
+        <!-- ── Section 2: Weight ── -->
+        <div class="ep-section">
+            <div class="ep-section-head"><span>Weight</span></div>
+            <div><label id="ep-label">GR WT *</label><input type="number" id="panel-gr-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" oninput="validatePanelForm()" placeholder="0.000" onkeydown="if(event.key==='Enter'){event.preventDefault();if(typeof _scW!=='undefined'&&_scW!==null&&parseFloat(_scW)>0){this.value=parseFloat(_scW).toFixed(3);this.dispatchEvent(new Event('input'));this.blur();}}"></div>
+            <div><label id="ep-label">Less WT</label><input type="number" id="panel-ls-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+            <div><label id="ep-label">Pkg WT</label><input type="number" id="panel-pkg-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+            <div id="panel-ghat-field"><label id="ep-label">Ghat WT</label><input type="number" id="panel-entry-ghat" class="panel-entry-input nav-target" step="0.001" placeholder="0.000"></div>
+            <div><label id="ep-label">Para Wt</label><input type="number" id="panel-para-stone-wt" class="panel-entry-input calc-trigger nav-target" step="0.001" placeholder="0.000"></div>
+            <div id="panel-wastage-field"><label id="ep-label">Wast %</label><input type="number" id="panel-entry-wastage" class="panel-entry-input nav-target calc-trigger" placeholder="0"></div>
+            <div id="panel-stone-value-field"><label id="ep-label">Stone Value</label><input type="number" id="panel-entry-stone-value" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
+        </div>
+
+        <!-- ── Section 3: Computed results ── -->
+        <div class="ep-section ep-results">
+            <div class="ep-result-card"><label id="ep-label">Net Weight</label><input type="text" id="panel-nt-wt" readonly class="calc-out" placeholder="0.000"></div>
+            <div class="ep-result-card"><label id="ep-label">Fine Gold</label><input type="text" id="panel-entry-fine-wt" readonly placeholder="0.000"></div>
+        </div>
+
+        <!-- ── Section 4: Pricing ── -->
+        <div class="ep-section">
+            <div class="ep-section-head"><span>Pricing</span></div>
+            <div id="panel-making-charge-field"><label id="ep-label">Making Charge</label><input type="number" id="panel-entry-making-charge" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
+            <div id="panel-making-type-field"><label id="ep-label">Making Type</label><select id="panel-entry-making-type"><option value="percent">% of metal value</option><option value="per_gram" selected>Rs per gram</option><option value="fixed">Flat Rs</option></select></div>
+            <div id="panel-sale-price-field"><label id="ep-label">Sale Price / MRP</label><input type="number" id="panel-entry-sale-price" class="panel-entry-input nav-target" step="0.01" placeholder="0 = use today's rate" title="Leave 0 to work the price out from today's rate"></div>
+        </div>
+
+        <!-- ── Footer: Photo + Save ── -->
+        <div class="ep-footer">
+            <div class="photo-pick">
+                <div class="photo-thumb" id="panel-photo-thumb" onclick="pickEntryPhoto()" title="Add / change photo">
+                    <img id="panel-photo-prev" alt="" style="display:none;">
+                    <span class="photo-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+                </div>
+                <div class="photo-meta">
+                    <button type="button" id="panel-photo-btn" onclick="pickEntryPhoto()">Add photo</button>
+                    <span class="photo-hint">JPG · PNG · WEBP · 8 MB max</span>
+                </div>
+            </div>
+            <button id="panelSaveBtn" onclick="savePanelEntry()" disabled>Save Entry</button>
+        </div>
     </div>
 </div>
 
@@ -529,6 +589,24 @@ function scInsertToGrWt() {
         <button class="btn-dc" onclick="closeModal('deleteConfirmModal')">Cancel</button>
         <button class="btn-dd" onclick="executeDelete()">Delete Records</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHOTO MODAL : one piece, big -->
+<div class="modal-overlay" id="photoModal">
+  <div class="modal-card" style="width:520px;max-width:94vw;">
+    <div class="modal-head">
+      <div class="modal-head-title">Piece <em id="photo-tag"></em></div>
+      <div class="modal-close" onclick="closeModal('photoModal')">&#10005;</div>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <img id="photo-img" alt="" style="max-width:100%;max-height:62vh;border-radius:10px;border:1px solid var(--rule);">
+    </div>
+    <div class="modal-footer" style="display:flex;gap:10px;">
+      <button class="btn-dc" style="flex:1;" onclick="replacePhoto()">Replace</button>
+      <button class="btn-dc" style="flex:1;color:var(--red);" onclick="removePhoto()">Remove</button>
+      <button class="btn-dc" style="flex:1;" onclick="closeModal('photoModal')">Close</button>
     </div>
   </div>
 </div>
@@ -584,7 +662,7 @@ function scInsertToGrWt() {
             <div style="font-size:0.54rem;font-weight:600;color:var(--muted2);padding:4px 0;">Fr</div>
             <div style="font-size:0.54rem;font-weight:600;color:var(--muted2);padding:4px 0;">Sa</div>
         </div>
-        <div id="cal-day-grid" style="padding:4px 18px 10px;display:grid;grid-template-columns:repeat(7,1fr);gap:3px;"></div>
+        <div id="cal-day-grid" style="padding:4px 18px 10px;display:grid;grid-template-columns:repeat(7,1fr);gap:3px;min-height:243px;align-content:start;"></div>
         <div style="padding:8px 18px;border-top:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;background:var(--cream);">
             <span id="cal-footer-label" style="font-family:var(--mono);font-size:0.65rem;color:var(--gold3);font-weight:600;"></span>
             <div style="display:flex;gap:6px;">
@@ -594,7 +672,6 @@ function scInsertToGrWt() {
         </div>
     </div>
 </div>
-<div class="toast" id="toast">&#10003; Database synchronized</div>
 </main>
 
 <script>
@@ -792,6 +869,16 @@ function _renderCal() {
         html += '<div class="' + cls + '"' + oc + '>' + day + '</div>';
     }
 
+    // Pad the grid to a full 6 rows x 7 columns every month. Without the
+    // trailing fillers a 28-day February renders 4 rows and a 31-day month
+    // starting on Saturday renders 6, so the whole popup jumped in height
+    // on every month change. Fixed cell count plus fixed cell height means
+    // the popup is now exactly the same size for every month and year.
+    var used = firstDay + daysInM;
+    var trailing = (7 - (used % 7)) % 7;
+    for (var t = 0; t < trailing; t++) html += '<div class="cal-day cal-empty"></div>';
+    for (var p = used + trailing; p < 42; p++) html += '<div class="cal-day cal-empty"></div>';
+
     document.getElementById('cal-day-grid').innerHTML = html;
     var fl = document.getElementById('cal-footer-label');
     if (fl) {
@@ -926,7 +1013,7 @@ function renderLedgerRows() {
     var tbody = document.getElementById('ledger-body');
 
     if (!ledgerData.length) {
-        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">No entries for this date.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">No entries for this date.</td></tr>';
         updateSelectionState(); return;
     }
 
@@ -939,7 +1026,7 @@ function renderLedgerRows() {
     }
 
     if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">No entries match "' + h(ledgerFilter) + '".</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--muted2);font-size:0.78rem;">No entries match "' + h(ledgerFilter) + '".</td></tr>';
         updateSelectionState(); return;
     }
 
@@ -947,7 +1034,14 @@ function renderLedgerRows() {
     // not removed) because getSelectedItemsBatch() reads cells by index.
     var wholesaleCellCss = isRetailMode() ? 'display:none;' : '';
 
-    tbody.innerHTML = list.map(function(e, i) {
+    tbody.innerHTML = list.map(function(e, i) { return renderLedgerRow(e, i); }).join('');
+    updateSelectionState();
+}
+
+// One ledger body row.
+function renderLedgerRow(e, i) {
+    // Same note as above: the wholesale cell stays hidden, not removed.
+    var wholesaleCellCss = isRetailMode() ? 'display:none;' : '';
         var dLess    = (parseFloat(e.ls_wt||0) + parseFloat(e.pkg_wt||0)).toFixed(3);
         var tagId    = (e.tag_id  || '-').trim();
         var sz       = (e.size && e.size !== 'undefined') ? e.size : '-';
@@ -973,10 +1067,11 @@ function renderLedgerRows() {
             + '<td style="font-family:var(--mono);font-size:0.7rem;color:var(--muted2);">'        + h(e.huid || '-')             + '</td>'
             + '<td>' + badge + '</td>'
             + '<td style="font-size:0.6rem;color:var(--muted2);">'                                + h((e.tag_variation||'RING').toUpperCase()) + '</td>'
+            + '<td style="text-align:center;">' + (e.photo
+                ? '<button onclick="viewPhoto(\'' + esc(e.tag_id) + '\');event.stopPropagation();" title="View photo" style="padding:4px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--blue-bg);color:var(--blue3);cursor:pointer;font-size:0.66rem;font-weight:700;font-family:inherit;">View</button>'
+                : '<button onclick="addPhoto(\'' + esc(e.tag_id) + '\');event.stopPropagation();" title="Add photo" style="padding:4px 10px;border-radius:6px;border:1px dashed var(--muted2);background:#fff;color:var(--muted2);cursor:pointer;font-size:0.66rem;font-weight:600;font-family:inherit;">Add</button>') + '</td>'
             + '<td style="display:none;"><span class="tag-id-hidden">' + h(tagId) + '</span></td>'
             + '</tr>';
-    }).join('');
-    updateSelectionState();
 }
 
 // ── EDIT ─────────────────────────────────────────────────────────
@@ -992,6 +1087,8 @@ function openEditById(id) {
     var rawId = (item.tag_id || '').trim();
     if (!rawId || rawId === 'undefined' || rawId === '---' || rawId === '-') rawId = generateUniqueTagID();
     document.getElementById('panel-entry-tag-id').value   = rawId;
+    _entryPhotoName = '';
+    refreshEntryPhotoPreview(rawId);
 
     document.getElementById('panel-entry-pcs').value      = item.pcs || 1;
     document.getElementById('panel-entry-size').value     = (item.size && item.size !== 'undefined' && item.size !== '-') ? item.size : '';
@@ -1010,7 +1107,7 @@ function openEditById(id) {
 
     // Retail pricing. Blank unless the ledger query hands these columns back.
     document.getElementById('panel-entry-making-charge').value = item.making_charge || '';
-    document.getElementById('panel-entry-making-type').value   = item.making_type || 'percent';
+    document.getElementById('panel-entry-making-type').value   = item.making_type || 'per_gram';
     document.getElementById('panel-entry-sale-price').value    = item.sale_price || '';
     document.getElementById('panel-entry-karat').value         = (item.karat    && item.karat    !== 'undefined') ? item.karat    : '';
     document.getElementById('panel-entry-category').value      = (item.category && item.category !== 'undefined') ? item.category : '';
@@ -1231,10 +1328,19 @@ function savePanelEntry() {
     if (!validatePanelForm()) return;
     var retail = isRetailMode();
     var huid   = document.getElementById('panel-entry-huid').value.trim();
+    // A blank tag used to reach the backend, which minted an OPENING- id
+    // that every ledger query filters out — a "saved" receipt invisible on
+    // all dates. Mint the same unique id the picker uses, up front.
+    var tagEl = document.getElementById('panel-entry-tag-id');
+    var tagNow = (tagEl.value || '').trim();
+    if (!tagNow || tagNow === 'Auto' || ['N/A', '---', '-', 'undefined'].indexOf(tagNow) > -1) {
+        tagNow = generateUniqueTagID();
+        tagEl.value = tagNow;
+    }
     var data = {
         it_code:       document.getElementById('panel-entry-it-code').value,
         it_name:       document.getElementById('panel-entry-it-name').value,
-        tag_id:        document.getElementById('panel-entry-tag-id').value,
+        tag_id:        tagNow,
         pkg_wt:        parseFloat(document.getElementById('panel-pkg-wt').value)        || 0,
         para_stone_wt: parseFloat(document.getElementById('panel-para-stone-wt').value) || 0,
         size:          document.getElementById('panel-entry-size').value   || '-',
@@ -1250,23 +1356,169 @@ function savePanelEntry() {
         wastage:       document.getElementById('panel-entry-wastage').value || '0',
         // Retail pricing. Wholesale sends the column defaults, so nothing moves there.
         making_charge: retail ? (parseFloat(document.getElementById('panel-entry-making-charge').value) || 0) : 0,
-        making_type:   retail ? (document.getElementById('panel-entry-making-type').value || 'percent')      : 'percent',
+        making_type:   retail ? (document.getElementById('panel-entry-making-type').value || 'per_gram')      : 'percent',
         sale_price:    retail ? (parseFloat(document.getElementById('panel-entry-sale-price').value) || 0)   : 0,
         karat:         retail ? document.getElementById('panel-entry-karat').value.trim()                    : '',
         category:      retail ? document.getElementById('panel-entry-category').value.trim()                 : '',
         stone_value:   retail ? (parseFloat(document.getElementById('panel-entry-stone-value').value) || 0)  : 0,
+        tag_variation: (document.getElementById('printVariation') || {}).value || 'RING',
     };
+    // A photo picked in this panel rides on the save, so the new row points
+    // at the file. Only when one was actually picked: sending an empty key
+    // on an edit would wipe the row's existing picture.
+    if (_entryPhotoName) data.photo = _entryPhotoName;
     if (!window.pywebview || !window.pywebview.api) return;
     var prom = editingPanelEntryId
         ? window.pywebview.api.update_stock_entry(editingPanelEntryId, data)
         : window.pywebview.api.add_stock_entry(data);
     prom.then(function(res) {
         if (res && res.status === 'success') {
+            if (_entryPhotoTag && _entryPhotoTag !== String(data.tag_id || '').trim()) {
+                showToast('Photo stayed on ' + _entryPhotoTag + '.', 'warn');
+            }
             loadRojmelSheet(viewDate);
             triggerSaveTable('Entry saved');
             clearPanelForNext();
         }
     }).catch(function(e){ console.error('savePanelEntry:', e); });
+}
+
+// ── PHOTOS ─────────────────────────────────────────────────────────
+// Backend already stores copies per tag (photo_pick / photo_path /
+// photo_remove); this page only had no way to reach them. Photos attach
+// by tag, so the entry form needs a typed tag first — picked-then-edited
+// tags are reported, never silently moved.
+var _entryPhotoTag = '';
+var _entryPhotoName = '';
+var _photoModalTag = '';
+function _photoApi() {
+    var api = window.pywebview && window.pywebview.api;
+    if (!api) { showToast('Not connected.', 'error'); return null; }
+    return api;
+}
+function _fileUri(p) {
+    // Backend hands back a Windows path; the <img> needs a file URI.
+    if (!p) return '';
+    if (/^(file:|https?:|data:)/i.test(p)) return p;
+    try { return encodeURI('file:///' + String(p).replace(/\\/g, '/')); }
+    catch (e) { return ''; }
+}
+function _showEntryPhotoUrl(url) {
+    var img = document.getElementById('panel-photo-prev');
+    var btn = document.getElementById('panel-photo-btn');
+    var th = document.getElementById('panel-photo-thumb');
+    if (th) th.classList.toggle('has-photo', !!url);
+    if (!img) return;
+    if (url) {
+        img.src = url; img.style.display = 'block';
+        if (btn) btn.innerText = 'Change photo';
+    } else {
+        img.style.display = 'none'; img.removeAttribute('src');
+        if (btn) btn.innerText = 'Add photo';
+    }
+}
+function pickEntryPhoto() {
+    var tag = (document.getElementById('panel-entry-tag-id').value || '').trim();
+    if (!tag || tag === 'Auto') { showToast('Tag first, then photo.', 'warn'); return; }
+    var api = _photoApi();
+    if (!api || typeof api.photo_pick !== 'function') {
+        showToast('Close and reopen AurumOS to finish updating.', 'error'); return;
+    }
+    api.photo_pick(tag).then(function(r) {
+        if (!r || r.status === 'cancelled') return;
+        if (r.status !== 'success') { showToast(r.message || 'Could not add photo.', 'error'); return; }
+        _entryPhotoTag = tag;
+        _entryPhotoName = r.photo || '';
+        // Show instantly from the pick result itself: the piece usually has
+        // no saved row yet, so a photo_path round-trip would find nothing.
+        _showEntryPhotoUrl(r.url || _fileUri(r.path));
+        refreshEntryPhotoPreview(tag);
+        showToast('Photo added.', 'ok');
+    }).catch(function() { showToast('Could not add photo.', 'error'); });
+}
+function refreshEntryPhotoPreview(tag) {
+    var api = window.pywebview && window.pywebview.api;
+    if (!tag || !api || typeof api.photo_path !== 'function') {
+        _showEntryPhotoUrl('');
+        return;
+    }
+    api.photo_path(tag).then(function(r) {
+        if (r && r.status === 'success' && (r.url || r.path)) {
+            _showEntryPhotoUrl(r.url || _fileUri(r.path));
+            _entryPhotoTag = tag;
+            if (r.photo) _entryPhotoName = r.photo;
+        } else {
+            // Keep an instantly-shown pick visible: no row match must not
+            // blank a photo that was just chosen in this panel.
+            var img = document.getElementById('panel-photo-prev');
+            if (!img || img.style.display !== 'block') _showEntryPhotoUrl('');
+        }
+    }).catch(function() {});
+}
+function _setRowPhoto(tag, name) {
+    for (var i = 0; i < ledgerData.length; i++) {
+        if (String(ledgerData[i].tag_id || '').trim() === String(tag || '').trim()) {
+            ledgerData[i].photo = name || '';
+            break;
+        }
+    }
+}
+function viewPhoto(tag) {
+    var api = _photoApi();
+    if (!api || typeof api.photo_path !== 'function') {
+        showToast('Close and reopen AurumOS to finish updating.', 'error'); return;
+    }
+    api.photo_path(tag).then(function(r) {
+        if (!r || r.status !== 'success' || !r.url) {
+            showToast(r && r.status === 'missing' ? 'Photo file is missing.' : 'No photo yet — use Add.', 'warn');
+            return;
+        }
+        _photoModalTag = tag;
+        document.getElementById('photo-tag').innerText = tag;
+        document.getElementById('photo-img').src = r.url;
+        openModal('photoModal');
+    }).catch(function() { showToast('Could not open photo.', 'error'); });
+}
+function addPhoto(tag) {
+    var api = _photoApi();
+    if (!api || typeof api.photo_pick !== 'function') {
+        showToast('Close and reopen AurumOS to finish updating.', 'error'); return;
+    }
+    api.photo_pick(tag).then(function(r) {
+        if (!r || r.status === 'cancelled') return;
+        if (r.status !== 'success') { showToast(r.message || 'Could not add photo.', 'error'); return; }
+        _setRowPhoto(tag, r.photo);
+        renderLedgerRows();
+        showToast('Photo added.', 'ok');
+    }).catch(function() { showToast('Could not add photo.', 'error'); });
+}
+function replacePhoto() {
+    var tag = _photoModalTag;
+    if (!tag) return;
+    var api = _photoApi();
+    if (!api || typeof api.photo_pick !== 'function') return;
+    api.photo_pick(tag).then(function(r) {
+        if (!r || r.status === 'cancelled') return;
+        if (r.status !== 'success') { showToast(r.message || 'Could not replace photo.', 'error'); return; }
+        _setRowPhoto(tag, r.photo);
+        renderLedgerRows();
+        viewPhoto(tag);
+        showToast('Photo replaced.', 'ok');
+    }).catch(function() { showToast('Could not replace photo.', 'error'); });
+}
+async function removePhoto() {
+    var tag = _photoModalTag;
+    if (!tag) return;
+    if (!await window.auConfirm('Remove the photo for ' + tag + '? The file stays on disk.', {danger:true, okText:'Remove'})) return;
+    var api = _photoApi();
+    if (!api || typeof api.photo_remove !== 'function') return;
+    api.photo_remove(tag).then(function(r) {
+        if (!r || r.status !== 'success') { showToast('Could not remove photo.', 'error'); return; }
+        _setRowPhoto(tag, '');
+        renderLedgerRows();
+        closeModal('photoModal');
+        showToast('Photo removed.', 'ok');
+    }).catch(function() { showToast('Could not remove photo.', 'error'); });
 }
 
 var editingPanelEntryId = null;
@@ -1299,7 +1551,9 @@ function panelDragStop() {
 function showEntryPanel() {
     var el = document.getElementById('entryPanel');
     el.style.display = 'flex';
-    el.style.height = el.style.height || '25vh';
+    // Laptop default: tall enough for the whole form, no scrolling. A manual
+    // drag resize is kept across opens within the session.
+    el.style.height = el.style.height || '46vh';
 }
 
 function closeEntryPanel() {
@@ -1335,6 +1589,11 @@ function clearPanelForNext() {
     document.getElementById('panel-entry-tag-id').value   = generateUniqueTagID();
     document.getElementById('panelSaveBtn').innerText = 'Save Entry';
     editingPanelEntryId = null;
+    _entryPhotoTag = '';
+    _entryPhotoName = '';
+    // New entries start on Rs per gram, the shop default.
+    document.getElementById('panel-entry-making-type').value = 'per_gram';
+    _showEntryPhotoUrl('');
     calculatePanelNetWeight();
     setTimeout(function(){ var el = document.getElementById('panel-entry-pcs'); el.focus(); el.select(); }, 100);
 }
@@ -1360,12 +1619,27 @@ function validatePanelForm() {
     var gr     = parseFloat(document.getElementById('panel-gr-wt').value)   || 0;
     var name   = document.getElementById('panel-entry-it-name').value.trim();
     var huidEl = document.getElementById('panel-entry-huid');
-    // Hallmarking is compulsory on a retail piece, so an untagged one cannot be saved.
-    var huidOk = !isRetailMode() || huidEl.value.trim() !== '';
-    var ok     = name !== '' && pcs > 0 && gr > 0 && huidOk;
+    // A retail piece either carries a real six-character HUID or nothing
+    // yet (it joins the waiting list). Anything in between — a bin label,
+    // a dash, half a number — is refused here so it can never pollute the
+    // column that every hallmark count in the app reads.
+    var hv = huidEl.value.replace(/[\s\-]/g,'').toUpperCase();
+    var huidOk = !isRetailMode() || hv === '' || /^[A-Z0-9]{6}$/.test(hv);
+    // Deductions must make sense: no negative weights, and stones/lesses
+    // can never eat the whole piece. Without this a bad weighing saved a
+    // zero-net-weight row into stock.
+    var ps = parseFloat(document.getElementById('panel-para-stone-wt').value) || 0;
+    var ls = parseFloat(document.getElementById('panel-ls-wt').value)         || 0;
+    var pk = parseFloat(document.getElementById('panel-pkg-wt').value)        || 0;
+    var wtOk = ps >= 0 && ls >= 0 && pk >= 0 && (ps + ls + pk) < gr;
+    var ok     = name !== '' && pcs > 0 && gr > 0 && huidOk && wtOk;
     document.getElementById('panel-entry-pcs').style.borderColor = pcs > 0 ? '' : 'var(--red)';
     document.getElementById('panel-gr-wt').style.borderColor     = gr  > 0 ? '' : 'var(--red)';
     huidEl.style.borderColor                                     = huidOk   ? '' : 'var(--red)';
+    var wtBad = !(ps >= 0 && ls >= 0 && pk >= 0) || (gr > 0 && (ps + ls + pk) >= gr);
+    document.getElementById('panel-para-stone-wt').style.borderColor = wtBad ? 'var(--red)' : '';
+    document.getElementById('panel-ls-wt').style.borderColor         = wtBad ? 'var(--red)' : '';
+    document.getElementById('panel-pkg-wt').style.borderColor        = wtBad ? 'var(--red)' : '';
     document.getElementById('panelSaveBtn').disabled = !ok;
     return ok;
 }
@@ -1462,8 +1736,31 @@ function selectItem(code, name, touch) {
     document.getElementById('panel-entry-tag-id').value     = generateUniqueTagID();
     document.getElementById('panel-entry-touch').value      = touch;
     document.getElementById('panel-entry-wastage').value    = ws;
+    // Pricing follows the Item Master: the making charge, its type, the MRP
+    // and the category set on the product come pre-filled, so the counter
+    // does not retype them on every receipt. A piece can still be overridden
+    // per tag before saving; editing an existing row keeps showing that
+    // row's own values (openEditById), never the master's. Without a master
+    // type the control falls back to the shop default, Rs per gram.
+    document.getElementById('panel-entry-making-type').value = 'per_gram';
+    if (prod) {
+        if (prod.making_charge !== undefined && prod.making_charge !== null && String(prod.making_charge) !== '') {
+            document.getElementById('panel-entry-making-charge').value = prod.making_charge;
+        }
+        if (prod.making_type) {
+            document.getElementById('panel-entry-making-type').value = prod.making_type;
+        }
+        if (prod.sale_price !== undefined && prod.sale_price !== null && String(prod.sale_price) !== '') {
+            document.getElementById('panel-entry-sale-price').value = prod.sale_price;
+        }
+        if (prod.category) {
+            document.getElementById('panel-entry-category').value = prod.category;
+        }
+    }
     editingPanelEntryId = null;
     document.getElementById('panelSaveBtn').innerText = 'Save Entry';
+    _entryPhotoName = '';
+    _showEntryPhotoUrl('');
     showEntryPanel();
     calculatePanelNetWeight();
     setTimeout(function(){ var el = document.getElementById('panel-entry-pcs'); el.focus(); el.select(); }, 200);
@@ -1492,15 +1789,22 @@ function executeDelete() {
 }
 
 // ── MISC ─────────────────────────────────────────────────────────
+// Single toast path: the old static #toast box showed/hid with display,
+// which the global toast restyle (display:flex !important) overrode — so
+// it stuck on screen for ever. showToast drives opacity instead, which no
+// stylesheet overrides, so every caller below just funnels through it.
 function triggerSaveTable(msg) {
-    var t = document.getElementById('toast');
-    t.innerHTML = '&#10003; ' + (msg || 'Saved');
-    t.style.display = 'block';
-    setTimeout(function(){ t.style.display = 'none'; }, 2200);
+    showToast(msg || 'Saved', 'ok');
 }
 
 document.addEventListener('input', function(e) {
     if (e.target.classList.contains('calc-trigger')) calculatePanelNetWeight();
+    // Deduction fields feed validation too, so an impossible weighing
+    // disables Save the moment it is typed, not only on submit.
+    if (e.target.id === 'panel-para-stone-wt' || e.target.id === 'panel-ls-wt' ||
+        e.target.id === 'panel-pkg-wt' || e.target.id === 'panel-gr-wt') {
+        try { validatePanelForm(); } catch (_e) {}
+    }
 });
 
 // ── INIT ─────────────────────────────────────────────────────────

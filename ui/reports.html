@@ -40,10 +40,13 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .ric{width:42px;height:42px;border-radius:10px;background:var(--gold-bg);border:1px solid var(--gold-ln);color:var(--gold3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rt{font-size:0.86rem;font-weight:700;color:var(--ink);}
 .rd{font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.5;}
+/* Responsive: small laptops down to 1024 */
+@media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)!important;}}
+@media (max-width:700px){.grid{grid-template-columns:1fr!important;}}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 <main>
   <header>

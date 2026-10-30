@@ -45,8 +45,8 @@ header h1{font-size:0.95rem;font-weight:700;}
 .btn-ghost{background:var(--white);color:var(--text-muted);border:1px solid var(--border);}
 .btn-ghost:hover{background:var(--cream);color:var(--text-main);}
 .btn-sm{height:26px;padding:0 9px;font-size:0.66rem;border-radius:7px;}
-.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;
-        scrollbar-width:thin;max-width:1020px;width:100%;margin:0 auto;}
+.scroll{flex:1;overflow-y:auto;padding:18px 24px 40px;scrollbar-width:thin;}
+.scroll-inner{max-width:1020px;width:100%;margin:0 auto;}
 .card{background:var(--white);border:1px solid var(--border);border-radius:13px;
       box-shadow:var(--sh);overflow:hidden;margin-bottom:16px;}
 .card-hdr{padding:13px 17px;border-bottom:1px solid var(--rule2);
@@ -63,6 +63,33 @@ header h1{font-size:0.95rem;font-weight:700;}
 .fld input:focus{border-color:var(--blue2);}
 .fld-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .hintline{font-size:0.66rem;color:var(--text-muted);line-height:1.6;}
+/* ── paused portal features: banner + locked pad, reversible later ─── */
+.soon-note{display:flex;align-items:center;gap:9px;
+       background:linear-gradient(90deg,rgba(180,83,9,0.10),rgba(37,99,235,0.07));
+       border:1px dashed rgba(180,83,9,0.45);border-radius:9px;padding:9px 12px;
+       font-size:0.7rem;font-weight:700;color:var(--amber,#b45309);margin-bottom:11px;}
+.soon-lock{opacity:0.55;pointer-events:none;filter:saturate(0.7);}
+.pinrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;
+       align-items:center;padding:8px 0;border-bottom:1px solid var(--rule2);}
+.pinrow:last-child{border-bottom:none;}
+.pinval{font-family:var(--mono);font-size:0.85rem;font-weight:700;color:var(--text-main);
+       background:var(--bg-main,#f8fafb);border:1px solid var(--border);
+       border-radius:8px;padding:7px 12px;letter-spacing:3px;}
+.pindate{font-size:0.64rem;color:var(--muted2);white-space:nowrap;}
+.pinbtn{height:30px;padding:0 13px;font-size:0.66rem;}
+.pinempty{font-size:0.68rem;color:var(--muted2);padding:8px 0;}
+.howto{margin-top:11px;border:1px dashed var(--blue-ln);border-radius:9px;
+       background:var(--blue-bg);overflow:hidden;}
+.howto summary{cursor:pointer;padding:9px 12px;font-size:0.7rem;font-weight:700;
+       color:var(--blue3);list-style:none;display:flex;align-items:center;gap:7px;}
+.howto summary::-webkit-details-marker{display:none;}
+.howto summary::before{content:"+";font-weight:800;font-size:0.85rem;}
+.howto[open] summary::before{content:"–";}
+.howto ol{margin:0;padding:2px 14px 12px 32px;font-size:0.68rem;color:var(--text-muted);
+       line-height:1.75;}
+.howto ol b{color:var(--text-main);}
+.howto code{font-family:var(--mono);font-size:0.64rem;background:var(--white);
+       border:1px solid var(--blue-ln);border-radius:5px;padding:1px 6px;color:var(--blue3);}
 .urlbox{display:none;margin-top:10px;background:var(--blue-bg);
         border:1px solid var(--blue-ln);border-radius:9px;padding:10px 12px;
         font-size:0.7rem;word-break:break-all;}
@@ -103,7 +130,7 @@ header h1{font-size:0.95rem;font-weight:700;}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 
 <main>
@@ -114,11 +141,12 @@ header h1{font-size:0.95rem;font-weight:700;}
         <div class="header-sub" id="c-sub">Loading…</div>
     </div>
     <div class="header-right">
-        <button class="btn btn-ghost" onclick="copyBoard()">Copy board link</button>
+        <button class="btn btn-ghost" onclick="copyBoard()" disabled title="Paused for now">Copy board link · paused</button>
     </div>
 </header>
 
 <div class="scroll">
+<div class="scroll-inner">
 
     <div class="card">
         <div class="card-hdr">
@@ -163,12 +191,21 @@ header h1{font-size:0.95rem;font-weight:700;}
             <span class="pill pill-done" id="pin-state" style="display:none;">login set</span>
         </div>
         <div class="pad">
+            <div class="soon-note">Coming soon</div>
+            <div class="soon-lock">
             <div class="fld">
                 <label>Login PIN (4–32 characters, blank removes it)</label>
-                <input type="password" id="centre-pin" inputmode="numeric" maxlength="32" placeholder="••••">
+                <input type="password" id="centre-pin" inputmode="numeric" maxlength="32" placeholder="••••" tabindex="-1">
             </div>
-            <button class="btn btn-ghost" onclick="savePin()">Save login</button>
-            <span class="hintline" id="pin-hint" style="margin-left:8px;"></span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button class="btn btn-ghost" onclick="genPin()" tabindex="-1">Generate &amp; set</button>
+                <button class="btn btn-ghost" onclick="savePin(this)" tabindex="-1">Save login</button>
+                <span class="hintline" id="pin-hint"></span>
+            </div>
+            <div id="pin-history" style="margin-top:10px;border-top:1px solid var(--rule2);padding-top:6px;">
+                <div class="pinempty">No saved logins yet.</div>
+            </div>
+            </div>
         </div>
     </div>
 
@@ -176,17 +213,20 @@ header h1{font-size:0.95rem;font-weight:700;}
         <div class="card-hdr">
             <div>
                 <div class="card-title">Portal address</div>
-                <div class="card-sub">What the links start with — no PC name inside</div>
+                <div class="card-sub">Links look like aurumos.in/dj-jewellers/1 — no PC name inside</div>
             </div>
         </div>
         <div class="pad">
+            <div class="soon-note">Coming soon</div>
+            <div class="soon-lock">
             <div class="fld">
-                <label>Base URL (testing: http://localhost:58903)</label>
-                <input type="text" id="portal-base" placeholder="http://localhost:58903">
+                <label>Base URL (public: http://aurumos.in)</label>
+                <input type="text" id="portal-base" placeholder="http://aurumos.in" tabindex="-1">
             </div>
-            <button class="btn btn-ghost" onclick="saveBase()">Save address</button>
+            <button class="btn btn-ghost" onclick="saveBase()" tabindex="-1">Save address</button>
             <span class="hintline" id="base-state" style="margin-left:8px;"></span>
-            <div class="hintline" style="margin-top:9px;">Keep localhost while testing. When the shop PC is reachable through your own domain, put that here and every new link uses it.</div>
+            <div class="hintline" style="margin-top:9px;">That address must reach this PC or links open nowhere: point aurumos.in at it (DNS) and open firewall port 58903 (dist\tools has the helper). While testing on this PC only, use http://localhost:58903. Plain http — https needs a proxy in front.</div>
+            </div>
         </div>
     </div>
 
@@ -198,18 +238,32 @@ header h1{font-size:0.95rem;font-weight:700;}
             </div>
         </div>
         <div class="pad">
+            <div class="soon-note">Coming soon</div>
+            <div class="soon-lock">
             <div class="fld-row">
                 <div class="fld">
                     <label>Sender Gmail</label>
-                    <input type="email" id="sender-email" placeholder="shop@gmail.com">
+                    <input type="email" id="sender-email" placeholder="shop@gmail.com" tabindex="-1">
                 </div>
                 <div class="fld">
                     <label>App password</label>
-                    <input type="password" id="sender-pw" placeholder="•••• •••• •••• ••••">
+                    <input type="password" id="sender-pw" placeholder="•••• •••• •••• ••••" tabindex="-1">
                 </div>
             </div>
-            <button class="btn btn-ghost" onclick="saveSender()">Save sender</button>
+            <button class="btn btn-ghost" onclick="saveSender()" tabindex="-1">Save sender</button>
             <span class="hintline" id="sender-state" style="margin-left:8px;"></span>
+            <details class="howto">
+                <summary>How to get the Gmail app password</summary>
+                <ol>
+                    <li>Open the shop's Gmail in a browser and go to <b>Google Account → Security</b>.</li>
+                    <li>Turn on <b>2-Step Verification</b> first — Google only shows app passwords after this.</li>
+                    <li>On the same Security page open <b>App passwords</b> (type it in the search box if you cannot see it).</li>
+                    <li>Create one: app <b>Mail</b>, device <b>Windows Computer</b> (or Other → <code>AurumOS</code>), then <b>Generate</b>.</li>
+                    <li>Copy the 16-letter code (<code>xxxx xxxx xxxx xxxx</code>) and paste it into <b>App password</b> above — spaces do not matter.</li>
+                    <li>Your normal Gmail password will <b>not</b> work here — Google blocks it. Only the app password sends mail.</li>
+                </ol>
+            </details>
+            </div>
         </div>
     </div>
 
@@ -224,6 +278,7 @@ header h1{font-size:0.95rem;font-weight:700;}
         <div id="lot-list"><div class="empty">Loading…</div></div>
     </div>
 
+</div>
 </div>
 </main>
 
@@ -264,7 +319,7 @@ function goBack(){
     window.location.href = 'hallmark.html';
 }
 
-var DETAIL = null, TAB = 'recent';
+var DETAIL = null, TAB = 'recent', HAS_PIN = false;
 
 function load(){
     var a = api();
@@ -296,9 +351,16 @@ function paintHead(c){
     el('c-sub').textContent = (c.code || '') +
         (c.turnaround_days ? ' · back in ' + c.turnaround_days + ' days' : '');
     el('c-contact').textContent = [c.phone, c.email].filter(function(x){ return x; }).join(' · ') || 'No contact saved';
+    HAS_PIN = !!c.has_pin;
+    loadPinHistory();
     el('pin-state').style.display = c.has_pin ? '' : 'none';
+    // If the field still holds a freshly generated login, keep telling the
+    // owner to pass it on — a reload must not silently swallow that.
     el('pin-hint').textContent = c.has_pin
-        ? 'The portal asks for it first.' : 'No login yet — the portal opens without one.';
+        ? (el('centre-pin').value
+            ? 'Login set — this is the centre\u2019s login. Tell it to the centre.'
+            : 'The portal asks for it first.')
+        : 'No login yet — the portal opens without one.';
     if (c.email) el('portal-email').value = c.email;
     var t = (DETAIL && DETAIL.tabs) || {};
     function n(k){ return ((t[k] || []).length); }
@@ -373,6 +435,56 @@ function copyText(t, okMsg){
         navigator.clipboard.writeText(t).then(done, fallback);
     } else { fallback(); }
 }
+// ── saved logins table: every login ever set, until deleted ──────────
+// Rows persist across restarts (hm_centre_pin_history); deleting a row
+// removes the record, and clears the portal login too if it was the one
+// the portal accepts — so the table never lies about what opens the board.
+function escAttr(s){
+    return esc(s).replace(/'/g, '&#39;');
+}
+function loadPinHistory(){
+    var a = api(), box = el('pin-history');
+    if (!box) return;
+    if (!a || typeof a.hm_centre_pin_history !== 'function') {
+        box.innerHTML = '<div class="pinempty">Close and reopen AurumOS to finish updating.</div>';
+        return;
+    }
+    a.hm_centre_pin_history(centreId()).then(function(r){
+        var rows = (r && r.status === 'success' && r.pins) || [];
+        if (!rows.length) {
+            box.innerHTML = '<div class="pinempty">No saved logins yet — Generate &amp; set one above.</div>';
+            return;
+        }
+        box.innerHTML = rows.map(function(x){
+            var p = String(x.pin || '');
+            return '<div class="pinrow">'
+                + '<div class="pinval">' + esc(p) + '</div>'
+                + '<div class="pindate">' + esc(x.created_at || '') + '</div>'
+                + '<button class="btn btn-ghost pinbtn" onclick="copyText(\'' + escAttr(p) + '\',\'Login copied.\')">Copy</button>'
+                + '<button class="btn btn-ghost pinbtn" style="color:var(--red,#dc2626);" onclick="forgetPin(this,\'' + escAttr(p) + '\')">Delete</button>'
+                + '</div>';
+        }).join('');
+    }).catch(function(){
+        box.innerHTML = '<div class="pinempty">Could not load saved logins.</div>';
+    });
+}
+async function forgetPin(btn, pin){
+    if (!await window.auConfirm('Delete this saved login? The portal stops accepting it too.', {danger:true, okText:'Delete'})) return;
+    var a = api();
+    if (!a || typeof a.hm_centre_pin_forget !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    if (btn) btn.disabled = true;
+    a.hm_centre_pin_forget(centreId(), pin).then(function(r){
+        if (btn) btn.disabled = false;
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not delete.', true); return;
+        }
+        toast(r.removed_active ? 'Login deleted — the portal no longer accepts it.'
+                               : 'Saved login deleted.');
+        load();
+    }).catch(function(e){ if (btn) btn.disabled = false; toast('Could not delete: ' + e, true); });
+}
 function copyLot(lotNo){
     var a = api();
     if (!a || typeof a.hm_share_url !== 'function') { toast('Not available in this build.', true); return; }
@@ -405,19 +517,60 @@ function loadSender(){
         }).catch(function(){});
     }
 }
-function savePin(){
+async function genPin(){
+    // Six digits: typed on a phone keypad at the centre, no confusing
+    // characters. crypto first, Math.random only where crypto is missing.
+    // Saved immediately — the old two-step (generate, then remember to
+    // press Save) is how centres ended up with no login at all.
+    if (HAS_PIN && !await window.auConfirm('A login is already set for this centre. Replace it with a new one?', {okText:'Replace'})) return;
     var a = api();
     if (!a || typeof a.hm_centre_pin !== 'function') {
         toast('Not available in this build.', true); return;
     }
-    a.hm_centre_pin(centreId(), el('centre-pin').value || '').then(function(r){
+    var cid = centreId();
+    if (!cid) { toast('Could not open this centre.', true); return; }
+    var n = '', i;
+    try {
+        var buf = new Uint32Array(6);
+        window.crypto.getRandomValues(buf);
+        for (i = 0; i < 6; i++) n += String(buf[i] % 10);
+        if (!/[1-9]/.test(n)) n = '482930';
+    } catch (e) {
+        n = '';
+        for (i = 0; i < 6; i++) n += String(Math.floor(Math.random() * 10));
+    }
+    a.hm_centre_pin(cid, n).then(function(r){
+        if (!r || r.status !== 'success') {
+            toast((r && r.message) || 'Could not save.', true); return;
+        }
+        var f = el('centre-pin');
+        f.value = n;
+        f.type = 'text';
+        try { f.focus(); f.select(); } catch (e2) {}
+        toast('Login set for this centre.');
+        load();
+    }).catch(function(e){ toast('Could not save: ' + e, true); });
+}
+function savePin(btn){
+    var a = api();
+    if (!a || typeof a.hm_centre_pin !== 'function') {
+        toast('Not available in this build.', true); return;
+    }
+    // One tap, one save: a second tap while the first is in flight would
+    // send the just-cleared field and wipe the login that was set.
+    var b = btn || document.querySelector('[onclick^="savePin"]');
+    if (b) b.disabled = true;
+    var typed = el('centre-pin').value || '';
+    a.hm_centre_pin(centreId(), typed).then(function(r){
+        if (b) b.disabled = false;
         if (!r || r.status !== 'success') {
             toast((r && r.message) || 'Could not save.', true); return;
         }
         el('centre-pin').value = '';
+        el('centre-pin').type = 'password';
         toast(r.has_pin ? 'Login set for this centre.' : 'Login removed.');
         load();
-    }).catch(function(e){ toast('Could not save: ' + e, true); });
+    }).catch(function(e){ if (b) b.disabled = false; toast('Could not save: ' + e, true); });
 }
 function saveBase(){
     var a = api();

@@ -5,6 +5,8 @@ karigar job-work, hallmarking lots, CRM with savings schemes, dead stock, hallma
 portal, multi-PC shop networking, and Bastion security monitoring — served as local HTML
 screens through pywebview, backed by SQLite.
 
+> AurumOS is built and maintained by **Pentarch**.
+
 Wholesale keys start `AU-`, retail keys start `AR-`.
 
 ## Run from source
@@ -28,7 +30,7 @@ python build.py
 Output: `dist\AurumOS.exe` (+ `dist\_internal\`). The build stamps the highest `vX.Y.Z`
 git tag into the version, obfuscates the frozen modules, writes
 `dist\exe_trusted_hash.txt` (Bastion's tamper baseline), and signs when
-`sign_config.json` points at a certificate (see `sign_config.json.example`).
+`sign_config.json` points at a certificate (see `config/sign_config.json.example`).
 
 ## Tests
 
@@ -58,7 +60,7 @@ CI (`.github/workflows/tests.yml`) runs these on every push.
 ## Configuration
 
 `config.json` is per-machine (licence terminal secrets, LAN IPs) and never committed —
-copy `config.example.json` to start. Environment overrides:
+copy `config/config.example.json` to `config.json` in the project root to start. Environment overrides:
 
 | Variable | Purpose |
 |---|---|
@@ -71,10 +73,39 @@ copy `config.example.json` to start. Environment overrides:
 
 ## Layout
 
-- `main.py` — pywebview bridge (`AurumAPI`, ~280 methods)
-- `ui/` — screens; `boot.js` injects `subscription.js`/`sse_stream.js`/`urgent.js` everywhere, `sidebar.js` loads `ai_support.js`
-- `core/` — permissions matrix, cluster API, CRM rules, GST, hallmark, WhatsApp
-- `core/tag_engine.py` — ships obfuscated (source lost to an unrestored build); interface re-mapped from bytecode, hash pinned in `core/tag_engine.sha256` and verified at startup
-- `database/` — `db_manager.py` (schema + migrations), `bastion_ai.py`, `cluster_store.py`
-- `network/` — cluster server/client, LAN scan, hallmark share
-- `docs/` — setup guide, update/CRM/hallmark notes
+```
+AurumOS_Client/
+├── main.py                  pywebview bridge (AurumAPI) and app entry point
+├── build.py                 one-command EXE build
+├── updater.py               over-the-air update client
+├── subscription_manager.py  plan / licence checks
+├── sse_listener.py          live licence events
+├── AurumOS.ico
+│
+├── core/          pure rules: permissions, cluster API, CRM, GST, hallmark, WhatsApp
+├── database/      db_manager.py (schema + ensure_* migrations), bastion_ai.py, cluster_store.py
+├── network/       cluster server/client, LAN scan, hallmark share
+├── ui/            screens, shipped over the air (path is part of the update manifest)
+├── migrations/    NNNN_what.sql, shipped over the air
+├── assets/  fonts/
+│
+├── config/        config.example.json, sign_config.json.example
+├── scripts/
+│   ├── release/   release_plan.py, gen_version_manifest.py, stage_release_assets.py (CI)
+│   ├── dev/       run_dev.bat, seed_demo_stock.py, dev_connect_staff.py, diag_keys.py
+│   └── admin/     generate_unlock_keys.py
+├── tools/         PowerShell helpers copied to dist\tools\ (firewall, unblock files, USB prep)
+├── docs/          setup guide, update / CRM / hallmark notes
+└── .github/workflows/
+```
+
+Run from the project root: `scripts\dev\run_dev.bat` for a dev instance next to an
+installed copy, `python scripts\dev\seed_demo_stock.py` for demo stock.
+
+Generated and per-machine files are git-ignored: `config.json`, `db_path.txt`,
+`AurumOS.spec`, `hook_*.py` / `rthook_*.py`, `version_info.txt`, `build/`, `dist/`,
+`dist-client/`, `exports/`.
+
+`core/tag_engine.py` ships obfuscated (source lost to an unrestored build); its interface
+was re-mapped from bytecode, and its hash is pinned in `core/tag_engine.sha256` and
+verified at startup.

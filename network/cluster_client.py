@@ -9,14 +9,16 @@ Lives under network/ so it reaches customers through the auto-updater.
 
 import json
 import os
+import re
 import socket
+import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 
 from network.cluster_server import CLUSTER_PORT
-from network.lan_scan import local_ip
+from network.lan_scan import local_ip, _no_window
 
 # Long enough to cross a slow shop router, short enough that a wrong address
 # fails while the person who typed it is still looking at the screen.
@@ -78,6 +80,41 @@ def is_terminal():
     return local_role() == ROLE_TERMINAL
 
 
+# The shop's plan, as the main PC reports it. A staff PC holds no licence key,
+# so without this it would report Lite on every page load and the screens it
+# may open would change whenever its cached state was refreshed.
+_SHOP_PLAN_TTL = 60
+_shop_plan_cache = {'plan': None, 'at': 0.0}
+
+
+def shop_plan():
+    """The main PC's plan ('lite' / 'pro' / 'enterprise'), or None if never known.
+
+    Asked at most once a minute. When the main PC cannot be reached, the last
+    plan it reported is used, so a router hiccup does not downgrade the till.
+    """
+    now = time.time()
+    if _shop_plan_cache['plan'] and now - _shop_plan_cache['at'] < _SHOP_PLAN_TTL:
+        return _shop_plan_cache['plan']
+    cfg = load_config()
+    ip = str(cfg.get('server_ip') or '').strip()
+    plan = None
+    if ip:
+        try:
+            data = _get(ip, int(cfg.get('server_port') or CLUSTER_PORT),
+                        '/aurum/hello', 1.5)   # on the page-load path: keep it short
+            plan = str(data.get('plan') or '').strip().lower() or None
+        except Exception:
+            plan = None
+    if plan:
+        if cfg.get('shop_plan') != plan:
+            save_config({'shop_plan': plan})
+    else:
+        plan = str(cfg.get('shop_plan') or '').strip().lower() or None
+    _shop_plan_cache.update(plan=plan, at=now)
+    return plan
+
+
 def terminal_id(db=None):
     """This PC's stable identity.
 
@@ -106,6 +143,57 @@ def hostname():
         return ''
 
 
+def _parse_ipconfig_addresses(text):
+    """Every IPv4 address ipconfig attributes to this PC's own adapters.
+
+    Pure function of the command output, so tests can pin it down without
+    touching the network. The token ``IPv4`` is identical in every Windows
+    display language ("IPv4 Address", "IPv4-Adresse", "Adresse IPv4", …),
+    while subnet-mask and default-gateway lines never contain it — so only
+    the PC's own addresses match, never masks or the gateway (which may be
+    the main PC itself).
+    """
+    found = set()
+    for m in re.finditer(r'IPv4[^\n:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})',
+                         text or ''):
+        found.add(m.group(1).strip())
+    return found
+
+
+def _adapter_addresses():
+    """All IPv4 addresses across all of this PC's adapters.
+
+    ``local_ip()`` returns only the single best-scoring address. On a PC
+    with several adapters (Wi-Fi + Ethernet + VPN/virtual), the address on
+    the shop network may not be that pick — and then typing it into Client
+    Node setup slipped past the own-address guard and probed the PC
+    itself, failing with a baffling "firewall is blocking" message.
+    """
+    try:
+        done = subprocess.run(['ipconfig'], capture_output=True, text=True,
+                              timeout=20, **_no_window())
+        return _parse_ipconfig_addresses(done.stdout or '')
+    except Exception:
+        return set()
+
+
+def _norm_ip(value):
+    """Canonical form for comparing addresses typed by hand.
+
+    ' 10.88.253.184 ' and '010.088.253.184' are the same PC; plain
+    lower-cased strings would call them different addresses.
+    """
+    text = str(value or '').strip().lower()
+    try:
+        parts = text.split('.')
+        if len(parts) == 4 and all(p.isdigit() for p in parts):
+            text = '.'.join(str(int(p)) for p in parts)
+        import ipaddress
+        return ipaddress.ip_address(text).compressed
+    except Exception:
+        return text
+
+
 def _own_addresses():
     """Every address or name that means this PC itself.
 
@@ -122,6 +210,10 @@ def _own_addresses():
     found = set()
     try:
         found.add(str(local_ip()).strip())
+    except Exception:
+        pass
+    try:
+        found.update(_adapter_addresses())
     except Exception:
         pass
     try:
@@ -144,6 +236,10 @@ def _own_addresses():
         if low.startswith('fe80:'):
             continue                # link-local moves between networks
         refused.add(low)
+        try:
+            refused.add(_norm_ip(low))
+        except Exception:
+            pass
     return refused
 
 
@@ -206,11 +302,12 @@ def verify_server(ip, port=CLUSTER_PORT):
     ip = str(ip or '').strip()
     if not ip:
         return {'status': 'error', 'message': 'Enter the main PC address first.'}
-    if ip.lower() in _own_addresses():
+    if _norm_ip(ip) in _own_addresses():
         return {'status': 'error',
                 'message': "That's this computer's own address. Enter the main PC's "
                            "address instead — you'll find it at the top of "
-                           "Connected Computers on the main PC."}
+                           "Connected Computers on the main PC. Testing the host "
+                           "and a client on this one PC? Enter 127.0.0.1."}
     try:
         data = _get(ip, port, '/aurum/hello', VERIFY_TIMEOUT)
     except Exception as e:

@@ -81,7 +81,7 @@ jobs:
           elif [ -n "${INPUT_VERSION}" ]; then
             ARGS="--tag v${INPUT_VERSION#v}"
           fi
-          python3 release_plan.py $ARGS | tee -a "$GITHUB_OUTPUT"
+          python3 scripts/release/release_plan.py $ARGS | tee -a "$GITHUB_OUTPUT"
 
       - name: Nothing to release
         if: steps.plan.outputs.skip == 'true'
@@ -95,8 +95,8 @@ jobs:
         env:
           AURUM_UI_DIR: ui
         run: |
-          python3 gen_version_manifest.py --plan release_plan.json
-          python3 stage_release_assets.py release_assets
+          python3 scripts/release/gen_version_manifest.py --plan release_plan.json
+          python3 scripts/release/stage_release_assets.py release_assets
           cp version.json release_assets/
           echo "staged $(ls release_assets | wc -l) assets"
 

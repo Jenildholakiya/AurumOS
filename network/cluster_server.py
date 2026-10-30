@@ -62,6 +62,45 @@ def _log(msg):
         pass
 
 
+# The centre board is paused for now: every board address answers with a
+# short paused page instead of the Kanban. Flip back to False to resume —
+# nothing else changes, no data moves, sessions simply start working again.
+HM_BOARD_PAUSED = True
+
+_PAUSED_HTML = (
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+    '<meta name="viewport" content="width=device-width,'
+    ' initial-scale=1.0"><title>Coming soon</title>'
+    '<style>body{margin:0;min-height:100vh;display:flex;'
+    'align-items:center;justify-content:center;overflow:hidden;'
+    'background:radial-gradient(1000px 500px at 80% -10%,'
+    ' rgba(37,99,235,0.25),transparent 60%),'
+    'radial-gradient(800px 500px at 10% 110%,rgba(212,175,55,0.18),'
+    'transparent 55%),#0b1526;'
+    'font-family:"DM Sans",system-ui,sans-serif;color:#fff;}'
+    '.ghost{position:fixed;inset:-40px;display:grid;'
+    'grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:40px;'
+    'filter:blur(14px);opacity:0.35;pointer-events:none;}'
+    '.ghost div{border:1px solid rgba(255,255,255,0.25);border-radius:16px;}'
+    '.box{position:relative;text-align:center;padding:56px 72px;'
+    'background:rgba(255,255,255,0.08);border:1px solid '
+    'rgba(255,255,255,0.22);border-radius:24px;'
+    'backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);'
+    'box-shadow:0 30px 80px rgba(0,0,0,0.45);}'
+    '.pill{display:inline-block;font-size:0.62rem;font-weight:800;'
+    'letter-spacing:2.5px;text-transform:uppercase;color:#0b1526;'
+    'background:linear-gradient(90deg,#d4af37,#f3d67c);border-radius:99px;'
+    'padding:6px 16px;margin-bottom:18px;}'
+    'h1{font-size:3rem;margin:0;letter-spacing:-1px;font-weight:800;}'
+    'p{font-size:0.8rem;color:rgba(255,255,255,0.75);line-height:1.6;'
+    'margin:12px 0 0;}</style>'
+    '</head><body><div class="ghost"><div></div><div></div>'
+    '<div></div><div></div></div>'
+    '<div class="box"><div class="pill">AurumOS</div>'
+    '<h1>Coming Soon</h1>'
+    '<p>Please call the shop instead.</p></div></body></html>')
+
+
 def _throttle_state(terminal_id):
     now = time.time()
     with _ATTEMPTS_LOCK:
@@ -83,6 +122,58 @@ def _record_failure(terminal_id):
 def _clear_failures(terminal_id):
     with _ATTEMPTS_LOCK:
         _ATTEMPTS.pop(terminal_id, None)
+
+
+def slug_centre_route(path):
+    """(slug, ref) for /{shop-slug}/{long-id} vanity links, else None.
+
+    The tail must be long (6+ URL-safe characters): sequential ids like
+    /dj/1 never match, so centres cannot be walked. Never matches app
+    routes (/hm/…, /aurum/…), the root page, or anything deeper — so
+    /hm/c/<token> links keep working untouched. Pure function, so the
+    test suite pins it directly.
+    """
+    try:
+        from urllib.parse import urlparse as _up
+        p = _up(str(path or '')).path.strip('/')
+        if '/' not in p:
+            return None
+        slug, _, tail = p.partition('/')
+        if '/' in tail or len(tail) < 6:
+            return None
+        if not all(c.isalnum() or c in '-_' for c in tail):
+            return None
+        if slug.lower() in ('hm', 'aurum'):
+            return None
+        if not slug or not all(c.isalnum() or c in '-_' for c in slug):
+            return None
+        return slug.lower(), tail
+    except Exception:
+        return None
+
+
+_PIN_MAX = 8
+_PIN_WINDOW_KEY = 'pin:'
+
+
+def _pin_client_ip(handler):
+    try:
+        return str((handler.client_address or ['?'])[0])
+    except Exception:
+        return '?'
+
+
+def _pin_throttled(handler):
+    tries, _first = _throttle_state(_PIN_WINDOW_KEY + _pin_client_ip(handler))
+    return tries >= _PIN_MAX
+
+
+def _pin_failed(handler):
+    _record_failure(_PIN_WINDOW_KEY + _pin_client_ip(handler))
+
+
+def _pin_cleared(handler):
+    _clear_failures(_PIN_WINDOW_KEY + _pin_client_ip(handler))
 
 
 def _secrets_match(presented, expected):
@@ -158,6 +249,8 @@ class _ClusterHandler(BaseHTTPRequestHandler):
             return self._hm_get()
         if self.path == '/' or self.path.startswith('/?'):
             return self._hm_index()
+        if slug_centre_route(self.path) and self._hm_slug_board():
+            return
         if not self.path.startswith('/aurum/hello'):
             self._send({'status': 'error', 'message': 'unknown endpoint'}, 404)
             return
@@ -187,7 +280,14 @@ class _ClusterHandler(BaseHTTPRequestHandler):
         Staff PCs probe bare addresses when joining, and owners paste the
         bare address into a browser. Answering with links beats answering
         with 'unknown endpoint'.
+
+        While the board is paused this is the page a centre actually opens,
+        so it answers paused too — otherwise the pause would be invisible
+        at the front door.
         """
+        if HM_BOARD_PAUSED:
+            self._send_html(_PAUSED_HTML)
+            return
         shop = ''
         try:
             if self.db:
@@ -244,6 +344,47 @@ class _ClusterHandler(BaseHTTPRequestHandler):
             'document.getElementById("pin").addEventListener("keydown",'
             'function(e){if(e.key==="Enter")go();});'
             '</script></body></html>')
+
+    def _hm_slug_board(self):
+        """Serve the board for a /{shop-slug}/{centre-id} vanity link.
+
+        Returns True when handled (board served, or a firm 404/503 for a
+        bad slug, unknown centre or unready database). Returns False only
+        when the path is not a vanity link at all, so the caller can fall
+        through to its normal routing.
+        """
+        m = slug_centre_route(self.path)
+        if not m:
+            return False
+        from network import hm_share as hms
+        if not self.db:
+            self._send({'status': 'error',
+                        'message': 'server database not ready'}, 503)
+            return True
+        slug, ref = m
+        try:
+            ok_slug = (hms.shop_slug(self.db) == slug)
+        except Exception:
+            ok_slug = False
+        try:
+            cid = hms.resolve_centre_ref(self.db, ref)
+        except Exception:
+            cid = 0
+        if not ok_slug or not cid:
+            self._send({'status': 'error',
+                        'message': 'unknown centre link'}, 404)
+            return True
+        if HM_BOARD_PAUSED:
+            self._send_html(_PAUSED_HTML)
+            return True
+        page = self._hm_board_file()
+        try:
+            with open(page, 'r', encoding='utf-8') as f:
+                self._send_html(f.read())
+        except Exception:
+            self._send({'status': 'error',
+                        'message': 'board page missing'}, 404)
+        return True
 
     def _hm_board_file(self):
         """The centre board page on disk, frozen or source alike."""
@@ -322,6 +463,9 @@ class _ClusterHandler(BaseHTTPRequestHandler):
             parsed = urlparse(self.path)
             route = parsed.path.rstrip('/') or '/hm/board'
             if route in ('/hm', '/hm/board') or route.startswith('/hm/c/'):
+                if HM_BOARD_PAUSED:
+                    self._send_html(_PAUSED_HTML)
+                    return
                 page = self._hm_board_file()
                 try:
                     with open(page, 'r', encoding='utf-8') as f:
@@ -374,7 +518,9 @@ class _ClusterHandler(BaseHTTPRequestHandler):
                 self._send(out, code)
                 return
             if route == '/hm/api/csession':
-                token = (parse_qs(parsed.query).get('token') or [''])[0]
+                qs = parse_qs(parsed.query)
+                token = (qs.get('token') or [''])[0]
+                want = (qs.get('centre_id') or [''])[0]
                 centre, token, err = self._hm_require_login(token)
                 if err:
                     self._send({'status': 'success', 'logged_in': False,
@@ -382,8 +528,35 @@ class _ClusterHandler(BaseHTTPRequestHandler):
                                 'message': err.get('message'),
                                 'centre': err.get('centre', '')})
                     return
+                # Vanity links name their centre: a session logged in as
+                # another centre must not silently inherit this board.
+                # The address carries the long public id (or, for old
+                # links, the numeric id) — both resolve the same way.
+                if want:
+                    try:
+                        from network import hm_share as _hms2
+                        want_id = _hms2.resolve_centre_ref(self.db, want)
+                    except Exception:
+                        want_id = 0
+                    if not want_id or str(want_id) != str(centre['id']):
+                        wname = ''
+                        try:
+                            with self.db._get_connection() as conn:
+                                wrow = conn.execute(
+                                    "SELECT name FROM hallmark_centres "
+                                    "WHERE id=?", (int(want_id or 0),)
+                                    ).fetchone()
+                                wname = str(wrow['name'] or '') if wrow else ''
+                        except Exception:
+                            wname = ''
+                        self._send({'status': 'success', 'logged_in': False,
+                                    'reason': 'login_required',
+                                    'message': 'Log in to open these lots.',
+                                    'centre': wname})
+                        return
                 self._send({'status': 'success', 'logged_in': True,
-                            'centre': centre.get('name') or ''})
+                            'centre': centre.get('name') or '',
+                            'centre_id': centre.get('id')})
                 return
             self._send({'status': 'error', 'message': 'unknown endpoint'}, 404)
         except Exception as e:
@@ -424,6 +597,10 @@ class _ClusterHandler(BaseHTTPRequestHandler):
     def _hm_login(self, payload):
         """Trade a portal token plus the centre PIN for a login session."""
         from network import hm_share as hms
+        if _pin_throttled(self):
+            return self._send({'status': 'denied',
+                               'message': 'Too many tries. Wait a few '
+                                          'minutes.'}, 403)
         token = str((payload or {}).get('token') or '').strip()
         pin = str((payload or {}).get('pin') or '')
         centre = hms.portal_centre(self.db, token)
@@ -437,12 +614,14 @@ class _ClusterHandler(BaseHTTPRequestHandler):
                                           'yet. Ask them for it.'}, 403)
         if not hms.verify_centre_pin(self.db, centre['id'], pin):
             _log(f"portal login refused for centre {centre['id']}")
+            _pin_failed(self)
             return self._send({'status': 'denied',
                                'message': 'Wrong login. Try again.'}, 403)
         sid, max_age = hms.hm_session_create(self.db, centre['id'])
         if not sid:
             return self._send({'status': 'error',
                                'message': 'Could not open the portal.'}, 500)
+        _pin_cleared(self)
         _log(f"portal login: centre {centre['id']}")
         jar = (f'hm_session={sid}; Path=/hm/; Max-Age={max_age}; '
                f'HttpOnly; SameSite=Lax')
@@ -459,6 +638,10 @@ class _ClusterHandler(BaseHTTPRequestHandler):
         if not self.db:
             return self._send({'status': 'error',
                                'message': 'server database not ready'}, 503)
+        if _pin_throttled(self):
+            return self._send({'status': 'denied',
+                               'message': 'Too many tries. Wait a few '
+                                          'minutes.'}, 403)
         pin = str((payload or {}).get('pin') or '')
         if not pin:
             return self._send({'status': 'error',
@@ -466,8 +649,16 @@ class _ClusterHandler(BaseHTTPRequestHandler):
         centre = hms.find_centre_by_pin(self.db, pin)
         if not centre:
             _log('portal pin login refused (no match)')
+            _pin_failed(self)
+            # A shop that never set any login got "Wrong login" here, which
+            # sent the centre back to retype a login that cannot exist yet.
+            if not hms.any_centre_has_pin(self.db):
+                return self._send({'status': 'no_pin',
+                                   'message': 'The shop has not set your login '
+                                              'yet. Ask them for it.'}, 403)
             return self._send({'status': 'denied',
                                'message': 'Wrong login. Try again.'}, 403)
+        _pin_cleared(self)
         token = hms.live_token(self.db, centre['id'])
         if not token:
             token = hms.silent_token(self.db, centre['id'])
@@ -768,6 +959,17 @@ def start_server(db, context=None, host='0.0.0.0', port=None):
         _log(f'could not bind {host}:{port}: {e}')
         _server = None
         return None
+
+
+def refresh_db(db):
+    """Point the running server at a new database handle.
+
+    The app replaces api.db on a financial-year switch while the portal
+    keeps the handle it was started with. Without this, the UI saves into
+    one database and the portal reads another, so saved logins vanish.
+    Rebinds nothing; only swaps the handle.
+    """
+    _ClusterHandler.db = db
 
 
 def stop_server():

@@ -85,6 +85,36 @@ def ensure_stage_column(db):
                 conn.execute(
                     "ALTER TABLE hallmark_centres ADD COLUMN portal_pin_salt "
                     "TEXT DEFAULT ''")
+            if 'public_uid' not in ccols:
+                conn.execute(
+                    "ALTER TABLE hallmark_centres ADD COLUMN public_uid "
+                    "TEXT DEFAULT ''")
+            for _r in conn.execute(
+                    "SELECT id FROM hallmark_centres WHERE "
+                    "COALESCE(public_uid,'')=''").fetchall():
+                _uid = ''
+                for _try in range(5):
+                    import secrets as _se
+                    _cand = _se.token_urlsafe(9)
+                    _dup = conn.execute(
+                        "SELECT 1 FROM hallmark_centres WHERE public_uid=?",
+                        (_cand,)).fetchone()
+                    if not _dup:
+                        _uid = _cand
+                        break
+                if _uid:
+                    conn.execute(
+                        "UPDATE hallmark_centres SET public_uid=? WHERE id=?",
+                        (_uid, _r['id']))
+            # Saved logins the owner can re-share: one row per login ever
+            # set, newest last. Stored retrievable (not hashed) on purpose —
+            # a hash cannot be read back out to tell the centre. This file
+            # never leaves the shop PC; the portal only ever sees hashes.
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS hm_centre_pin_history ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "centre_id INTEGER NOT NULL, pin TEXT NOT NULL, "
+                "created_at TEXT NOT NULL)")
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS hm_portal_tokens ("
                 "token TEXT PRIMARY KEY, centre_id INTEGER NOT NULL, "
@@ -205,6 +235,68 @@ def shop_name(db):
         return db.get_config('business_name', '') or ''
     except Exception:
         return ''
+
+
+def shop_slug(db):
+    """URL-safe shop name for vanity portal links: 'DJ Jewellers' ->
+    'dj-jewellers'. Falls back to 'shop' so a link always has a shape."""
+    import re as _re
+    slug = _re.sub(r'[^a-z0-9]+', '-', str(shop_name(db) or '').lower())
+    slug = slug.strip('-')
+    return slug or 'shop'
+
+
+def centre_public_uid(db, centre_id):
+    """The centre's long public id for vanity links, minted once and then
+    stable for ever. Sequential ids would let anyone walk centre 1, 2, 3…;
+    a 12-character random id cannot be walked. The login PIN stays the
+    real gate either way."""
+    ensure_stage_column(db)
+    try:
+        with db._get_connection() as conn:
+            row = conn.execute(
+                "SELECT public_uid FROM hallmark_centres WHERE id=?",
+                (int(centre_id or 0),)).fetchone()
+            return str((row and row['public_uid']) or '')
+    except Exception:
+        return ''
+
+
+def resolve_centre_ref(db, ref):
+    """A vanity tail back to a centre id: long public uid first, with the
+    old numeric id accepted so nothing already shared breaks."""
+    ensure_stage_column(db)
+    ref = str(ref or '').strip()
+    if not ref:
+        return 0
+    try:
+        with db._get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM hallmark_centres WHERE public_uid=?",
+                (ref,)).fetchone()
+            if row:
+                return int(row['id'])
+            if ref.isdigit():
+                row = conn.execute(
+                    "SELECT id FROM hallmark_centres WHERE id=?",
+                    (int(ref),)).fetchone()
+                if row:
+                    return int(row['id'])
+    except Exception:
+        pass
+    return 0
+
+
+def portal_url(base, slug, uid):
+    """Public centre link: {base}/{shop-slug}/{long-id}.
+
+    No token in the URL means no link to revoke: one login, one board,
+    per centre. The id is long and random (see centre_public_uid), and
+    the login PIN stays the real gate.
+    """
+    return (str(base or '').rstrip('/')
+            + '/' + str(slug or 'shop').strip('/')
+            + '/' + str(uid or '').strip())
 
 
 # ── centres: directory, detail, portal tokens ────────────────────────
@@ -386,15 +478,82 @@ def set_centre_pin(db, centre_id, pin=''):
                     "UPDATE hallmark_centres SET portal_pin_hash=?, "
                     "portal_pin_salt=? WHERE id=?",
                     (_hash_pin(pin, salt), salt, cid))
+                # Remember it for the login table, once per distinct login.
+                last = conn.execute(
+                    "SELECT pin FROM hm_centre_pin_history "
+                    "WHERE centre_id=? ORDER BY id DESC LIMIT 1",
+                    (cid,)).fetchone()
+                if not last or str(last['pin'] or '') != pin:
+                    from datetime import datetime as _dt
+                    conn.execute(
+                        "INSERT INTO hm_centre_pin_history"
+                        "(centre_id, pin, created_at) VALUES(?,?,?)",
+                        (cid, pin,
+                         _dt.now().strftime('%Y-%m-%d %H:%M')))
             else:
                 conn.execute(
                     "UPDATE hallmark_centres SET portal_pin_hash='', "
                     "portal_pin_salt='' WHERE id=?", (cid,))
             conn.commit()
+        _log(f'set pin: centre {cid} has_pin={bool(pin)}')
         return {'status': 'success',
                 'has_pin': bool(pin)}
     except Exception as e:
         _log(f'set pin: {e}')
+        return {'status': 'error', 'message': str(e)}
+
+
+def pin_history(db, centre_id):
+    """Every login ever set for this centre, newest first. The table on
+    the centre page reads this — rows live until the owner deletes them,
+    even across restarts."""
+    ensure_stage_column(db)
+    try:
+        with db._get_connection() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT pin, created_at FROM hm_centre_pin_history "
+                "WHERE centre_id=? ORDER BY id DESC LIMIT 50",
+                (int(centre_id or 0),)).fetchall()]
+    except Exception:
+        return []
+
+
+def pin_forget(db, centre_id, pin=''):
+    """Delete one saved login from the table. If it is also the login the
+    portal currently accepts, that is cleared too, so the table never lies
+    about what opens the board."""
+    import hmac
+    ensure_stage_column(db)
+    pin = str(pin or '').strip()
+    try:
+        with db._get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM hallmark_centres WHERE id=?",
+                (int(centre_id or 0),)).fetchone()
+            if not row:
+                return {'status': 'not_found',
+                        'message': 'No such centre.'}
+            cid = row['id']
+            conn.execute(
+                "DELETE FROM hm_centre_pin_history "
+                "WHERE centre_id=? AND pin=?", (cid, pin))
+            removed_active = False
+            cur = conn.execute(
+                "SELECT portal_pin_hash, portal_pin_salt "
+                "FROM hallmark_centres WHERE id=?", (cid,)).fetchone()
+            if cur and str(cur['portal_pin_hash'] or '') and pin:
+                if hmac.compare_digest(
+                        _hash_pin(pin, cur['portal_pin_salt'] or ''),
+                        str(cur['portal_pin_hash'] or '')):
+                    conn.execute(
+                        "UPDATE hallmark_centres SET portal_pin_hash='', "
+                        "portal_pin_salt='' WHERE id=?", (cid,))
+                    removed_active = True
+            conn.commit()
+        return {'status': 'success', 'has_pin': centre_has_pin(db, cid),
+                'removed_active': removed_active}
+    except Exception as e:
+        _log(f'forget pin: {e}')
         return {'status': 'error', 'message': str(e)}
 
 
@@ -412,10 +571,14 @@ def centre_has_pin(db, centre_id):
 
 
 def verify_centre_pin(db, centre_id, pin=''):
-    """Constant-time PIN check. Blank PIN never verifies."""
+    """Constant-time PIN check. Blank PIN never verifies.
+
+    Stripped before hashing, exactly like set_centre_pin stores it, so a
+    trailing space from a phone keyboard can never lock a centre out.
+    """
     import hmac
     ensure_stage_column(db)
-    pin = str(pin or '')
+    pin = str(pin or '').strip()
     if not pin:
         return False
     try:
@@ -748,11 +911,28 @@ def silent_token(db, centre_id):
         return ''
 
 
+def any_centre_has_pin(db):
+    """Whether any centre has a portal login at all. The root portal page
+    uses this to tell 'nobody set a login yet' apart from 'wrong login'."""
+    ensure_stage_column(db)
+    try:
+        with db._get_connection() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM hallmark_centres "
+                "WHERE COALESCE(portal_pin_hash,'')<>'' LIMIT 1").fetchone()
+            return bool(row)
+    except Exception:
+        return False
+
+
 def find_centre_by_pin(db, pin=''):
-    """The centre whose login PIN this is, or None."""
+    """The centre whose login PIN this is, or None.
+
+    Stripped before hashing, exactly like set_centre_pin stores it.
+    """
     import hmac
     ensure_stage_column(db)
-    pin = str(pin or '')
+    pin = str(pin or '').strip()
     if not pin:
         return None
     try:

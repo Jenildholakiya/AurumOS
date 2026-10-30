@@ -985,7 +985,7 @@ function buildRetailSlip(D, copyLabel) {
         + buildTermsSection()
         + buildSignatureArea(D)
         + '<div class="ft-thanks">'
-        + '<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+        + '<div class="ft-thanks-text">Thank you for shopping with us!</div><div class="ft-thanks-powered">Software by <strong>AurumOS by Pentarch</strong></div>'
         + '</div></div>';
 
     return '<div class="slip retail-slip">'
@@ -1109,7 +1109,7 @@ function buildWeightSlip(D, copyLabel) {
                 +buildBanner(D)+metaHtml
                 +'<table class="bt" style="margin-bottom:0;">'+tableHead+'<tbody>'+wRows+subRow+'</tbody></table>'
                 +'<div class="ft-thanks" style="border-top:1.5px solid #000;margin:0 28px;">'
-                +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+                +'<div class="ft-thanks-text">Thank you for shopping with us!</div><div class="ft-thanks-powered">Software by <strong>AurumOS by Pentarch</strong></div>'
                 +'</div></div>';
         } else {
             var netFine = gTF - colFn - discFineFinal - f995 - fDhal;
@@ -1137,7 +1137,7 @@ function buildWeightSlip(D, copyLabel) {
                 +'<tbody>'+wRows+totRow1+ratRow+deduct+discRow+gstRow+totRow2+spacer+footRow+'</tbody>'
                 +'</table>'
                 +'<div class="ft-thanks" style="border-top:1.5px solid #000;margin:0 28px;">'
-                +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+                +'<div class="ft-thanks-text">Thank you for shopping with us!</div><div class="ft-thanks-powered">Software by <strong>AurumOS by Pentarch</strong></div>'
                 +'</div></div>';
         }
     }
@@ -1199,7 +1199,7 @@ function buildUchakSlip(D, copyLabel) {
         +'<table class="bt">'+tableHead
         +'<tbody>'+uRows+uDisc+uGst+spacer+totalRow+'</tbody></table>'
         +'<div class="ft-thanks">'
-        +'<div class="ft-thanks-text">Thank you for shopping with us!</div>'
+        +'<div class="ft-thanks-text">Thank you for shopping with us!</div><div class="ft-thanks-powered">Software by <strong>AurumOS by Pentarch</strong></div>'
         +'</div></div>';
 }
 </script>

@@ -50,7 +50,19 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .dashboard-scroll::-webkit-scrollbar-thumb:hover{background:var(--muted2);}
 
 /* ── ACTION BUTTONS ── */
-.top-action-bar{display:flex;justify-content:flex-end;gap:10px;margin-bottom:-10px;width:100%;}
+.top-action-bar{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px;width:100%;padding:2px 2px 4px;margin-bottom:0;}
+.btn-lux{padding:9px 15px;border-radius:10px;font-size:0.7rem;font-weight:700;letter-spacing:0.3px;cursor:pointer;transition:all 0.22s cubic-bezier(0.22,1,0.36,1);display:inline-flex;align-items:center;gap:7px;border:1.5px solid transparent;position:relative;overflow:hidden;font-family:var(--sans);white-space:nowrap;}
+.btn-lux svg{flex-shrink:0;}
+.btn-lux::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.14) 0%,transparent 55%);pointer-events:none;opacity:0;transition:opacity 0.22s;}
+.btn-lux:hover::after{opacity:1;}
+.btn-lux:hover{transform:translateY(-1px);}
+.btn-lux:active{transform:translateY(0);}
+.btn-lux-violet{background:rgba(124,58,237,0.07);color:#7c3aed;border-color:rgba(124,58,237,0.2);}
+.btn-lux-violet:hover{border-color:#7c3aed;box-shadow:0 4px 12px rgba(124,58,237,0.18);}
+.btn-lux-green{background:rgba(22,163,74,0.07);color:#16a34a;border-color:rgba(22,163,74,0.2);}
+.btn-lux-green:hover{border-color:#16a34a;box-shadow:0 4px 12px rgba(22,163,74,0.18);}
+.btn-lux-blue{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-ln);}
+.btn-lux-blue:hover{border-color:var(--blue2);box-shadow:0 4px 12px rgba(37,99,235,0.18);}
 .btn-lux{padding:9px 16px;border-radius:8px;font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.25s cubic-bezier(0.22,1,0.36,1);display:flex;align-items:center;gap:6px;border:1.5px solid transparent;position:relative;overflow:hidden;font-family:var(--sans);}
 .btn-lux::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 50%);pointer-events:none;opacity:0;transition:opacity 0.25s;}
 .btn-lux:hover::after{opacity:1;}
@@ -90,6 +102,22 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .opening-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .opening-card-title{display:flex;align-items:center;gap:10px;}
 .opening-badge{font-size:0.6rem;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-ln);padding:3px 9px;border-radius:6px;font-weight:600;}
+
+/* Uchak stock cards: one per fixed-price code. Same card language as the
+   rest of the dashboard (border, radius, hover lift). */
+.uchak-total{display:flex;gap:18px;align-items:baseline;margin:2px 2px 12px;font-size:0.72rem;color:var(--text-muted);}
+.uchak-total b{font-size:0.95rem;color:var(--ink);}
+.uchak-total .uv{color:var(--gold3);font-weight:700;}
+.uchak-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;}
+.uchak-card{border:1px solid var(--border);border-radius:12px;padding:13px 15px;background:var(--white);transition:all 0.2s;cursor:default;}
+.uchak-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,23,42,0.10);}
+.uchak-code{display:inline-block;font-family:var(--mono);font-size:0.68rem;font-weight:700;color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-ln);border-radius:6px;padding:2px 8px;letter-spacing:0.4px;}
+.uchak-name{font-size:0.82rem;font-weight:600;margin:7px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.uchak-pcs{font-family:var(--mono);font-size:1.25rem;font-weight:700;margin-top:2px;}
+.uchak-pcs span{font-size:0.62rem;font-weight:600;color:var(--text-muted);margin-left:3px;}
+.uchak-meta{display:flex;justify-content:space-between;align-items:baseline;margin-top:7px;padding-top:7px;border-top:1px dashed var(--border);font-size:0.68rem;color:var(--text-muted);}
+.uchak-val{font-weight:700;color:var(--gold3);}
+.uchak-empty{grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:0.78rem;padding:18px 0;}
 .opening-card-link{font-size:0.7rem;color:var(--blue);cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--blue-ln);background:var(--blue-bg);transition:all 0.25s cubic-bezier(0.22,1,0.36,1);font-weight:600;text-decoration:none;}
 .opening-card-link:hover{background:var(--blue);color:#fff;border-color:var(--blue);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.25);}
 .opening-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
@@ -171,45 +199,51 @@ tr:hover td{background:rgba(37,99,235,0.02);}
 /* ── ALERTS ── */
 @keyframes floatUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .stock-alerts-wrap{display:flex;flex-direction:column;gap:12px;}
-.alert-card{border-radius:14px;padding:0;display:flex;flex-direction:column;overflow:hidden;animation:floatUp 0.4s ease both;transition:all 0.3s;}
-.alert-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,23,42,0.15);}
+.stock-alerts-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.stock-alerts-wrap:empty{display:none;}
+.alert-card{position:relative;border-radius:12px;padding:0;display:flex;flex-direction:column;overflow:hidden;background:var(--white);border:1px solid var(--border);box-shadow:var(--shadow-lux);animation:floatUp 0.4s cubic-bezier(0.22,1,0.36,1) both;transition:transform 0.2s,box-shadow 0.2s;}
+.alert-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover);}
 .alert-top-bar{height:3px;width:100%;flex-shrink:0;}
-.alert-inner{display:flex;align-items:center;gap:16px;padding:16px 20px;}
-.alert-icon-wrap{flex-shrink:0;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.alert-inner{display:flex;align-items:center;gap:14px;padding:12px 16px;}
+.alert-icon-wrap{flex-shrink:0;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
 .alert-body{flex:1;min-width:0;}
-.alert-header-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
-.alert-title{font-size:0.82rem;font-weight:700;}
-.alert-count-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;font-size:0.65rem;font-family:var(--mono);font-weight:700;}
-.alert-subtitle{font-size:0.68rem;margin-bottom:8px;}
+.alert-header-row{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.alert-title{font-size:0.78rem;font-weight:800;letter-spacing:0.1px;}
+.alert-count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;font-size:0.64rem;font-family:var(--mono);font-weight:800;}
+.alert-subtitle{font-size:0.66rem;margin-bottom:7px;font-weight:500;}
 .alert-pills{display:flex;flex-wrap:wrap;gap:5px;}
-.pill{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:3px 8px;font-size:0.65rem;font-family:var(--mono);transition:all 0.2s;}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:7px;padding:3px 9px;font-size:0.63rem;font-family:var(--mono);font-weight:600;transition:all 0.15s;}
 .pill:hover{transform:translateY(-1px);}
-.pill-dot{width:5px;height:5px;border-radius:50%;}
-.pill-wt{opacity:0.55;font-size:0.6rem;}
-.alert-action{flex-shrink:0;padding:9px 16px;border:none;border-radius:8px;font-size:0.65rem;cursor:pointer;text-transform:uppercase;letter-spacing:0.7px;transition:all 0.25s cubic-bezier(0.22,1,0.36,1);white-space:nowrap;align-self:flex-start;font-weight:700;}
+.pill-dot{width:6px;height:6px;border-radius:50%;}
+.pill-wt{opacity:0.6;font-size:0.58rem;font-weight:500;}
+.alert-action{flex-shrink:0;padding:8px 16px;border:none;border-radius:8px;font-size:0.63rem;cursor:pointer;text-transform:uppercase;letter-spacing:0.7px;transition:all 0.2s;white-space:nowrap;align-self:flex-start;font-weight:800;}
 .alert-action:hover{transform:translateY(-1px);}
-.alert-oos{background:linear-gradient(135deg,#150005,#1f0009);border:1px solid rgba(225,29,72,0.4);}
-.alert-oos .alert-top-bar{background:linear-gradient(90deg,#e11d48,#9f1239);}
-.alert-oos .alert-icon-wrap{background:rgba(225,29,72,0.1);border:1px solid rgba(225,29,72,0.3);}
-.alert-oos .alert-title{color:#fff;}.alert-oos .alert-subtitle{color:rgba(252,165,165,0.75);}
-.alert-oos .alert-count-badge{background:#e11d48;color:#fff;}
-.pill-oos{background:rgba(225,29,72,0.1);border:1px solid rgba(225,29,72,0.25);color:#fca5a5;}
-.pill-dot-oos{background:#e11d48;}
-.alert-oos .alert-action{background:rgba(225,29,72,0.8);color:#fff;}
-.alert-oos .alert-action:hover{background:rgba(225,29,72,1);box-shadow:0 4px 12px rgba(225,29,72,0.3);}
-.alert-low{background:linear-gradient(135deg,#110900,#1c1000);border:1px solid rgba(245,158,11,0.35);}
-.alert-low .alert-top-bar{background:linear-gradient(90deg,#f59e0b,#b45309);}
-.alert-low .alert-icon-wrap{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);}
-.alert-low .alert-title{color:#fef3c7;}.alert-low .alert-subtitle{color:rgba(252,211,77,0.75);}
-.alert-low .alert-count-badge{background:#f59e0b;color:#000;}
-.alert-progress-row{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
-.alert-progress-item{display:flex;align-items:center;gap:6px;}
-.alert-progress-label{font-size:0.6rem;color:rgba(252,211,77,0.7);width:52px;flex-shrink:0;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.alert-progress-track{flex:1;height:3px;border-radius:99px;background:rgba(245,158,11,0.12);overflow:hidden;}
-.alert-progress-fill{height:100%;border-radius:99px;width:0%;transition:width 0.8s ease;}
-.alert-progress-val{font-size:0.6rem;color:rgba(252,211,77,0.6);font-family:var(--mono);width:40px;text-align:right;flex-shrink:0;}
-.alert-low .alert-action{background:rgba(245,158,11,0.8);color:#000;}
-.alert-low .alert-action:hover{background:rgba(245,158,11,1);box-shadow:0 4px 12px rgba(245,158,11,0.3);}
+/* Out of stock: white card, red edge */
+.alert-oos{border-top:3px solid #dc2626;}
+.alert-oos .alert-top-bar{display:none;}
+.alert-oos .alert-icon-wrap{background:var(--red-bg);border:1px solid rgba(220,38,38,0.2);}
+.alert-oos .alert-title{color:var(--ink);}
+.alert-oos .alert-subtitle{color:var(--text-muted);}
+.alert-oos .alert-count-badge{background:#dc2626;color:#fff;}
+.pill-oos{background:var(--red-bg);border:1px solid rgba(220,38,38,0.2);color:#b91c1c;}
+.pill-dot-oos{background:#dc2626;color:#dc2626;}
+.alert-oos .alert-action{background:#dc2626;color:#fff;box-shadow:0 3px 10px rgba(220,38,38,0.25);}
+.alert-oos .alert-action:hover{background:#b91c1c;box-shadow:0 5px 14px rgba(220,38,38,0.32);}
+/* Low stock: white card, amber edge */
+.alert-low{border-top:3px solid #f59e0b;}
+.alert-low .alert-top-bar{display:none;}
+.alert-low .alert-icon-wrap{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);}
+.alert-low .alert-title{color:var(--ink);}
+.alert-low .alert-subtitle{color:var(--text-muted);}
+.alert-low .alert-count-badge{background:#f59e0b;color:#451a03;}
+.alert-progress-row{margin-top:7px;display:flex;flex-direction:column;gap:5px;}
+.alert-progress-item{display:flex;align-items:center;gap:8px;}
+.alert-progress-label{font-size:0.6rem;font-weight:700;color:var(--ink3);width:56px;flex-shrink:0;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.alert-progress-track{flex:1;height:5px;border-radius:99px;background:rgba(245,158,11,0.16);overflow:hidden;}
+.alert-progress-fill{height:100%;border-radius:99px;width:0%;transition:width 0.9s cubic-bezier(0.22,1,0.36,1);}
+.alert-progress-val{font-size:0.6rem;font-weight:600;color:var(--text-muted);font-family:var(--mono);width:50px;text-align:right;flex-shrink:0;}
+.alert-low .alert-action{background:#f59e0b;color:#451a03;box-shadow:0 3px 10px rgba(245,158,11,0.28);}
+.alert-low .alert-action:hover{background:#d97706;box-shadow:0 5px 14px rgba(245,158,11,0.36);}
 
 /* bin popover */
 .bin-popover-card{position:fixed;display:none;background:var(--white);width:280px;border-radius:14px;border:1px solid var(--border);box-shadow:0 20px 40px -8px rgba(15,23,42,0.2);padding:14px;z-index:99999;pointer-events:none;}
@@ -219,6 +253,9 @@ tr:hover td{background:rgba(37,99,235,0.02);}
 .popover-total{font-family:var(--mono);font-size:0.75rem;color:var(--success);font-weight:600;}
 .popover-item-row{display:flex;justify-content:space-between;padding:5px 8px;background:var(--bg-main);border-radius:8px;font-size:0.68rem;margin-bottom:5px;}
 .popover-empty{font-size:0.68rem;color:var(--text-muted);text-align:center;padding:12px 0;}
+/* Responsive: small laptops down to 1024 */
+@media (max-width:1180px){.stats-row,.heatmap-container{grid-template-columns:repeat(3,1fr)!important;}.sc-grid,.stats-row-2{grid-template-columns:repeat(2,1fr)!important;}.intel-grid{grid-template-columns:1fr!important;}}
+@media (max-width:760px){.stats-row,.stats-row-2,.heatmap-container,.sc-grid{grid-template-columns:repeat(2,1fr)!important;}}
 </style>
 <style id="aurum-layout-fix">
 body{display:flex!important;height:100vh!important;overflow:hidden!important;width:100vw!important;}
@@ -228,7 +265,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 
 <main>
@@ -245,21 +282,56 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
 <div class="dashboard-scroll">
     <div class="top-action-bar">
         <button class="btn-lux btn-report-emerald" onclick="sideNavigate('full_report.html')">&#9654; Full Report</button>
-        <button class="btn-lux" onclick="sideNavigate('year_close.html')" style="background:rgba(124,58,237,0.06);color:#7c3aed;border-color:rgba(124,58,237,0.18);" title="Stock Taking &amp; Period Reset">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <button class="btn-lux btn-lux-violet" onclick="sideNavigate('year_close.html')" title="Stock Taking &amp; Period Reset">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1 2-2h11"/></svg>
             Balance Transfer
         </button>
-        <button class="btn-lux" onclick="sideNavigate('tag_audit.html')" style="background:rgba(22,163,74,0.06);color:#16a34a;border-color:rgba(22,163,74,0.18);" title="Tag Audit — Verify tagged stock">
+        <button class="btn-lux btn-lux-green" onclick="sideNavigate('tag_audit.html')" title="Tag Audit — Verify tagged stock">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Tag Audit
         </button>
         <button class="btn-lux btn-add-stock"      onclick="sideNavigate('opening_stock.html')">&#128230; Opening Stock</button>
         <button class="btn-lux btn-katti-gold" id="btn-weight-terminal" onclick="sideNavigate('katti_entry.html')">Weight Terminal</button>
-        <button class="btn-lux" onclick="sideNavigate('sold_tags.html')" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-ln);" title="Sold Tags Ledger — date-wise sale records">
+        <button class="btn-lux btn-uchak-slate" id="btn-uchak-terminal" onclick="sideNavigate('uchak_stock_entry.html')" title="Uchak Inward — Fixed-price stock entry">Uchak Inward</button>
+        <button class="btn-lux btn-lux-blue" onclick="sideNavigate('sold_tags.html')" title="Sold Tags Ledger — date-wise sale records">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Sold Tags
         </button>
         <button class="btn-lux btn-add-stock"      onclick="sideNavigate('stock_ledger.html')">Add Stock</button>
+    </div>
+
+    <!-- ── STOCK ALERTS (below actions, both modes) ── -->
+    <div class="stock-alerts-wrap" id="stock-alerts-wrap">
+        <div class="alert-card alert-oos" id="oos-banner" style="display:none;">
+            <div class="alert-top-bar"></div>
+            <div class="alert-inner">
+                <div class="alert-icon-wrap">&#128680;</div>
+                <div class="alert-body">
+                    <div class="alert-header-row">
+                        <div class="alert-title">Out of Stock</div>
+                        <div class="alert-count-badge" id="oos-count-badge">0</div>
+                    </div>
+                    <div class="alert-subtitle">Items fully exhausted</div>
+                    <div class="alert-pills" id="oos-items-list"></div>
+                </div>
+                <button class="alert-action" onclick="goAddStock()">+ Add Stock</button>
+            </div>
+        </div>
+        <div class="alert-card alert-low" id="low-stock-banner" style="display:none;">
+            <div class="alert-top-bar"></div>
+            <div class="alert-inner">
+                <div class="alert-icon-wrap">&#9888;&#65039;</div>
+                <div class="alert-body">
+                    <div class="alert-header-row">
+                        <div class="alert-title">Low Stock Warning</div>
+                        <div class="alert-count-badge" id="low-count-badge">0</div>
+                    </div>
+                    <div class="alert-subtitle" id="low-stock-subtitle">Items below threshold</div>
+                    <div class="alert-progress-row" id="low-stock-list"></div>
+                </div>
+                <button class="alert-action" onclick="goAddStock()">Add Stock</button>
+            </div>
+        </div>
     </div>
 
     <!-- ── STOCK SUMMARY (Opening → Inward → Outward → Closing) ── -->
@@ -307,37 +379,18 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
         </table>
     </div>
 
-    <!-- ── STOCK ALERTS ── -->
-    <div class="stock-alerts-wrap" id="stock-alerts-wrap">
-        <div class="alert-card alert-oos" id="oos-banner" style="display:none;">
-            <div class="alert-top-bar"></div>
-            <div class="alert-inner">
-                <div class="alert-icon-wrap">&#128680;</div>
-                <div class="alert-body">
-                    <div class="alert-header-row">
-                        <div class="alert-title">Out of Stock</div>
-                        <div class="alert-count-badge" id="oos-count-badge">0</div>
-                    </div>
-                    <div class="alert-subtitle">Items fully exhausted</div>
-                    <div class="alert-pills" id="oos-items-list"></div>
-                </div>
-                <button class="alert-action" onclick="goAddStock()">+ Add Stock</button>
+    <!-- ── FIXED-PRICE (UCHAK) STOCK ── -->
+    <div class="opening-stock-card">
+        <div class="opening-card-head">
+            <div class="opening-card-title">
+                <span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;">Uchak · Fixed Price Stock</span>
+                <span class="opening-badge" id="uchak-count-badge">0 Lines</span>
             </div>
+            <a href="#" onclick="sideNavigate('uchak_stock_entry.html');return false;" class="opening-card-link">Manage Uchak Stock &#8594;</a>
         </div>
-        <div class="alert-card alert-low" id="low-stock-banner" style="display:none;">
-            <div class="alert-top-bar"></div>
-            <div class="alert-inner">
-                <div class="alert-icon-wrap">&#9888;&#65039;</div>
-                <div class="alert-body">
-                    <div class="alert-header-row">
-                        <div class="alert-title">Low Stock Warning</div>
-                        <div class="alert-count-badge" id="low-count-badge">0</div>
-                    </div>
-                    <div class="alert-subtitle" id="low-stock-subtitle">Items below threshold</div>
-                    <div class="alert-progress-row" id="low-stock-list"></div>
-                </div>
-                <button class="alert-action" onclick="goAddStock()">Add Stock</button>
-            </div>
+        <div class="uchak-total" id="uchak-total" style="display:none;"></div>
+        <div class="uchak-grid" id="uchak-grid">
+            <div class="uchak-empty">Loading...</div>
         </div>
     </div>
 
@@ -358,7 +411,7 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
             <div class="metric-value" id="hm-done">0<span>PCS</span></div></div>
             <div class="metric-sub" id="hm-done-sub">0.000 g with HUID</div>
         </div>
-        <div class="metric-card card-packets-indicator">
+        <div class="metric-card card-packets-indicator" onclick="window.location.href='hallmark.html'" title="Open hallmark panel" style="cursor:pointer;">
             <div><span class="metric-label">Pending Hallmark</span>
             <div class="metric-value" id="hm-pending" style="color:#d97706;">0<span>PCS</span></div></div>
             <div class="metric-sub" id="hm-pending-sub">0.000 g awaiting HUID</div>
@@ -527,20 +580,77 @@ function loadDashboard(){
     }).catch(function(){});
     api.get_analytics_payload().then(function(p){ if(p) analyticsData=p; renderHeatmap(); renderCategoryChart(document.getElementById('dist-toggle').value); }).catch(function(){});
     api.get_velocity_products().then(function(d){ hotProductsRaw=d||[]; renderHotProducts(); }).catch(function(){});
-    api.get_stock_ledger().then(function(l){ rawInventoryItemsList=l||[]; renderStockTable(rawInventoryItemsList); updateHallmarkCards(rawInventoryItemsList); }).catch(function(){});
+    api.get_stock_ledger().then(function(l){ rawInventoryItemsList=l||[]; renderStockTable(rawInventoryItemsList); updateHallmarkCards(rawInventoryItemsList, null); }).catch(function(){});
+    // Lot-aware pending count from the hallmark summary (same numbers as the
+    // hallmark panel): pieces out at the centre stop reading as "awaiting".
+    // Staff without the hallmark bundle get a denial here — the ledger-only
+    // split above stays as the fallback.
+    if(typeof api.hallmark_dashboard==='function'){
+        api.hallmark_dashboard(2000).then(function(d){
+            if(d&&d.status==='success') updateHallmarkCards(rawInventoryItemsList, d);
+        }).catch(function(){});
+    }
     runStagnancyScan();
     checkOutOfStock();
+    loadUchakStock();
+}
+
+// ── UCHAK STOCK CARD ─────────────────────────────────────────────
+// Live fixed-price stock grouped by code (pieces, price, value), from the
+// same untagged rows the counter deducts from, so this card can never
+// disagree with a sale. Empty register renders one quiet row, not an error.
+function loadUchakStock(){
+    var grid = document.getElementById('uchak-grid');
+    var badge = document.getElementById('uchak-count-badge');
+    var total = document.getElementById('uchak-total');
+    if(!window.pywebview || !window.pywebview.api ||
+       typeof window.pywebview.api.get_uchak_stock !== 'function'){
+        if(grid) grid.innerHTML = '<div class="uchak-empty">Uchak lookup unavailable — rebuild the app.</div>';
+        return;
+    }
+    window.pywebview.api.get_uchak_stock().then(function(rows){
+        rows = rows || [];
+        if(badge) badge.innerText = rows.length + (rows.length === 1 ? ' Line' : ' Lines');
+        if(!grid) return;
+        if(!rows.length){
+            if(total) total.style.display = 'none';
+            grid.innerHTML = '<div class="uchak-empty">No fixed-price stock — press Uchak Inward above to add some.</div>';
+            return;
+        }
+        var tPcs = 0, tVal = 0;
+        grid.innerHTML = rows.map(function(r){
+            var pcs = parseInt(r.pcs || 0, 10);
+            var price = parseFloat(r.price || 0);
+            var val = parseFloat(r.value || (pcs * price));
+            tPcs += pcs; tVal += val;
+            return '<div class="uchak-card">'
+                + '<span class="uchak-code">' + h(r.it_code || '—') + '</span>'
+                + '<div class="uchak-name">' + h(r.it_name || '—') + '</div>'
+                + '<div class="uchak-pcs">' + pcs + '<span>pcs</span></div>'
+                + '<div class="uchak-meta"><span>@ Rs.' + price.toLocaleString('en-IN', {maximumFractionDigits: 2}) + '</span>'
+                + '<span class="uchak-val">Rs.' + val.toLocaleString('en-IN', {maximumFractionDigits: 2}) + '</span></div>'
+                + '</div>';
+        }).join('');
+        if(total){
+            total.style.display = 'flex';
+            total.innerHTML = '<span>Total <b>' + tPcs + ' pcs</b></span>'
+                + '<span>Stock value <b class="uv">Rs.' + tVal.toLocaleString('en-IN', {maximumFractionDigits: 2}) + '</b></span>';
+        }
+    }).catch(function(){
+        if(grid) grid.innerHTML = '<div class="uchak-empty">Could not load uchak stock.</div>';
+    });
 }
 
 // ── KPI: hallmark status from the live stock ledger ──
-// Same HUID rule as the rest of the app: present means not blank/'-'/None/N/A.
+// Same rule as core.hallmark.has_huid: only a valid six-character number
+// counts. Bin labels (B-001) and blanks are waiting, wherever they sleep.
 function hasHuid(r){
     var x=r ? r.huid : '';
     if(x===null||x===undefined) return false;
-    x=String(x).trim();
-    return x!=='' && x!=='-' && x.toLowerCase()!=='none' && x.toUpperCase()!=='N/A';
+    x=String(x).replace(/[\s\-]/g,'').toUpperCase();
+    return /^[A-Z0-9]{6}$/.test(x);
 }
-function updateHallmarkCards(list){
+function updateHallmarkCards(list, hm){
     var done=0, pend=0, doneW=0, pendW=0;
     (list||[]).forEach(function(r){
         var w=parseFloat(r.nt_wt||r.gr_wt||0);
@@ -548,8 +658,19 @@ function updateHallmarkCards(list){
     });
     var a=document.getElementById('hm-done'); if(a) a.innerHTML=done+'<span>PCS</span>';
     var b=document.getElementById('hm-done-sub'); if(b) b.innerText=f3(doneW)+' g with HUID';
-    var c=document.getElementById('hm-pending'); if(c) c.innerHTML=pend+'<span>PCS</span>';
-    var d=document.getElementById('hm-pending-sub'); if(d) d.innerText=f3(pendW)+' g awaiting HUID';
+    // Lot-aware: the hallmark summary splits "no HUID" into waiting in the
+    // shop vs away at the centre. Pieces out in a lot are not "awaiting".
+    if(hm&&(hm.waiting||hm.out)){
+        var w=hm.waiting||{}, o=hm.out||{}, l=hm.late||{};
+        var c=document.getElementById('hm-pending');
+        if(c) c.innerHTML=(w.pieces||0)+'<span>PCS</span>';
+        var d=document.getElementById('hm-pending-sub');
+        if(d) d.innerText=f3(w.gross_wt||0)+' g in shop · '+(o.pieces||0)+' pcs at centre'
+            +((l.pieces||0)?' · '+(l.pieces||0)+' late':'');
+        return;
+    }
+    var c2=document.getElementById('hm-pending'); if(c2) c2.innerHTML=pend+'<span>PCS</span>';
+    var d2=document.getElementById('hm-pending-sub'); if(d2) d2.innerText=f3(pendW)+' g awaiting HUID';
 }
 
 function checkOutOfStock(){

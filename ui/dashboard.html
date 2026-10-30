@@ -193,7 +193,9 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;ba
 .toast-x:hover{color:var(--red);}
 
 /* ── KPIs ── */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.kpi-click{cursor:pointer;}
+.kpi-click:hover{box-shadow:var(--sh-hover);transform:translateY(-2px);}
 .kpi{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh);transition:box-shadow 0.18s,transform 0.18s;}
 .kpi:hover{box-shadow:var(--sh2);transform:translateY(-1px);}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:8px 8px 0 0;}
@@ -281,10 +283,12 @@ td:not(:first-child){text-align:right;}
 .btn-update:hover{background:rgba(37,99,235,0.14);border-color:rgba(37,99,235,0.35);transform:translateY(-1px);}
 .btn-update.upd-ok{background:rgba(21,128,61,0.07);border-color:rgba(21,128,61,0.25);color:var(--green);}
 .btn-update.upd-ready{background:rgba(21,128,61,0.12);border-color:rgba(21,128,61,0.3);color:var(--green);}
+/* Responsive: small laptops down to 1024 */
+@media (max-width:1100px){.chart-row,.bottom-row{grid-template-columns:1fr!important;}}
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <script src="sse_stream.js"></script>
 <script src="urgent.js"></script>
 <div id="sidebar-container"></div>
@@ -378,6 +382,7 @@ td:not(:first-child){text-align:right;}
         <div class="kpi kpi-blue"><div class="kpi-lbl">Cash in Hand (Today)</div><div class="kpi-val" id="k-cash">Rs. 0.00</div><div class="kpi-sub" id="k-cash-sub">Cash 0 &middot; UPI 0 &middot; Card 0</div></div>
         <div class="kpi kpi-green"><div class="kpi-lbl">Outstanding Dues</div><div class="kpi-val" style="color:var(--red);" id="k-dues">Rs. 0.00</div><div class="kpi-sub" id="k-dues-sub">customer credit</div></div>
         <div class="kpi kpi-ink"><div class="kpi-lbl">Stock Value (approx)</div><div class="kpi-val" style="font-size:1.2rem;" id="k-stockval">Rs. 0</div><div class="kpi-sub" id="k-stockval-sub">— g fine at live rate</div></div>
+        <div class="kpi kpi-click" onclick="window.location.href='hallmark.html'" title="Open hallmark panel"><div class="kpi-lbl">Hallmark — not saleable</div><div class="kpi-val" style="color:var(--amber,#b45309);" id="k-hm">—</div><div class="kpi-sub" id="k-hm-sub">waiting · at centre · late</div></div>
     </div>
 
     <div class="sec"><span class="sec-text">Sales Trend &amp; Category Split</span></div>
@@ -716,7 +721,15 @@ function loadDashboard(){
         document.getElementById('k-dues').innerHTML='Rs. '+parseFloat(s.dues_total||0).toLocaleString('en-IN',{minimumFractionDigits:2});
         document.getElementById('k-dues-sub').innerText='total customer credit';
         document.getElementById('k-stockval').innerText=shortRs(R.stock_value||0);
-        document.getElementById('k-stockval-sub').innerText=parseFloat(R.stock_fine_wt||0).toFixed(3)+' g fine at live rate';
+        var _uv=(s.stock_unvalued||{gross:0,pcs:0});
+        document.getElementById('k-stockval-sub').innerText=parseFloat(R.stock_fine_wt||0).toFixed(3)+' g fine at live rate'
+            +((parseFloat(_uv.gross||0)>0)?' · '+parseFloat(_uv.gross).toFixed(2)+' g without purity':'');
+        // ── Hallmark widget ──
+        var hm=(s.hallmark||{});
+        var gap=parseInt(hm.saleable_gap||0,10)||0;
+        document.getElementById('k-hm').innerText=gap+' pcs';
+        document.getElementById('k-hm-sub').innerText=(hm.waiting||0)+' waiting · '+(hm.out||0)+' at centre · '+(hm.late||0)+' late';
+        document.getElementById('k-hm').style.color=gap?'var(--amber,#b45309)':'var(--green)';
         // ── Sales trend + category ──
         if(s.chart) buildRevChart(s.chart.labels||[],s.chart.revenue||[],s.chart.fine||[]);
         if(R.category_split) buildCatChart(R.category_split.labels||[],R.category_split.values||[]);
@@ -767,7 +780,8 @@ function loadDashboard(){
         document.getElementById('sync-status').innerText='Node: '+((s&&s.sync_node)||'Active');
         buildNotifs({rateG:parseFloat((R.rates||{}).gold_g||0),bills:R.today_bills||0,
             billsAmt:R.today_amount||0,dues:parseFloat(s.dues_total||0),
-            lows:R.low_stock||[],update:document.getElementById('update-banner').classList.contains('visible')});
+            lows:R.low_stock||[],update:document.getElementById('update-banner').classList.contains('visible'),
+            hmLate:parseInt(((s.hallmark||{}).late)||0,10)||0,hmGap:gap});
     }).catch(function(e){console.error('Dashboard error:',e);});
 }
 
@@ -779,6 +793,8 @@ function buildNotifs(d){
     if(d.bills>0) _notifs.push({cls:'ok',ico:'&#129534;',html:'<b>'+d.bills+' bill'+(d.bills===1?'':'s')+'</b> billed today · Rs.'+Math.round(d.billsAmt||0).toLocaleString('en-IN')+'.',page:'voucher_history.html'});
     if(d.dues>0) _notifs.push({cls:'due',ico:'&#9888;',html:'<b>Outstanding dues Rs.'+Math.round(d.dues).toLocaleString('en-IN')+'</b> — follow up with customers.',page:'customer_account.html'});
     if(d.lows&&d.lows.length) _notifs.push({cls:'warn',ico:'&#128276;',html:'<b>'+d.lows.length+' item'+(d.lows.length===1?'':'s')+' running low:</b> '+d.lows.slice(0,3).map(function(x){return escHtml(x.code||'');}).join(', ')+(d.lows.length>3?'…':''),page:'inventory.html'});
+    if(d.hmLate>0) _notifs.push({cls:'due',ico:'&#9888;',html:'<b>'+d.hmLate+' hallmark lot'+(d.hmLate===1?'':'s')+' overdue</b> at the centre — chase before promised dates slip.',page:'hallmark.html'});
+    else if(d.hmGap>0) _notifs.push({cls:'info',ico:'&#9679;',html:'<b>'+d.hmGap+' pcs</b> not yet hallmarked and unsaleable.',page:'hallmark.html'});
     if(d.update) _notifs.push({cls:'info',ico:'&#11088;',html:'<b>New AurumOS update available.</b> Tap Update Now above.',page:''});
     loadInbox();
 }

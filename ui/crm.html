@@ -225,7 +225,7 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
 </style>
 </head>
 <body>
-<script src="sidebar.js?v=3"></script>
+<script src="sidebar.js?v=4"></script>
 <div id="sidebar-container"></div>
 
 <main>
@@ -242,7 +242,6 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
         <div class="live" id="live" title="This screen updates itself">
             <span class="live-dot"></span><span id="live-text">live</span>
         </div>
-        <button class="btn btn-ghost" onclick="goTo('customer_detail.html')">Records</button>
         <button class="btn btn-ghost" onclick="goTo('crm_schemes.html')">Plans</button>
         <button class="icon-btn" onclick="loadAll(true)" title="Refresh now">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -573,6 +572,7 @@ function goTo(page){
 
 // customer_detail.html takes ?name=. The bridge's navigate() takes a bare page
 // and would drop the query string, so this builds the jump itself.
+// ?from=crm tells the detail page which registry to return to.
 function openCustomer(name){
     if (!name) return;
     var href = window.location.href;
@@ -580,7 +580,7 @@ function openCustomer(name){
     if (q >= 0) href = href.substring(0, q);
     var cut = Math.max(href.lastIndexOf('/'), href.lastIndexOf('\\'));
     var base = cut >= 0 ? href.substring(0, cut + 1) : '';
-    window.location.href = base + 'customer_detail.html?name=' + encodeURIComponent(name);
+    window.location.href = base + 'customer_detail.html?name=' + encodeURIComponent(name) + '&from=crm';
 }
 
 function jumpTo(id){
