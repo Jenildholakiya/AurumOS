@@ -16,7 +16,7 @@
     --muted:#64748b;--muted2:#94a3b8;
     --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.18);
     --green:#16a34a;--green-bg:rgba(22,163,74,0.07);--green-border:rgba(22,163,74,0.18);
-    --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);--amber-border:rgba(217,119,6,0.18);
     --serif:'DM Serif Display',Georgia,serif;
     --sans:'DM Sans',system-ui,sans-serif;
     --mono:Arial,sans-serif;
@@ -181,6 +181,45 @@ body{font-family:var(--sans);background:var(--cream);display:flex;align-items:ce
 .btn-check.loading .btn-label{display:none;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* severity colors */
+.severity-hard .header-card{background:linear-gradient(140deg,#450a0a 0%,#7f1d1d 60%,#450a0a 100%);}
+.severity-medium .header-card{background:linear-gradient(140deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);}
+
+/* export box */
+.export-box{
+    background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.15);
+    border-radius:10px;padding:14px 18px;margin-bottom:18px;
+    display:flex;align-items:center;gap:12px;
+    animation:slideIn 0.4s ease 0.3s both;
+}
+.export-box svg{flex-shrink:0;stroke:var(--gold);fill:none;stroke-width:1.8;}
+.export-info{flex:1;}
+.export-title{font-size:0.7rem;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.export-sub{font-size:0.62rem;color:var(--muted);}
+.btn-export{
+    padding:7px 16px;border-radius:7px;border:1px solid var(--gold-ln);
+    background:var(--gold-bg);color:var(--gold3);font-size:0.65rem;
+    font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;
+    transition:all 0.15s;
+}
+.btn-export:hover{background:rgba(37,99,235,0.12);transform:translateY(-1px);}
+
+/* next-steps */
+.next-steps{
+    background:var(--cream);border:1px solid var(--rule2);border-radius:10px;
+    padding:14px 18px;margin-bottom:18px;animation:slideIn 0.4s ease 0.35s both;
+}
+.next-steps-title{font-size:0.48rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.next-step-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:0.68rem;color:var(--ink2);line-height:1.5;}
+.next-step-item:last-child{margin-bottom:0;}
+.step-num{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--gold-bg);border:1px solid var(--gold-ln);display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:700;color:var(--gold3);margin-top:1px;}
+
+/* timestamp row */
+.ts-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.ts-cell{flex:1;min-width:120px;background:var(--cream);border:1px solid var(--rule2);border-radius:8px;padding:10px 14px;text-align:center;}
+.ts-cell-label{font-size:0.44rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:3px;}
+.ts-cell-val{font-family:var(--mono);font-size:0.68rem;font-weight:600;color:var(--ink);}
+
 /* footer */
 .footer-bar{
     display:flex;align-items:center;justify-content:space-between;
@@ -247,10 +286,42 @@ body{font-family:var(--sans);background:var(--cream);display:flex;align-items:ce
             </div>
         </div>
 
+        <!-- timestamps -->
+        <div class="ts-row" id="ts-row">
+            <div class="ts-cell">
+                <div class="ts-cell-label">Revoked On</div>
+                <div class="ts-cell-val" id="ts-revoked">--</div>
+            </div>
+            <div class="ts-cell">
+                <div class="ts-cell-label">Export Deadline</div>
+                <div class="ts-cell-val" id="ts-export-deadline">--</div>
+            </div>
+            <div class="ts-cell">
+                <div class="ts-cell-label">Severity</div>
+                <div class="ts-cell-val red" id="ts-severity">HARD</div>
+            </div>
+        </div>
+
         <!-- reason -->
         <div class="reason-box">
             <div class="reason-label">Why am I seeing this?</div>
-            <div class="reason-text">Your license was revoked by the administrator. This may be due to policy violation, non-payment, or a request from your organization. Contact your software owner or AurumOS support for more information.</div>
+            <div class="reason-text" id="reason-text">Your license was revoked by the administrator. This may be due to policy violation, non-payment, or a request from your organization. Contact your software owner or AurumOS support for more information.</div>
+        </div>
+
+        <!-- export -->
+        <div class="export-box" id="export-box">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <div class="export-info">
+                <div class="export-title">Export Your Data</div>
+                <div class="export-sub" id="export-window-text">You have a limited time to export your shop data.</div>
+            </div>
+            <button class="btn-export" id="btn-export" onclick="exportData()">Export Data</button>
+        </div>
+
+        <!-- next steps -->
+        <div class="next-steps" id="next-steps">
+            <div class="next-steps-title">Next Steps</div>
+            <div id="next-steps-list"></div>
         </div>
 
         <!-- check result -->
@@ -301,15 +372,65 @@ function getBusinessName(){
     return state?(state.business||'AurumOS'):'AurumOS';
 }
 
+var EXPORT_HOURS = { medium: 24, hard: 1 };
+var SEVERITY_STEPS = {
+    medium: [
+        'Export your data immediately using the button above',
+        'Contact support to understand why your license was disabled',
+        'You have 24 hours before data access is fully restricted',
+        'Once resolved, use "Check License" to reactivate'
+    ],
+    hard: [
+        'Your license has been permanently revoked',
+        'You have 1 hour to export your critical data',
+        'Contact support with your business details for next steps',
+        'A new license may be required to continue using AurumOS'
+    ]
+};
+
 (function(){
     var biz=getBusinessName();
     document.getElementById('p-biz').innerText=biz;
     var state=null;
     try{state=window.__aurumSubState&&window.__aurumSubState();}catch(e){}
+    var severity = 'hard';
+    var reason = '';
     if(state){
         document.getElementById('p-plan').innerText=(state.plan||'lite').toUpperCase();
+        severity = state._revoke_severity || 'hard';
+        reason = state._revoke_reason || '';
     }
-    document.getElementById('footer-id').innerText='ERR-LICENSE-REVOKED | '+new Date().toLocaleDateString('en-GB');
+
+    // Severity class on container
+    document.querySelector('.container').classList.add('severity-' + severity);
+    document.getElementById('ts-severity').innerText = severity.toUpperCase();
+    if (severity === 'medium') {
+        document.getElementById('ts-severity').style.color = 'var(--amber)';
+        document.querySelector('.status-text').innerText = 'License Disabled';
+        document.querySelector('.header-title').innerText = 'License Disabled';
+        document.querySelector('.header-sub').innerText = 'Your software license has been disabled. You have 24 hours to export your data and contact support to resolve this.';
+    }
+
+    // Reason
+    if (reason) document.getElementById('reason-text').innerText = reason;
+
+    // Timestamps
+    var now = new Date();
+    document.getElementById('ts-revoked').innerText = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    var hours = EXPORT_HOURS[severity] || 1;
+    var deadline = new Date(now.getTime() + hours * 3600000);
+    document.getElementById('ts-export-deadline').innerText = deadline.toLocaleDateString('en-GB') + ' ' + deadline.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('export-window-text').innerText = 'You have ' + hours + ' hour' + (hours>1?'s':'') + ' to export your shop data before access is restricted.';
+
+    // Next steps
+    var steps = SEVERITY_STEPS[severity] || SEVERITY_STEPS.hard;
+    var html = '';
+    for (var i = 0; i < steps.length; i++) {
+        html += '<div class="next-step-item"><span class="step-num">' + (i+1) + '</span><span>' + steps[i] + '</span></div>';
+    }
+    document.getElementById('next-steps-list').innerHTML = html;
+
+    document.getElementById('footer-id').innerText='ERR-LICENSE-' + severity.toUpperCase() + ' | '+now.toLocaleDateString('en-GB');
 })();
 
 function checkLicense(){
@@ -438,6 +559,21 @@ function checkLicenseDone(ok,msg){
     btn.disabled=false;
     result.className='check-result show '+(ok?'ok':'fail');
     result.innerHTML=(ok?'&#10003; ':'&#10007; ')+msg;
+}
+
+function exportData(){
+    var api = window.pywebview && window.pywebview.api;
+    if(api && typeof api.export_shop_data === 'function'){
+        var btn = document.getElementById('btn-export');
+        btn.innerText = 'Exporting...'; btn.disabled = true;
+        try{
+            api.export_shop_data().then(function(r){
+                btn.innerText = r ? 'Exported!' : 'Failed';
+                btn.disabled = false;
+                setTimeout(function(){ btn.innerText = 'Export Data'; }, 3000);
+            }).catch(function(){ btn.innerText = 'Export Data'; btn.disabled = false; });
+        }catch(e){ btn.innerText = 'Export Data'; btn.disabled = false; }
+    } else { alert('Export is not available yet. Contact support.'); }
 }
 
 function openWhatsApp(msg){

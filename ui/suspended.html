@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Account Suspended</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+    --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+    --white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+    --gold:#2563eb;--gold2:#3b82f6;--gold3:#1d4ed8;
+    --gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+    --rule:rgba(14,12,9,0.09);--rule2:rgba(14,12,9,0.05);
+    --muted:#64748b;--muted2:#94a3b8;
+    --red:#dc2626;--red-bg:rgba(220,38,38,0.06);--red-border:rgba(220,38,38,0.18);
+    --green:#16a34a;--green-bg:rgba(22,163,74,0.07);--green-border:rgba(22,163,74,0.18);
+    --amber:#d97706;--amber-bg:rgba(217,119,6,0.06);--amber-border:rgba(217,119,6,0.18);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:Arial,sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--cream);display:flex;align-items:center;justify-content:center;height:100vh;}
+
+.container{width:680px;max-width:94vw;animation:lift 0.55s cubic-bezier(0.16,1,0.3,1) both;}
+@keyframes lift{from{opacity:0;transform:translateY(24px) scale(0.97);}to{opacity:1;transform:none;}}
+
+.header-card{
+    background:linear-gradient(140deg,#78350f 0%,#92400e 60%,#78350f 100%);
+    border-radius:16px 16px 0 0;padding:36px 40px 30px;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+}
+.header-card::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(circle at 20% 80%,rgba(217,119,6,0.15) 0%,transparent 50%),
+        radial-gradient(circle at 80% 20%,rgba(251,191,36,0.08) 0%,transparent 50%);
+    pointer-events:none;
+}
+
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;z-index:2;}
+.brand-logo{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;}
+.brand-logo span{font-size:0.75rem;font-weight:700;color:#fbbf24;font-style:italic;}
+.brand-name{font-size:0.88rem;font-weight:600;color:#fff;}
+.brand-name em{color:#fbbf24;font-style:normal;}
+
+.icon-area{position:relative;width:90px;height:90px;margin-bottom:22px;z-index:2;}
+.icon-pulse{position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(217,119,6,0.2);animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.2);opacity:0;}}
+.icon-pulse:nth-child(2){animation-delay:1s;}
+.icon-circle{position:absolute;inset:0;border-radius:50%;background:rgba(217,119,6,0.15);border:1.5px solid rgba(217,119,6,0.3);display:flex;align-items:center;justify-content:center;}
+.icon-circle svg{width:36px;height:36px;stroke:var(--amber);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+.status-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 14px;border-radius:99px;
+    background:rgba(217,119,6,0.15);border:1px solid rgba(217,119,6,0.25);
+    margin-bottom:16px;z-index:2;
+}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:blink 1.8s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.status-text{font-size:0.54rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;}
+
+.header-title{font-family:var(--serif);font-size:1.7rem;font-weight:400;color:#fff;margin-bottom:8px;z-index:2;letter-spacing:-0.5px;}
+.header-sub{font-size:0.78rem;color:rgba(255,255,255,0.5);line-height:1.6;max-width:420px;z-index:2;}
+
+.body-card{
+    background:var(--white);border:1px solid var(--rule);border-top:none;
+    border-radius:0 0 16px 16px;padding:28px 32px 24px;
+    box-shadow:0 8px 32px rgba(14,12,9,0.08);
+}
+
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.info-cell{background:var(--cream);border:1px solid var(--rule2);border-radius:8px;padding:12px 14px;text-align:center;transition:all 0.15s;}
+.info-cell:hover{border-color:var(--gold-ln);background:var(--gold-bg);transform:translateY(-1px);}
+.info-cell-label{font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);margin-bottom:4px;}
+.info-cell-val{font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--ink);}
+.info-cell-val.amber{color:var(--amber);}
+
+.reason-box{
+    background:var(--amber-bg);border:1px solid var(--amber-border);
+    border-radius:10px;padding:14px 18px;margin-bottom:18px;
+    animation:slideIn 0.4s ease 0.2s both;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.reason-label{font-size:0.48rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--amber);margin-bottom:5px;}
+.reason-text{font-size:0.72rem;color:var(--ink2);line-height:1.6;}
+
+.export-box{
+    background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.15);
+    border-radius:10px;padding:14px 18px;margin-bottom:18px;
+    display:flex;align-items:center;gap:12px;
+}
+.export-box svg{flex-shrink:0;stroke:var(--gold);fill:none;stroke-width:1.8;}
+.export-info{flex:1;}
+.export-title{font-size:0.7rem;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.export-sub{font-size:0.62rem;color:var(--muted);}
+.btn-export{
+    padding:7px 16px;border-radius:7px;border:1px solid var(--gold-ln);
+    background:var(--gold-bg);color:var(--gold3);font-size:0.65rem;
+    font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;
+    transition:all 0.15s;
+}
+.btn-export:hover{background:rgba(37,99,235,0.12);transform:translateY(-1px);}
+
+.check-result{display:none;padding:10px 14px;border-radius:8px;font-size:0.72rem;font-weight:500;margin-bottom:14px;align-items:center;gap:8px;animation:slideIn 0.25s ease;}
+.check-result.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.check-result.fail{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.check-result.show{display:flex;}
+
+.divider{height:1px;background:var(--rule);margin:0 0 16px;}
+
+.contact-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.chip{display:flex;align-items:center;gap:5px;padding:6px 13px;background:var(--cream);border:1px solid var(--rule);border-radius:7px;font-size:0.62rem;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.chip:hover{border-color:var(--gold2);background:var(--gold-bg);transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,0.06);}
+.chip-icon{font-size:0.78rem;}
+.chip-val{font-family:var(--mono);font-size:0.58rem;color:var(--ink2);}
+
+.btn-row{display:flex;gap:8px;}
+.btn{height:40px;border-radius:8px;font-family:var(--sans);font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.18s;border:none;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-ghost{flex:0 0 auto;padding:0 18px;background:var(--white);color:var(--muted);border:1px solid var(--rule);}
+.btn-ghost:hover{border-color:var(--muted2);color:var(--ink);transform:translateY(-1px);}
+.btn-contact{flex:1;background:var(--ink);color:#fff;box-shadow:0 2px 8px rgba(14,12,9,0.12);}
+.btn-contact:hover{background:var(--ink2);box-shadow:0 6px 20px rgba(14,12,9,0.15);transform:translateY(-1px);}
+.btn-check{flex:1;background:var(--gold3);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,0.2);}
+.btn-check:hover{background:var(--gold);box-shadow:0 6px 20px rgba(37,99,235,0.3);transform:translateY(-1px);}
+.btn-check:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-check .spinner{display:none;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+.btn-check.loading .spinner{display:inline-block;}
+.btn-check.loading .btn-label{display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.footer-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--rule);}
+.footer-l{font-size:0.5rem;color:var(--muted2);display:flex;align-items:center;gap:5px;}
+.footer-l .dot{width:5px;height:5px;border-radius:50%;background:var(--amber);animation:blink 2s ease-in-out infinite;}
+.footer-r{font-family:var(--mono);font-size:0.46rem;color:var(--muted2);letter-spacing:0.5px;}
+
+@media(max-width:600px){
+    .container{width:100vw;max-width:100vw;}
+    .header-card{padding:28px 20px 22px;border-radius:12px 12px 0 0;}
+    .header-title{font-size:1.3rem;}
+    .body-card{padding:20px 18px 18px;border-radius:0 0 12px 12px;}
+    .info-grid{grid-template-columns:1fr;}
+    .btn-row{flex-direction:column;}
+    .contact-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header-card">
+        <div class="brand">
+            <div class="brand-logo"><span>A</span></div>
+            <div class="brand-name">Aurum<em>OS</em></div>
+        </div>
+
+        <div class="icon-area">
+            <div class="icon-pulse"></div>
+            <div class="icon-pulse"></div>
+            <div class="icon-circle">
+                <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+        </div>
+
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span class="status-text">Account Suspended</span>
+        </div>
+
+        <div class="header-title">Temporarily Suspended</div>
+        <div class="header-sub">Your account has been temporarily suspended. You can still export your data. Contact support to resolve this quickly.</div>
+    </div>
+
+    <div class="body-card">
+        <div class="info-grid">
+            <div class="info-cell">
+                <div class="info-cell-label">Business</div>
+                <div class="info-cell-val" id="p-biz">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Plan</div>
+                <div class="info-cell-val" id="p-plan">--</div>
+            </div>
+            <div class="info-cell">
+                <div class="info-cell-label">Status</div>
+                <div class="info-cell-val amber">SUSPENDED</div>
+            </div>
+        </div>
+
+        <div class="reason-box">
+            <div class="reason-label">Reason</div>
+            <div class="reason-text" id="reason-text">Your account was suspended by the administrator. This may be due to a billing issue or a temporary hold on your account. Contact support to resolve.</div>
+        </div>
+
+        <div class="export-box">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <div class="export-info">
+                <div class="export-title">Export Your Data</div>
+                <div class="export-sub">You have 48 hours to export your shop data before access is restricted further.</div>
+            </div>
+            <button class="btn-export" id="btn-export" onclick="exportData()">Export Data</button>
+        </div>
+
+        <div class="check-result" id="check-result"></div>
+
+        <div class="divider"></div>
+
+        <div class="contact-row">
+            <div class="chip" onclick="callPhone()" title="Call now">
+                <span class="chip-icon">&#128222;</span>
+                <span class="chip-val">+91 70411 26244</span>
+            </div>
+            <div class="chip" onclick="openEmail()" title="Send email">
+                <span class="chip-icon">&#9993;</span>
+                <span class="chip-val">support@aurumos.in</span>
+            </div>
+            <div class="chip" onclick="openWhatsApp()" title="WhatsApp">
+                <span class="chip-icon">&#128172;</span>
+                <span class="chip-val">WhatsApp</span>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="quitApp()">Quit</button>
+            <button class="btn btn-contact" onclick="contactOwner()">Contact Support</button>
+            <button class="btn btn-check" id="btn-check" onclick="checkStatus()">
+                <span class="spinner"></span>
+                <span class="btn-label">Check Status</span>
+            </button>
+        </div>
+
+        <div class="footer-bar">
+            <div class="footer-l"><span class="dot"></span>BASTION Security</div>
+            <div class="footer-r" id="footer-id">WARN-SUSPENDED</div>
+        </div>
+    </div>
+</div>
+
+<script src="subscription.js"></script>
+<script>
+'use strict';
+
+(function(){
+    var state = null;
+    try { state = window.__aurumSubState && window.__aurumSubState(); } catch(e){}
+    if (state) {
+        document.getElementById('p-biz').innerText = state.business || 'AurumOS';
+        document.getElementById('p-plan').innerText = (state.plan || 'lite').toUpperCase();
+        if (state._revoke_reason) {
+            document.getElementById('reason-text').innerText = state._revoke_reason;
+        }
+    }
+    document.getElementById('footer-id').innerText = 'WARN-SUSPENDED | ' + new Date().toLocaleDateString('en-GB');
+})();
+
+// 8s polling for reactivation
+var _pollTimer = setInterval(function(){
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.subscription_startup_check !== 'function') return;
+    try {
+        var r = api.subscription_startup_check();
+        if (r && typeof r.then === 'function') {
+            r.then(function(d){
+                if (d && (d.status === 'active' || d.status === 'grace')) {
+                    clearInterval(_pollTimer);
+                    if (api.navigate) api.navigate('login.html');
+                    else window.location.href = 'login.html';
+                }
+            });
+        }
+    } catch(e){}
+}, 8000);
+
+function checkStatus(){
+    var btn = document.getElementById('btn-check');
+    var result = document.getElementById('check-result');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    result.className = 'check-result';
+
+    var api = window.pywebview && window.pywebview.api;
+    if (!api || typeof api.subscription_startup_check !== 'function'){
+        showResult(false, 'App bridge not ready. Please wait.');
+        return;
+    }
+    try {
+        api.subscription_startup_check().then(function(d){
+            if (d && (d.status === 'active' || d.status === 'grace')){
+                showResult(true, 'Account reactivated! Redirecting...');
+                setTimeout(function(){
+                    if (api.navigate) api.navigate('login.html');
+                    else window.location.href = 'login.html';
+                }, 1500);
+            } else {
+                showResult(false, 'Account is still suspended. Contact support for help.');
+            }
+        }).catch(function(){ showResult(false, 'Check failed. Try again.'); });
+    } catch(e){ showResult(false, 'Error: ' + e); }
+}
+
+function showResult(ok, msg){
+    var btn = document.getElementById('btn-check');
+    var result = document.getElementById('check-result');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    result.className = 'check-result show ' + (ok ? 'ok' : 'fail');
+    result.innerHTML = (ok ? '&#10003; ' : '&#9888; ') + msg;
+    if (!ok) setTimeout(function(){ result.className = 'check-result'; }, 5000);
+}
+
+function exportData(){
+    var api = window.pywebview && window.pywebview.api;
+    if (api && typeof api.export_shop_data === 'function'){
+        var btn = document.getElementById('btn-export');
+        btn.innerText = 'Exporting...';
+        btn.disabled = true;
+        try {
+            api.export_shop_data().then(function(r){
+                btn.innerText = r ? 'Exported!' : 'Failed';
+                btn.disabled = false;
+                setTimeout(function(){ btn.innerText = 'Export Data'; }, 3000);
+            }).catch(function(){ btn.innerText = 'Export Data'; btn.disabled = false; });
+        } catch(e){ btn.innerText = 'Export Data'; btn.disabled = false; }
+    } else {
+        alert('Export is not available yet. Contact support.');
+    }
+}
+
+function callPhone(){ try { window.open('tel:+917041126244'); } catch(e){} }
+function openEmail(){
+    try { window.open('mailto:support@aurumos.in?subject=AurumOS Account Suspended&body=Hi, my AurumOS account has been suspended. Please help me resolve this.'); } catch(e){}
+}
+function openWhatsApp(){
+    try { window.open('https://wa.me/917041126244?text=Hi, my AurumOS account has been suspended. Please help.'); } catch(e){}
+}
+function contactOwner(){
+    try { window.open('https://wa.me/917041126244?text=Hi, my AurumOS account is suspended. Please help me resolve this.'); } catch(e){}
+}
+function quitApp(){
+    var api = window.pywebview && window.pywebview.api;
+    if (api && typeof api.quit_app === 'function') api.quit_app();
+}
+</script>
+</body>
+</html>
