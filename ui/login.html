@@ -15,6 +15,8 @@
     --blue-bg:rgba(37,99,235,0.06);--blue-ln:rgba(37,99,235,0.18);
     --rule:#e2e8f0;
     --red:#dc2626;--red-bg:#fef2f2;
+    --amber:#d97706;--amber-bg:#fffbeb;
+    --orange:#ea580c;--orange-bg:#fff7ed;
     --green:#16a34a;--muted:#64748b;--muted2:#94a3b8;
     --mono:Arial,sans-serif;
 }
@@ -330,6 +332,15 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
                 <div class="dot" id="d3"></div>
             </div>
         </div>
+        <!-- Enterprise rate-limit cooldown bar -->
+        <div id="rl-bar" style="display:none;margin:8px 0 4px;text-align:center;">
+            <div id="rl-timer" style="font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--red);letter-spacing:1px;"></div>
+            <div id="rl-label" style="font-size:.66rem;color:var(--muted);margin-top:2px;"></div>
+            <div style="margin:8px auto 0;width:80%;height:4px;border-radius:2px;background:var(--rule);overflow:hidden;">
+                <div id="rl-progress" style="height:100%;width:0%;border-radius:2px;transition:width .3s;"></div>
+            </div>
+            <div id="rl-severity" style="margin-top:6px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;"></div>
+        </div>
         <div class="em" id="em"></div>
 
         <!-- Terminal only: re-point at the main PC when its address changed
@@ -363,8 +374,8 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <!-- Lockout panel — permanent until admin resets -->
         <div class="lkp" id="lkp">
           <div class="lki">&#128274;</div>
-          <div class="lkt">Account Locked</div>
-          <div class="lks">Too many incorrect attempts. Access is temporarily suspended.</div>
+          <div class="lkt" id="lk-title">Account Locked</div>
+          <div class="lks" id="lk-subtitle">Too many incorrect attempts. Access is suspended.</div>
           <div class="lk-code-wrap">
             <div class="lk-code-label">Your Lock Code</div>
             <div class="lk-code-row">
@@ -448,7 +459,17 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
 var LOCKED   = false;
 var ATTEMPTS = 0;
-var MAX      = 3;
+var MAX      = 10;
+var RL_TIMER = null;
+var RL_TOTAL = 0;
+var SEVERITY_COLORS = {
+    none:'var(--muted2)', warning:'var(--amber)', caution:'var(--orange)',
+    elevated:'var(--red)', high:'var(--red)', critical:'var(--red)', permanent:'var(--red)'
+};
+var SEVERITY_LABELS = {
+    none:'', warning:'Warning', caution:'Caution',
+    elevated:'Elevated Threat', high:'High Threat', critical:'Critical — Lock Code Required', permanent:'Permanently Locked'
+};
 var READY    = false;
 
 // ── Particles ──────────────────────────────────────────────────────
@@ -772,9 +793,14 @@ function onReady() {
             if (!s) { _showLogin(); return; }
             ATTEMPTS = parseInt(s.attempts) || 0;
             if (s.locked) {
-                dots(MAX); showAR(); applyLock(s.lock_code || '');
+                dots(ATTEMPTS, s.severity); showAR();
+                if (s.permanent || s.severity === 'critical') {
+                    applyLock(s.lock_code || '');
+                } else {
+                    startRLTimer(s.remaining, s.remaining, s.severity || 'elevated');
+                }
             } else if (ATTEMPTS > 0) {
-                dots(ATTEMPTS); showAR(); _showLogin();
+                dots(ATTEMPTS, s.severity); showAR(); _showLogin();
             } else {
                 _showLogin();
             }
@@ -1136,6 +1162,8 @@ function handleResult(res) {
     }
 
     if (res.status === 'success') {
+        stopRLTimer(); ATTEMPTS = 0;
+        var ar = document.getElementById('ar'); if (ar) ar.style.display = 'none';
         var btn = document.getElementById('btn');
         btn.innerHTML='<span>✓</span> Welcome!'; btn.style.background='#15803d';
         // Save last login to localStorage
@@ -1208,30 +1236,37 @@ function handleResult(res) {
     }
 
     if (res.status === 'locked') {
-        // The server throttles each terminal on its own clock. Keep the box
-        // open so staff can simply retry — hiding it here is what used to
-        // leave terminals with nothing to type in.
         if (IS_TERMINAL) {
             var wait = res.retry_after ? (' Try again in ' + res.retry_after + ' seconds.') : '';
             showErr((res.message || 'Too many wrong passwords.') + wait);
-            shake();
-            var li = document.getElementById('inp');
-            if (li) { li.value = ''; li.focus(); }
-            return;
+            shake(); var li = document.getElementById('inp');
+            if (li) { li.value = ''; li.focus(); } return;
         }
-        ATTEMPTS=MAX; dots(MAX); showAR();
-        applyLock(res.lock_code || '');
+        ATTEMPTS = res.attempts || MAX;
+        dots(ATTEMPTS, res.severity);
+        showAR();
+        if (res.permanent || res.remaining === -1) {
+            applyLock(res.lock_code || '');
+        } else if (res.severity === 'critical' && res.lock_code) {
+            applyLock(res.lock_code || '');
+        } else {
+            startRLTimer(res.remaining, res.remaining, res.severity || 'elevated');
+            showErr(res.message || 'Too many attempts.');
+        }
         return;
     }
 
     // Handle error status (exception in backend)
     if (res.status === 'error') {
-        showErr(res.message || 'An error occurred. Please try again.');
+        ATTEMPTS = res.attempts || ATTEMPTS;
+        if (res.attempts > 0) { dots(res.attempts, res.severity); showAR(); }
+        var msg = res.message || 'An error occurred. Please try again.';
+        if (res.next_cooldown && res.next_cooldown > 0 && res.left <= 1) {
+            var nc = res.next_cooldown;
+            msg += ' Next: ' + (nc >= 60 ? Math.floor(nc/60) + 'min' : nc + 's') + ' lockout.';
+        }
+        showErr(msg);
         shake();
-        // On a terminal this is almost always "cannot reach the main PC"
-        // (a wrong/stale address resolves to an error dict, it never
-        // rejects) — so this, not the catch below, is where the repair box
-        // must appear.
         if (IS_TERMINAL) showServerBox();
         document.getElementById('inp').value = '';
         document.getElementById('inp').focus();
@@ -1568,17 +1603,68 @@ function revealTempField() {
 }
 
 // ── UI helpers ─────────────────────────────────────────────────────
-function dots(n) {
+function dots(n, severity) {
+    var sev = severity || 'none';
     [1,2,3].forEach(function(i) {
         var d=document.getElementById('d'+i);
         d.className='dot';
-        if (i<n) d.classList.add('used');
-        else if (i===n) d.classList.add(n<MAX?'warn':'used');
+        if (i <= Math.min(n, 3)) d.classList.add('used');
+        else if (i === Math.min(n+1, 3)) d.classList.add(n<3?'warn':'used');
     });
-    var left=MAX-n;
     var al=document.getElementById('al');
     if (n>=MAX){ al.innerText='Account locked'; al.style.color='var(--red)'; }
-    else { al.innerText=left+' attempt'+(left===1?'':'s')+' remaining'; al.style.color=left===1?'var(--red)':'var(--muted2)'; }
+    else if (n>=7){ al.innerText='Critical — '+n+' failed attempts'; al.style.color='var(--red)'; }
+    else if (n>=4){ al.innerText=n+' failed attempts — cooldown active'; al.style.color=SEVERITY_COLORS[sev]||'var(--amber)'; }
+    else {
+        var left=3-n;
+        al.innerText=left+' attempt'+(left===1?'':'s')+' before cooldown';
+        al.style.color=left===1?'var(--amber)':'var(--muted2)';
+    }
+}
+
+function startRLTimer(remaining, total, severity) {
+    var bar = document.getElementById('rl-bar');
+    var timer = document.getElementById('rl-timer');
+    var label = document.getElementById('rl-label');
+    var prog = document.getElementById('rl-progress');
+    var sevEl = document.getElementById('rl-severity');
+    if (!bar) return;
+    bar.style.display = 'block';
+    RL_TOTAL = total || remaining;
+    var col = SEVERITY_COLORS[severity] || 'var(--red)';
+    prog.style.background = col;
+    timer.style.color = col;
+    if (sevEl) { sevEl.innerText = SEVERITY_LABELS[severity]||''; sevEl.style.color = col; }
+    if (label) label.innerText = 'Cooldown active — please wait';
+    // Disable input during cooldown
+    var inp = document.getElementById('inp');
+    var btn = document.getElementById('btn');
+    if (inp) inp.disabled = true;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span>&#9202;</span> Locked'; }
+    if (RL_TIMER) clearInterval(RL_TIMER);
+    var left = remaining;
+    function tick() {
+        if (left <= 0) {
+            clearInterval(RL_TIMER); RL_TIMER = null;
+            bar.style.display = 'none';
+            if (inp) { inp.disabled = false; inp.value = ''; inp.focus(); }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<span>&rarr;</span> Sign In'; }
+            return;
+        }
+        var m = Math.floor(left/60), s = left%60;
+        timer.innerText = (m>0?(m+'m '):'') + (s<10?'0':'') + s + 's';
+        var pct = Math.max(0, ((RL_TOTAL - left) / RL_TOTAL) * 100);
+        prog.style.width = pct + '%';
+        left--;
+    }
+    tick();
+    RL_TIMER = setInterval(tick, 1000);
+}
+
+function stopRLTimer() {
+    if (RL_TIMER) { clearInterval(RL_TIMER); RL_TIMER = null; }
+    var bar = document.getElementById('rl-bar');
+    if (bar) bar.style.display = 'none';
 }
 function showAR()   { document.getElementById('ar').style.display='flex'; }
 function showErr(m) { var e=document.getElementById('em'); e.innerText=m; e.classList.add('on'); }
@@ -1594,6 +1680,7 @@ function setSt(s,t) {
 window.remoteUnlock = function() {
     LOCKED   = false;
     ATTEMPTS = 0;
+    stopRLTimer();
     // Re-enable input and button
     var inp = document.getElementById('inp');
     if (inp) { inp.disabled = false; inp.value = ''; }
