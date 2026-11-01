@@ -234,12 +234,84 @@ def check_after_hours(rule, context):
     return {"violated": False}
 
 
+# ── IP clone detection (tiered) ──────────────────────────────────
+
+_CLONE_TIERS = [
+    # (min_ips, tier_name, severity_action)
+    (2, "medium",   "warn"),
+    (3, "high",     "warn"),
+    (4, "critical", "revoke"),
+]
+
+_CLONE_MESSAGES = {
+    "medium": {
+        "title": "License Activity Notice",
+        "body": (
+            "Your license key has been detected on multiple networks "
+            "simultaneously. If this is unexpected, please secure your "
+            "license key immediately. Continued shared usage may result "
+            "in automatic revocation."
+        ),
+    },
+    "high": {
+        "title": "License Sharing Warning",
+        "body": (
+            "Your license key is actively being used from {ip_count} "
+            "different IP addresses. This violates the terms of your "
+            "license agreement. Please contact support if you believe "
+            "this is an error. Unauthorized sharing will result in "
+            "license revocation within 24 hours."
+        ),
+    },
+    "critical": {
+        "title": "License Suspended — Cloning Detected",
+        "body": (
+            "Your license key has been flagged for simultaneous use "
+            "across multiple locations. Your access has been temporarily "
+            "suspended pending review. Contact support with your license "
+            "key to resolve this. Reference code: CLONE-{ref_code}"
+        ),
+    },
+}
+
+
+def check_ip_clone(rule, context):
+    """Detect simultaneous use from multiple IPs — tiered response."""
+    active_ips = context.get("active_ips", [])
+    ip_count = len(active_ips)
+    if ip_count < 2:
+        return {"violated": False}
+
+    # Find the matching tier (highest that applies)
+    tier_name = "medium"
+    for min_ips, name, _ in _CLONE_TIERS:
+        if ip_count >= min_ips:
+            tier_name = name
+
+    # Build the warning message
+    msg = _CLONE_MESSAGES.get(tier_name, _CLONE_MESSAGES["medium"])
+    ref_code = str(int(time.time()))
+    body = msg["body"].format(ip_count=ip_count, ref_code=ref_code)
+
+    return {
+        "violated": True,
+        "reason": f"IP clone detected: {ip_count} simultaneous IPs",
+        "ip_count": ip_count,
+        "active_ips": active_ips,
+        "clone_tier": tier_name,
+        "warning_title": msg["title"],
+        "warning_body": body,
+        "ref_code": f"CLONE-{ref_code}" if tier_name == "critical" else None,
+    }
+
+
 _RULE_CHECKERS = {
     "machine_limit": check_machine_limit,
     "rapid_activation": check_rapid_activation,
     "vpn_detection": check_vpn_detection,
     "country_mismatch": check_country_mismatch,
     "after_hours": check_after_hours,
+    "ip_clone": check_ip_clone,
 }
 
 
@@ -401,8 +473,44 @@ def enforce(context=None):
         _do_revoke(violations)
     else:
         _log(f"WARN: {[v['rule_type'] for v in violations]}")
+        _show_warning(violations)
 
     return {"action": action, "violations": violations}
+
+
+def _show_warning(violations):
+    """Show a toast/modal warning for warn-level violations via pywebview."""
+    if not _api_ref:
+        return
+    for v in violations:
+        title = v.get("warning_title", "License Warning")
+        body = v.get("warning_body", v.get("reason", "A license rule was triggered."))
+        tier = v.get("clone_tier", "")
+        tier_class = f"clone-{tier}" if tier else "warn"
+        js = (
+            "try{if(typeof showAutoRevokeWarning==='function'){"
+            "showAutoRevokeWarning(%s,%s,%s)"
+            "}else{"
+            "var d=document.createElement('div');"
+            "d.className='ar-warning %s';"
+            "d.innerHTML='<strong>'+%s+'</strong><br>'+%s;"
+            "Object.assign(d.style,{position:'fixed',top:'20px',right:'20px',"
+            "zIndex:'99999',padding:'16px 24px',borderRadius:'12px',"
+            "background:'#FFF3CD',color:'#856404',border:'1px solid #FFEEBA',"
+            "maxWidth:'420px',fontSize:'14px',boxShadow:'0 4px 20px rgba(0,0,0,0.15)'});"
+            "document.body.appendChild(d);"
+            "setTimeout(function(){d.remove()},15000)"
+            "}}catch(e){}"
+        ) % (
+            json.dumps(title), json.dumps(body), json.dumps(tier_class),
+            tier_class,
+            json.dumps(title), json.dumps(body),
+        )
+        try:
+            _api_ref._window.evaluate_js(js)
+            _log(f"Showed warning: {title}")
+        except Exception as e:
+            _log(f"Failed to show warning: {e}")
 
 
 def _do_revoke(violations):
@@ -419,6 +527,20 @@ def _do_revoke(violations):
         _log(f"Failed to write .revoked flag: {e}")
 
     log_event("license_revoked", {"reasons": reasons, "violations": violations})
+
+    # Show clone-specific critical message before locking
+    clone_violations = [v for v in violations if v.get("clone_tier") == "critical"]
+    if clone_violations and _api_ref:
+        v = clone_violations[0]
+        js = (
+            "try{if(typeof showAutoRevokeWarning==='function'){"
+            "showAutoRevokeWarning(%s,%s,'clone-critical')"
+            "}}catch(e){}"
+        ) % (json.dumps(v.get("warning_title", "")), json.dumps(v.get("warning_body", "")))
+        try:
+            _api_ref._window.evaluate_js(js)
+        except Exception:
+            pass
 
     if _api_ref:
         try:
