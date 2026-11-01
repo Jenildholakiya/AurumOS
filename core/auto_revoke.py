@@ -25,6 +25,7 @@ _EVENTS_ENDPOINT = "/api/license-events"
 
 _lock = threading.Lock()
 _rules: list = []
+_server_context: dict = {}
 _last_fetch: float = 0
 _cache_path: str = ""
 _license_key: str = ""
@@ -93,8 +94,14 @@ def _load_cache():
 # ── Fetch rules ──────────────────────────────────────────────────
 
 def _fetch_rules():
-    import urllib.request, urllib.error
-    url = _API_BASE + _RULES_ENDPOINT
+    import urllib.request, urllib.error, urllib.parse
+    params = {}
+    if _license_key:
+        params["key"] = _license_key
+    if _machine_id:
+        params["machine_id"] = _machine_id
+    qs = urllib.parse.urlencode(params)
+    url = _API_BASE + _RULES_ENDPOINT + ("?" + qs if qs else "")
     try:
         req = urllib.request.Request(url, method="GET")
         req.add_header("Accept", "application/json")
@@ -102,27 +109,32 @@ def _fetch_rules():
         with urllib.request.urlopen(req, timeout=10) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         if body.get("status") == "ok" and isinstance(body.get("rules"), list):
-            return body["rules"]
+            return body["rules"], body.get("context", {})
         if isinstance(body, list):
-            return body
+            return body, {}
     except urllib.error.URLError as e:
         _log(f"Fetch error (network): {e}")
     except Exception as e:
         _log(f"Fetch error: {e}")
-    return None
+    return None, {}
 
 
 def _poll():
-    global _rules, _last_fetch
-    fetched = _fetch_rules()
+    global _rules, _server_context, _last_fetch
+    fetched, ctx = _fetch_rules()
     if fetched is not None:
         with _lock:
             old_count = len(_rules)
             _rules = [r for r in fetched if r.get("enabled", True)]
+            _server_context = ctx or {}
             _last_fetch = time.time()
         _save_cache(_rules)
         if len(_rules) != old_count:
             _log(f"Rules updated: {old_count} -> {len(_rules)} active")
+        if ctx:
+            _log(f"Context: machines={len(ctx.get('known_machines', []))} "
+                 f"activations={len(ctx.get('recent_activations', []))} "
+                 f"country={ctx.get('country', '?')} vpn={ctx.get('vpn_detected', '?')}")
     else:
         # Offline — load from cache if we have no rules yet
         with _lock:
@@ -234,12 +246,20 @@ _RULE_CHECKERS = {
 def evaluate_rules(context=None):
     """Evaluate all active rules against the given context.
 
+    Server-polled context (known_machines, recent_activations, country,
+    vpn_detected, ip) is merged automatically so callers don't need it.
+
     Returns:
         list of dicts: [{rule_type, severity, reason, ...}, ...]
         Only violated rules are included. Empty list = all clear.
     """
     if context is None:
         context = {}
+    # Merge server-provided context (polled every 30s) as defaults
+    with _lock:
+        srv = dict(_server_context)
+    for k, v in srv.items():
+        context.setdefault(k, v)
     context.setdefault("machine_id", _machine_id)
     context.setdefault("license_key", _license_key)
 
