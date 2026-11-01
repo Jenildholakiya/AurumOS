@@ -156,20 +156,53 @@ REVOKED_REASONS = ('revoked', 'disabled', 'suspended', 'blocked',
 TRANSIENT_REASONS = ('server_error', 'timeout', 'error')
 
 
+# ── Expiry warning thresholds ───────────────────────────────────────
+WARN_THRESHOLDS = [
+    (1,  'final'),     # 1 day or less
+    (3,  'critical'),  # 3 days or less
+    (7,  'urgent'),    # 7 days or less
+    (14, 'warning'),   # 14 days or less
+    (30, 'notice'),    # 30 days or less
+]
+
+def get_expiry_warning_level(remaining_days):
+    """Return warning level based on remaining days, or None if >30."""
+    if not remaining_days or remaining_days <= 0:
+        return 'final'
+    for threshold, level in WARN_THRESHOLDS:
+        if remaining_days <= threshold:
+            return level
+    return None
+
+# ── Grace days per plan ─────────────────────────────────────────────
+GRACE_DAYS = {'lite': 3, 'pro': 7, 'enterprise': 15}
+
+# ── Revocation severity ─────────────────────────────────────────────
+REVOKE_SEVERITY = {
+    'suspended':  'soft',
+    'cancelled':  'soft',
+    'disabled':   'medium',
+    'revoked':    'hard',
+    'terminated': 'hard',
+    'blocked':    'hard',
+}
+
+
 def classify_reason(reason):
     """One reading of a server word, shared by poll/sync/SSE.
 
-    Returns 'expired', 'revoked', or None. None means "no verdict" — keep
-    the cached state and try again later.
+    Returns (category, severity) tuple.
+    category: 'expired', 'revoked', or None (no verdict — keep cached state).
+    severity: 'soft', 'medium', 'hard', or '' (for expired/transient).
     """
     r = str(reason or '').strip().lower()
     if r in EXPIRED_REASONS:
-        return 'expired'
+        return ('expired', '')
     if r in REVOKED_REASONS:
-        return 'revoked'
+        return ('revoked', REVOKE_SEVERITY.get(r, 'hard'))
     if r in TRANSIENT_REASONS:
-        return None
-    return 'revoked' if r else None
+        return (None, '')
+    return ('revoked', 'hard') if r else (None, '')
 
 
 class SubscriptionManager:
@@ -241,6 +274,19 @@ class SubscriptionManager:
 
     def set_license_key(self, key):
         self._license_key = (key or '').strip().upper()
+
+    def _log_audit(self, old_status, new_status, reason='', severity='',
+                   source='', server_response=None):
+        try:
+            from database.db_manager import db_manager
+            mid = getattr(self, '_machine_id', '')
+            db_manager.log_subscription_event(
+                old_status=old_status, new_status=new_status,
+                reason=reason, severity=severity, source=source,
+                server_response=server_response, machine_id=mid,
+            )
+        except Exception as e:
+            _log(f'Audit log failed: {e}')
 
     # ── Public state accessors ──────────────────────────────────────────
     @property
@@ -585,6 +631,7 @@ class SubscriptionManager:
     def _sync_with_server(self, k):
         """Single check endpoint: ok=true → features, ok=false → revoke.
         Tries /api/subscription/check, falls back to /api/check."""
+        old_status = self._state.get('status', 'unknown')
         machine_id = str(uuid.getnode())
         payload = json.dumps({'key': k, 'machine_id': machine_id}).encode()
         headers = {'Content-Type': 'application/json', 'User-Agent': 'AurumOS/Client'}
@@ -629,7 +676,7 @@ class SubscriptionManager:
                     return data, 'server'
                 else:
                     reason = data.get('reason', data.get('status', 'unknown'))
-                    verdict = classify_reason(reason)
+                    verdict, severity = classify_reason(reason)
                     if verdict is None:
                         _log(f'Sync ({endpoint}): transient error ({reason}) — keeping cached state')
                         return None, 'failed'
@@ -637,9 +684,10 @@ class SubscriptionManager:
                             and verdict in ('expired', 'revoked')):
                         _log(f'Sync ({endpoint}): server says {reason} but in force-active grace — ignoring')
                         return None, 'failed'
-                    _log(f'Sync ({endpoint}): rejected reason={reason}')
+                    _log(f'Sync ({endpoint}): rejected reason={reason} severity={severity}')
                     self._set_status(verdict)
-                    self._notify_js(verdict, {'reason': reason})
+                    self._log_audit(old_status, verdict, reason, severity, 'sync', data)
+                    self._notify_js(verdict, {'reason': reason, 'severity': severity})
                     return data, 'server'
 
             except urllib.error.HTTPError as e:
@@ -800,8 +848,16 @@ class SubscriptionManager:
                 'renewal_amount': data.get('renewal_amount', 0)
             }
 
+            # Expiry warning level
+            plan_key = (self._state.get('plan') or 'lite').lower()
+            plan_grace = GRACE_DAYS.get(plan_key, 3)
+            warning_level = get_expiry_warning_level(remaining) if status == 'active' else None
+            self._state['subscription']['plan_grace_days'] = plan_grace
+            self._state['expiry_warning'] = warning_level
+
             _log(f'Server: status={status} valid={valid} plan={self._state["effective_plan"]} '
-                 f'remaining={remaining} grace={grace} features={len(self._state["features"])}')
+                 f'remaining={remaining} grace={grace} features={len(self._state["features"])}'
+                 f' warning={warning_level}')
 
             if isinstance(self._state['features'], str):
                 self._state['features'] = self._state['features'].split(',')
@@ -809,6 +865,16 @@ class SubscriptionManager:
             # Store updated_at for poll tracking
             if data.get('updated_at'):
                 self._last_updated_at = data['updated_at']
+
+        # Emit expiry warning to JS (outside lock)
+        if warning_level and self._window:
+            try:
+                self._window.evaluate_js(
+                    f'window.__sub && window.__sub._onExpiryWarning'
+                    f'("{warning_level}", {remaining})'
+                )
+            except Exception:
+                pass
 
     def _apply_cache_data(self, cache):
         """Apply cached data to internal state."""
@@ -845,21 +911,23 @@ class SubscriptionManager:
                 self._state['features'] = list(LITE_FEATURES)
         self._save_state_file()
 
-    def _set_status_for_reason(self, reason):
+    def _set_status_for_reason(self, reason, source='poll'):
         """Apply one server word to the state. Returns True when the word
         was a verdict (expired/revoked set, or ignored inside the
         post-renewal force-active window) and False when it was transient —
         in which case the caller keeps the cached state and retries later.
         """
+        verdict, severity = classify_reason(reason)
         if (time.time() < self._force_active_until
-                and classify_reason(reason) in ('expired', 'revoked')):
+                and verdict in ('expired', 'revoked')):
             _log(f'Server says {reason} but in force-active grace — ignoring')
             return True
-        verdict = classify_reason(reason)
         if verdict is None:
             return False
+        old_status = self._state.get('status', 'unknown')
         self._set_status(verdict)
-        self._notify_js(verdict, {'reason': reason})
+        self._log_audit(old_status, verdict, reason, severity, source)
+        self._notify_js(verdict, {'reason': reason, 'severity': severity})
         return True
 
     def _set_state(self, data):

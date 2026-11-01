@@ -323,6 +323,10 @@ td:not(:first-child){text-align:right;}
 
 <div class="page">
 
+    <!-- ── Expiry Status Widget ── -->
+    <div id="expiry-widget" style="display:none;margin:0 0 12px 0;padding:12px 18px;border-radius:8px;font-family:var(--sans);
+      display:none;align-items:center;gap:12px;font-size:0.78rem;"></div>
+
     <div id="update-banner">
         <div class="ub-inner">
             <div class="ub-icon">&#11088;</div>
@@ -1196,12 +1200,60 @@ function _updatePlanBatch() {
     batch.style.display = 'inline-flex';
 }
 
-window.addEventListener('subscription:features_updated', _updatePlanBatch);
-window.addEventListener('apiready', function() { setTimeout(_updatePlanBatch, 500); });
-setTimeout(_updatePlanBatch, 1000);
-setTimeout(_updatePlanBatch, 2000);
-setTimeout(_updatePlanBatch, 4000);
-setTimeout(_updatePlanBatch, 8000);
+function _updateExpiryWidget() {
+    var w = document.getElementById('expiry-widget');
+    if (!w || !window.__aurumSubState) return;
+    var st = window.__aurumSubState();
+    var sub = st.subscription || {};
+    var days = sub.remaining_days || 0;
+    var grace = sub.grace_remaining_days || 0;
+    var status = st.status || 'unknown';
+    var warning = st.expiry_warning;
+
+    if (status === 'active' && !warning) {
+        // Active, >30 days: green
+        w.style.display = 'flex';
+        w.style.background = 'rgba(21,128,61,0.07)';
+        w.style.border = '1px solid rgba(21,128,61,0.2)';
+        w.style.color = '#15803d';
+        w.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+            + '<span><strong>Active</strong> — ' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining</span>';
+    } else if (status === 'active' && warning) {
+        var isUrgent = warning === 'critical' || warning === 'final' || warning === 'urgent';
+        var col = isUrgent ? '#dc2626' : '#d97706';
+        w.style.display = 'flex';
+        w.style.background = isUrgent ? 'rgba(220,38,38,0.07)' : 'rgba(217,119,6,0.07)';
+        w.style.border = '1px solid ' + (isUrgent ? 'rgba(220,38,38,0.2)' : 'rgba(217,119,6,0.2)');
+        w.style.color = col;
+        w.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+            + '<span><strong>' + (isUrgent ? 'Expiring!' : 'Renewing soon') + '</strong> — ' + days + ' day' + (days !== 1 ? 's' : '') + ' left</span>'
+            + '<button onclick="window.__aurumSubRenew && window.__aurumSubRenew()" style="margin-left:auto;background:' + col + ';color:#fff;border:none;padding:5px 14px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;font-family:var(--sans);">Renew Now</button>';
+    } else if (status === 'grace') {
+        w.style.display = 'flex';
+        w.style.background = 'rgba(180,83,9,0.08)';
+        w.style.border = '1px solid rgba(180,83,9,0.25)';
+        w.style.color = '#b45309';
+        w.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+            + '<span><strong>Grace Period</strong> — ' + grace + ' day' + (grace !== 1 ? 's' : '') + ' left</span>'
+            + '<button onclick="window.__aurumSubRenew && window.__aurumSubRenew()" style="margin-left:auto;background:#b45309;color:#fff;border:none;padding:5px 14px;border-radius:5px;font-size:0.7rem;font-weight:700;cursor:pointer;font-family:var(--sans);">Renew Now</button>';
+    } else if (status === 'expired') {
+        w.style.display = 'flex';
+        w.style.background = 'rgba(185,28,28,0.08)';
+        w.style.border = '1px solid rgba(185,28,28,0.25)';
+        w.style.color = '#b91c1c';
+        w.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+            + '<span><strong>Expired</strong> — Subscription has ended</span>';
+    } else {
+        w.style.display = 'none';
+    }
+}
+
+window.addEventListener('subscription:features_updated', function() { _updatePlanBatch(); _updateExpiryWidget(); });
+window.addEventListener('apiready', function() { setTimeout(function() { _updatePlanBatch(); _updateExpiryWidget(); }, 500); });
+setTimeout(function(){_updatePlanBatch();_updateExpiryWidget();}, 1000);
+setTimeout(function(){_updatePlanBatch();_updateExpiryWidget();}, 2000);
+setTimeout(function(){_updatePlanBatch();_updateExpiryWidget();}, 4000);
+setTimeout(function(){_updatePlanBatch();_updateExpiryWidget();}, 8000);
 
 (function(){
     var _a=0;

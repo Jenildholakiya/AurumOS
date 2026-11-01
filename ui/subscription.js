@@ -37,6 +37,16 @@
     enterprise: ENTERPRISE_FEATURES
   };
 
+  var GRACE_DAYS = { lite: 3, pro: 7, enterprise: 15 };
+
+  var WARN_COLORS = {
+    notice:   { bg: '#2563eb', text: '#fff', dismiss: 86400000 },
+    warning:  { bg: '#d97706', text: '#fff', dismiss: 28800000 },
+    urgent:   { bg: '#d97706', text: '#fff', dismiss: 0 },
+    critical: { bg: '#dc2626', text: '#fff', dismiss: 0 },
+    final:    { bg: '#dc2626', text: '#fff', dismiss: 0 }
+  };
+
   // The tier decides, in both directions. This used to only strip: anything
   // above the plan was removed, but nothing the plan includes was ever added,
   // so a shop saw a feature only if the admin server happened to list it
@@ -312,12 +322,88 @@
     return false;
   }
 
+  // ── UI: Expiry warning banner (tiered) ────────────────────────────────
+  function _showExpiryWarning(level, daysLeft) {
+    if (!level || !WARN_COLORS[level]) return;
+    var cfg = WARN_COLORS[level];
+
+    // Check dismiss (notice/warning only)
+    if (cfg.dismiss > 0) {
+      try {
+        var key = 'aurum_warn_dismiss_' + level;
+        var dismissed = parseInt(localStorage.getItem(key) || '0', 10);
+        if (dismissed && (Date.now() - dismissed) < cfg.dismiss) return;
+      } catch (e) {}
+    }
+
+    var existing = document.getElementById('sub-expiry-warning');
+    if (existing) existing.remove();
+
+    var page = '';
+    try { page = location.pathname.replace(/.*[\\/]/, '').toLowerCase().trim(); } catch (e) {}
+    if (page === 'expiry.html' || page === 'revoked.html' || page === 'suspended.html') return;
+
+    var urgent = level === 'critical' || level === 'final';
+    var pulse = level === 'final' ? 'animation:subWarnPulse 1.5s ease-in-out infinite;' : '';
+    var msg = daysLeft <= 1
+      ? 'EXPIRES TOMORROW — Renew now to avoid losing access!'
+      : 'Subscription expires in <strong>' + daysLeft + ' days</strong>'
+        + (urgent ? ' — Renew immediately!' : '');
+
+    var dismissBtn = cfg.dismiss > 0
+      ? '<button id="sub-warn-dismiss" style="background:rgba(255,255,255,0.2);color:#fff;'
+        + 'border:1px solid rgba(255,255,255,0.3);padding:5px 14px;border-radius:6px;'
+        + 'font-size:0.72rem;cursor:pointer;font-family:var(--sans);">Dismiss</button>'
+      : '';
+
+    var banner = document.createElement('div');
+    banner.id = 'sub-expiry-warning';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100001;'
+      + 'background:' + cfg.bg + ';color:' + cfg.text + ';'
+      + 'padding:10px 24px;display:flex;align-items:center;justify-content:space-between;'
+      + 'font-family:var(--sans);box-shadow:0 4px 16px rgba(0,0,0,0.2);' + pulse;
+    banner.innerHTML = ''
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">'
+      + '    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'
+      + '    <line x1="12" y1="16" x2="12.01" y2="16"/>'
+      + '  </svg>'
+      + '  <span style="font-weight:600;font-size:0.8rem;">' + msg + '</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + dismissBtn
+      + '  <button onclick="window.__aurumSubRenew()" style="background:#fff;color:' + cfg.bg + ';'
+      + '    border:none;padding:6px 16px;border-radius:6px;font-weight:700;font-size:0.76rem;'
+      + '    cursor:pointer;font-family:var(--sans);">Renew Now</button>'
+      + '</div>';
+    document.body.appendChild(banner);
+
+    if (cfg.dismiss > 0) {
+      var db = document.getElementById('sub-warn-dismiss');
+      if (db) db.onclick = function () {
+        try { localStorage.setItem('aurum_warn_dismiss_' + level, String(Date.now())); } catch (e) {}
+        banner.remove();
+      };
+    }
+  }
+
+  // Python calls this from evaluate_js
+  window.__sub = {
+    _onExpiryWarning: function (level, days) {
+      _showExpiryWarning(level, days);
+    }
+  };
+
   // ── UI: Grace warning banner ─────────────────────────────────────────
   function _showGraceBanner() {
     var existing = document.getElementById('sub-grace-banner');
     if (existing) existing.remove();
     if (_state.status !== 'grace') return;
-    var days = (_state.subscription && _state.subscription.grace_remaining_days) || 0;
+    var sub = _state.subscription || {};
+    var days = sub.grace_remaining_days || 0;
+    var planKey = (_state.plan || 'lite').toLowerCase();
+    var totalGrace = GRACE_DAYS[planKey] || 3;
+    var pct = totalGrace > 0 ? Math.round((days / totalGrace) * 100) : 0;
     var banner = document.createElement('div');
     banner.id = 'sub-grace-banner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100000;'
@@ -325,14 +411,20 @@
       + 'padding:10px 24px;display:flex;align-items:center;justify-content:space-between;'
       + 'font-family:var(--sans);box-shadow:0 4px 16px rgba(180,83,9,0.3);';
     banner.innerHTML = ''
-      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;flex:1;">'
       + '  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">'
       + '    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
       + '    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
       + '  </svg>'
-      + '  <span style="font-weight:600;font-size:0.82rem;">'
-      + '    Subscription expired \u2014 <strong>' + days + ' grace day' + (days !== 1 ? 's' : '') + ' left. Only Lite features available.</strong>'
-      + '  </span>'
+      + '  <div>'
+      + '    <div style="font-weight:600;font-size:0.82rem;">'
+      + '      Subscription expired \u2014 <strong>' + days + ' of ' + totalGrace + ' grace day' + (totalGrace !== 1 ? 's' : '') + ' left</strong>'
+      + '      <span style="opacity:0.8;font-weight:400;">(Plan: ' + planKey.charAt(0).toUpperCase() + planKey.slice(1) + ')</span>'
+      + '    </div>'
+      + '    <div style="margin-top:4px;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;width:200px;">'
+      + '      <div style="height:100%;width:' + pct + '%;background:#fff;border-radius:2px;"></div>'
+      + '    </div>'
+      + '  </div>'
       + '</div>'
       + '<button onclick="window.__aurumSubRenew()" style="background:#fff;color:#b45309;'
       + '  border:none;padding:7px 18px;border-radius:6px;font-weight:700;font-size:0.78rem;'
@@ -361,15 +453,22 @@
     var shouldRedirect = st === 'expired' || st === 'revoked';
     if (!shouldRedirect) return;
 
-    var target = st === 'expired' ? 'expiry.html' : 'revoked.html';
+    var severity = _state._revoke_severity || 'hard';
+    var target;
+    if (st === 'expired') {
+      target = 'expiry.html';
+    } else if (severity === 'soft') {
+      target = 'suspended.html';
+    } else {
+      target = 'revoked.html';
+    }
 
     // Don't redirect if already on the CORRECT page
     try {
       var page = location.pathname.replace(/.*[\\/]/, '').toLowerCase().trim();
-      if (page === target || page === 'login.html' || page === 'setup.html') return;
+      if (page === target || page === 'login.html' || page === 'setup.html'
+          || page === 'suspended.html' || page === 'revoked.html' || page === 'expiry.html') return;
     } catch (e) {}
-
-    var target = _state.status === 'expired' ? 'expiry.html' : 'revoked.html';
     _log('Redirecting to ' + target + ' (status=' + _state.status + ', valid=' + _state.valid + ')');
     if (window.pywebview && window.pywebview.api && window.pywebview.api.navigate) {
       window.pywebview.api.navigate(target);
@@ -444,6 +543,9 @@
       _showGraceBanner();
     } else if (_state.status === 'expired' || _state.status === 'revoked') {
       _redirectToRevokeScreen();
+    } else if (_state.status === 'active' && _state.expiry_warning) {
+      var remaining = (_state.subscription && _state.subscription.remaining_days) || 0;
+      _showExpiryWarning(_state.expiry_warning, remaining);
     }
 
     _renderBadge();
@@ -503,10 +605,13 @@
         syncNow().catch(function (e) { _err('Sync after plan_change failed: ' + e); });
       }
     } else if (event === 'revoked') {
+      var severity = (data && data.severity) || 'hard';
       _state.valid = false;
       _state.status = 'revoked';
       _state.effective_plan = 'lite';
-      _state.features = [];
+      _state.features = severity === 'soft' ? LITE_FEATURES.slice() : [];
+      _state._revoke_severity = severity;
+      _state._revoke_reason = (data && data.reason) || '';
       _applyState(_state);
       _redirectToRevokeScreen();
     } else if (event === 'expired') {
@@ -553,6 +658,9 @@
     _state.is_trial = data.is_trial || false;
     _state.trial_end_ms = data.trial_end_ms || null;
     _state.subscription = data.subscription || _state.subscription;
+    _state.expiry_warning = data.expiry_warning || null;
+    _state._revoke_severity = data._revoke_severity || _state._revoke_severity || '';
+    _state._revoke_reason = data._revoke_reason || _state._revoke_reason || '';
     _state.last_sync = Date.now();
 
     // ── Status-based feature override ──
@@ -582,7 +690,8 @@
   // ── CSS animation injection ──────────────────────────────────────────
   (function () {
     var style = document.createElement('style');
-    style.textContent = '@keyframes subModalIn{from{opacity:0;transform:scale(0.95) translateY(10px);}to{opacity:1;transform:none;}}';
+    style.textContent = '@keyframes subModalIn{from{opacity:0;transform:scale(0.95) translateY(10px);}to{opacity:1;transform:none;}}'
+      + '@keyframes subWarnPulse{0%,100%{opacity:1;}50%{opacity:0.85;}}';
     document.head.appendChild(style);
   })();
 

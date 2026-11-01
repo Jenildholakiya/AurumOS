@@ -86,6 +86,7 @@ OWNER_ONLY = frozenset([
     # Full backup in/out: the whole database leaves or arrives here
     'export_backup', 'get_backup_progress', 'reveal_backup',
     'pick_backup_file', 'import_backup', 'get_restore_progress',
+    'export_shop_data',
 ])
 
 
@@ -110,6 +111,7 @@ ALWAYS = frozenset([
     'mark_all_notifications_read', 'get_trial_status',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
+    'get_subscription_audit',
 ])
 
 

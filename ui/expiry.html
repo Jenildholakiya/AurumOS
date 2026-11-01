@@ -113,6 +113,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--ink);display:fl
 .footer-left .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
 .footer-right{font-family:Arial,sans-serif;font-size:0.5rem;color:var(--ink4);letter-spacing:0.5px;}
 
+/* export & days-since */
+.expiry-alert{display:flex;align-items:center;gap:10px;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:10px 14px;margin-bottom:12px;animation:slideAlert 0.4s ease both;}
+@keyframes slideAlert{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.expiry-alert svg{flex-shrink:0;stroke:var(--red);fill:none;stroke-width:1.8;}
+.expiry-alert-text{flex:1;font-size:0.62rem;color:var(--ink2);line-height:1.4;}
+.expiry-alert-text strong{color:var(--red);font-weight:700;}
+.btn-export-sm{padding:5px 12px;border-radius:6px;border:1px solid var(--blue-border);background:var(--blue-bg);color:var(--blue3);font-size:0.58rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all 0.15s;}
+.btn-export-sm:hover{background:rgba(37,99,235,0.12);transform:translateY(-1px);}
+
 .copy-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:8px 20px;border-radius:8px;font-size:0.72rem;font-weight:500;z-index:9999;opacity:0;transition:all 0.3s ease;box-shadow:0 4px 20px rgba(15,23,42,0.2);pointer-events:none;}
 .copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
@@ -358,6 +367,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--ink);display:fl
     </div>
 
     <div class="online-badge">&#9889; Online Payment Only — UPI / Cards / Net Banking</div>
+
+    <div class="expiry-alert" id="expiry-alert" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="expiry-alert-text" id="expiry-alert-text"></div>
+      <button class="btn-export-sm" id="btn-export" onclick="exportData()">Export Data</button>
+    </div>
 
     <div class="section-label">Choose Your Plan</div>
     <div class="plan-grid" id="plan-grid"></div>
@@ -668,8 +683,36 @@ function showCopyToast(msg){
   }
   document.getElementById('footer-id').innerText='ERR-SUB-EXPIRED | '+new Date().toLocaleDateString('en-GB');
 
+  // Days since expiry alert + export
+  var alertEl = document.getElementById('expiry-alert');
+  var alertText = document.getElementById('expiry-alert-text');
+  if (state && state.subscription && state.subscription.expires_at) {
+    var expDate = new Date(state.subscription.expires_at);
+    var daysSince = Math.floor((Date.now() - expDate.getTime()) / 86400000);
+    if (daysSince > 0) {
+      alertEl.style.display = 'flex';
+      alertText.innerHTML = 'Your subscription expired <strong>' + daysSince + ' day' + (daysSince>1?'s':'') + ' ago</strong>. Export your shop data now before access is fully restricted.';
+    }
+  } else {
+    alertEl.style.display = 'flex';
+    alertText.innerHTML = 'Your subscription has expired. <strong>Export your data</strong> while you still have access.';
+  }
+
   getPlans().then(function(plans){renderPlans(plans);});
 })();
+
+function exportData(){
+  var api = window.pywebview && window.pywebview.api;
+  if(api && typeof api.export_shop_data === 'function'){
+    var btn = document.getElementById('btn-export');
+    btn.innerText = 'Exporting...'; btn.disabled = true;
+    api.export_shop_data().then(function(r){
+      btn.innerText = r ? 'Exported!' : 'Failed';
+      btn.disabled = false;
+      setTimeout(function(){ btn.innerText = 'Export Data'; }, 3000);
+    }).catch(function(){ btn.innerText = 'Export Data'; btn.disabled = false; });
+  } else { alert('Export is not available yet. Contact support.'); }
+}
 
 async function retryCheck(){
   var btn=document.getElementById('btn-retry');

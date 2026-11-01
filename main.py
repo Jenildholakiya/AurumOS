@@ -8186,6 +8186,48 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    def export_shop_data(self):
+        """Quick JSON export of core shop data for subscription screens."""
+        import sqlite3 as _sq
+        from datetime import datetime as _dt
+        try:
+            base = self._app_base_dir()
+            stamp = _dt.now().strftime('%Y%m%d-%H%M%S')
+            out_dir = os.path.join(base, 'exports')
+            os.makedirs(out_dir, exist_ok=True)
+            db_path = self.db.db_path
+            conn = _sq.connect(db_path, timeout=30)
+            conn.row_factory = _sq.Row
+            cur = conn.cursor()
+            tables = ['products', 'customers', 'transactions',
+                      'inventory', 'karigar', 'ledger']
+            data = {}
+            for t in tables:
+                try:
+                    cur.execute(f'SELECT * FROM {t}')
+                    rows = [dict(r) for r in cur.fetchall()]
+                    data[t] = rows
+                except Exception:
+                    pass
+            conn.close()
+            data['_meta'] = {
+                'app': 'AurumOS', 'kind': 'shop-data-export',
+                'created': _dt.now().isoformat(timespec='seconds'),
+                'tables': list(data.keys()),
+            }
+            out_path = os.path.join(out_dir, f'AurumOS-shopdata-{stamp}.json')
+            with open(out_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, default=str, indent=2)
+            LOG(f"[EXPORT] shop data exported to {out_path}")
+            try:
+                os.startfile(out_dir)
+            except Exception:
+                pass
+            return True
+        except Exception as e:
+            ERR(f"[EXPORT] shop data export failed: {e}")
+            return False
+
     def pick_backup_file(self):
         """Windows file picker limited to backup zips.
 

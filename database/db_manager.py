@@ -436,6 +436,21 @@ class DBManager:
                     )
                 """)
 
+                # ── SUBSCRIPTION AUDIT LOG ───────────────────────────────────
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS subscription_audit (
+                        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp       TEXT NOT NULL DEFAULT (datetime('now')),
+                        old_status      TEXT,
+                        new_status      TEXT,
+                        reason          TEXT DEFAULT '',
+                        severity        TEXT DEFAULT '',
+                        source          TEXT DEFAULT '',
+                        server_response TEXT DEFAULT '',
+                        machine_id      TEXT DEFAULT ''
+                    )
+                """)
+
                 # ── LAN SYNC SCHEMA ──────────────────────────────────────────
                 # Permanent per-PC identity for sync (separate from the
                 # hardware security fingerprint -- this one is purely for
@@ -7801,6 +7816,42 @@ class DBManager:
         except Exception as e:
             _dberr(f"[BASTION] get_status error: {e}")
             return {'suspended': False}
+
+    # ── SUBSCRIPTION AUDIT LOG ───────────────────────────────────────
+    def log_subscription_event(self, old_status, new_status, reason='',
+                               severity='', source='', server_response=None,
+                               machine_id=''):
+        import json as _json
+        try:
+            raw = ''
+            if server_response:
+                try:
+                    raw = _json.dumps(server_response, default=str)[:4000]
+                except Exception:
+                    raw = str(server_response)[:4000]
+            with self._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO subscription_audit "
+                    "(old_status,new_status,reason,severity,source,server_response,machine_id) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (old_status or '', new_status or '', reason or '',
+                     severity or '', source or '', raw, machine_id or '')
+                )
+        except Exception as e:
+            _dblog(f"[AUDIT] log_subscription_event failed: {e}")
+
+    def get_subscription_audit(self, limit=50):
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT id,timestamp,old_status,new_status,reason,severity,source "
+                    "FROM subscription_audit ORDER BY id DESC LIMIT ?",
+                    (limit,)
+                ).fetchall()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            _dblog(f"[AUDIT] get_subscription_audit failed: {e}")
+            return []
 
     def bastion_verify_exe(self, exe_path=''):
         """
