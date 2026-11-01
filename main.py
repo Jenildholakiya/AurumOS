@@ -1105,6 +1105,14 @@ class AurumAPI:
         except Exception as _se:
             LOG(f"[SESSION] Token generation skipped: {_se}")
 
+        # ── BASTION SETTINGS SYNC: pull admin dashboard toggles ──
+        try:
+            from core import bastion_sync
+            bastion_sync.start_sync(db_manager=self.db, interval=30)
+            LOG("[BASTION_SYNC] Settings sync started (30s interval)")
+        except Exception as _bs:
+            LOG(f"[BASTION_SYNC] Start skipped: {_bs}")
+
         # ── BASTION AI: Start background monitor ─────────────────
         try:
             self.bastion = BastionAI(self.db)
@@ -1129,8 +1137,26 @@ class AurumAPI:
         self._session_bundles  = []
         self._login_attempts   = 0
         self._lockout_until    = None
-        self._MAX_ATTEMPTS     = 3
-        self._LOCKOUT_SECONDS  = 5 * 60
+        self._lockout_tier     = 0
+        self._attempt_history  = []
+        # Enterprise progressive rate-limit tiers
+        # (max_attempts_before_tier, cooldown_seconds, severity)
+        self._RATE_TIERS = [
+            # Tier 0: first 3 attempts — no delay
+            {"threshold": 3,  "cooldown": 0,    "severity": "none"},
+            # Tier 1: attempt 4 — 30s cooldown
+            {"threshold": 4,  "cooldown": 30,   "severity": "warning"},
+            # Tier 2: attempt 5 — 2min cooldown
+            {"threshold": 5,  "cooldown": 120,  "severity": "caution"},
+            # Tier 3: attempt 6 — 5min cooldown
+            {"threshold": 6,  "cooldown": 300,  "severity": "elevated"},
+            # Tier 4: attempt 7 — 15min cooldown
+            {"threshold": 7,  "cooldown": 900,  "severity": "high"},
+            # Tier 5: attempt 8-9 — 30min cooldown + lock code
+            {"threshold": 9,  "cooldown": 1800, "severity": "critical"},
+            # Tier 6: attempt 10+ — permanent lock (admin reset)
+            {"threshold": 10, "cooldown": -1,   "severity": "permanent"},
+        ]
         self._last_update_files = []
         self._update_state = {"pct": 0, "msg": "", "done": False, "ok": False}
         self._load_lockout_state()
@@ -3193,9 +3219,13 @@ class AurumAPI:
     def _save_lockout_state(self):
         try:
             import json as _j
-            data={'attempts':self._login_attempts,
-                  'until':self._lockout_until.isoformat() if self._lockout_until else None}
-            open(self._get_lockout_file(),'w').write(_j.dumps(data))
+            data = {
+                'attempts': self._login_attempts,
+                'until': self._lockout_until.isoformat() if self._lockout_until else None,
+                'tier': self._lockout_tier,
+                'history': self._attempt_history[-50:],
+            }
+            open(self._get_lockout_file(), 'w').write(_j.dumps(data))
         except: pass
 
     def _load_lockout_state(self):
@@ -3205,16 +3235,39 @@ class AurumAPI:
             path = self._get_lockout_file()
             if not os.path.exists(path): return
             data = _j.loads(open(path).read())
-            self._login_attempts = data.get('attempts',0)
+            self._login_attempts = data.get('attempts', 0)
+            self._lockout_tier = data.get('tier', 0)
+            self._attempt_history = data.get('history', [])
             until_str = data.get('until')
             if until_str:
                 until = _dt.fromisoformat(until_str)
                 if until > _dt.now():
                     self._lockout_until = until
-                    LOG(f"[LOGIN] Lockout restored -- {int((until-_dt.now()).total_seconds())}s remaining")
+                    LOG(f"[LOGIN] Lockout restored -- tier {self._lockout_tier}, {int((until-_dt.now()).total_seconds())}s remaining")
                 else:
-                    self._login_attempts=0; self._lockout_until=None; os.remove(path)
+                    self._lockout_until = None
+                    # Keep attempts and tier — don't reset on expiry (progressive)
         except: pass
+
+    def _get_rate_tier(self):
+        """Return the current rate-limit tier dict based on attempt count."""
+        for tier in reversed(self._RATE_TIERS):
+            if self._login_attempts >= tier["threshold"]:
+                return tier
+        return self._RATE_TIERS[0]
+
+    def _record_attempt_audit(self, success):
+        """Record login attempt in the audit history."""
+        from datetime import datetime as _dt
+        entry = {
+            "time": _dt.now().isoformat(),
+            "attempt": self._login_attempts,
+            "success": success,
+            "tier": self._lockout_tier,
+        }
+        self._attempt_history.append(entry)
+        if len(self._attempt_history) > 50:
+            self._attempt_history = self._attempt_history[-50:]
 
     # -- LOGIN -----------------------------------------------------------------
     # ══════════════════════════════════════════════════════════════════
@@ -3477,17 +3530,25 @@ class AurumAPI:
             }
 
         if self._lockout_until and now < self._lockout_until:
-            remaining = int((self._lockout_until-now).total_seconds())
+            remaining = int((self._lockout_until - now).total_seconds())
+            tier = self._get_rate_tier()
             try:
-                with self.db._get_connection() as _cc2:
-                    _r2 = _cc2.execute("SELECT value FROM app_config WHERE key='lock_code_cache'").fetchone()
-                    _lc2 = _r2["value"] if _r2 else "LOCKED01"
+                _lc2 = self.db._machine_fingerprint()[:8].upper()
             except: _lc2 = "LOCKED01"
-            return {"status":"locked","remaining":remaining,
-                    "lock_code": _lc2,
-                    "message":f"Locked. Try in {remaining//60}m {remaining%60:02d}s."}
+            is_permanent = tier["cooldown"] == -1
+            return {
+                "status": "locked",
+                "remaining": remaining,
+                "lock_code": _lc2 if tier["severity"] in ("critical", "permanent") else "",
+                "tier": self._lockout_tier,
+                "severity": tier["severity"],
+                "attempts": self._login_attempts,
+                "permanent": is_permanent,
+                "message": "Account permanently locked. Contact admin." if is_permanent
+                           else f"Locked. Try in {remaining // 60}m {remaining % 60:02d}s.",
+            }
         elif self._lockout_until and now >= self._lockout_until:
-            self._lockout_until=None; self._login_attempts=0
+            self._lockout_until = None
         # Check temp password first (one-time unlock)
         try:
             with self.db._get_connection() as _conn:
@@ -3528,6 +3589,10 @@ class AurumAPI:
                                "by the main PC. Wait a moment and try again."}
         auth = self.db.authenticate_user_by_password(password)
         if auth["authenticated"]:
+            self._record_attempt_audit(True)
+            self._login_attempts = 0; self._lockout_tier = 0
+            self._lockout_until = None
+            self._save_lockout_state()
             role = auth["role"]; username = auth.get("username", "Admin")
             landing = "billing.html" if role == "staff" else "dashboard.html"
             # ── TWO-FACTOR GATE (owner/admin only) ──────────────────────
@@ -3540,43 +3605,104 @@ class AurumAPI:
                 return {"status": "2fa_required", "username": username}
             return self._finalize_login(role, username, landing, now, _dt)
         self._login_attempts += 1
-        left = self._MAX_ATTEMPTS - self._login_attempts
-        if self._login_attempts >= self._MAX_ATTEMPTS:
-            self._lockout_until = now + _td(seconds=self._LOCKOUT_SECONDS)
+        self._record_attempt_audit(False)
+        tier = self._get_rate_tier()
+        cooldown = tier["cooldown"]
+        severity = tier["severity"]
+
+        # Find tier index for the response
+        tier_idx = 0
+        for i, t in enumerate(self._RATE_TIERS):
+            if self._login_attempts >= t["threshold"]:
+                tier_idx = i
+        self._lockout_tier = tier_idx
+
+        if cooldown == -1:
+            # Permanent lock — needs admin reset
+            self._lockout_until = now + _td(days=365)
             self._save_lockout_state()
-            # Generate lock code using machine fingerprint (consistent with verify_unlock_key)
             try:
                 _lc = self.db._machine_fingerprint()[:8].upper()
-            except:
-                _lc = "LOCKED01"
-            # Also save to app_config for health page and verification
+            except: _lc = "LOCKED01"
             try:
                 with self.db._get_connection() as _cc:
                     _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)", (_lc,))
+                    _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('account_locked','1')")
+                    _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('locked_at',?)",
+                                (now.strftime('%Y-%m-%d %H:%M:%S'),))
                     _cc.commit()
             except: pass
-            return {"status":"locked","remaining":self._LOCKOUT_SECONDS,
-                    "attempts":self._login_attempts,
-                    "lock_code": _lc,
-                    "message":"Too many attempts. Locked for 15 minutes."}
-        word = "attempt" if left==1 else "attempts"
-        return {"status":"error","attempts":self._login_attempts,"left":left,
-                "message":f"Wrong password. {left} {word} remaining."}
+            LOG(f"[RATE-LIMIT] PERMANENT LOCK after {self._login_attempts} attempts")
+            return {
+                "status": "locked", "remaining": -1,
+                "attempts": self._login_attempts, "lock_code": _lc,
+                "tier": tier_idx, "severity": "permanent", "permanent": True,
+                "message": "Account permanently locked. Contact admin for unlock code.",
+            }
+        elif cooldown > 0:
+            # Progressive cooldown
+            self._lockout_until = now + _td(seconds=cooldown)
+            self._save_lockout_state()
+            try:
+                _lc = self.db._machine_fingerprint()[:8].upper()
+            except: _lc = "LOCKED01"
+            if severity in ("critical",):
+                try:
+                    with self.db._get_connection() as _cc:
+                        _cc.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('lock_code_cache',?)", (_lc,))
+                        _cc.commit()
+                except: pass
+            LOG(f"[RATE-LIMIT] Tier {tier_idx} lockout: {cooldown}s after {self._login_attempts} attempts")
+            return {
+                "status": "locked", "remaining": cooldown,
+                "attempts": self._login_attempts,
+                "lock_code": _lc if severity in ("critical",) else "",
+                "tier": tier_idx, "severity": severity, "permanent": False,
+                "message": f"Too many attempts. Locked for {cooldown // 60}m {cooldown % 60:02d}s.",
+            }
+        else:
+            # No cooldown yet — just a warning
+            self._save_lockout_state()
+            next_tier = self._RATE_TIERS[min(tier_idx + 1, len(self._RATE_TIERS) - 1)]
+            left_before_next = next_tier["threshold"] - self._login_attempts
+            LOG(f"[RATE-LIMIT] Attempt {self._login_attempts}, tier {tier_idx}, {left_before_next} left before next tier")
+            return {
+                "status": "error", "attempts": self._login_attempts,
+                "left": left_before_next,
+                "tier": tier_idx, "severity": severity,
+                "next_cooldown": next_tier["cooldown"],
+                "message": f"Wrong password. {left_before_next} attempt{'s' if left_before_next != 1 else ''} before lockout.",
+            }
 
     def get_lockout_status(self):
         from datetime import datetime as _dt
         try:
-            if self._lockout_until and _dt.now() < self._lockout_until:
-                remaining = int((self._lockout_until-_dt.now()).total_seconds())
-                # Return lock code so lock screen can display it
-                try:
-                    _lc = self.db._machine_fingerprint()[:8].upper()
-                except:
-                    _lc = ''
-                return {"locked":True,"remaining":remaining,"attempts":self._login_attempts,"lock_code":_lc}
-            return {"locked":False,"attempts":self._login_attempts,"max":self._MAX_ATTEMPTS}
+            now = _dt.now()
+            if self._lockout_until and now < self._lockout_until:
+                remaining = int((self._lockout_until - now).total_seconds())
+                tier = self._get_rate_tier()
+                try: _lc = self.db._machine_fingerprint()[:8].upper()
+                except: _lc = ''
+                return {
+                    "locked": True, "remaining": remaining,
+                    "attempts": self._login_attempts,
+                    "lock_code": _lc if tier["severity"] in ("critical", "permanent") else "",
+                    "tier": self._lockout_tier,
+                    "severity": tier["severity"],
+                    "permanent": tier["cooldown"] == -1,
+                }
+            elif self._lockout_until and now >= self._lockout_until:
+                self._lockout_until = None
+            tier = self._get_rate_tier()
+            next_tier = self._RATE_TIERS[min(self._lockout_tier + 1, len(self._RATE_TIERS) - 1)]
+            return {
+                "locked": False, "attempts": self._login_attempts,
+                "tier": self._lockout_tier, "severity": tier["severity"],
+                "next_cooldown": next_tier["cooldown"],
+                "left_before_next": next_tier["threshold"] - self._login_attempts,
+            }
         except:
-            return {"locked":False,"attempts":0,"max":3}
+            return {"locked": False, "attempts": 0, "tier": 0, "severity": "none"}
 
     def logout(self):
         self._audit(f"Logout",f"User: {self._session_username}","auth")
@@ -7055,6 +7181,7 @@ class AurumAPI:
         try:
             self._login_attempts = 0
             self._lockout_until  = None
+            self._lockout_tier   = 0
             self._save_lockout_state()
             # Also delete the lockout file entirely for clean state
             try:
@@ -7567,9 +7694,9 @@ class AurumAPI:
     def verify_unlock_key(self, unlock_key, lock_code=None):
         result = self.db.verify_unlock_key(unlock_key, lock_code)
         if result and result.get('status') == 'success':
-            # Reset in-memory lock state so login works immediately
             self._lockout_until  = None
             self._login_attempts = 0
+            self._lockout_tier   = 0
             try: self._save_lockout_state()
             except Exception: pass
             LOG("[LOCK] In-memory lock state cleared after unlock")
