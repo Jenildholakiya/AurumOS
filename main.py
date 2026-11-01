@@ -2189,6 +2189,17 @@ class AurumAPI:
                     LOG(f"[LICENSE] REACTIVATED on server ({key[:10]}...) — clearing .revoked flag")
                     try: os.remove(flag_path)
                     except: pass
+                    # Auto-revoke rule enforcement on reactivation
+                    try:
+                        from core.auto_revoke import enforce as _ar_enforce, get_rules as _ar_rules
+                        if _ar_rules():
+                            _ar_ctx = {"machine_id": machine_id, "license_key": key}
+                            _ar_result = _ar_enforce(_ar_ctx)
+                            if _ar_result.get("action") == "revoke":
+                                LOG(f"[LICENSE] Auto-revoke triggered on reactivation: {_ar_result.get('violations')}")
+                                return "revoked"
+                    except Exception as _ar_e:
+                        ERR(f"[LICENSE] Auto-revoke reactivation check error: {_ar_e}")
                     return "ok"
                 else:
                     reason = data.get("status", flag_reason)
@@ -2265,6 +2276,17 @@ class AurumAPI:
                 try:
                     if os.path.exists(flag_path): os.remove(flag_path)
                 except: pass
+                # Auto-revoke rule enforcement on heartbeat
+                try:
+                    from core.auto_revoke import enforce as _ar_enforce, get_rules as _ar_rules
+                    if _ar_rules():
+                        _ar_ctx = {"machine_id": machine_id, "license_key": key}
+                        _ar_result = _ar_enforce(_ar_ctx)
+                        if _ar_result.get("action") == "revoke":
+                            LOG(f"[LICENSE] Auto-revoke triggered: {_ar_result.get('violations')}")
+                            return "revoked"
+                except Exception as _ar_e:
+                    ERR(f"[LICENSE] Auto-revoke check error: {_ar_e}")
                 return "ok"
             else:
                 reason = data.get("status","revoked")
@@ -9411,6 +9433,26 @@ def run_aur_os():
                             LOG('[SUB] Periodic sync + reactivation polling started from bg_check')
                         except Exception as _sub_err:
                             ERR(f'[SUB] bg_check sync start failed: {_sub_err}')
+                        # Start auto-revoke rule engine
+                        try:
+                            from core.auto_revoke import start as _ar_start
+                            _ar_key = api._read_license_key()
+                            _ar_mid = ''
+                            try:
+                                _ar_mid = api.db._machine_fingerprint()
+                            except Exception:
+                                import uuid as _ar_uuid
+                                _ar_mid = str(_ar_uuid.getnode())
+                            _ar_start(
+                                license_key=_ar_key,
+                                machine_id=_ar_mid,
+                                db_manager=api.db,
+                                api_ref=api,
+                                interval=30,
+                            )
+                            LOG('[AUTO-REVOKE] Engine started from bg_check')
+                        except Exception as _ar_err:
+                            ERR(f'[AUTO-REVOKE] Start failed: {_ar_err}')
             run_revoke_check()
 
             threading.Thread(
