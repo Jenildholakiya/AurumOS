@@ -931,6 +931,46 @@ _server = None
 _thread = None
 
 
+def _ensure_firewall_rule(port):
+    """Silently add an inbound TCP rule for the cluster port.
+
+    Uses netsh so it works from a frozen EXE without PowerShell.  Requires
+    admin; if the process is not elevated the call fails harmlessly.  The
+    rule is idempotent — netsh overwrites an existing rule of the same name.
+    """
+    if sys.platform != 'win32':
+        return
+    import subprocess
+    rule = 'AurumOS Shop Server'
+    try:
+        # Remove any existing rule first (including stale BLOCK rules)
+        subprocess.run(
+            ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+             f'name={rule}'],
+            capture_output=True, timeout=10,
+        )
+    except Exception:
+        pass
+    try:
+        exe = sys.executable
+        result = subprocess.run(
+            ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+             f'name={rule}',
+             'dir=in', 'action=allow', 'protocol=TCP',
+             f'localport={port}',
+             f'program={exe}',
+             'profile=private,domain',
+             'enable=yes'],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0:
+            _log(f'firewall rule added for port {port}')
+        else:
+            _log(f'firewall rule skipped (not admin?): {result.stderr.strip()}')
+    except Exception as e:
+        _log(f'firewall rule attempt: {e}')
+
+
 def start_server(db, context=None, host='0.0.0.0', port=None):
     """Start the shop server. Safe to call twice; the second call refreshes
     the database handle rather than trying to bind the port again."""
@@ -952,6 +992,8 @@ def start_server(db, context=None, host='0.0.0.0', port=None):
                                    name='AurumClusterServer')
         _thread.start()
         _log(f'listening on {host}:{port}')
+        threading.Thread(target=_ensure_firewall_rule, args=(port,),
+                         daemon=True).start()
         return _server
     except OSError as e:
         # Another copy of the app, or a stale process, already holds the port.
