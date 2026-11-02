@@ -22,20 +22,23 @@ class LicenseEventListener:
 
     def __init__(self, license_key, server_url,
                  on_plan_change=None, on_status_change=None, on_connected=None,
-                 on_urgent_message=None):
+                 on_urgent_message=None, machine_id='', app_version=''):
         self.license_key = license_key
         self.server_url = server_url.rstrip('/')
         self.on_plan_change = on_plan_change
         self.on_status_change = on_status_change
         self.on_connected = on_connected
         self.on_urgent_message = on_urgent_message
+        self.machine_id = machine_id
+        self.app_version = app_version
         self.running = False
         self.thread = None
         self._lock = threading.Lock()
-        self._reconnect_delay = 5
+        self._retry_count = 0
         self._max_reconnect_delay = 30
         self._last_event_id = None
-        self.last_activity = 0.0  # epoch of last byte/event (for poll fallback)
+        self._last_connected_at = 0.0
+        self.last_activity = 0.0
 
     def seconds_since_activity(self):
         if not self.last_activity:
@@ -63,7 +66,7 @@ class LicenseEventListener:
         return self.running
 
     def _listen_loop(self):
-        """Main loop with auto-reconnect — never exits while running=True."""
+        """Main loop with auto-reconnect and exponential backoff."""
         url = f'{self.server_url}/api/nexus/stream?key={self.license_key}'
 
         while self.running:
@@ -73,26 +76,30 @@ class LicenseEventListener:
                 _ERR(f'Connection error: {e}')
 
             if self.running:
-                _LOG(f'Reconnecting in {self._reconnect_delay}s...')
-                time.sleep(self._reconnect_delay)
-                self._reconnect_delay = min(
-                    self._reconnect_delay * 1.5, self._max_reconnect_delay
-                )
+                # Reset backoff if the connection was stable (>60s)
+                if self._last_connected_at and (time.time() - self._last_connected_at > 60):
+                    self._retry_count = 0
+                delay = min(1 * (2 ** self._retry_count), self._max_reconnect_delay)
+                self._retry_count += 1
+                _LOG(f'Reconnecting in {delay}s...')
+                time.sleep(delay)
 
     def _connect_and_listen(self, url):
         """Open SSE connection and process events line by line."""
-        # Build request with optional Last-Event-ID header
+        import platform
         headers = {
             'Accept': 'text/event-stream',
             'Cache-Control': 'no-cache',
-            'User-Agent': 'AurumOS/Client-PY'
+            'User-Agent': f'AurumOS-Desktop/{self.app_version} ({platform.system()}; {platform.machine()})',
         }
+        if self.machine_id:
+            headers['X-Machine-Id'] = self.machine_id
+        if self.app_version:
+            headers['X-App-Version'] = self.app_version
         if self._last_event_id:
             headers['Last-Event-ID'] = str(self._last_event_id)
 
         req = urllib.request.Request(url, headers=headers)
-
-        # Create SSL context that works on all platforms
         ctx = ssl.create_default_context()
 
         try:
@@ -105,7 +112,8 @@ class LicenseEventListener:
             return
 
         _LOG('Connected to server')
-        self._reconnect_delay = 5  # Reset backoff on success
+        self._last_connected_at = time.time()
+        self._retry_count = 0
         self.last_activity = time.time()
 
         if self.on_connected:

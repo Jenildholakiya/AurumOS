@@ -2511,13 +2511,20 @@ class AurumAPI:
 
             # Create and start Python SSE listener
             self._sse_key = key
+            _mid = ''
+            try:
+                _mid = self.db._machine_fingerprint()
+            except Exception:
+                pass
             self._sse_listener = LicenseEventListener(
                 license_key=key,
                 server_url=server_url,
                 on_plan_change=self._sse_on_plan_change,
                 on_status_change=self._sse_on_status_change,
                 on_connected=self._sse_on_connected,
-                on_urgent_message=self._sse_on_urgent_message
+                on_urgent_message=self._sse_on_urgent_message,
+                machine_id=_mid,
+                app_version=CURRENT_VERSION,
             )
             self._sse_listener.start()
             LOG('[SSE-PY] Python listener started')
