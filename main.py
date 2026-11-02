@@ -9453,6 +9453,19 @@ def run_aur_os():
                             LOG('[AUTO-REVOKE] Engine started from bg_check')
                         except Exception as _ar_err:
                             ERR(f'[AUTO-REVOKE] Start failed: {_ar_err}')
+
+                        # ── Geo-fence country check ──
+                        try:
+                            from core.geo_fence import enforce as _gf_enforce
+                            _gf_result = _gf_enforce(
+                                license_key=_ar_key,
+                                api_ref=api,
+                            )
+                            LOG(f'[GEO-FENCE] Result: allowed={_gf_result.get("allowed")}, '
+                                f'country={_gf_result.get("country_code")}')
+                        except Exception as _gf_err:
+                            ERR(f'[GEO-FENCE] Check failed: {_gf_err}')
+
             run_revoke_check()
 
             threading.Thread(
