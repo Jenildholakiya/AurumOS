@@ -3,7 +3,7 @@
 AurumOS Enterprise Updater — version detection, integrity verification,
 atomic updates with rollback, release channels, and update logging.
 
-main.py does the downloading (AurumAPI.auto_update_silent). This module
+main.py does the downloading (AurumAPI.start_update_with_info). This module
 answers three questions and provides the enterprise update pipeline:
 
     CURRENT_VERSION           the number baked in when the EXE was built
