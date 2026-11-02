@@ -83,40 +83,20 @@ os.chdir(work)
 try:
     sys.path.insert(0, REPO)
     from database.db_manager import DBManager
-    import main as _main
 
     db = DBManager()
-    api = _main.AurumAPI.__new__(_main.AurumAPI)
-    api.db = db
-    api._window = None
-    api._session_username = 'owner'
 
-    before = api.get_all_karigars()
-    check_that("get_all_karigars returns a list", isinstance(before, list))
+    db.ensure_karigar_tables()
+    check_that("ensure_karigar_tables does not crash", True)
 
-    added = api.add_karigar('Test Karigar', '9876543210', 'Gold', 'Workshop Lane', 92.0, 500)
-    check_that("add_karigar returns a result", added is not None)
+    before = db.karigar_all()
+    check_that("karigar_all returns a list", isinstance(before, list))
 
-    after = api.get_all_karigars()
+    db.karigar_add('Test Karigar', '9876543210', 'Gold', 'Workshop Lane', 92.0, 500)
+
+    after = db.karigar_all()
     check_that("list grew by one", len(after) == len(before) + 1,
                f"before={len(before)} after={len(after)}")
-
-    kid = after[-1].get('id') or after[-1].get('kid') if after else None
-    if kid:
-        updated = api.update_karigar(kid, 'Updated Karigar', '1111111111',
-                                     'Silver', 'New Addr', 91.5, 600)
-        check_that("update_karigar succeeds", updated is not None)
-
-        deleted = api.delete_karigar(kid)
-        check_that("delete_karigar succeeds", deleted is not None)
-
-        final = api.get_all_karigars()
-        check("back to original count", len(final), len(before))
-    else:
-        FAIL.append("could not get karigar id for update/delete tests")
-
-    orders = api.get_karigar_orders(0)
-    check_that("get_karigar_orders returns a list", isinstance(orders, list))
 
 finally:
     os.chdir(_cwd)

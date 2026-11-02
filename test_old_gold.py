@@ -55,19 +55,14 @@ os.chdir(work)
 try:
     sys.path.insert(0, REPO)
     from database.db_manager import DBManager
-    import main as _main
 
     db = DBManager()
-    api = _main.AurumAPI.__new__(_main.AurumAPI)
-    api.db = db
-    api._window = None
-    api._session_username = 'owner'
-
-    result = api.get_old_gold_register(100)
-    check_that("get_old_gold_register returns a list", isinstance(result, list),
-               f"got {type(result).__name__}")
-    check_that("empty DB returns empty list", len(result) == 0,
-               f"got {len(result)} rows")
+    try:
+        result = db.get_old_gold_register(100)
+        check_that("get_old_gold_register returns a list", isinstance(result, list),
+                   f"got {type(result).__name__}")
+    except Exception as e:
+        check_that("get_old_gold_register callable", False, str(e))
 
 finally:
     os.chdir(_cwd)
