@@ -605,6 +605,11 @@ window.addEventListener('aurum-update-done', function(e) {    var fill = documen
 function restartApp(){if(window.pywebview&&window.pywebview.api)window.pywebview.api.restart_app();}
 window.__showUpdate=function(data){if(data&&data.available)showUpdateBanner(data);};
 window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.detail.available)showUpdateBanner(e.detail);});
+window.addEventListener('aurum-version',function(e){
+    if(e.detail&&e.detail.available&&e.detail.latest&&!document.getElementById('update-banner').classList.contains('visible')){
+        showUpdateBanner({available:true,version:e.detail.latest,release_date:e.detail.releaseDate||'',changelog:e.detail.changelog||[]});
+    }
+});
 
 // ── REALTIME: check for updates as soon as dashboard loads ──
 (function(){
@@ -612,10 +617,13 @@ window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.deta
         if(!window.pywebview||!window.pywebview.api||typeof window.pywebview.api.auto_update_check!=='function'){
             setTimeout(_checkOnLoad,1000);return;
         }
-        window.pywebview.api.auto_update_check();
+        window.pywebview.api.auto_update_check().then(function(r){
+            if(r&&r.status==='update_available'&&r.available) showUpdateBanner(r);
+        }).catch(function(){});
     }
     if(document.readyState==='complete') setTimeout(_checkOnLoad,2000);
     else window.addEventListener('load',function(){setTimeout(_checkOnLoad,2000);});
+    setInterval(_checkOnLoad,5*60*1000);
 })();
 
 // ── MANUAL UPDATE CHECK ───────────────────────────────────────────

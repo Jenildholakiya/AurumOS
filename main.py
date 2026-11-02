@@ -7224,7 +7224,8 @@ class AurumAPI:
                     self._window.evaluate_js(js)
             except Exception:
                 pass
-            return {"status": "update_available", "version": new_ver}
+            r_js["status"] = "update_available"
+            return r_js
         finally:
             self._auto_update_busy = False
 
