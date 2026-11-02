@@ -111,7 +111,6 @@ ALWAYS = frozenset([
     'mark_all_notifications_read', 'get_trial_status',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
-    'get_subscription_audit',
 ])
 
 

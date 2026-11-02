@@ -99,7 +99,7 @@ print("\n-- sidebar pages follow the software type --")
 check("wholesale billing lands on billing.html",
       P.pages_for(['billing'], 'wholesale'), ['billing.html', 'tag_audit.html'])
 check("retail billing lands on pos_billing.html",
-      P.pages_for(['billing'], 'retail'), ['pos_billing.html', 'tag_audit.html'])
+      P.pages_for(['billing'], 'retail'), ['pos_billing.html', 'tag_audit.html', 'old_gold.html'])
 check("overlapping bundles do not repeat a page",
       P.pages_for(['inventory', 'karigar'], 'wholesale').count('uchak_stock_entry.html'), 1)
 
