@@ -83,22 +83,51 @@
   }
 
   // ── Sound (WebAudio, no assets) ─────────────────────────────────────
-  function alertSound() {
+  function _audioCtx() {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    return Ctx ? new Ctx() : null;
+  }
+
+  function _tone(ctx, freq, start, dur, vol, type) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(vol, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.start(start); o.stop(start + dur + 0.01);
+  }
+
+  function soundInfo() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      var ctx = new Ctx();
-      [0, 0.28, 0.56].forEach(function (off) {
-        var o = ctx.createOscillator(), g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type = 'sine'; o.frequency.value = 880;
-        var t = ctx.currentTime + off;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.4, t + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
-        o.start(t); o.stop(t + 0.26);
-      });
+      var ctx = _audioCtx(); if (!ctx) return;
+      _tone(ctx, 523, ctx.currentTime, 0.15, 0.2, 'sine');
     } catch (e) {}
+  }
+
+  function soundWarning() {
+    try {
+      var ctx = _audioCtx(); if (!ctx) return;
+      var t = ctx.currentTime;
+      _tone(ctx, 523, t, 0.12, 0.25, 'sine');
+      _tone(ctx, 659, t + 0.18, 0.12, 0.25, 'sine');
+    } catch (e) {}
+  }
+
+  function soundCritical() {
+    try {
+      var ctx = _audioCtx(); if (!ctx) return;
+      var t = ctx.currentTime;
+      _tone(ctx, 660, t, 0.1, 0.35, 'sine');
+      _tone(ctx, 770, t + 0.18, 0.1, 0.35, 'sine');
+      _tone(ctx, 880, t + 0.36, 0.1, 0.35, 'sine');
+    } catch (e) {}
+  }
+
+  function notifSound(priority) {
+    if (priority === 'critical') soundCritical();
+    else if (priority === 'warning') soundWarning();
+    else soundInfo();
   }
 
   // ── Toast host (shared with dashboard toasts when present) ──────────
@@ -225,9 +254,9 @@
   }
 
   function display(msg) {
+    notifSound(msg.priority);
     if (msg.priority === 'critical') {
-      alertSound();
-      showCritical(msg); // no auto-dismiss; ack-only
+      showCritical(msg);
     } else if (msg.priority === 'warning') {
       toast(msg, 15000, '#b45309');
     } else {
