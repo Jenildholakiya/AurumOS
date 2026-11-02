@@ -27,6 +27,7 @@ database/.subscription_cache
 database/.subscription_state.json
 database/.session_token
 database/.sse_cache
+database/.ip_check_cache.json
 database/.setup_complete
 db_path.txt
 machine.lock

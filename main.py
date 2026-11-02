@@ -2621,6 +2621,47 @@ class AurumAPI:
         LOG(f'[SSE-PY] Config update event: key={data.get("config_key")}')
         threading.Thread(target=self._refresh_remote_config, daemon=True).start()
 
+    def _ip_guard_on_action(self, action, result):
+        """Handle IP guard enforcement actions: warn, block, revoke, throttle."""
+        LOG(f'[IP-GUARD] Action triggered: {action} result={result}')
+        msg = result.get('message', '')
+        w = self._window
+        if not w:
+            return
+        if action == 'revoke':
+            LOG('[IP-GUARD] Revoking license due to IP rule')
+            try:
+                self.fire_revoked_screen('ip_blocked')
+            except Exception:
+                pass
+        elif action == 'block':
+            js = (
+                "try{if(!document.getElementById('ip-block-banner')){"
+                "var d=document.createElement('div');d.id='ip-block-banner';"
+                "d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;"
+                "background:#dc2626;color:#fff;text-align:center;padding:12px;font-size:14px';"
+                f"d.textContent='Access restricted: {msg or 'Your IP address has been blocked by the administrator.'}';"
+                "document.body.appendChild(d)}}catch(e){}"
+            )
+            try:
+                w.evaluate_js(js)
+            except Exception:
+                pass
+        elif action == 'warn':
+            js = (
+                "try{if(!document.getElementById('ip-warn-banner')){"
+                "var d=document.createElement('div');d.id='ip-warn-banner';"
+                "d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99998;"
+                "background:#f59e0b;color:#000;text-align:center;padding:10px;font-size:13px;cursor:pointer';"
+                f"d.textContent='Warning: {msg or 'Unusual IP activity detected.'}';"
+                "d.onclick=function(){{this.remove()}};"
+                "document.body.appendChild(d)}}catch(e){}"
+            )
+            try:
+                w.evaluate_js(js)
+            except Exception:
+                pass
+
     def _sse_on_plan_change(self, data):
         """Called when admin changes plan — apply features immediately."""
         from subscription_manager import PLAN_FEATURES, LITE_FEATURES, _clamp_expiry, SUBSCRIPTION_DAYS
@@ -9432,6 +9473,21 @@ def run_aur_os():
                     except: pass
                     if not _sse_started[0]:
                         _sse_started[0] = True
+                        # ── IP guard check (before SSE/config) ──
+                        try:
+                            from core.ip_guard import IPGuard
+                            _ip_key = api._read_license_key()
+                            _ip_srv = api._get_server_url()
+                            api._ip_guard = IPGuard(
+                                server_url=_ip_srv,
+                                license_key=_ip_key,
+                                on_action=api._ip_guard_on_action,
+                                interval_sec=1800,
+                            )
+                            api._ip_guard.start()
+                            LOG('[IP-GUARD] Started periodic IP check (30 min)')
+                        except Exception as _ip_err:
+                            ERR(f'[IP-GUARD] Start failed: {_ip_err}')
                         LOG('[LICENSE] Background: Valid — starting SSE stream')
                         try:
                             api.start_sse_stream()
