@@ -7153,16 +7153,16 @@ class AurumAPI:
             self._auto_update_busy = False
 
     def auto_update_loop(self):
-        """Background loop: check at startup, then every 30 minutes. Shows card only."""
+        """Background loop: check at startup, then every 5 minutes. Shows card only."""
         import time as _t
         try:
-            _t.sleep(45)
+            _t.sleep(5)
             self.auto_update_check()
         except Exception as e:
             LOG(f"[AUTO-UPDATE] {e}")
         while not getattr(self, '_app_closing', False):
             try:
-                for _ in range(30 * 60):
+                for _ in range(5 * 60):
                     _t.sleep(1)
                     if getattr(self, '_app_closing', False):
                         break

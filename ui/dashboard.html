@@ -553,7 +553,12 @@ function startUpdate(){
         }
         window.pywebview.api.start_update_with_info(info).then(function(res){
             if(res&&res.status==='started'){if(fill)fill.style.width='10%';if(status)status.innerText='Downloading...';}
-            else if(res&&res.status==='nothing_to_do'){if(status)status.innerText='Already up to date.';}
+            else if(res&&res.status==='success'){
+                if(fill)fill.style.width='100%';
+                var done=document.getElementById('ub-done');if(done)done.classList.add('visible');
+                if(wrap)wrap.classList.remove('visible');
+                if(status)status.innerText='Updated to v'+(res.version||info.version||'')+' — restart to apply.';
+            }
             else{if(status)status.innerText='Error: '+(res&&res.message||'unknown');}
         }).catch(function(e){if(status)status.innerText='Error: '+e;});
     }
@@ -601,6 +606,18 @@ function restartApp(){if(window.pywebview&&window.pywebview.api)window.pywebview
 window.__showUpdate=function(data){if(data&&data.available)showUpdateBanner(data);};
 window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.detail.available)showUpdateBanner(e.detail);});
 
+// ── REALTIME: check for updates as soon as dashboard loads ──
+(function(){
+    function _checkOnLoad(){
+        if(!window.pywebview||!window.pywebview.api||typeof window.pywebview.api.auto_update_check!=='function'){
+            setTimeout(_checkOnLoad,1000);return;
+        }
+        window.pywebview.api.auto_update_check();
+    }
+    if(document.readyState==='complete') setTimeout(_checkOnLoad,2000);
+    else window.addEventListener('load',function(){setTimeout(_checkOnLoad,2000);});
+})();
+
 // ── MANUAL UPDATE CHECK ───────────────────────────────────────────
 function manualCheckUpdate(){
     var btn=document.getElementById('check-update-btn');
@@ -632,11 +649,11 @@ function manualCheckUpdate(){
         if(!v||!v.latest){ settle('No Internet'); return; }
         if(!v.available){ settle('✓ Latest','upd-ok'); return; }
         if(lbl) lbl.innerText='v'+v.latest+' downloading…';
-        if(api&&typeof api.auto_update_silent==='function'){
-            api.auto_update_silent().then(function(r){
-                if(r&&r.status==='success'){ settle('✓ v'+(r.version||v.latest)+' installed','upd-ok'); }
+        if(api&&typeof api.auto_update_check==='function'){
+            api.auto_update_check().then(function(r){
+                if(r&&r.status==='update_available'){ settle('v'+(r.version||v.latest)+' available','upd-ready'); }
                 else { settle('✓ Latest','upd-ok'); }
-            }).catch(function(){ settle('Update failed'); });
+            }).catch(function(){ settle('Check failed'); });
         } else {
             settle('v'+v.latest+' ready','upd-ready');
         }
