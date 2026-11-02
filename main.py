@@ -2670,6 +2670,15 @@ class AurumAPI:
             except Exception as e:
                 LOG(f'[SSE-PY] JS notify error: {e}')
 
+        # Trial→paid conversion: dismiss countdown banner
+        if not data.get('is_trial', False):
+            try:
+                from core.trial_manager import dismiss_banner as _tm_dismiss
+                _tm_dismiss()
+                LOG('[SSE-PY] Trial banner dismissed (trial→paid conversion)')
+            except Exception:
+                pass
+
         # Save to local cache for offline use
         try:
             cache_path = os.path.join(
@@ -3084,13 +3093,24 @@ class AurumAPI:
         """Return trial status for dashboard."""
         try:
             state = self.sub.get_state_json()
-            return {
+            result = {
                 'is_trial': state.get('is_trial', False),
                 'status': state.get('status', 'unknown'),
                 'expiry_ms': state.get('trial_end_ms'),
                 'effective_plan': state.get('effective_plan', 'lite'),
                 'remaining_days': state.get('subscription', {}).get('remaining_days', 0)
             }
+            try:
+                from core.trial_manager import get_status as _tm_status
+                tm = _tm_status()
+                if tm.get('is_trial'):
+                    result['days_remaining'] = tm.get('days_remaining', 0)
+                    result['machine_bound'] = tm.get('machine_bound', False)
+                    result['degraded'] = tm.get('degraded', False)
+                    result['cache_stale'] = tm.get('cache_stale', False)
+            except Exception:
+                pass
+            return result
         except Exception as e:
             return {'is_trial': False, 'status': 'unknown', 'expiry_ms': None}
 
@@ -9465,6 +9485,19 @@ def run_aur_os():
                                 f'country={_gf_result.get("country_code")}')
                         except Exception as _gf_err:
                             ERR(f'[GEO-FENCE] Check failed: {_gf_err}')
+
+                        # ── Trial system check ──
+                        try:
+                            from core.trial_manager import start as _trial_start
+                            _trial_result = _trial_start(
+                                license_key=_ar_key,
+                                machine_id=_ar_mid,
+                                api_ref=api,
+                            )
+                            LOG(f'[TRIAL] Manager started: is_trial={_trial_result.get("is_trial")}, '
+                                f'days={_trial_result.get("days_remaining")}')
+                        except Exception as _trial_err:
+                            ERR(f'[TRIAL] Start failed: {_trial_err}')
 
             run_revoke_check()
 
