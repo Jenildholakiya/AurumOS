@@ -7075,8 +7075,16 @@ class AurumAPI:
             LOG(f"[UPDATE] --- result: {len(ui_files)} UI + {len(backend_files)} backend = {total_changed} of {len(all_files)} need update ---")
 
             if not ui_files and not backend_files:
-                push_done(False, "Already up to date.")
-                return {"status": "nothing_to_do"}
+                new_ver = str(version_info.get('version', '')).strip()
+                import re as _re
+                if _re.match(r'^\d+\.\d+\.\d+', new_ver):
+                    try:
+                        set_installed_version(new_ver)
+                        self._update_applied_version = new_ver
+                    except Exception:
+                        pass
+                push_done(True, "Updated to v" + new_ver)
+                return {"status": "success", "version": new_ver}
 
             self._last_update_files = ui_files + backend_files
             self._update_running    = True
