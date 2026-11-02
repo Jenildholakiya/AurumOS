@@ -40,6 +40,9 @@ ui/temp/
 *.png
 !ui/**/*.png
 
+# Environment secrets
+.env
+
 # License & security files
 .license_key
 .revoked

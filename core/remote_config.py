@@ -17,8 +17,25 @@ _LOG = lambda m: print(f'[REMOTE-CONFIG] {m}', flush=True)
 _ERR = lambda m: print(f'[REMOTE-CONFIG ERR] {m}', flush=True)
 
 # ── Shared secret — must match server's CONFIG_ENCRYPTION_SECRET env var ──
-# Replace at build time or load from secure storage.
-_CONFIG_SECRET = 'REPLACE_WITH_CONFIG_ENCRYPTION_SECRET'
+# Loaded from env var or .env file alongside the app.
+def _load_secret() -> str:
+    val = os.environ.get('CONFIG_ENCRYPTION_SECRET', '')
+    if val:
+        return val
+    base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+    env_path = os.path.join(base, '.env')
+    try:
+        if os.path.exists(env_path):
+            with open(env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('CONFIG_ENCRYPTION_SECRET='):
+                        return line.split('=', 1)[1].strip()
+    except Exception:
+        pass
+    return ''
+
+_CONFIG_SECRET = _load_secret()
 
 
 def _derive_key(secret: str) -> bytes:
