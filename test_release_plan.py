@@ -20,6 +20,7 @@ import tempfile
 
 REPO = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, REPO)
+sys.path.insert(0, os.path.join(REPO, 'scripts', 'release'))
 
 try:
     import release_plan as rp                                # noqa: E402
@@ -84,6 +85,46 @@ check("rebuild list is sorted and deduplicated",
 notes = rp.release_notes("1.1.8", ["Fix totals"], ["main.py"], "abcdef1234")
 check("notes carry the rebuild warning", "Rebuild needed" in notes and "`main.py`" in notes, True)
 check("notes name the commit", "abcdef1" in notes, True)
+
+print("-- release channels --")
+check("detect_channel stable", rp.detect_channel("Fix totals"), "stable")
+check("detect_channel beta", rp.detect_channel("New feature [beta]"), "beta")
+check("detect_channel rc", rp.detect_channel("Prep [rc] for release"), "rc")
+check("format stable version", rp.format_channel_version((1, 2, 0), "stable"), "1.2.0")
+check("format beta version", rp.format_channel_version((1, 2, 0), "beta", 1), "1.2.0-beta.1")
+check("format rc version", rp.format_channel_version((1, 2, 0), "rc", 3), "1.2.0-rc.3")
+check("parse version with beta suffix", rp.parse_version("1.2.0-beta.1"), (1, 2, 0))
+check("parse version with rc suffix", rp.parse_version("v1.2.0-rc.2"), (1, 2, 0))
+check("changelog strips [beta] marker",
+      rp.changelog_lines(["New screen [beta]"]), ["New screen"])
+check("changelog strips [rc] marker",
+      rp.changelog_lines(["Prep [rc]"]), ["Prep"])
+
+print("-- manifest integrity --")
+import hashlib, json
+sample_manifest = {"version": "1.2.0", "channel": "stable", "files": []}
+body = json.dumps(sample_manifest, sort_keys=True, ensure_ascii=False).encode('utf-8')
+sample_manifest["manifest_checksum"] = hashlib.sha256(body).hexdigest()
+check("valid checksum passes", updater.verify_manifest_checksum(sample_manifest), True)
+tampered = dict(sample_manifest)
+tampered["version"] = "9.9.9"
+check("tampered manifest fails", updater.verify_manifest_checksum(tampered), False)
+check("manifest without checksum passes", updater.verify_manifest_checksum({"version": "1.0.0"}), True)
+
+print("-- minimum version enforcement --")
+min_manifest = {"version": "2.0.0", "min_version": "1.5.0", "files": []}
+check("below min_version forces update",
+      updater.decide(min_manifest, "1.1.7") is not None, True)
+check("above min_version still needs newer",
+      updater.decide({"version": "1.1.7", "min_version": "1.0.0"}, "1.1.7"), None)
+
+print("-- channel filtering --")
+check("stable client accepts stable", updater._channel_accepts("stable", "stable"), True)
+check("stable client rejects beta", updater._channel_accepts("stable", "beta"), False)
+check("beta client accepts stable", updater._channel_accepts("beta", "stable"), True)
+check("beta client accepts beta", updater._channel_accepts("beta", "beta"), True)
+check("rc client accepts rc", updater._channel_accepts("rc", "rc"), True)
+check("rc client rejects beta", updater._channel_accepts("rc", "beta"), False)
 
 print("-- what an installed copy accepts --")
 check("version key", updater._version_key("v1.2.3"), (1, 2, 3))
@@ -177,7 +218,7 @@ try:
     here = os.getcwd()
     os.chdir(work)
     try:
-        out = subprocess.run([sys.executable, os.path.join(REPO, "release_plan.py"), "--out", "plan_out"],
+        out = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "release", "release_plan.py"), "--out", "plan_out"],
                              capture_output=True, text=True)
     finally:
         os.chdir(here)

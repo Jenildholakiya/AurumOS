@@ -39,7 +39,10 @@ import re
 import subprocess
 import sys
 
-VERSION_RE = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)$')
+VERSION_RE = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:-(beta|rc)\.(\d+))?$')
+STABLE_RE = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)$')
+
+CHANNELS = ('stable', 'rc', 'beta')
 
 # Everything outside ui/ that ends up inside the frozen EXE or its bundle.
 FROZEN_FILES = {
@@ -56,9 +59,12 @@ CHANGELOG_LIMIT = 20
 # ── pure helpers (covered by test_release_plan.py) ─────────────────────────
 
 def parse_version(text):
-    """'v1.2.3' or '1.2.3' -> (1, 2, 3); anything else -> None."""
+    """'v1.2.3' or '1.2.3' -> (1, 2, 3); anything else -> None.
+    Also accepts '1.2.3-beta.1' but returns only the base triple."""
     m = VERSION_RE.match(str(text or '').strip())
-    return tuple(int(x) for x in m.groups()) if m else None
+    if not m:
+        return None
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
 
 def fmt(version):
@@ -93,6 +99,37 @@ def wants_force(message):
     return '[force]' in (message or '').lower()
 
 
+def detect_channel(message):
+    """Return 'beta', 'rc', or 'stable' based on commit markers."""
+    text = (message or '').lower()
+    if '[beta]' in text:
+        return 'beta'
+    if '[rc]' in text:
+        return 'rc'
+    return 'stable'
+
+
+def read_min_version():
+    """Read MIN_VERSION file from repo root, or None."""
+    try:
+        p = os.path.join(os.getcwd(), 'MIN_VERSION')
+        if os.path.isfile(p):
+            v = open(p, encoding='utf-8').read().strip()
+            if STABLE_RE.match(v):
+                return v
+    except Exception:
+        pass
+    return None
+
+
+def format_channel_version(base_version, channel, pre_num=1):
+    """Format version with channel suffix: '1.2.0-beta.1' or '1.2.0'."""
+    v = fmt(base_version) if isinstance(base_version, tuple) else str(base_version)
+    if channel in ('beta', 'rc'):
+        return f'{v}-{channel}.{pre_num}'
+    return v
+
+
 def changelog_lines(subjects):
     """Commit subjects -> release notes lines: no merges, no repeats, capped."""
     seen, out = set(), []
@@ -100,7 +137,7 @@ def changelog_lines(subjects):
         s = ' '.join(str(s or '').split())
         if not s or s.lower().startswith('merge '):
             continue
-        s = re.sub(r'\s*\[(major|minor|force|skip release|no release|skip ci)\]', '', s, flags=re.I).strip()
+        s = re.sub(r'\s*\[(major|minor|force|skip release|no release|skip ci|beta|rc)\]', '', s, flags=re.I).strip()
         if not s or s in seen:
             continue
         seen.add(s)
@@ -219,21 +256,29 @@ def plan(tag=None):
     if existing and not tag:
         return {'skip': True, 'reason': f'v{fmt(version)} already exists'}
 
+    channel = detect_channel(message)
+    min_ver = read_min_version()
+    ver_str = format_channel_version(version, channel)
+    tag_str = f'v{ver_str}'
+
     changelog = changelog_lines(subjects)
     rebuild = rebuild_files(changed_since(prev))
     commit = head_sha()
     return {
         'skip': False,
         'reason': '',
-        'version': fmt(version),
-        'tag': f'v{fmt(version)}',
+        'version': ver_str,
+        'base_version': fmt(version),
+        'tag': tag_str,
         'prev_tag': prev or '',
+        'channel': channel,
+        'min_version': min_ver,
         'force': force,
         'needs_rebuild': bool(rebuild),
         'rebuild_files': rebuild,
         'changelog': changelog,
         'commit': commit,
-        'notes': release_notes(fmt(version), changelog, rebuild, commit),
+        'notes': release_notes(ver_str, changelog, rebuild, commit),
     }
 
 
@@ -270,6 +315,8 @@ def main(argv):
         print(f"version={p['version']}")
         print(f"tag={p['tag']}")
         print(f"prev_tag={p['prev_tag']}")
+        print(f"channel={p.get('channel', 'stable')}")
+        print(f"min_version={p.get('min_version') or ''}")
         print(f"force={'true' if p['force'] else 'false'}")
         print(f"needs_rebuild={'true' if p['needs_rebuild'] else 'false'}")
         print(f"rebuild_count={len(p['rebuild_files'])}")

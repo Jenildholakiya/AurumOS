@@ -36,6 +36,8 @@ on:
     branches: [main]
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
   workflow_dispatch:
     inputs:
       version:
@@ -120,19 +122,25 @@ jobs:
           body_path: release_notes.md
           files: release_assets/*
           fail_on_unmatched_files: true
+          prerelease: ${{ steps.plan.outputs.channel != 'stable' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         if: steps.plan.outputs.skip != 'true'
         env:
+          CHANNEL: ${{ steps.plan.outputs.channel }}
           NEEDS_REBUILD: ${{ steps.plan.outputs.needs_rebuild }}
           REBUILD_COUNT: ${{ steps.plan.outputs.rebuild_count }}
         run: |
           {
             cat release_notes.md
             echo
-            python3 -c "import json;m=json.load(open('version.json'));print('Manifest:',len(m['files']),'files,',format(m['size_bytes'],','),'bytes')"
+            python3 -c "import json;m=json.load(open('version.json'));print('Manifest:',len(m['files']),'files,',format(m['size_bytes'],','),'bytes, channel:',m.get('channel','stable'))"
+            if [ "$CHANNEL" != "stable" ]; then
+              echo
+              echo "> :information_source: **Pre-release** — this is a **$CHANNEL** build."
+            fi
             if [ "$NEEDS_REBUILD" = "true" ]; then
               echo
               echo "> :warning: **Rebuild needed** — $REBUILD_COUNT frozen file(s) changed. Run \`python build.py\` and reinstall on each PC to ship them."

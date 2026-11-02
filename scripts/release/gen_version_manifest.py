@@ -198,11 +198,20 @@ def main():
         if mig_count:
             print(f"  Migrations: {mig_count} .sql file(s)")
 
+    # Determine which files are safe to rollback (ui/ files are, frozen are not)
+    for f_entry in files:
+        f_entry["rollback_safe"] = f_entry["path"].startswith("_internal/ui/") or f_entry["path"].startswith("migrations/")
+
+    channel = (plan.get('channel') if plan else None) or 'stable'
+    min_ver = (plan.get('min_version') if plan else None) or None
+
     total_size = sum(f["size_bytes"] for f in files)
     manifest = {
         "version": version,
+        "channel": channel,
         "release_date": datetime.date.today().isoformat(),
-        "min_version": "1.0.0",
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "min_version": min_ver or "1.0.0",
         "download_url": f"{RELEASES}/tag/v{version}",
         "release_url": f"{RELEASES}/tag/v{version}",
         "commit": (commit or '')[:7],
@@ -210,17 +219,19 @@ def main():
         "changelog": changelog,
         "files": files,
         "force": forced,
-        # Set when the push also touched files frozen inside the EXE. Installed
-        # copies cannot act on it; it tells the developer a rebuild is due.
         "needs_rebuild": bool(rebuild),
         "rebuild_files": rebuild,
     }
+
+    # Integrity: compute manifest_checksum over the body (excluding the checksum itself)
+    body_for_hash = json.dumps(manifest, sort_keys=True, ensure_ascii=False).encode('utf-8')
+    manifest["manifest_checksum"] = hashlib.sha256(body_for_hash).hexdigest()
 
     out_path = os.path.join(ROOT, 'version.json')
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
-    print(f"\n[OK] version.json written - v{version}, {len(files)} files ({total_size:,} bytes)"
+    print(f"\n[OK] version.json written - v{version} [{channel}], {len(files)} files ({total_size:,} bytes)"
           + (", FORCED" if forced else "")
           + (f", rebuild needed for {len(rebuild)} frozen file(s)" if rebuild else ""))
 
