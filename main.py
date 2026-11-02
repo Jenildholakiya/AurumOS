@@ -7099,21 +7099,19 @@ class AurumAPI:
             return {"status": "error"}
 
 
-    # ── SILENT AUTO-UPDATE (push-to-update: zero clicks, zero installs) ──
-    # Runs in background at startup + every 4h. Downloads changed files
-    # quietly: UI applies instantly (live reload), backend .py files stage to
-    # _update_staging/ and auto-apply on next launch (see _apply_staged_updates
-    # at the top of this file). The user never clicks anything.
+    # ── AUTO-UPDATE CHECK (shows update card, user clicks Install) ──────
+    # Runs in background at startup + every 30 min. Only CHECKS for updates
+    # and shows the update card. The user clicks "Install" to start the
+    # actual download via start_update_with_info().
     _auto_update_busy = False
 
-    def auto_update_silent(self):
-        """One silent check-and-download cycle. Safe to call repeatedly."""
+    def auto_update_check(self):
+        """Check for updates and show the update card if available."""
         if getattr(self, '_auto_update_busy', False):
             return {"status": "busy"}
         self._auto_update_busy = True
         try:
-            from updater import check_for_update as _check, get_app_root, _is_protected, set_installed_version
-            import urllib.request as _ur
+            from updater import check_for_update as _check
         except Exception as e:
             self._auto_update_busy = False
             return {"status": "error", "message": str(e)}
@@ -7124,88 +7122,34 @@ class AurumAPI:
                 info = None
             if not info or not info.get('available'):
                 return {"status": "nothing_to_do"}
-            files = info.get('files', [])
-            app_root = get_app_root()
-            try:
-                from updater import sha256 as _sha256
-            except Exception:
-                _sha256 = lambda p: ''
-            ui_count = backend_count = 0
-            staging = app_root / '_update_staging'
-            for entry in files:
-                rel = str(entry.get('path', '')).replace('\\', '/')
-                url = entry.get('url', '')
-                want = entry.get('sha256', '')
-                if not rel or not url or _is_protected(rel):
-                    continue
-                ext = os.path.splitext(rel)[1].lower()
-                if rel.startswith('_internal/ui/') and ext in {'.html', '.js', '.css', '.png', '.jpg', '.svg', '.json', '.woff', '.woff2', '.ttf', '.map'}:
-                    kind = 'ui'
-                elif rel.startswith('migrations/') and ext == '.sql':
-                    kind = 'migration'
-                elif (rel.startswith('core/') or rel.startswith('database/') or rel.startswith('network/')) and ext == '.py':
-                    kind = 'backend'
-                else:
-                    continue
-                try:
-                    if _sha256(app_root / rel) == want and want:
-                        continue
-                except Exception:
-                    pass
-                try:
-                    req = _ur.Request(url, headers={'User-Agent': 'AurumOS/auto', 'Accept': '*/*'})
-                    with _ur.urlopen(req, timeout=30) as resp:
-                        data = resp.read()
-                except Exception as e:
-                    LOG(f"[AUTO-UPDATE] skip {rel}: {e}")
-                    continue
-                try:
-                    dst = (staging / rel) if kind == 'backend' else (app_root / rel)
-                    dst.parent.mkdir(parents=True, exist_ok=True)
-                    dst.write_bytes(data)
-                    if kind == 'backend':
-                        backend_count += 1
-                    else:
-                        ui_count += 1
-                except Exception as e:
-                    LOG(f"[AUTO-UPDATE] write failed {rel}: {e}")
-            try:
-                applied = self.db.apply_migrations(str(app_root))
-                if applied:
-                    LOG(f"[AUTO-UPDATE] migrations applied now: {applied}")
-            except Exception as _me:
-                LOG(f"[AUTO-UPDATE] migration apply deferred: {_me}")
-            new_ver = str(info.get('version', '') or '').strip()
-            import re as _re
-            if _re.match(r'^\d+\.\d+\.\d+$', new_ver):
-                try:
-                    set_installed_version(new_ver)
-                except Exception:
-                    pass
-            else:
-                new_ver = ''
-            total = ui_count + backend_count
-            if total == 0:
+            _applied = getattr(self, '_update_applied_version', None)
+            if _applied and _applied == info.get('version'):
+                LOG(f"[AUTO-UPDATE] Already applied v{_applied} -- skip card")
                 return {"status": "nothing_to_do"}
-            LOG(f"[AUTO-UPDATE] applied {ui_count} UI + staged {backend_count} backend (v{new_ver})")
+            import json as _j
+            r_js = {k: v for k, v in info.items() if k != "_changed"}
+            json_str = _j.dumps(r_js)
+            js = ("(function(){var d=" + json_str + ";"
+                  "if(window.__showUpdate) window.__showUpdate(d);"
+                  "window.dispatchEvent(new CustomEvent('aurum-update-available',{detail:d}));})()")
+            new_ver = str(info.get('version', '') or '').strip()
+            LOG(f"[AUTO-UPDATE] v{new_ver} available, showing update card")
+            self._last_update_files = info.get("_changed", [])
             try:
                 if self._window:
-                    self._window.evaluate_js(
-                        "window.dispatchEvent(new CustomEvent('aurum-auto-updated',"
-                        "{detail:{version:'" + new_ver + "',restart:" + ('true' if backend_count else 'false') + "}}))")
+                    self._window.evaluate_js(js)
             except Exception:
                 pass
-            return {"status": "success", "version": new_ver,
-                    "ui": ui_count, "backend": backend_count}
+            return {"status": "update_available", "version": new_ver}
         finally:
             self._auto_update_busy = False
 
     def auto_update_loop(self):
-        """Background loop: silent check at startup, then every 30 minutes."""
+        """Background loop: check at startup, then every 30 minutes. Shows card only."""
         import time as _t
         try:
-            _t.sleep(45)  # let the app settle first
-            self.auto_update_silent()
+            _t.sleep(45)
+            self.auto_update_check()
         except Exception as e:
             LOG(f"[AUTO-UPDATE] {e}")
         while not getattr(self, '_app_closing', False):
@@ -7216,7 +7160,7 @@ class AurumAPI:
                         break
                 if getattr(self, '_app_closing', False):
                     break
-                self.auto_update_silent()
+                self.auto_update_check()
             except Exception:
                 pass
 
@@ -9377,10 +9321,10 @@ def run_aur_os():
 
         threading.Thread(target=_auto_connect_scale, daemon=True).start()
 
-        # ── Silent auto-update loop (push-to-update: zero clicks) ──
+        # ── Auto-update check loop (shows card, user clicks Install) ──
         try:
             threading.Thread(target=api.auto_update_loop, daemon=True).start()
-            LOG("[STARTUP] Silent auto-update loop started")
+            LOG("[STARTUP] Auto-update check loop started")
         except Exception as _au:
             ERR(f"[STARTUP] auto-update loop failed to start: {_au}")
 
