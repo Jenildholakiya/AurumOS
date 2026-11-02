@@ -22,13 +22,15 @@ class LicenseEventListener:
 
     def __init__(self, license_key, server_url,
                  on_plan_change=None, on_status_change=None, on_connected=None,
-                 on_urgent_message=None, machine_id='', app_version=''):
+                 on_urgent_message=None, on_config_update=None,
+                 machine_id='', app_version=''):
         self.license_key = license_key
         self.server_url = server_url.rstrip('/')
         self.on_plan_change = on_plan_change
         self.on_status_change = on_status_change
         self.on_connected = on_connected
         self.on_urgent_message = on_urgent_message
+        self.on_config_update = on_config_update
         self.machine_id = machine_id
         self.app_version = app_version
         self.running = False
@@ -231,6 +233,14 @@ class LicenseEventListener:
                     self.on_urgent_message(data)
                 except Exception as e:
                     _ERR(f'on_urgent_message error: {e}')
+
+        elif event_type == 'config_update':
+            _LOG(f'CONFIG UPDATE key={data.get("config_key")} deleted={data.get("deleted", False)}')
+            if self.on_config_update:
+                try:
+                    self.on_config_update(data)
+                except Exception as e:
+                    _ERR(f'on_config_update error: {e}')
 
         else:
             _LOG(f'Unknown event type: {event_type}')

@@ -2523,6 +2523,7 @@ class AurumAPI:
                 on_status_change=self._sse_on_status_change,
                 on_connected=self._sse_on_connected,
                 on_urgent_message=self._sse_on_urgent_message,
+                on_config_update=self._sse_on_config_update,
                 machine_id=_mid,
                 app_version=CURRENT_VERSION,
             )
@@ -2595,6 +2596,30 @@ class AurumAPI:
             threading.Thread(target=self.urgent_fetch_missed, daemon=True).start()
         except Exception:
             pass
+        # Re-fetch remote config on reconnect to catch missed changes
+        try:
+            threading.Thread(target=self._refresh_remote_config, daemon=True).start()
+        except Exception:
+            pass
+
+    def _refresh_remote_config(self):
+        """Fetch remote config bundle and update the local store."""
+        try:
+            from core.remote_config import fetch_and_decrypt
+            key = getattr(self, '_sse_key', '') or self._read_license_key()
+            if not key:
+                return
+            server_url = self._get_server_url()
+            configs = fetch_and_decrypt(server_url, key)
+            if configs and hasattr(self, '_config_store'):
+                self._config_store.load_from_fetch(configs)
+        except Exception as e:
+            ERR(f'[REMOTE-CONFIG] Refresh failed: {e}')
+
+    def _sse_on_config_update(self, data):
+        """Called on config_update SSE event — re-fetch full config bundle."""
+        LOG(f'[SSE-PY] Config update event: key={data.get("config_key")}')
+        threading.Thread(target=self._refresh_remote_config, daemon=True).start()
 
     def _sse_on_plan_change(self, data):
         """Called when admin changes plan — apply features immediately."""
@@ -6816,6 +6841,16 @@ class AurumAPI:
         try: return self.db.get_out_of_stock_items()
         except Exception as e: ERR(f"[OOS] {e}"); return []
 
+    # -- REMOTE CONFIG ---------------------------------------------------------
+    def get_remote_config(self, key='', fallback=''):
+        """Bridge: read a remote config value. JS calls pywebview.api.get_remote_config('key')."""
+        store = getattr(self, '_config_store', None)
+        if not store:
+            return fallback
+        if not key:
+            return store.all()
+        return store.get_string(key, fallback)
+
     # -- UPDATE ----------------------------------------------------------------
     def check_for_update(self):
         result = check_for_update(timeout=8)
@@ -9402,6 +9437,14 @@ def run_aur_os():
                             api.start_sse_stream()
                         except Exception as _sse_err:
                             ERR(f'[LICENSE] SSE start failed: {_sse_err}')
+                        # Initialize remote config store and fetch first bundle
+                        try:
+                            from core.remote_config import ConfigStore
+                            api._config_store = ConfigStore()
+                            threading.Thread(target=api._refresh_remote_config, daemon=True).start()
+                            LOG('[REMOTE-CONFIG] Store initialized, first fetch queued')
+                        except Exception as _cfg_err:
+                            ERR(f'[REMOTE-CONFIG] Init failed: {_cfg_err}')
                         # Start subscription periodic sync
                         try:
                             api.sub.set_license_key(api._read_license_key())
