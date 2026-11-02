@@ -43,7 +43,7 @@ VERSION_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/l
 VERSION_RE = re.compile(r'^\d+\.\d+\.\d+$')
 VERSION_CHANNEL_RE = re.compile(r'^(\d+\.\d+\.\d+)(?:-(beta|rc)\.\d+)?$')
 
-FALLBACK_VERSION = "1.0.0"
+FALLBACK_VERSION = "2.0.0"
 
 PROTECTED_PATHS = {
     'database', 'logs', 'config.json', 'exe_trusted_hash.txt',
