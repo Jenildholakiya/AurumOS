@@ -347,10 +347,16 @@ def evaluate_rules(context=None):
         try:
             result = checker(rule, context)
             if result.get("violated"):
+                # ip_clone tier overrides the rule's base severity
+                severity = rule.get("severity", "warn")
+                if rule_type == "ip_clone" and result.get("clone_tier"):
+                    tier_sev = dict((n, s) for _, n, s in _CLONE_TIERS).get(result["clone_tier"])
+                    if tier_sev:
+                        severity = tier_sev
                 violations.append({
                     "rule_id": rule.get("id"),
                     "rule_type": rule_type,
-                    "severity": rule.get("severity", "warn"),
+                    "severity": severity,
                     "reason": result.get("reason", ""),
                     **{k: v for k, v in result.items() if k not in ("violated", "reason")},
                 })
