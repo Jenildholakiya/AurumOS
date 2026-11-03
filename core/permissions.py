@@ -376,7 +376,7 @@ INTERNAL = frozenset([
     'fire_revoked_screen', 'sse_handle_revoke', 'start_sse_stream',
     'subscription_sync', 'subscription_start_sync', 'subscription_poll_check',
     'subscription_startup_check', 'subscription_check_update',
-    'auto_update_check', 'auto_update_loop',
+    'auto_update_check',
     'urgent_fetch_missed', 'scale_get_saved_config',
 ])
 

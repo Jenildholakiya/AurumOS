@@ -603,15 +603,12 @@ window.addEventListener('aurum-update-done', function(e) {    var fill = documen
 });
 
 function restartApp(){if(window.pywebview&&window.pywebview.api)window.pywebview.api.restart_app();}
-window.__showUpdate=function(data){if(data&&data.available)showUpdateBanner(data);};
-window.addEventListener('aurum-update-available',function(e){if(e.detail&&e.detail.available)showUpdateBanner(e.detail);});
+// ── Check for updates once when dashboard loads ──
 window.addEventListener('aurum-version',function(e){
     if(e.detail&&e.detail.available&&e.detail.latest&&!document.getElementById('update-banner').classList.contains('visible')){
         showUpdateBanner({available:true,version:e.detail.latest,release_date:e.detail.releaseDate||'',changelog:e.detail.changelog||[]});
     }
 });
-
-// ── REALTIME: check for updates as soon as dashboard loads ──
 (function(){
     function _checkOnLoad(){
         if(!window.pywebview||!window.pywebview.api||typeof window.pywebview.api.auto_update_check!=='function'){
@@ -623,7 +620,6 @@ window.addEventListener('aurum-version',function(e){
     }
     if(document.readyState==='complete') setTimeout(_checkOnLoad,2000);
     else window.addEventListener('load',function(){setTimeout(_checkOnLoad,2000);});
-    setInterval(_checkOnLoad,5*60*1000);
 })();
 
 // ── MANUAL UPDATE CHECK ───────────────────────────────────────────
@@ -1179,9 +1175,6 @@ setTimeout(function(){
         var last=parseInt(localStorage.getItem('aurum_silent_check')||'0',10);
         if(Date.now()-last<15*60*1000) return;
         localStorage.setItem('aurum_silent_check',String(Date.now()));
-        if(window.pywebview&&window.pywebview.api&&window.pywebview.api.auto_update_silent){
-            window.pywebview.api.auto_update_silent().catch(function(){});
-        }
     }catch(e){}
 },8000);
 

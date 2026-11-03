@@ -7185,69 +7185,29 @@ class AurumAPI:
 
     # ── AUTO-UPDATE CHECK (shows update card, user clicks Install) ──────
     # Runs in background at startup + every 30 min. Only CHECKS for updates
-    # and shows the update card. The user clicks "Install" to start the
-    # actual download via start_update_with_info().
-    _auto_update_busy = False
-
     def auto_update_check(self):
-        """Check for updates and show the update card if available."""
-        if getattr(self, '_auto_update_busy', False):
-            return {"status": "busy"}
-        self._auto_update_busy = True
+        """Check for updates and return result. No background push — UI calls this on demand."""
         try:
             from updater import check_for_update as _check
         except Exception as e:
-            self._auto_update_busy = False
             return {"status": "error", "message": str(e)}
         try:
-            try:
-                info = _check(timeout=8)
-            except Exception:
-                info = None
-            if not info or not info.get('available'):
-                return {"status": "nothing_to_do"}
-            _applied = getattr(self, '_update_applied_version', None)
-            if _applied and _applied == info.get('version'):
-                LOG(f"[AUTO-UPDATE] Already applied v{_applied} -- skip card")
-                return {"status": "nothing_to_do"}
-            import json as _j
-            r_js = {k: v for k, v in info.items() if k != "_changed"}
-            json_str = _j.dumps(r_js)
-            js = ("(function(){var d=" + json_str + ";"
-                  "if(window.__showUpdate) window.__showUpdate(d);"
-                  "window.dispatchEvent(new CustomEvent('aurum-update-available',{detail:d}));})()")
-            new_ver = str(info.get('version', '') or '').strip()
-            LOG(f"[AUTO-UPDATE] v{new_ver} available, showing update card")
-            self._last_update_files = info.get("_changed", [])
-            try:
-                if self._window:
-                    self._window.evaluate_js(js)
-            except Exception:
-                pass
-            r_js["status"] = "update_available"
-            return r_js
-        finally:
-            self._auto_update_busy = False
+            info = _check(timeout=8)
+        except Exception:
+            info = None
+        if not info or not info.get('available'):
+            return {"status": "nothing_to_do"}
+        _applied = getattr(self, '_update_applied_version', None)
+        if _applied and _applied == info.get('version'):
+            LOG(f"[UPDATE] Already applied v{_applied} -- skip")
+            return {"status": "nothing_to_do"}
+        r_js = {k: v for k, v in info.items() if k != "_changed"}
+        new_ver = str(info.get('version', '') or '').strip()
+        LOG(f"[UPDATE] v{new_ver} available")
+        self._last_update_files = info.get("_changed", [])
+        r_js["status"] = "update_available"
+        return r_js
 
-    def auto_update_loop(self):
-        """Background loop: check at startup, then every 5 minutes. Shows card only."""
-        import time as _t
-        try:
-            _t.sleep(5)
-            self.auto_update_check()
-        except Exception as e:
-            LOG(f"[AUTO-UPDATE] {e}")
-        while not getattr(self, '_app_closing', False):
-            try:
-                for _ in range(5 * 60):
-                    _t.sleep(1)
-                    if getattr(self, '_app_closing', False):
-                        break
-                if getattr(self, '_app_closing', False):
-                    break
-                self.auto_update_check()
-            except Exception:
-                pass
 
 
     def reset_lockout(self) -> dict:
@@ -9406,12 +9366,6 @@ def run_aur_os():
 
         threading.Thread(target=_auto_connect_scale, daemon=True).start()
 
-        # ── Auto-update check loop (shows card, user clicks Install) ──
-        try:
-            threading.Thread(target=api.auto_update_loop, daemon=True).start()
-            LOG("[STARTUP] Auto-update check loop started")
-        except Exception as _au:
-            ERR(f"[STARTUP] auto-update loop failed to start: {_au}")
 
         # ── Silent encrypted recovery backup (every 5 minutes) ──
         try:
@@ -9565,57 +9519,6 @@ def run_aur_os():
                 daemon=True
             ).start()
 
-            _t.sleep(5)
-            try:
-                LOG("[UPDATE] Checking for updates...")
-                r = check_for_update(timeout=10)
-                # Full debug log so we can see exactly why banner shows or not
-                LOG(f"[UPDATE] check result: available={r.get('available') if r else None} "
-                    f"version={r.get('version') if r else None} "
-                    f"file_count={r.get('file_count') if r else None} "
-                    f"current={r.get('current') if r else None}")
-                if r:
-                    LOG(f"[UPDATE] full result keys: {list(r.keys())}")
-                    for k,v in r.items():
-                        if k != '_changed':
-                            LOG(f"[UPDATE]   {k} = {v!r}")
-                # Skip banner if update already applied (session flag OR marker file)
-                _applied = getattr(api, '_update_applied_version', None)
-                if not _applied:
-                    try:
-                        from updater import get_app_root as _gar2
-                        _mf = _gar2() / '.update_applied'
-                        if _mf.exists():
-                            _applied = _mf.read_text(encoding='utf-8').strip()
-                            LOG(f"[UPDATE] Marker file found: applied={_applied}")
-                    except Exception:
-                        pass
-                if _applied and r and _applied == r.get('version'):
-                    LOG(f"[UPDATE] Already applied v{_applied} -- skip banner")
-                    r['available'] = False
-
-                if r and r.get("available"):
-                    r_js     = {k:v for k,v in r.items() if k!="_changed"}
-                    json_str = _j.dumps(r_js)
-                    js = ("(function(){var d="+json_str+";"
-                          "if(window.__showUpdate) window.__showUpdate(d);"
-                          "window.dispatchEvent(new CustomEvent('aurum-update-available',{detail:d}));})()")
-                    LOG(f"[UPDATE] v{r['version']} available, {r.get('file_count',0)} files")
-                    api._last_update_files = r.get("_changed",[])
-                    for attempt in range(5):
-                        try:
-                            if api._window:
-                                api._window.evaluate_js(js)
-                                LOG(f"[UPDATE] Banner fired (attempt {attempt+1})")
-                                break
-                        except Exception as e:
-                            ERR(f"[UPDATE] Attempt {attempt+1} failed: {e}")
-                            _t.sleep(3)
-                else:
-                    LOG(f"[UPDATE] Up to date. local={CURRENT_VERSION} remote={r and r.get('version')} changed={r and r.get('file_count',0)}")
-            except Exception as e:
-                ERR(f"[UPDATE] Check error: {e}")
-                import traceback as _tb; _tb.print_exc()
 
         threading.Thread(target=_bg_check, daemon=True).start()
 
