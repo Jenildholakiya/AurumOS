@@ -1,94 +1,97 @@
-import os
-import sys
-import time
-import threading
+# -*- coding: utf-8 -*-
+"""
+Bastion Settings Sync — polls the admin REST API every 30s
+and writes toggle state into the local DB so BastionAI threads
+respect the dashboard switches.
+
+API:  GET https://aurum-os-admin.vercel.app/api/bastion-settings
+"""
+
+import threading, time, os, sys, json
 from datetime import datetime
 
-_state = {
-    "db_watchdog_enabled": True,
-    "session_guard_enabled": True,
-    "file_integrity_enabled": True,
-    "anti_debugger_enabled": True,
-    "honeypot_enabled": True,
-    "auto_healer_enabled": True,
-    "pattern_learner_enabled": True,
-    "alert_sender_enabled": True,
-}
-_lock = threading.Lock()
-_sb = None
+_API_URL = "https://aurum-os-admin.vercel.app/api/bastion-settings"
 
-# ── Log file next to your .exe or .py ──────────────
-if getattr(__builtins__, '__spec__', None):
-    # Running from EXE
-    _BASE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
+_FEATURES = [
+    "db_watchdog_enabled",
+    "session_guard_enabled",
+    "file_integrity_enabled",
+    "anti_debugger_enabled",
+    "honeypot_enabled",
+    "auto_healer_enabled",
+    "pattern_learner_enabled",
+    "alert_sender_enabled",
+    "dpdp_retention_auto_purge",
+    "dpdp_breach_notification",
+    "dpdp_consent_enforcement",
+]
+
+_lock = threading.Lock()
+_state = {k: True for k in _FEATURES}
+_db = None
+
+# ── Logging ──────────────────────────────────────────────────────
+if getattr(sys, 'frozen', False):
+    _BASE = os.path.dirname(os.path.abspath(sys.executable))
 else:
     _BASE = os.path.dirname(os.path.abspath(__file__))
 
-LOG_FILE = os.path.join(_BASE, "bastion.log")
+LOG_FILE = os.path.join(_BASE, "bastion_sync.log")
 
 
 def _log(msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] {msg}"
-    # Always write to file — works in EXE and dev
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except Exception:
         pass
-    # Also try terminal — works in dev mode
     try:
         print(line, flush=True)
     except Exception:
         pass
 
 
-def _get_sb():
-    global _sb
-    if _sb:
-        return _sb
-    try:
-        from supabase import create_client
-        url = os.environ.get("SUPABASE_URL", "")
-        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "") or os.environ.get("SUPABASE_ANON_KEY", "")
-        if url and key:
-            _sb = create_client(url, key)
-            _log("Connected to Supabase")
-        else:
-            _log("WARNING: SUPABASE_URL or KEY not set")
-    except Exception as e:
-        _log(f"Supabase init failed: {e}")
-    return _sb
-
+# ── Public API ───────────────────────────────────────────────────
 
 def is_enabled(feature_id: str) -> bool:
     with _lock:
         return _state.get(feature_id, True)
 
 
-def _poll():
-    sb = _get_sb()
-    if not sb:
-        return
+def _fetch():
+    """GET the admin REST API and return the data dict, or None."""
+    import urllib.request
     try:
-        res = (
-            sb.table("global_bastion_settings")
-            .select("*")
-            .eq("id", 1)
-            .single()
-            .execute()
-        )
-        if res.data:
-            with _lock:
-                for key in _state:
-                    if key in res.data:
-                        old = _state[key]
-                        new = bool(res.data[key])
-                        if old != new:
-                            _log(f"⚡ {key}: {'ON' if old else 'OFF'} → {'ON' if new else 'OFF'}")
-                        _state[key] = new
+        req = urllib.request.Request(_API_URL, method="GET")
+        req.add_header("Accept", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+        if body.get("status") == "ok" and body.get("data"):
+            return body["data"]
     except Exception as e:
-        _log(f"Sync error: {e}")
+        _log(f"Fetch error: {e}")
+    return None
+
+
+def _poll():
+    data = _fetch()
+    if not data:
+        return
+    with _lock:
+        for key in _FEATURES:
+            if key in data:
+                old = _state[key]
+                new = bool(data[key])
+                if old != new:
+                    _log(f"⚡ {key}: {'ON' if old else 'OFF'} → {'ON' if new else 'OFF'}")
+                    if _db:
+                        try:
+                            _db.set_global_setting(key, new)
+                        except Exception as e:
+                            _log(f"DB write failed for {key}: {e}")
+                _state[key] = new
 
 
 def _loop(interval):
@@ -97,10 +100,13 @@ def _loop(interval):
         time.sleep(interval)
 
 
-def start_sync(interval=30):
+def start_sync(db_manager=None, interval=30):
+    """Start the background sync. Pass db_manager so toggles persist locally."""
+    global _db
+    _db = db_manager
     _log("=" * 40)
-    _log("BASTION SYNC STARTING")
-    _log(f"Log: {LOG_FILE}")
+    _log("BASTION SETTINGS SYNC STARTING")
+    _log(f"API: {_API_URL}")
     _poll()
     for k, v in _state.items():
         _log(f"  {'✅' if v else '❌'} {k}")

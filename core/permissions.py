@@ -87,6 +87,12 @@ OWNER_ONLY = frozenset([
     'export_backup', 'get_backup_progress', 'reveal_backup',
     'pick_backup_file', 'import_backup', 'get_restore_progress',
     'export_shop_data',
+    # DPDP Act compliance — owner-only operations
+    'dpdp_set_dpo_info', 'dpdp_process_rights_request',
+    'dpdp_view_breaches', 'dpdp_mark_breach_notified',
+    'dpdp_update_transfer_policy', 'dpdp_run_retention_purge',
+    'dpdp_get_compliance_status', 'dpdp_export_personal_data',
+    'dpdp_execute_erasure',
 ])
 
 
@@ -109,6 +115,10 @@ ALWAYS = frozenset([
     'logout', 'quit_app', 'restart_app', 'js_log', 'get_local_ip',
     'get_notifications', 'mark_notification_read',
     'mark_all_notifications_read', 'get_trial_status',
+    # DPDP — every data principal can exercise their own rights
+    'dpdp_get_privacy_notice', 'dpdp_get_my_consents',
+    'dpdp_withdraw_consent', 'dpdp_submit_rights_request',
+    'dpdp_get_my_requests', 'dpdp_get_dpo_info',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
 ])

@@ -1122,6 +1122,23 @@ class AurumAPI:
             LOG(f"[BASTION_AI] Start skipped: {_be}")
             self.bastion = BastionAI(self.db)
 
+        # ── DPDP Compliance: Initialize retention scheduler ────────
+        try:
+            from core.dpdp_compliance import run_retention_purge
+            def _dpdp_retention_loop():
+                import time as _t
+                while True:
+                    try:
+                        run_retention_purge()
+                    except Exception:
+                        pass
+                    _t.sleep(86400)  # once per day
+            _dpdp_t = threading.Thread(target=_dpdp_retention_loop, daemon=True)
+            _dpdp_t.start()
+            LOG("[DPDP] Retention scheduler started")
+        except Exception as _de:
+            LOG(f"[DPDP] Retention scheduler skipped: {_de}")
+
         self._window = None
         self.TEMP_KEY = "aurum-dev-2026"
         self.tag_factory = TagFactory()
@@ -2478,6 +2495,101 @@ class AurumAPI:
     def _get_license_check_url(self):
         """License check ALWAYS goes to the production server."""
         return 'https://aurum-os-admin.vercel.app'
+
+    # ── DPDP Act 2023 Compliance API ─────────────────────────────
+    def _get_principal_id(self):
+        try:
+            row = self.db._get_connection().execute(
+                "SELECT value FROM app_config WHERE key='machine_fingerprint'"
+            ).fetchone()
+            return (row[0] if row else '') or 'unknown'
+        except Exception:
+            return 'unknown'
+
+    def dpdp_get_compliance_status(self):
+        from core.dpdp_compliance import get_compliance_status
+        return get_compliance_status()
+
+    def dpdp_get_my_consents(self):
+        from core.dpdp_compliance import get_all_consents
+        return get_all_consents(self._get_principal_id())
+
+    def dpdp_save_consents(self, consents):
+        from core.dpdp_compliance import record_bulk_consent
+        return record_bulk_consent(self._get_principal_id(), consents,
+                                   method='ui')
+
+    def dpdp_withdraw_consent(self, purpose):
+        from core.dpdp_compliance import withdraw_consent
+        return withdraw_consent(self._get_principal_id(), purpose)
+
+    def dpdp_get_privacy_notice(self):
+        from core.dpdp_compliance import get_privacy_notice
+        return get_privacy_notice()
+
+    def dpdp_submit_rights_request(self, request_type, details):
+        from core.dpdp_compliance import submit_rights_request
+        return submit_rights_request(self._get_principal_id(), request_type,
+                                     details, self._session_username or '')
+
+    def dpdp_get_my_requests(self):
+        from core.dpdp_compliance import get_rights_requests
+        return get_rights_requests(self._get_principal_id())
+
+    def dpdp_get_dpo_info(self):
+        from core.dpdp_compliance import get_dpo_info
+        return get_dpo_info()
+
+    def dpdp_set_dpo_info(self, name='', email='', phone='',
+                          org_name='', org_address=''):
+        from core.dpdp_compliance import set_dpo_info
+        return set_dpo_info(name, email, phone, org_name, org_address)
+
+    def dpdp_get_purpose_registry(self):
+        from core.dpdp_compliance import get_purpose_registry
+        return get_purpose_registry()
+
+    def dpdp_get_transfer_policies(self):
+        from core.dpdp_compliance import get_transfer_policies
+        return get_transfer_policies()
+
+    def dpdp_view_breaches(self):
+        from core.dpdp_compliance import get_breaches
+        return get_breaches()
+
+    def dpdp_mark_breach_notified(self, breach_id, board=False, principals=False):
+        from core.dpdp_compliance import mark_breach_notified
+        return mark_breach_notified(breach_id, board, principals)
+
+    def dpdp_process_rights_request(self, request_id, response, status='completed'):
+        from core.dpdp_compliance import process_rights_request
+        return process_rights_request(request_id, response,
+                                      self._session_username or 'owner', status)
+
+    def dpdp_run_retention_purge(self):
+        from core.dpdp_compliance import run_retention_purge
+        return run_retention_purge()
+
+    def dpdp_get_compliance_status(self):
+        from core.dpdp_compliance import get_compliance_status
+        return get_compliance_status()
+
+    def dpdp_export_personal_data(self):
+        from core.dpdp_compliance import execute_access_request
+        return execute_access_request(self._get_principal_id())
+
+    def dpdp_execute_erasure(self, categories=None):
+        from core.dpdp_compliance import execute_erasure_request
+        return execute_erasure_request(self._get_principal_id(), categories)
+
+    def dpdp_download_privacy_notice(self):
+        from core.dpdp_compliance import get_privacy_notice_html
+        html = get_privacy_notice_html()
+        path = os.path.join(self.db.db_dir, 'privacy_notice.html')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>Privacy Notice</title></head><body>{html}</body></html>')
+        return path
+
     def start_sse_stream(self):
         """Start Python SSE listener for real-time license events.
         Called from _bg_check after the first successful license verification."""

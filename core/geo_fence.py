@@ -258,6 +258,13 @@ def enforce(license_key="", api_ref=None):
 
     if result["allowed"]:
         _log(f"License allowed in {cc}")
+        try:
+            from core.dpdp_compliance import is_transfer_allowed
+            xfer = is_transfer_allowed(cc)
+            if not xfer['allowed']:
+                _log(f"[DPDP] Cross-border transfer blocked for {cc}: {xfer['reason']}")
+        except Exception:
+            pass
         return {"allowed": True, "action": "none", "country_code": cc}
 
     action = result["action"]

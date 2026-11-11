@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS — DPDP Compliance Centre</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--cream3:#e2e8f0;
+  --white:#fff;--ink:#0f172a;--ink2:#1e293b;--ink3:#64748b;
+  --blue:#2563eb;--blue2:#3b82f6;--blue3:#1d4ed8;
+  --blue-ln:rgba(37,99,235,0.18);--blue-bg:rgba(37,99,235,0.06);
+  --rule:rgba(15,23,42,0.08);
+  --muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.07);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,0.07);
+  --sh:0 1px 3px rgba(15,23,42,0.04),0 4px 16px rgba(15,23,42,0.06);
+  --sans:"DM Sans",system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;padding:24px 16px 60px;}
+.wrap{max-width:900px;margin:0 auto;}
+
+/* Back */
+.back-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:var(--white);border:1px solid var(--rule);border-radius:8px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:20px;transition:all .15s;}
+.back-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:32px;}
+.hdr h1{font-size:1.6rem;font-weight:700;color:var(--ink);}
+.hdr p{font-size:0.85rem;color:var(--ink3);margin-top:6px;}
+.badge{display:inline-block;padding:4px 12px;background:var(--green-bg);color:var(--green);border-radius:20px;font-size:0.7rem;font-weight:700;margin-top:8px;}
+.badge.warn{background:var(--amber-bg);color:var(--amber);}
+.badge.err{background:var(--red-bg);color:var(--red);}
+
+/* Card */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--sh);padding:24px 28px;margin-bottom:20px;}
+.card h2{font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--ink);display:flex;align-items:center;gap:10px;}
+.card h2 .ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+
+/* Consent toggles */
+.consent-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule);}
+.consent-row:last-child{border-bottom:none;}
+.consent-label{font-size:0.85rem;font-weight:500;}
+.consent-label small{display:block;font-size:0.72rem;color:var(--muted);font-weight:400;margin-top:2px;}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle .slider{position:absolute;inset:0;background:var(--cream3);border-radius:24px;cursor:pointer;transition:.2s;}
+.toggle .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+.toggle input:checked+.slider{background:var(--blue);}
+.toggle input:checked+.slider::before{transform:translateX(20px);}
+.toggle input:disabled+.slider{opacity:0.5;cursor:not-allowed;}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:8px;}
+.tbl th{text-align:left;padding:8px 10px;background:var(--cream);font-weight:600;border-bottom:2px solid var(--blue-ln);}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--rule);}
+
+/* Form */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:0.78rem;font-weight:600;color:var(--ink2);margin-bottom:4px;}
+.form-group select,.form-group textarea,.form-group input[type=text]{width:100%;padding:8px 12px;border:1px solid var(--cream3);border-radius:8px;font-family:var(--sans);font-size:0.82rem;background:var(--cream);resize:vertical;}
+.btn{padding:8px 20px;border:none;border-radius:8px;font-family:var(--sans);font-weight:600;font-size:0.8rem;cursor:pointer;transition:all .15s;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover{background:var(--blue3);}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{opacity:0.9;}
+.btn-outline{background:transparent;border:1px solid var(--blue);color:var(--blue);}
+.btn-outline:hover{background:var(--blue-bg);}
+
+/* Status */
+.status-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:0.82rem;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.green{background:var(--green);}.dot.amber{background:var(--amber);}.dot.red{background:var(--red);}
+
+/* Toast */
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:0.8rem;font-weight:500;color:#fff;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.success{background:var(--green);}.toast.error{background:var(--red);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="back-btn" onclick="pywebview.api.navigate('hm_centre.html')">← Back to Home</button>
+
+  <div class="hdr">
+    <h1>DPDP Compliance Centre</h1>
+    <p>Digital Personal Data Protection Act, 2023 — Manage your data rights</p>
+    <div class="badge" id="compliance-badge">Loading...</div>
+  </div>
+
+  <!-- COMPLIANCE STATUS -->
+  <div class="card" id="status-card">
+    <h2><span class="ico" style="background:var(--blue-bg);color:var(--blue);">📊</span> Compliance Status</h2>
+    <div id="status-rows"></div>
+  </div>
+
+  <!-- CONSENT MANAGEMENT -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--green-bg);color:var(--green);">✓</span> Consent Management</h2>
+    <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:14px;">Manage your data processing consents. Required items cannot be disabled while the software is active.</p>
+    <div id="consent-list"></div>
+    <div style="margin-top:14px;text-align:right;">
+      <button class="btn btn-blue" onclick="saveConsents()">Save Consent Preferences</button>
+    </div>
+  </div>
+
+  <!-- PRIVACY NOTICE -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--blue-bg);color:var(--blue);">📄</span> Privacy Notice</h2>
+    <div id="privacy-notice" style="font-size:0.82rem;line-height:1.7;"></div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-outline" onclick="downloadNotice()">Download Privacy Notice (PDF)</button>
+    </div>
+  </div>
+
+  <!-- DATA RIGHTS -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--amber-bg);color:var(--amber);">⚖</span> Exercise Your Rights</h2>
+    <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:14px;">Submit a request under the DPDP Act to access, correct, or erase your personal data.</p>
+    <div class="form-group">
+      <label>Request Type</label>
+      <select id="req-type">
+        <option value="access">Right to Access (Section 11) — Get a copy of my data</option>
+        <option value="correction">Right to Correction (Section 12) — Fix inaccurate data</option>
+        <option value="erasure">Right to Erasure (Section 13) — Delete my data</option>
+        <option value="grievance">Grievance (Section 14) — File a complaint</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Details (describe what data or what correction needed)</label>
+      <textarea id="req-details" rows="3" placeholder="Please describe your request..."></textarea>
+    </div>
+    <button class="btn btn-blue" onclick="submitRequest()">Submit Request</button>
+
+    <div style="margin-top:20px;">
+      <h3 style="font-size:0.85rem;font-weight:600;margin-bottom:8px;">My Requests</h3>
+      <table class="tbl" id="requests-table">
+        <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Submitted</th></tr></thead>
+        <tbody id="requests-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DPO INFO -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--green-bg);color:var(--green);">👤</span> Data Protection Officer</h2>
+    <div id="dpo-info" style="font-size:0.85rem;line-height:1.8;"></div>
+  </div>
+
+  <!-- DATA RETENTION -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--amber-bg);color:var(--amber);">🕐</span> Data Retention Schedule</h2>
+    <table class="tbl">
+      <thead><tr><th>Data Category</th><th>Purpose</th><th>Retention Period</th><th>Legal Basis</th></tr></thead>
+      <tbody id="retention-body"></tbody>
+    </table>
+  </div>
+
+  <!-- CROSS-BORDER -->
+  <div class="card">
+    <h2><span class="ico" style="background:var(--red-bg);color:var(--red);">🌍</span> Cross-Border Transfer Policy</h2>
+    <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:10px;">Data transfer restrictions per Section 16 of the DPDP Act.</p>
+    <div id="transfer-policy"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function toast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+const CONSENTS=[
+  {id:'license_validation',label:'License Validation',desc:'Hardware fingerprint for license binding',required:true},
+  {id:'behavioral_monitoring',label:'Security Monitoring',desc:'Bastion AI behavioral analysis',required:true},
+  {id:'geo_fence',label:'Geo-Fence',desc:'IP-based location for territory enforcement',required:true},
+  {id:'login_audit',label:'Login Audit',desc:'Login timestamps and security events',required:true},
+  {id:'telemetry',label:'Telemetry',desc:'Anonymized health data for software improvement',required:false},
+  {id:'crm',label:'CRM Data',desc:'Customer information for business management',required:false},
+  {id:'whatsapp',label:'WhatsApp Integration',desc:'Contact numbers for order notifications',required:false},
+  {id:'backup',label:'Encrypted Backups',desc:'Automatic vault backups for data recovery',required:false},
+];
+
+let consentState={};
+
+async function loadAll(){
+  try{
+    // Load compliance status
+    const status=await pywebview.api.dpdp_get_compliance_status();
+    renderStatus(status);
+    // Load consents
+    const consents=await pywebview.api.dpdp_get_my_consents();
+    renderConsents(consents);
+    // Load privacy notice
+    const notice=await pywebview.api.dpdp_get_privacy_notice();
+    renderNotice(notice);
+    // Load requests
+    const reqs=await pywebview.api.dpdp_get_my_requests();
+    renderRequests(reqs);
+    // Load DPO
+    const dpo=await pywebview.api.dpdp_get_dpo_info();
+    renderDPO(dpo);
+    // Load retention
+    const retention=await pywebview.api.dpdp_get_purpose_registry();
+    renderRetention(retention);
+    // Load transfer policy
+    const transfers=await pywebview.api.dpdp_get_transfer_policies();
+    renderTransfers(transfers);
+  }catch(e){console.error('DPDP load error:',e);}
+}
+
+function renderStatus(s){
+  const badge=document.getElementById('compliance-badge');
+  if(s.overall==='compliant'){badge.textContent='COMPLIANT';badge.className='badge';}
+  else if(s.overall==='partial'){badge.textContent='PARTIALLY COMPLIANT';badge.className='badge warn';}
+  else{badge.textContent='NON-COMPLIANT';badge.className='badge err';}
+  const rows=document.getElementById('status-rows');
+  const checks=[
+    {label:'Consent Records',ok:!s.gaps.includes('consent_incomplete')},
+    {label:'DPO Configured',ok:!s.gaps.includes('dpo_not_configured')},
+    {label:'Purpose Registry',ok:!s.gaps.includes('no_purpose_registry')},
+    {label:'No Pending Rights Requests',ok:!s.gaps.some(g=>g.startsWith('pending_requests'))},
+    {label:'No Open Breaches',ok:!s.gaps.some(g=>g.startsWith('open_breaches'))},
+  ];
+  rows.innerHTML=checks.map(c=>`<div class="status-row"><div class="dot ${c.ok?'green':'amber'}"></div>${c.label}</div>`).join('');
+}
+
+function renderConsents(existing){
+  const map={};
+  (existing||[]).forEach(c=>map[c.purpose]=c.consent_given===1);
+  const el=document.getElementById('consent-list');
+  el.innerHTML=CONSENTS.map(c=>{
+    const checked=c.required||map[c.id];
+    consentState[c.id]=!!checked;
+    return `<div class="consent-row">
+      <div class="consent-label">${c.label}${c.required?' <span style="color:var(--red);font-size:0.7rem;">(Required)</span>':''}<small>${c.desc}</small></div>
+      <label class="toggle"><input type="checkbox" ${checked?'checked':''} ${c.required?'disabled':''} onchange="consentState['${c.id}']=this.checked"><span class="slider"></span></label>
+    </div>`;
+  }).join('');
+}
+
+async function saveConsents(){
+  try{
+    await pywebview.api.dpdp_save_consents(consentState);
+    toast('Consent preferences saved');
+  }catch(e){toast('Error saving consents','error');}
+}
+
+function renderNotice(n){
+  const el=document.getElementById('privacy-notice');
+  let html=`<p><strong>Version:</strong> ${n.version} &nbsp;|&nbsp; <strong>Last Updated:</strong> ${n.last_updated}</p>`;
+  html+=`<p style="margin-top:8px;"><strong>Data Fiduciary:</strong> ${n.data_fiduciary}</p>`;
+  html+=`<h4 style="margin-top:14px;font-size:0.85rem;">Data We Collect</h4>`;
+  html+=`<table class="tbl"><thead><tr><th>Category</th><th>Purpose</th><th>Retention</th></tr></thead><tbody>`;
+  n.data_collected.forEach(d=>{html+=`<tr><td>${d.category}</td><td>${d.purpose}</td><td>${d.retention}</td></tr>`;});
+  html+=`</tbody></table>`;
+  html+=`<h4 style="margin-top:14px;font-size:0.85rem;">Your Rights</h4><ul style="margin:6px 0 0 18px;">`;
+  n.rights.forEach(r=>{html+=`<li>${r}</li>`;});
+  html+=`</ul>`;
+  html+=`<p style="margin-top:12px;"><strong>Cross-Border:</strong> ${n.cross_border}</p>`;
+  el.innerHTML=html;
+}
+
+function renderRequests(reqs){
+  const body=document.getElementById('requests-body');
+  if(!reqs||!reqs.length){body.innerHTML='<tr><td colspan="4" style="color:var(--muted);text-align:center;">No requests submitted</td></tr>';return;}
+  body.innerHTML=reqs.map(r=>`<tr>
+    <td style="font-family:monospace;font-size:0.72rem;">${r.request_id}</td>
+    <td>${r.request_type}</td>
+    <td><span class="badge ${r.status==='completed'?'':'warn'}">${r.status}</span></td>
+    <td>${new Date(r.submitted_at).toLocaleDateString()}</td>
+  </tr>`).join('');
+}
+
+function renderDPO(d){
+  const el=document.getElementById('dpo-info');
+  if(!d.name&&!d.email){
+    el.innerHTML='<p style="color:var(--amber);">DPO not yet configured. The owner should set this in Settings → DPDP Compliance.</p>';
+    return;
+  }
+  el.innerHTML=`<p><strong>Name:</strong> ${d.name||'—'}</p>
+    <p><strong>Email:</strong> ${d.email||'—'}</p>
+    <p><strong>Phone:</strong> ${d.phone||'—'}</p>
+    <p><strong>Organization:</strong> ${d.org_name||'—'}</p>
+    <p><strong>Address:</strong> ${d.org_address||'—'}</p>`;
+}
+
+function renderRetention(items){
+  const body=document.getElementById('retention-body');
+  body.innerHTML=(items||[]).map(i=>`<tr>
+    <td>${i.data_category.replace(/_/g,' ')}</td>
+    <td style="font-size:0.78rem;">${i.purpose}</td>
+    <td>${i.retention_days>0?i.retention_days+' days':'License duration'}</td>
+    <td><span class="badge">${i.legal_basis}</span></td>
+  </tr>`).join('');
+}
+
+function renderTransfers(items){
+  const el=document.getElementById('transfer-policy');
+  el.innerHTML=(items||[]).map(i=>`<div class="status-row">
+    <div class="dot ${i.allowed?'green':'red'}"></div>
+    <strong>${i.destination==='ALL'?'All Countries':i.destination}</strong>: ${i.restriction} — ${i.reason}
+  </div>`).join('');
+}
+
+async function submitRequest(){
+  const type=document.getElementById('req-type').value;
+  const details=document.getElementById('req-details').value;
+  if(!details.trim()){toast('Please describe your request','error');return;}
+  try{
+    const id=await pywebview.api.dpdp_submit_rights_request(type,details);
+    if(id){toast('Request submitted: '+id);document.getElementById('req-details').value='';loadAll();}
+    else toast('Failed to submit request','error');
+  }catch(e){toast('Error: '+e,'error');}
+}
+
+async function downloadNotice(){
+  try{await pywebview.api.dpdp_download_privacy_notice();toast('Privacy notice saved');}
+  catch(e){toast('Download not available yet','error');}
+}
+
+window.addEventListener('pywebviewready',loadAll);
+</script>
+</body>
+</html>

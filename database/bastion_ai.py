@@ -310,17 +310,17 @@ class BastionAI:
 
     # Inside BastionAI class
     def _is_feature_enabled(self, feature_id):
-        """
-        Checks the Global Master Config in Supabase.
-        If the client is offline, it falls back to the last cached setting.
-        """
+        """Check whether a Bastion feature is enabled via the sync module
+        (fed by the admin REST API), falling back to local DB."""
         try:
-            # Example API call to your Supabase/Vercel proxy
-            # This function fetches the master config for ALL clients
-            settings = self.db.get_global_settings()
-            return settings.get(feature_id, True)
-        except:
-            return True  # Default to ON if network is down (Fail-safe)
+            from core.bastion_sync import is_enabled
+            return is_enabled(feature_id)
+        except Exception:
+            pass
+        try:
+            return self.db.get_global_settings().get(feature_id, True)
+        except Exception:
+            return True
 
     def _runner(self, name, target, interval):
         while self._running:
@@ -1012,6 +1012,11 @@ class BastionAI:
                 action_taken = 'SUSPENDED'
             )
             self._auto_suspend(attack_type, detail)
+            try:
+                from core.dpdp_compliance import check_for_breach_conditions
+                check_for_breach_conditions(95, attack_type, detail)
+            except Exception:
+                pass
             return
 
         if action == 'RESTRICT':
@@ -1023,6 +1028,11 @@ class BastionAI:
                 detail     = f"[RESTRICTED L{level}] {detail}",
                 action_taken = 'RESTRICTED'
             )
+            try:
+                from core.dpdp_compliance import check_for_breach_conditions
+                check_for_breach_conditions(70, attack_type, detail)
+            except Exception:
+                pass
             self._queue_alert(
                 subject = 'AurumOS BASTION: Restricted Mode Engaged',
                 severity = SEV_HIGH,
