@@ -119,6 +119,8 @@ ALWAYS = frozenset([
     'dpdp_get_privacy_notice', 'dpdp_get_my_consents',
     'dpdp_withdraw_consent', 'dpdp_submit_rights_request',
     'dpdp_get_my_requests', 'dpdp_get_dpo_info',
+    'dpdp_check_first_launch', 'dpdp_fetch_remote_privacy',
+    'dpdp_sync_all_consents',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
 ])

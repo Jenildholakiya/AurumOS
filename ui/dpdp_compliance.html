@@ -103,8 +103,12 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
     <h2><span class="ico" style="background:var(--green-bg);color:var(--green);">✓</span> Consent Management</h2>
     <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:14px;">Manage your data processing consents. Required items cannot be disabled while the software is active.</p>
     <div id="consent-list"></div>
-    <div style="margin-top:14px;text-align:right;">
-      <button class="btn btn-blue" onclick="saveConsents()">Save Consent Preferences</button>
+    <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+      <span id="sync-status" style="font-size:0.75rem;color:var(--ink3);"></span>
+      <div>
+        <button class="btn" style="margin-right:8px;" onclick="syncConsents()">Sync with Server</button>
+        <button class="btn btn-blue" onclick="saveConsents()">Save Consent Preferences</button>
+      </div>
     </div>
   </div>
 
@@ -250,7 +254,19 @@ async function saveConsents(){
   try{
     await pywebview.api.dpdp_save_consents(consentState);
     toast('Consent preferences saved');
+    syncConsents();
   }catch(e){toast('Error saving consents','error');}
+}
+
+async function syncConsents(){
+  const el=document.getElementById('sync-status');
+  el.textContent='Syncing with server…';
+  try{
+    const r=await pywebview.api.dpdp_sync_all_consents();
+    if(r&&r.synced!=null) el.textContent=`Synced ${r.synced} consent(s) with server`;
+    else el.textContent='Sync error';
+    setTimeout(()=>{el.textContent='';},5000);
+  }catch(e){el.textContent='Server unreachable';setTimeout(()=>{el.textContent='';},5000);}
 }
 
 function renderNotice(n){

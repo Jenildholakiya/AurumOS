@@ -14,11 +14,35 @@ Addresses all 8 identified compliance gaps:
 import json
 import os
 import sqlite3
+import threading
 import uuid
 from datetime import datetime, timedelta
 
 _LOG = lambda m: print(f'[DPDP] {m}', flush=True)
 _ERR = lambda m: print(f'[DPDP-ERR] {m}', flush=True)
+
+
+def _remote_fire(fn, *args, **kwargs):
+    """Run a dpdp_remote function in a background thread (fire-and-forget)."""
+    def _run():
+        try:
+            fn(*args, **kwargs)
+        except Exception:
+            pass
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _get_license_key():
+    """Read the license key from app_config for remote API calls."""
+    try:
+        conn = _get_db()
+        row = conn.execute(
+            "SELECT value FROM app_config WHERE key='license_key'"
+        ).fetchone()
+        conn.close()
+        return (row[0] if row else '') or ''
+    except Exception:
+        return ''
 
 NOTICE_VERSION = '1.0.0'
 
@@ -85,6 +109,13 @@ def record_consent(principal_id: str, purpose: str, given: bool,
         conn.commit()
         conn.close()
         _LOG(f"Consent {'given' if given else 'withdrawn'}: {purpose} for {principal_id[:16]}...")
+        try:
+            from core.dpdp_remote import sync_consent
+            lk = _get_license_key()
+            if lk:
+                _remote_fire(sync_consent, lk, purpose, given, ip_address)
+        except Exception:
+            pass
         return True
     except Exception as e:
         _ERR(f"record_consent: {e}")
@@ -125,6 +156,14 @@ def record_bulk_consent(principal_id: str, consents: dict,
         conn.commit()
         conn.close()
         _LOG(f"Bulk consent recorded for {principal_id[:16]}...: {len(consents)} purposes")
+        try:
+            from core.dpdp_remote import sync_consent
+            lk = _get_license_key()
+            if lk:
+                for p, g in consents.items():
+                    _remote_fire(sync_consent, lk, p, g, ip_address)
+        except Exception:
+            pass
         return True
     except Exception as e:
         _ERR(f"record_bulk_consent: {e}")
@@ -188,7 +227,40 @@ def is_consent_required() -> bool:
 # ═════════════════════════════════════════════════════════
 
 def get_privacy_notice() -> dict:
-    """Return the structured privacy notice content for display."""
+    """Return the structured privacy notice content for display.
+
+    Tries the remote admin API first and caches it; falls back to
+    the local hardcoded notice when the server is unreachable.
+    """
+    try:
+        conn = _get_db()
+        cached = conn.execute(
+            "SELECT value FROM app_config WHERE key='dpdp_remote_privacy_notice'"
+        ).fetchone()
+        conn.close()
+        if cached and cached[0]:
+            remote = json.loads(cached[0])
+            if remote:
+                return remote
+    except Exception:
+        pass
+    try:
+        from core.dpdp_remote import fetch_privacy_notice
+        remote = fetch_privacy_notice()
+        if remote and isinstance(remote, dict):
+            try:
+                conn = _get_db()
+                conn.execute(
+                    "INSERT OR REPLACE INTO app_config(key,value) VALUES(?,?)",
+                    ('dpdp_remote_privacy_notice', json.dumps(remote))
+                )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            return remote
+    except Exception:
+        pass
     dpo = get_dpo_info()
     return {
         'version': NOTICE_VERSION,
@@ -295,6 +367,26 @@ def submit_rights_request(principal_id: str, request_type: str,
         conn.commit()
         conn.close()
         _LOG(f"Rights request {request_id}: {request_type} from {principal_id[:16]}...")
+        try:
+            from core.dpdp_remote import submit_dsr
+            lk = _get_license_key()
+            if lk:
+                def _sync_dsr():
+                    r = submit_dsr(lk, request_type, details)
+                    if r and r.get('request_id'):
+                        try:
+                            c = _get_db()
+                            c.execute(
+                                "UPDATE dpdp_rights_requests SET response=? WHERE request_id=?",
+                                (f"remote_id:{r['request_id']}", request_id)
+                            )
+                            c.commit()
+                            c.close()
+                        except Exception:
+                            pass
+                _remote_fire(_sync_dsr)
+        except Exception:
+            pass
         return request_id
     except Exception as e:
         _ERR(f"submit_rights_request: {e}")

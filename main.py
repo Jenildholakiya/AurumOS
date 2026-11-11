@@ -2590,6 +2590,34 @@ class AurumAPI:
             f.write(f'<!DOCTYPE html><html><head><meta charset="utf-8"><title>Privacy Notice</title></head><body>{html}</body></html>')
         return path
 
+    def dpdp_check_first_launch(self):
+        from core.dpdp_compliance import is_consent_required
+        return {'consent_required': is_consent_required()}
+
+    def dpdp_fetch_remote_privacy(self):
+        try:
+            from core.dpdp_remote import fetch_privacy_notice
+            return fetch_privacy_notice() or {}
+        except Exception:
+            return {}
+
+    def dpdp_sync_all_consents(self):
+        try:
+            from core.dpdp_compliance import get_all_consents
+            from core.dpdp_remote import sync_consent
+            pid = self._get_principal_id()
+            lk = self._read_license_key()
+            if not lk:
+                return {'synced': 0}
+            consents = get_all_consents(pid)
+            count = 0
+            for c in consents:
+                sync_consent(lk, c['purpose'], bool(c.get('consent_given')))
+                count += 1
+            return {'synced': count}
+        except Exception as e:
+            return {'error': str(e)}
+
     def start_sse_stream(self):
         """Start Python SSE listener for real-time license events.
         Called from _bg_check after the first successful license verification."""
