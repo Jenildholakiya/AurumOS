@@ -3981,7 +3981,8 @@ class DBManager:
         _rm(photos_dir, 'photos')
 
         # ── Subscription / SSE caches beside the DB ──
-        for name in ('.subscription_cache', '.subscription_state.json', '.sse_cache'):
+        for name in ('.subscription_cache', '.subscription_state.json', '.sse_cache',
+                     '.revoked', '.license_key'):
             _rm(os.path.join(self.db_dir, name), name)
 
         # ── Exports folder ──

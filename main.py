@@ -2281,15 +2281,20 @@ class AurumAPI:
                 return "error"
             return flag_reason if flag_reason in ("revoked","invalid","not_found","expired") else "revoked"
 
-        # No flag, no key: check if setup was done (implies key was removed)
+        # No flag, no key: check if this is a key-removed scenario vs fresh install
         if not key or not _is_valid_key_format(key):
             try:
                 setup_done = self.db.is_setup_done()
             except Exception:
                 setup_done = False
             if setup_done:
-                LOG("[LICENSE] No key but setup was done — admin likely deleted license")
-                return "not_found"
+                # Only treat as admin-deleted if there's evidence a key existed before:
+                # subscription state file exists (meaning the app was activated once)
+                state_file = os.path.join(base, 'database', '.subscription_state.json')
+                if os.path.exists(state_file):
+                    LOG("[LICENSE] No key but setup+state file exist — admin likely deleted license")
+                    return "not_found"
+                LOG("[LICENSE] No key, setup done, no state file — fresh install or transfer")
             LOG("[LICENSE] No key available -- skip check")
             return "ok"
 
@@ -9489,6 +9494,16 @@ def run_aur_os():
 
     if not is_ready:
         initial_file="setup.html"; startup_reason=None
+        # Fresh install / foreign machine — clear any stale license artifacts
+        try:
+            _base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.abspath('.')
+            for _f in ('.revoked', '.license_key'):
+                _fp = os.path.join(_base, 'database', _f)
+                if os.path.exists(_fp):
+                    os.remove(_fp)
+                    LOG(f'[STARTUP] Cleared stale {_f} for fresh setup')
+        except Exception:
+            pass
     else:
         LOG("[LICENSE] === PRE-LAUNCH REVOCATION CHECK (local-only, fast) ===")
         # Local-only: instant. The remote revocation check runs on the
