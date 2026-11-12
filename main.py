@@ -3358,18 +3358,43 @@ class AurumAPI:
                 'status': state.get('status', 'unknown'),
                 'expiry_ms': state.get('trial_end_ms'),
                 'effective_plan': state.get('effective_plan', 'lite'),
-                'remaining_days': state.get('subscription', {}).get('remaining_days', 0)
+                'remaining_days': state.get('subscription', {}).get('remaining_days', 0),
+                'trial_end_ms': state.get('trial_end_ms'),
             }
+            # Try trial_manager module (cached from _bg_check)
             try:
                 from core.trial_manager import get_status as _tm_status
                 tm = _tm_status()
                 if tm.get('is_trial'):
+                    result['is_trial'] = True
                     result['days_remaining'] = tm.get('days_remaining', 0)
+                    result['trial_end_ms'] = tm.get('trial_end_ms')
+                    result['expiry_ms'] = tm.get('trial_end_ms')
                     result['machine_bound'] = tm.get('machine_bound', False)
                     result['degraded'] = tm.get('degraded', False)
                     result['cache_stale'] = tm.get('cache_stale', False)
             except Exception:
                 pass
+            # If still no trial, try direct server check
+            if not result['is_trial']:
+                try:
+                    key = self._read_license_key()
+                    if key:
+                        import urllib.request as _ur, json as _j, uuid as _uu
+                        mid = str(_uu.getnode())
+                        url = (f"https://aurum-os-admin.vercel.app/api/trials/check"
+                               f"?key={_ur.quote(key)}&machine_id={_ur.quote(mid)}")
+                        req = _ur.Request(url, headers={'Accept':'application/json',
+                                                        'User-Agent':'AurumOS/TrialCheck'})
+                        with _ur.urlopen(req, timeout=8) as resp:
+                            td = _j.loads(resp.read().decode())
+                        if td.get('is_trial'):
+                            result['is_trial'] = True
+                            result['days_remaining'] = td.get('days_remaining', 0)
+                            result['trial_end_ms'] = td.get('trial_end_ms')
+                            result['expiry_ms'] = td.get('trial_end_ms')
+                except Exception:
+                    pass
             return result
         except Exception as e:
             return {'is_trial': False, 'status': 'unknown', 'expiry_ms': None}
