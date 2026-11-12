@@ -741,28 +741,25 @@ function loadDashboard(){
         document.getElementById('welcome-str').innerHTML = (g.greeting_prefix||'Hello')+', <em id="welcome-name">'+displayName+'</em>';
     }).catch(function(){});
 
-    // ── Trial countdown ──
+    // ── Trial countdown (only for ACTIVE trials with days > 0) ──
     api.get_trial_status().then(function(t){
         if(!t||!t.is_trial) return;
+        var days=parseInt(t.days_remaining||t.remaining_days||0);
+        var endMs=parseInt(t.expiry_ms||t.trial_end_ms||0);
+        // Hide banner if trial expired/terminated (days<=0 or end time passed)
+        if(days<=0 && (!endMs || endMs<=Date.now())) return;
         var el=document.getElementById('trial-banner'); if(!el) return;
         el.style.display='block';
-        var days=parseInt(t.days_remaining||t.remaining_days||0);
         document.getElementById('trial-days').innerText=days;
-        if(days<=0){
-            document.getElementById('trial-title').innerText='Trial Expired';
-            document.getElementById('trial-sub').innerHTML='Your trial period has ended. Please upgrade to continue.';
-            el.style.borderColor='rgba(185,28,28,0.25)';
-            el.style.background='linear-gradient(135deg,#fef2f2 0%,#fecaca 100%)';
-        }else if(days<=3){
+        if(days<=3){
             document.getElementById('trial-title').innerText='Trial Ending Soon!';
             el.style.borderColor='rgba(220,38,38,0.25)';
             el.style.background='linear-gradient(135deg,#fff7ed 0%,#fed7aa 100%)';
         }
-        if(t.expiry_ms||t.trial_end_ms){
-            var end=parseInt(t.expiry_ms||t.trial_end_ms);
+        if(endMs && endMs>Date.now()){
             var _tick=function(){
-                var diff=end-Date.now();
-                if(diff<=0){document.getElementById('trial-timer').innerText='Trial expired';return;}
+                var diff=endMs-Date.now();
+                if(diff<=0){el.style.display='none';return;}
                 var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),
                     m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
                 document.getElementById('trial-timer').innerText=d+'d '+h+'h '+m+'m '+s+'s remaining';
