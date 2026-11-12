@@ -2255,9 +2255,12 @@ class AurumAPI:
             LOG("[LICENSE] .revoked flag present but network=False — treating as ok for startup")
             return "ok"
 
-        # Flagged with no key: can't re-check server — remove stale flag
+        # Flagged with no key: can't re-check server
         if has_flag:
             if not key or not _is_valid_key_format(key):
+                if flag_reason == "not_found":
+                    LOG("[LICENSE] .revoked flag=not_found and no key — admin deleted license")
+                    return "not_found"
                 LOG("[LICENSE] .revoked flag exists but no key — removing stale flag")
                 try: os.remove(flag_path)
                 except: pass
@@ -2269,8 +2272,15 @@ class AurumAPI:
                 return "error"
             return flag_reason if flag_reason in ("revoked","invalid","not_found","expired") else "revoked"
 
-        # No flag, no key: nothing to check
+        # No flag, no key: check if setup was done (implies key was removed)
         if not key or not _is_valid_key_format(key):
+            try:
+                setup_done = self.db.is_setup_done()
+            except Exception:
+                setup_done = False
+            if setup_done:
+                LOG("[LICENSE] No key but setup was done — admin likely deleted license")
+                return "not_found"
             LOG("[LICENSE] No key available -- skip check")
             return "ok"
 
