@@ -558,7 +558,7 @@
       _redirectToRevokeScreen();
     } else if (_state.status === 'active' && _state.expiry_warning) {
       var remaining = (_state.subscription && _state.subscription.remaining_days) || 0;
-      _showExpiryWarning(_state.expiry_warning, remaining);
+      if (remaining > 0) _showExpiryWarning(_state.expiry_warning, remaining);
     }
 
     _renderBadge();

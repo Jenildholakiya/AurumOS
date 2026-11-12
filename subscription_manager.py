@@ -170,9 +170,9 @@ WARN_THRESHOLDS = [
 ]
 
 def get_expiry_warning_level(remaining_days):
-    """Return warning level based on remaining days, or None if >30."""
-    if not remaining_days or remaining_days <= 0:
-        return 'final'
+    """Return warning level based on remaining days, or None if >30 or 0 (no-expiry)."""
+    if remaining_days is None or remaining_days <= 0:
+        return None
     for threshold, level in WARN_THRESHOLDS:
         if remaining_days <= threshold:
             return level

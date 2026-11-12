@@ -147,7 +147,7 @@ def _show_blocked_screen(api_ref, action, license_key, country_code, country_nam
     masked_key = license_key[:4] + "****" + license_key[-4:] if len(license_key) > 8 else license_key
 
     dismiss_btn = ""
-    if action == "warn":
+    if action in ("warn", "alert"):
         dismiss_btn = (
             "<button onclick=\"this.parentElement.parentElement.remove()\" "
             "style=\"padding:10px 28px;border-radius:8px;border:1px solid #ccc;"
