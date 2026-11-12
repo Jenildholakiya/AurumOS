@@ -2229,6 +2229,15 @@ class AurumAPI:
                     if reason in ("revoked","invalid","not_found"):
                         try: open(flag_path,"w").write(reason)
                         except: pass
+                        if reason == "not_found":
+                            LOG("[LICENSE] Admin deleted license — clearing cached key")
+                            try:
+                                if os.path.exists(key_path): os.remove(key_path)
+                            except: pass
+                            try:
+                                with self.db._get_connection() as conn:
+                                    conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('license_key','')")
+                            except: pass
                         return reason
                     if reason in ("expired", "subscription_expired"):
                         # Don't write 'expired' to .revoked flag — let subscription system handle it
@@ -2327,6 +2336,15 @@ class AurumAPI:
                 if reason in ("revoked","invalid","not_found"):
                     try: open(flag_path,"w").write(reason)
                     except: pass
+                    if reason == "not_found":
+                        LOG("[LICENSE] Admin deleted license — clearing cached key")
+                        try:
+                            if os.path.exists(key_path): os.remove(key_path)
+                        except: pass
+                        try:
+                            with self.db._get_connection() as conn:
+                                conn.execute("INSERT OR REPLACE INTO app_config(key,value) VALUES('license_key','')")
+                        except: pass
                     return reason
                 if reason in ("expired", "subscription_expired"):
                     try:
