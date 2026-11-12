@@ -1145,6 +1145,19 @@ function shakeCard() {
 
 window.onload = function() {
     document.getElementById('inp-key').focus();
+    // Show alert if redirected here because admin deleted the license
+    try{
+        var p=new URLSearchParams(window.location.search);
+        var a=p.get('alert');
+        if(a){
+            var d=document.createElement('div');
+            d.style.cssText='padding:14px 18px;margin:0 0 16px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:0.85rem;text-align:center;';
+            d.innerHTML='<strong>⚠ License Removed</strong><br>'+decodeURIComponent(a);
+            var f=document.querySelector('form')||document.querySelector('.card')||document.body.firstElementChild;
+            if(f&&f.parentNode)f.parentNode.insertBefore(d,f);
+            else document.body.insertBefore(d,document.body.firstChild);
+        }
+    }catch(e){}
 };
 
 // ── GST ──────────────────────────────────────────────────────────────

@@ -353,6 +353,21 @@ td:not(:first-child){text-align:right;}
         </div>
     </div>
 
+    <!-- ── TRIAL COUNTDOWN BANNER ── -->
+    <div id="trial-banner" style="display:none;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid rgba(245,158,11,0.25);background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;">
+        <div style="width:42px;height:42px;border-radius:10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">&#9202;</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.92rem;font-weight:700;color:#92400e;" id="trial-title">Trial Period Active</div>
+          <div style="font-size:0.72rem;color:#b45309;margin-top:2px;" id="trial-sub">Your trial expires in <strong id="trial-days">—</strong> days</div>
+          <div style="font-size:0.62rem;color:#d97706;margin-top:6px;font-family:var(--mono);" id="trial-timer"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <button onclick="try{pywebview.api.subscription_show_plans()}catch(e){}" style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:#f59e0b;color:#fff;border:none;border-radius:7px;font-family:var(--sans);font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Upgrade Now</button>
+        </div>
+      </div>
+    </div>
+
     <div class="welcome">
         <div>
             <div class="w-greeting" id="welcome-str">Good morning, <em id="welcome-name">Director</em></div>
@@ -724,6 +739,37 @@ function loadDashboard(){
         document.getElementById('h-avatar').innerText = ini||'OS';
         var displayName = biz || nm;
         document.getElementById('welcome-str').innerHTML = (g.greeting_prefix||'Hello')+', <em id="welcome-name">'+displayName+'</em>';
+    }).catch(function(){});
+
+    // ── Trial countdown ──
+    api.get_trial_status().then(function(t){
+        if(!t||!t.is_trial) return;
+        var el=document.getElementById('trial-banner'); if(!el) return;
+        el.style.display='block';
+        var days=parseInt(t.days_remaining||t.remaining_days||0);
+        document.getElementById('trial-days').innerText=days;
+        if(days<=0){
+            document.getElementById('trial-title').innerText='Trial Expired';
+            document.getElementById('trial-sub').innerHTML='Your trial period has ended. Please upgrade to continue.';
+            el.style.borderColor='rgba(185,28,28,0.25)';
+            el.style.background='linear-gradient(135deg,#fef2f2 0%,#fecaca 100%)';
+        }else if(days<=3){
+            document.getElementById('trial-title').innerText='Trial Ending Soon!';
+            el.style.borderColor='rgba(220,38,38,0.25)';
+            el.style.background='linear-gradient(135deg,#fff7ed 0%,#fed7aa 100%)';
+        }
+        if(t.expiry_ms||t.trial_end_ms){
+            var end=parseInt(t.expiry_ms||t.trial_end_ms);
+            var _tick=function(){
+                var diff=end-Date.now();
+                if(diff<=0){document.getElementById('trial-timer').innerText='Trial expired';return;}
+                var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),
+                    m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+                document.getElementById('trial-timer').innerText=d+'d '+h+'h '+m+'m '+s+'s remaining';
+                setTimeout(_tick,1000);
+            };
+            _tick();
+        }
     }).catch(function(){});
 
     api.get_live_command_metrics().then(function(s){

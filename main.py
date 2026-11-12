@@ -2362,30 +2362,48 @@ class AurumAPI:
 
     def fire_revoked_screen(self, reason='revoked'):
         try:
+            # License deleted by admin → redirect to setup with alert
+            if reason == 'not_found':
+                LOG('[LICENSE] License deleted — redirecting to setup page')
+                alert_msg = 'Admin has removed your license key. Please contact the admin for renewal.'
+                js = f"window.location.href='setup.html?alert={urllib.parse.quote(alert_msg)}'"
+                self._eval_js_with_retry(js)
+                return
             # Route: expired/subscription_expired → expiry.html, revoked → revoked.html
             page = 'expiry.html' if reason in ('expired', 'subscription_expired') else 'revoked.html'
             if self._window:
                 try:
                     cur = self._window.get_current_url() or ''
                     cur_page = cur.split('/')[-1].split('?')[0].lower()
-                    # Already on the CORRECT page — skip
                     if cur_page == page:
                         LOG(f'[LICENSE] Already on {page} — skipping navigation')
                         return
-                    # On wrong page — navigate to correct one
                     if cur_page in ('revoked.html', 'expiry.html'):
                         LOG(f'[LICENSE] On {cur_page} but should be {page} — navigating')
                 except Exception:
                     pass
             msg_map={'revoked':'Your license has been revoked. Please contact AurumOS support.',
-                     'not_found':'License key not found on server. Please contact AurumOS support.',
                      'invalid':'Your license is no longer valid. Please contact AurumOS support.',
                      'expired':'Your subscription has expired. Please renew to continue.'}
             msg = msg_map.get(reason,'License issue detected. Please contact AurumOS support.')
-            js  = f"window.location.href='{page}?reason={reason}&msg={msg.replace(chr(39),'')}'",
-            if self._window: self._window.evaluate_js(js[0])
+            js = f"window.location.href='{page}?reason={reason}&msg={msg.replace(chr(39), '')}'"
+            self._eval_js_with_retry(js)
         except Exception as e:
             ERR(f'[LICENSE] Revoked screen error: {e}')
+
+    def _eval_js_with_retry(self, js, retries=5, delay=1):
+        """Evaluate JS on the window with retries for when window isn't ready."""
+        import time as _t
+        for i in range(retries):
+            try:
+                if self._window:
+                    self._window.evaluate_js(js)
+                    return True
+            except Exception as e:
+                ERR(f'[LICENSE] JS eval attempt {i+1}/{retries} failed: {e}')
+            _t.sleep(delay)
+        ERR(f'[LICENSE] JS eval failed after {retries} retries')
+        return False
 
     def reactivate_check(self):
         import urllib.request, json as _j, uuid as _uuid
@@ -9432,7 +9450,12 @@ def run_aur_os():
         # authoritatively via server calls.
 
         if revoke_status in ("revoked","invalid","not_found","expired"):
-            initial_file = "expiry.html" if revoke_status == "expired" else "revoked.html"
+            if revoke_status == "not_found":
+                initial_file = "setup.html"
+            elif revoke_status == "expired":
+                initial_file = "expiry.html"
+            else:
+                initial_file = "revoked.html"
             startup_reason=revoke_status
         else:
             initial_file="login.html"; startup_reason=None
@@ -9515,6 +9538,24 @@ def run_aur_os():
             LOG("[STARTUP] Encrypted recovery backup started")
         except Exception as _bk:
             ERR(f"[STARTUP] recovery backup failed to start: {_bk}")
+
+        if initial_file=="setup.html" and startup_reason=="not_found":
+            import time as _ti; _ti.sleep(1.5)
+            alert_js = (
+                "try{"
+                "var _ab=document.createElement('div');"
+                "_ab.id='admin-alert';"
+                "_ab.style.cssText='padding:14px 18px;margin:0 0 16px;border-radius:8px;"
+                "background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:0.85rem;text-align:center;';"
+                "_ab.innerHTML='<strong>&#9888; License Removed</strong><br>"
+                "Admin has removed your license key. Please contact the admin for renewal.';"
+                "var f=document.querySelector('form')||document.querySelector('.card')||document.body.firstElementChild;"
+                "if(f&&f.parentNode)f.parentNode.insertBefore(_ab,f);"
+                "else document.body.insertBefore(_ab,document.body.firstChild);"
+                "}catch(e){}"
+            )
+            try: w.evaluate_js(alert_js)
+            except Exception as je: ERR(f"[LICENSE] Setup alert JS error: {je}")
 
         if initial_file=="revoked.html" and startup_reason:
             import time as _ti; _ti.sleep(1.2)
