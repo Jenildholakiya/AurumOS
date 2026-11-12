@@ -807,21 +807,22 @@ class SubscriptionManager:
             remaining = data.get('remaining_days', 0) or 0
             grace = data.get('grace_remaining_days', 0) or 0
 
-            # Derive status
+            # Derive status — this method only runs on ok=true from the server,
+            # so the server has already said the license is valid.
             if grace > 0:
                 status = 'grace'
                 valid = True
             elif remaining > 0:
                 status = 'active'
                 valid = True
-            elif not has_days:
-                # The server tracks no day counts for this licence type.
-                # This method only runs on ok=true, so trust it as active —
-                # keeping the previously known remaining count rather than
-                # inventing one.
+            elif not has_days or remaining == 0:
+                # Server said ok=true but remaining_days is 0 or absent.
+                # Trust the server verdict — the plan may not track days,
+                # or the days haven't synced yet after renewal.
                 status = 'active'
                 valid = True
-                remaining = ((self._state.get('subscription') or {}).get('remaining_days')) or 0
+                if not remaining:
+                    remaining = ((self._state.get('subscription') or {}).get('remaining_days')) or 0
             else:
                 status = 'expired'
                 valid = False

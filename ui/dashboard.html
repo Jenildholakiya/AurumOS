@@ -1280,7 +1280,7 @@ function _updateExpiryWidget() {
         var daysText = days > 0 ? (' — ' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining') : '';
         w.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
             + '<span><strong>Active</strong>' + daysText + '</span>';
-    } else if (status === 'active' && warning) {
+    } else if (status === 'active' && warning && days > 0) {
         var isUrgent = warning === 'critical' || warning === 'final' || warning === 'urgent';
         var col = isUrgent ? '#dc2626' : '#d97706';
         w.style.display = 'flex';
