@@ -3057,7 +3057,8 @@ class AurumAPI:
             flag_path = os.path.join(base, 'database', '.revoked')
             if reason not in ('expired', 'subscription_expired'):
                 try:
-                    open(flag_path, 'w').write(reason if reason in ('revoked', 'disabled', 'suspended') else 'revoked')
+                    flag_val = reason if reason in ('revoked', 'disabled', 'suspended', 'not_found', 'invalid') else 'revoked'
+                    open(flag_path, 'w').write(flag_val)
                 except Exception:
                     pass
             else:

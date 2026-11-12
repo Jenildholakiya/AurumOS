@@ -537,8 +537,21 @@
   }
 
   // ── Render all UI elements + enforce status ──────────────────────────
+  function _redirectToSetup() {
+    try {
+      var page = location.pathname.replace(/.*[\\/]/, '').toLowerCase().trim();
+      if (page === 'setup.html') return;
+    } catch (e) {}
+    _log('License deleted by admin — redirecting to setup');
+    var msg = encodeURIComponent('Admin has removed your license key. Please contact the admin for renewal.');
+    window.location.href = 'setup.html?alert=' + msg;
+  }
+
   function _renderUI() {
-    if (_state.status === 'grace') {
+    if (_state.status === 'deleted') {
+      _redirectToSetup();
+      return;
+    } else if (_state.status === 'grace') {
       _applyGraceDegradation();
       _showGraceBanner();
     } else if (_state.status === 'expired' || _state.status === 'revoked') {
@@ -604,6 +617,13 @@
         // Fallback: re-fetch from Python if no data provided
         syncNow().catch(function (e) { _err('Sync after plan_change failed: ' + e); });
       }
+    } else if (event === 'deleted') {
+      _state.valid = false;
+      _state.status = 'deleted';
+      _state.effective_plan = 'lite';
+      _state.features = [];
+      _applyState(_state);
+      _redirectToSetup();
     } else if (event === 'revoked') {
       var severity = (data && data.severity) || 'hard';
       _state.valid = false;

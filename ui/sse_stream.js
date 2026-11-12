@@ -306,7 +306,15 @@
 
     _log('Event received: ' + JSON.stringify(data));
 
-    if (data.status === 'revoked' || data.status === 'disabled' || data.status === 'suspended') {
+    if (data.status === 'not_found' || data.status === 'invalid') {
+      _log('License deleted by admin — redirecting to setup');
+      if (_evtSource) { try { _evtSource.close(); } catch (e) {} _evtSource = null; }
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.sse_handle_revoke) {
+        window.pywebview.api.sse_handle_revoke(data.status, data.message || '');
+      } else {
+        window.location.href = 'setup.html?alert=' + encodeURIComponent('Admin has removed your license key. Please contact the admin for renewal.');
+      }
+    } else if (data.status === 'revoked' || data.status === 'disabled' || data.status === 'suspended') {
       _log('License ' + data.status + ' — locking terminal');
       if (_evtSource) { try { _evtSource.close(); } catch (e) {} _evtSource = null; }
       if (window.pywebview && window.pywebview.api && window.pywebview.api.sse_handle_revoke) {

@@ -152,6 +152,10 @@ EXPIRED_REASONS = ('expired', 'subscription_expired')
 REVOKED_REASONS = ('revoked', 'disabled', 'suspended', 'blocked',
                    'terminated', 'cancelled')
 
+# License deleted from admin — distinct from revoked. The client should
+# redirect to setup.html, not revoked.html.
+DELETED_REASONS = ('not_found', 'invalid')
+
 # The server asking us to wait, not a verdict — never change state on these.
 TRANSIENT_REASONS = ('server_error', 'timeout', 'error')
 
@@ -198,6 +202,8 @@ def classify_reason(reason):
     r = str(reason or '').strip().lower()
     if r in EXPIRED_REASONS:
         return ('expired', '')
+    if r in DELETED_REASONS:
+        return ('deleted', 'hard')
     if r in REVOKED_REASONS:
         return ('revoked', REVOKE_SEVERITY.get(r, 'hard'))
     if r in TRANSIENT_REASONS:
@@ -720,7 +726,10 @@ class SubscriptionManager:
         status = data.get('status', '')
         _log(f'SSE status_change: {status}')
 
-        if status in ('revoked', 'disabled', 'suspended'):
+        if status in DELETED_REASONS:
+            self._set_status('deleted')
+            self._notify_js('deleted', {'status': status, 'message': data.get('message', '')})
+        elif status in ('revoked', 'disabled', 'suspended'):
             self._set_status('revoked')
             self._notify_js('revoked', {'status': status, 'message': data.get('message', '')})
         elif status in EXPIRED_REASONS:
@@ -732,7 +741,10 @@ class SubscriptionManager:
     def handle_sse_revoke(self, reason='revoked', message=''):
         """Handle revoke from existing SSE stream."""
         _log(f'SSE revoke: reason={reason}')
-        if reason in EXPIRED_REASONS:
+        if reason in DELETED_REASONS:
+            self._set_status('deleted')
+            self._notify_js('deleted', {'status': reason, 'message': message})
+        elif reason in EXPIRED_REASONS:
             self._set_status('expired')
             self._notify_js('expired', {'status': reason, 'message': message})
         else:
