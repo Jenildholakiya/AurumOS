@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Branch Dashboard</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.stat{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--sh);}
+.stat label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600;}
+.stat span{display:block;font-size:1.15rem;font-weight:700;color:var(--ink);margin-top:4px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+.form-row{display:flex;gap:10px;padding:14px 18px;flex-wrap:wrap;align-items:flex-end;}
+.form-row .fg{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;}
+.form-row label{font-size:0.7rem;font-weight:600;color:var(--ink3);}
+.form-row input{padding:7px 10px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;font-family:var(--sans);}
+.btn{padding:8px 16px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
+.btn-blue{background:var(--gold);color:#fff;border-color:var(--gold);}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mono{font-family:var(--mono);}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+.chart-wrap{padding:16px 18px;}
+canvas{max-height:260px;}
+.actions-row{display:flex;gap:8px;padding:14px 18px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<script>initSidebar('accounting');</script>
+<main>
+  <div class="topbar">
+    <h1>Branch Dashboard</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+    <div class="stats">
+      <div class="stat"><label>Total revenue</label><span id="st-rev">Rs. 0.00</span></div>
+      <div class="stat"><label>Total bills</label><span id="st-bills">0</span></div>
+      <div class="stat"><label>Total stock weight</label><span id="st-stock">0.000 g</span></div>
+      <div class="stat"><label>Total dues</label><span id="st-dues">0.000 g</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Manage branches</span></div>
+      <div class="form-row">
+        <div class="fg"><label>Branch name</label><input id="br-name" placeholder="e.g. Main Showroom"></div>
+        <div class="fg"><label>Code</label><input id="br-code" placeholder="e.g. HQ" style="max-width:80px;"></div>
+        <div class="fg"><label>City</label><input id="br-city" placeholder="e.g. Rajkot"></div>
+        <div class="fg"><label>Owner</label><input id="br-owner" placeholder="Name"></div>
+        <button class="btn btn-blue" onclick="addBranch()">Add Branch</button>
+      </div>
+      <div class="actions-row">
+        <button class="btn" onclick="exportSummary()">Export this branch summary</button>
+        <label class="btn" style="cursor:pointer;">Import branch summary <input type="file" accept=".json" id="import-file" onchange="importSummary(this)" style="display:none;"></label>
+      </div>
+      <div id="status-msg" style="padding:0 18px 12px;font-size:0.75rem;color:var(--green);"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Branch comparison</span><span class="mono" style="font-size:0.7rem;color:var(--muted);" id="br-count">0 branches</span></div>
+      <div class="chart-wrap"><canvas id="brChart"></canvas></div>
+      <table>
+        <thead><tr><th>Branch</th><th>Code</th><th>City</th><th style="text-align:right;">Revenue</th><th style="text-align:right;">Bills</th><th style="text-align:right;">Stock (g)</th><th>Last sync</th></tr></thead>
+        <tbody id="br-tbody"><tr><td colspan="7" class="empty">No branches registered yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<script src="chart.min.js"></script>
+<script>
+function fmt(n){return 'Rs. '+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function msg(t,c){var e=document.getElementById('status-msg');e.textContent=t;e.style.color=c||'var(--green)';setTimeout(function(){e.textContent='';},4000);}
+
+var _brChart=null;
+function loadAll(){
+  if(!window.pywebview||!window.pywebview.api){setTimeout(loadAll,200);return;}
+  if(typeof Chart==='undefined'){setTimeout(loadAll,100);return;}
+  var api=window.pywebview.api;
+  if(api.get_consolidated_report) api.get_consolidated_report().then(function(r){
+    if(!r||r.status!=='success') return;
+    document.getElementById('st-rev').textContent=fmt(r.total_revenue);
+    document.getElementById('st-bills').textContent=r.total_bills;
+    document.getElementById('st-stock').textContent=parseFloat(r.total_stock_weight||0).toFixed(3)+' g';
+    document.getElementById('st-dues').textContent=parseFloat(r.total_dues||0).toFixed(3)+' g';
+    document.getElementById('br-count').textContent=(r.branches||[]).length+' branches';
+    var tb=document.getElementById('br-tbody');
+    if(!r.branches||!r.branches.length){tb.innerHTML='<tr><td colspan="7" class="empty">No branches registered yet</td></tr>';return;}
+    tb.innerHTML=r.branches.map(function(b){
+      return '<tr><td>'+b.name+'</td><td class="mono">'+b.code+'</td><td>'+b.city+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(b.revenue)+'</td>'
+        +'<td style="text-align:right;">'+b.bills+'</td>'
+        +'<td style="text-align:right;" class="mono">'+parseFloat(b.stock_weight||0).toFixed(3)+'</td>'
+        +'<td style="font-size:0.7rem;color:var(--muted);">'+(b.last_sync||'—')+'</td></tr>';
+    }).join('');
+    var labels=r.branches.map(function(b){return b.name;});
+    var data=r.branches.map(function(b){return b.revenue;});
+    var ctx=document.getElementById('brChart').getContext('2d');
+    if(_brChart) _brChart.destroy();
+    _brChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Revenue',data:data,backgroundColor:'rgba(37,99,235,0.7)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'Rs.'+v.toLocaleString('en-IN');}}}}}});
+  }).catch(function(){});
+}
+function addBranch(){
+  var api=window.pywebview&&window.pywebview.api;if(!api||!api.register_branch) return;
+  api.register_branch({name:document.getElementById('br-name').value,code:document.getElementById('br-code').value,city:document.getElementById('br-city').value,owner:document.getElementById('br-owner').value}).then(function(r){
+    if(r&&r.status==='success'){msg('Branch registered');loadAll();}else msg(r.message||'Error','var(--red)');
+  });
+}
+function exportSummary(){
+  var api=window.pywebview&&window.pywebview.api;if(!api||!api.export_branch_summary) return;
+  api.export_branch_summary().then(function(r){
+    if(r&&r.status==='success') msg('Exported to: '+r.path);
+    else msg(r.message||'Export failed','var(--red)');
+  });
+}
+function importSummary(input){
+  if(!input.files||!input.files[0]) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      var api=window.pywebview&&window.pywebview.api;
+      if(api&&api.import_branch_summary_data){
+        api.import_branch_summary_data(data).then(function(r){
+          if(r&&r.status==='success'){msg('Imported branch: '+r.branch_code);loadAll();}
+          else msg(r.message||'Import failed','var(--red)');
+        });
+      } else msg('Import not available','var(--red)');
+    }catch(ex){msg('Invalid JSON file','var(--red)');}
+  };
+  reader.readAsText(input.files[0]);
+  input.value='';
+}
+function updateClock(){var n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();}
+setInterval(updateClock,1000);updateClock();
+window.addEventListener('load',loadAll);
+</script>
+</body>
+</html>

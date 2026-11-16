@@ -27,6 +27,8 @@ var NAV_ADMIN = [
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Finance' },
     { id:'analytics', label:'Analytics',    icon:'bar-chart', page:'analytics.html',       section:'Finance' },
     { id:'integrations',label:'Integrations',icon:'plug',     page:'integrations.html',    section:'Finance' },
+    { id:'forecast',  label:'Forecast',     icon:'bar-chart', page:'forecast.html',        section:'Finance' },
+    { id:'branches',  label:'Branches',     icon:'grid',      page:'branch_dashboard.html',section:'Finance' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'Finance' },
     { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'  },
     { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'  },
@@ -47,6 +49,8 @@ var NAV_RETAIL = [
     { id:'reports',   label:'Reports',      icon:'bar-chart', page:'reports.html',         section:'Business' },
     { id:'analytics', label:'Analytics',    icon:'bar-chart', page:'analytics.html',       section:'Business' },
     { id:'integrations',label:'Integrations',icon:'plug',     page:'integrations.html',    section:'Business' },
+    { id:'forecast',  label:'Forecast',     icon:'bar-chart', page:'forecast.html',        section:'Business' },
+    { id:'branches',  label:'Branches',     icon:'grid',      page:'branch_dashboard.html',section:'Business' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'System'   },
     { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'   },
     { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'   },
@@ -220,6 +224,8 @@ var _FEATURE_MAP = {
     'stock_transfer.html': 'stock_transfer',
     'analytics.html':     'analytics_dashboard',
     'integrations.html':  'api_integration',
+    'forecast.html':      'analytics_dashboard',
+    'branch_dashboard.html': 'fleet_bastion',
     'reports.html':        'stock_med_reports'
     // network_manager.html is deliberately absent. Connecting computers is
     // limited by seats, not by hiding the screen, and the seat limit is
@@ -243,6 +249,8 @@ var _FEATURE_PLANS = {
     'stock_transfer.html': 'Pro',
     'analytics.html':     'Pro',
     'integrations.html':  'Pro',
+    'forecast.html':      'Pro',
+    'branch_dashboard.html': 'Enterprise',
     'reports.html':        'Pro'
 };
 

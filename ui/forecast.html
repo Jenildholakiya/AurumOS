@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Demand Forecast</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--amber:#d97706;
+  --sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.stat{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--sh);}
+.stat label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600;}
+.stat span{display:block;font-size:1.15rem;font-weight:700;color:var(--ink);margin-top:4px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+.chart-wrap{padding:16px 18px;}
+canvas{max-height:280px;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mono{font-family:var(--mono);}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:600;}
+.pill-red{background:rgba(220,38,38,0.08);color:#dc2626;}
+.pill-amber{background:rgba(217,119,6,0.08);color:#d97706;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.row-2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<script>initSidebar('reports');</script>
+<main>
+  <div class="topbar">
+    <h1>Demand Forecast</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+    <div class="stats">
+      <div class="stat"><label>Avg daily sales</label><span id="st-avg">Rs. 0.00</span></div>
+      <div class="stat"><label>Forecast total (30 days)</label><span id="st-forecast" style="color:var(--amber);">Rs. 0.00</span></div>
+      <div class="stat"><label>Reorder items</label><span id="st-reorder" style="color:var(--gold);">0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Sales forecast — 30 days</span><span style="font-size:0.68rem;color:var(--muted);">Actual (blue) vs Forecast (amber dashed)</span></div>
+      <div class="chart-wrap"><canvas id="forecastChart"></canvas></div>
+    </div>
+
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Reorder suggestions</span><span class="mono" style="font-size:0.7rem;color:var(--muted);" id="reorder-count">0 items</span></div>
+        <table>
+          <thead><tr><th>Item code</th><th>Name</th><th style="text-align:right;">Current stock</th><th style="text-align:right;">Monthly demand</th><th style="text-align:right;">Reorder qty</th></tr></thead>
+          <tbody id="reorder-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Seasonal patterns — monthly revenue</span></div>
+        <div class="chart-wrap"><canvas id="seasonChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="chart.min.js"></script>
+<script>
+function fmt(n){return 'Rs. '+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+var _fcChart=null,_ssChart=null;
+
+function loadAll(){
+  if(!window.pywebview||!window.pywebview.api){setTimeout(loadAll,200);return;}
+  if(typeof Chart==='undefined'){setTimeout(loadAll,100);return;}
+  var api=window.pywebview.api;
+
+  if(api.get_sales_forecast) api.get_sales_forecast().then(function(r){
+    if(!r||r.status!=='success') return;
+    document.getElementById('st-avg').textContent=fmt(r.avg_daily);
+    document.getElementById('st-forecast').textContent=fmt(r.forecast_total);
+    var labels=(r.actual_dates||[]).concat(r.forecast_dates||[]);
+    var actual=(r.actual_revenue||[]).concat(new Array((r.forecast_dates||[]).length).fill(null));
+    var forecast=new Array((r.actual_dates||[]).length).fill(null).concat(r.forecast_revenue||[]);
+    var ctx=document.getElementById('forecastChart').getContext('2d');
+    if(_fcChart) _fcChart.destroy();
+    _fcChart=new Chart(ctx,{type:'line',data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[
+      {label:'Actual',data:actual,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.1)',fill:true,tension:0.3,pointRadius:1},
+      {label:'Forecast',data:forecast,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.08)',fill:true,borderDash:[6,4],tension:0.3,pointRadius:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'line',font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'Rs.'+Math.round(v/1000)+'k';}}}}}});
+  }).catch(function(){});
+
+  if(api.get_reorder_suggestions) api.get_reorder_suggestions().then(function(r){
+    if(!r||r.status!=='success') return;
+    var items=r.suggestions||[];
+    document.getElementById('st-reorder').textContent=items.length;
+    document.getElementById('reorder-count').textContent=items.length+' items';
+    var tb=document.getElementById('reorder-tbody');
+    if(!items.length){tb.innerHTML='<tr><td colspan="5" class="empty">No reorder needed — stock meets demand</td></tr>';return;}
+    tb.innerHTML=items.map(function(it){
+      var urgency=it.current_stock===0?'pill-red':(it.current_stock<it.monthly_demand?'pill-amber':'');
+      return '<tr><td class="mono">'+it.code+'</td><td>'+it.name+'</td>'
+        +'<td style="text-align:right;">'+(urgency?'<span class="pill '+urgency+'">'+it.current_stock+'</span>':it.current_stock)+'</td>'
+        +'<td style="text-align:right;" class="mono">'+it.monthly_demand+'</td>'
+        +'<td style="text-align:right;font-weight:600;">'+it.reorder_qty+'</td></tr>';
+    }).join('');
+  }).catch(function(){});
+
+  if(api.get_seasonal_patterns) api.get_seasonal_patterns().then(function(r){
+    if(!r||r.status!=='success') return;
+    var monthly=r.monthly||[];
+    var labels=monthly.map(function(m){return m.month;});
+    var data=monthly.map(function(m){return m.avg_daily;});
+    var ctx=document.getElementById('seasonChart').getContext('2d');
+    if(_ssChart) _ssChart.destroy();
+    _ssChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Avg daily revenue',data:data,backgroundColor:data.map(function(v,i){
+      var max=Math.max.apply(null,data)||1;return v/max>0.8?'rgba(22,163,74,0.7)':v/max>0.5?'rgba(37,99,235,0.7)':'rgba(148,163,184,0.5)';
+    }),borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'Rs.'+Math.round(v/1000)+'k';}}}}}});
+  }).catch(function(){});
+}
+
+function updateClock(){var n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();}
+setInterval(updateClock,1000);updateClock();
+window.addEventListener('load',loadAll);
+</script>
+</body>
+</html>

@@ -6271,6 +6271,62 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # -- ADVANCED: Branch, Mobile API, Forecast --------------------------------
+    def get_branches(self):
+        try:
+            from core.branch_manager import list_branches
+            return list_branches()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def register_branch(self, data):
+        try:
+            from core.branch_manager import register_branch
+            return register_branch(data or {})
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def export_branch_summary(self):
+        try:
+            from core.branch_manager import export_branch_summary
+            return export_branch_summary(self.db)
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def import_branch_summary(self, path):
+        try:
+            from core.branch_manager import import_branch_summary
+            return import_branch_summary(path)
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_consolidated_report(self):
+        try:
+            from core.branch_manager import consolidated_report
+            return consolidated_report()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def start_mobile_api(self):
+        try:
+            from core.mobile_api import start
+            port = int(self.db.get_config('mobile_api_port', '58904') or 58904)
+            key = self.db.get_config('mobile_api_key', '')
+            ok = start(self.db, port, key)
+            return {"status": "success" if ok else "error", "port": port}
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def stop_mobile_api(self):
+        try:
+            from core.mobile_api import stop
+            stop()
+            return {"status": "success"}
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_sales_forecast(self):
+        try:
+            from core.ai_forecast import forecast_daily_sales
+            return forecast_daily_sales()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_reorder_suggestions(self):
+        try:
+            from core.ai_forecast import reorder_suggestions
+            return reorder_suggestions()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_seasonal_patterns(self):
+        try:
+            from core.ai_forecast import seasonal_patterns
+            return seasonal_patterns()
+        except Exception as e: return {"status": "error", "message": str(e)}
+
     # -- INTEGRATIONS -----------------------------------------------------------
     def export_tally(self, from_date='', to_date=''):
         try:
