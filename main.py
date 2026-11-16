@@ -6235,6 +6235,42 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    def seed_default_accounts(self):
+        try:
+            return self.db.finance_seed_default_accounts()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_profit_loss(self, from_date='', to_date=''):
+        try:
+            return self.db.finance_profit_loss(from_date or '', to_date or '')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_balance_sheet(self, as_of_date=''):
+        try:
+            return self.db.finance_balance_sheet(as_of_date or '')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_gst_summary(self, from_date='', to_date=''):
+        try:
+            return self.db.finance_gst_summary(from_date or '', to_date or '')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def get_unreconciled(self, bank_account='BANK'):
+        try:
+            return self.db.finance_unreconciled(bank_account or 'BANK')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def reconcile_entries(self, line_ids):
+        try:
+            return self.db.finance_reconcile(line_ids or [])
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     # -- UCHAK INWARD ----------------------------------------------------------
     def get_next_uchak_inward_vch_id(self):         return self.db.get_last_uchak_inward_vch_id()
 
@@ -6769,6 +6805,32 @@ class AurumAPI:
             ERR(f"[BILL] {e}")
             return {"status":"error","message":str(e)}
 
+    def _auto_post_sale_voucher(self, vch_id, customer, total, cgst, sgst, status, pay_mode):
+        """Auto-post a double-entry accounting voucher for a sale."""
+        try:
+            self.db.finance_seed_default_accounts()
+            total = float(total or 0)
+            cgst = float(cgst or 0)
+            sgst = float(sgst or 0)
+            if total <= 0:
+                return
+            sale_amount = total - cgst - sgst
+            is_credit = str(status or '').upper() == 'CREDIT'
+            dr_account = 'DEBTORS' if is_credit else 'CASH'
+            lines = [{'account_code': dr_account, 'dr': round(total, 2), 'cr': 0}]
+            if sale_amount > 0:
+                lines.append({'account_code': 'SALES-GOLD', 'dr': 0, 'cr': round(sale_amount, 2)})
+            if cgst > 0:
+                lines.append({'account_code': 'OUTPUT-CGST', 'dr': 0, 'cr': round(cgst, 2)})
+            if sgst > 0:
+                lines.append({'account_code': 'OUTPUT-SGST', 'dr': 0, 'cr': round(sgst, 2)})
+            narration = f"Sale {vch_id} to {customer}"
+            self.db.finance_post_voucher({
+                'type': 'SALES', 'narration': narration, 'lines': lines
+            })
+        except Exception as e:
+            ERR(f"[FINANCE] Auto-post sale failed: {e}")
+
     def generate_retail_bill(self, data):
         """Handle POS retail bill — saves to DB and triggers print."""
         try:
@@ -6847,6 +6909,12 @@ class AurumAPI:
                     ERR(f"[RETAIL BILL] loyalty skipped: {_le}")
             self._audit(f"Retail Bill: {vch_id}", f"Customer: {customer} | Status: {status}", "billing")
             self._notify_staff_bill(vch_id, customer, total_amount)
+            if status != 'ESTIMATE':
+                try:
+                    self._auto_post_sale_voucher(vch_id, customer, total_amount,
+                        float(inv.get('cgst') or 0), float(inv.get('sgst') or 0), status, pay_mode)
+                except Exception:
+                    pass
             LOG(f"[RETAIL BILL] generate_retail_bill returning vch_id={vch_id!r}")
             return {"status":"success","vch_id":vch_id,
                     "loyalty_earned": loyalty.get('earned', 0),

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | GST Returns</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.toolbar label{font-size:0.75rem;font-weight:600;color:var(--ink3);}
+.toolbar input[type="month"]{padding:6px 10px;border:1px solid var(--rule);border-radius:6px;font-family:var(--sans);font-size:0.8rem;}
+.toolbar button{padding:7px 16px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mono{font-family:var(--mono);}
+.sum-row{display:flex;justify-content:space-between;padding:10px 18px;font-size:0.82rem;}
+.sum-row.total{font-weight:700;border-top:2px solid var(--ink);margin-top:4px;}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+</style>
+</head>
+<body>
+<script>initSidebar('accounting');</script>
+<main>
+  <div class="topbar">
+    <h1>GST Returns</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+    <div class="toolbar">
+      <label>Period:</label>
+      <input type="month" id="gst-month" />
+      <button onclick="loadGST()">Load</button>
+      <button onclick="exportCSV()" style="margin-left:auto;">Export CSV</button>
+    </div>
+
+    <!-- GSTR-3B Summary -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">GSTR-3B Summary</span></div>
+      <div style="padding:16px 18px;">
+        <div class="sum-row"><span>Total Outward Supplies (Sales)</span><span class="mono" id="g3-taxable">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Output CGST</span><span class="mono" id="g3-cgst">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Output SGST</span><span class="mono" id="g3-sgst">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Total Output Tax</span><span class="mono" id="g3-out" style="font-weight:600;">Rs. 0.00</span></div>
+        <div class="sum-row" style="margin-top:8px;"><span>Input CGST (Purchases)</span><span class="mono" id="g3-icgst">Rs. 0.00</span></div>
+        <div class="sum-row"><span>Input SGST (Purchases)</span><span class="mono" id="g3-isgst">Rs. 0.00</span></div>
+        <div class="sum-row total"><span>Net GST Payable</span><span class="mono" id="g3-net">Rs. 0.00</span></div>
+      </div>
+    </div>
+
+    <!-- GSTR-1 Outward Supplies by Rate -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">GSTR-1 — Outward Supplies by Rate Slab</span><span class="mono" id="g1-bills" style="font-size:0.7rem;color:var(--muted);">0 bills</span></div>
+      <table>
+        <thead><tr><th>GST Rate</th><th>Bills</th><th style="text-align:right;">Taxable Value</th><th style="text-align:right;">CGST</th><th style="text-align:right;">SGST</th><th style="text-align:right;">Total Tax</th></tr></thead>
+        <tbody id="g1-tbody">
+          <tr><td colspan="6" class="empty">Select a month and click Load</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<script>
+function fmt(n){ return 'Rs. ' + parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// Default to current month
+var now = new Date();
+document.getElementById('gst-month').value = now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
+
+var _gstData = null;
+
+async function loadGST(){
+  var m = document.getElementById('gst-month').value;
+  if(!m) return;
+  var parts = m.split('-');
+  var y = parseInt(parts[0]), mo = parseInt(parts[1]);
+  var from = y+'-'+(mo<10?'0':'')+mo+'-01';
+  var lastDay = new Date(y, mo, 0).getDate();
+  var to = y+'-'+(mo<10?'0':'')+mo+'-'+lastDay;
+  try{
+    var api = window.pywebview.api;
+    var r = await api.get_gst_summary(from, to);
+    if(!r || r.status!=='success') return;
+    _gstData = r;
+    document.getElementById('g3-taxable').textContent = fmt(r.total_taxable);
+    document.getElementById('g3-cgst').textContent = fmt(r.total_cgst);
+    document.getElementById('g3-sgst').textContent = fmt(r.total_sgst);
+    document.getElementById('g3-out').textContent = fmt(r.total_gst);
+    document.getElementById('g3-icgst').textContent = fmt(r.input_cgst);
+    document.getElementById('g3-isgst').textContent = fmt(r.input_sgst);
+    var net = document.getElementById('g3-net');
+    net.textContent = fmt(r.net_gst_payable);
+    net.style.color = r.net_gst_payable >= 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('g1-bills').textContent = r.total_bills + ' bills';
+    var tb = document.getElementById('g1-tbody');
+    if(!r.slabs || !r.slabs.length){
+      tb.innerHTML = '<tr><td colspan="6" class="empty">No GST bills for this period</td></tr>';
+      return;
+    }
+    tb.innerHTML = r.slabs.map(function(s){
+      return '<tr><td>'+s.gst_rate+'%</td><td>'+s.bills+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(s.taxable)+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(s.cgst)+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(s.sgst)+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(s.total_gst)+'</td></tr>';
+    }).join('');
+  }catch(e){ console.error('GST load error:', e); }
+}
+
+function exportCSV(){
+  if(!_gstData || !_gstData.slabs) return;
+  var csv = 'GST Rate,Bills,Taxable Value,CGST,SGST,Total Tax\n';
+  _gstData.slabs.forEach(function(s){
+    csv += s.gst_rate+'%,'+s.bills+','+s.taxable+','+s.cgst+','+s.sgst+','+s.total_gst+'\n';
+  });
+  csv += '\nSummary\n';
+  csv += 'Total Taxable,'+_gstData.total_taxable+'\n';
+  csv += 'Output CGST,'+_gstData.total_cgst+'\n';
+  csv += 'Output SGST,'+_gstData.total_sgst+'\n';
+  csv += 'Input CGST,'+_gstData.input_cgst+'\n';
+  csv += 'Input SGST,'+_gstData.input_sgst+'\n';
+  csv += 'Net Payable,'+_gstData.net_gst_payable+'\n';
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gst_returns_'+document.getElementById('gst-month').value+'.csv';
+  a.click();
+}
+
+// Clock
+function updateClock(){
+  var n = new Date();
+  document.getElementById('clock').textContent = n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();
+}
+setInterval(updateClock, 1000); updateClock();
+</script>
+</body>
+</html>

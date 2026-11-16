@@ -8888,6 +8888,8 @@ class DBManager:
         'CASH_RCPT': 'CR', 'CASH_PAY': 'CP',
         'BANK_RCPT': 'BR', 'BANK_PAY': 'BP',
         'CONTRA': 'CT', 'JV': 'JV', 'GST_JV': 'GJ',
+        'SALES': 'SL', 'PURCHASE': 'PU',
+        'DEBIT_NOTE': 'DN', 'CREDIT_NOTE': 'CN',
     }
 
     def ensure_finance_tables(self):
@@ -9269,4 +9271,278 @@ class DBManager:
                     'message': f'Voucher {vch_no} posted.'}
         except Exception as e:
             _dberr(f"[FINANCE] post: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Seed default chart of accounts (jewelry) ──────────────────────
+    def finance_seed_default_accounts(self):
+        self.ensure_finance_tables()
+        try:
+            with self._get_connection() as conn:
+                existing = conn.execute("SELECT COUNT(*) FROM chart_accounts").fetchone()[0]
+                if existing > 0:
+                    return {'status': 'ok', 'message': 'Accounts already exist'}
+                defaults = [
+                    # INCOME
+                    ('SALES-GOLD', 'Sales - Gold', 'INCOME', 'Sales', 'Cr', 0, 0, 0, '7113'),
+                    ('SALES-SILVER', 'Sales - Silver', 'INCOME', 'Sales', 'Cr', 0, 0, 0, '7114'),
+                    ('MAKING-INC', 'Making Income', 'INCOME', 'Sales', 'Cr', 0, 0, 0, ''),
+                    ('LABOUR-INC', 'Labour Income', 'INCOME', 'Sales', 'Cr', 0, 0, 0, ''),
+                    # EXPENSE
+                    ('PURCH-GOLD', 'Purchase - Gold', 'EXPENSE', 'Purchase', 'Dr', 0, 0, 0, '7113'),
+                    ('PURCH-SILVER', 'Purchase - Silver', 'EXPENSE', 'Purchase', 'Dr', 0, 0, 0, '7114'),
+                    ('KARIGAR-WAGES', 'Karigar Wages', 'EXPENSE', 'Direct Expense', 'Dr', 0, 0, 0, ''),
+                    ('RENT', 'Rent', 'EXPENSE', 'Indirect Expense', 'Dr', 0, 0, 0, ''),
+                    ('ELECTRICITY', 'Electricity', 'EXPENSE', 'Indirect Expense', 'Dr', 0, 0, 0, ''),
+                    ('MISC-EXP', 'Miscellaneous Expense', 'EXPENSE', 'Indirect Expense', 'Dr', 0, 0, 0, ''),
+                    # ASSET
+                    ('CASH', 'Cash', 'ASSET', 'Current Asset', 'Dr', 0, 0, 0, ''),
+                    ('BANK', 'Bank (Primary)', 'ASSET', 'Current Asset', 'Dr', 0, 0, 0, ''),
+                    ('DEBTORS', 'Debtors (Sundry)', 'ASSET', 'Current Asset', 'Dr', 0, 0, 0, ''),
+                    ('STOCK-GOLD', 'Stock - Gold', 'ASSET', 'Current Asset', 'Dr', 0, 0, 0, ''),
+                    ('STOCK-SILVER', 'Stock - Silver', 'ASSET', 'Current Asset', 'Dr', 0, 0, 0, ''),
+                    ('INPUT-CGST', 'Input CGST', 'ASSET', 'Duties & Taxes', 'Dr', 0, 1, 0, ''),
+                    ('INPUT-SGST', 'Input SGST', 'ASSET', 'Duties & Taxes', 'Dr', 0, 1, 0, ''),
+                    # LIABILITY
+                    ('CREDITORS', 'Creditors (Sundry)', 'LIABILITY', 'Current Liability', 'Cr', 0, 0, 0, ''),
+                    ('OUTPUT-CGST', 'Output CGST', 'LIABILITY', 'Duties & Taxes', 'Cr', 0, 1, 0, ''),
+                    ('OUTPUT-SGST', 'Output SGST', 'LIABILITY', 'Duties & Taxes', 'Cr', 0, 1, 0, ''),
+                    ('GST-PAYABLE', 'GST Payable', 'LIABILITY', 'Duties & Taxes', 'Cr', 0, 1, 0, ''),
+                    # EQUITY
+                    ('CAPITAL', 'Capital', 'EQUITY', 'Capital', 'Cr', 0, 0, 0, ''),
+                    ('RETAINED', 'Retained Earnings', 'EQUITY', 'Reserves', 'Cr', 0, 0, 0, ''),
+                ]
+                for code, name, atype, group, bt, ob, is_gst, gst_rate, hsn in defaults:
+                    kind = 'CASH' if code == 'CASH' else ('BANK' if code == 'BANK' else '')
+                    conn.execute(
+                        "INSERT OR IGNORE INTO chart_accounts"
+                        "(code,name,type,acc_group,balance_type,opening_balance,is_gst,gst_rate,hsn,kind)"
+                        " VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (code, name, atype, group, bt, ob, is_gst, gst_rate, hsn, kind))
+                conn.commit()
+            _dblog("[FINANCE] Seeded 23 default chart accounts")
+            return {'status': 'success', 'message': 'Default accounts created'}
+        except Exception as e:
+            _dberr(f"[FINANCE] seed: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Profit & Loss Statement ───────────────────────────────────────
+    def finance_profit_loss(self, from_date='', to_date=''):
+        self.ensure_finance_tables()
+        try:
+            with self._get_connection() as conn:
+                where = ""
+                params = []
+                if from_date:
+                    where += " AND v.date >= ?"
+                    params.append(from_date)
+                if to_date:
+                    where += " AND v.date <= ?"
+                    params.append(to_date)
+                rows = conn.execute(f"""
+                    SELECT a.code, a.name, a.type, a.acc_group,
+                           COALESCE(SUM(l.dr),0) as total_dr,
+                           COALESCE(SUM(l.cr),0) as total_cr
+                    FROM chart_accounts a
+                    LEFT JOIN cash_voucher_lines l ON l.account_code = a.code
+                    LEFT JOIN cash_vouchers v ON v.vch_no = l.vch_no
+                    WHERE a.type IN ('INCOME','EXPENSE') {where}
+                    GROUP BY a.code
+                    ORDER BY a.type, a.acc_group, a.name
+                """, params).fetchall()
+                revenue = []
+                expenses = []
+                total_rev = 0
+                total_exp = 0
+                for r in rows:
+                    dr = float(r[4] or 0)
+                    cr = float(r[5] or 0)
+                    if r[2] == 'INCOME':
+                        amt = cr - dr
+                        if abs(amt) > 0.005:
+                            revenue.append({'code': r[0], 'name': r[1], 'group': r[3], 'amount': round(amt, 2)})
+                            total_rev += amt
+                    else:
+                        amt = dr - cr
+                        if abs(amt) > 0.005:
+                            expenses.append({'code': r[0], 'name': r[1], 'group': r[3], 'amount': round(amt, 2)})
+                            total_exp += amt
+            net = round(total_rev - total_exp, 2)
+            return {'status': 'success', 'revenue': revenue, 'expenses': expenses,
+                    'total_revenue': round(total_rev, 2), 'total_expenses': round(total_exp, 2),
+                    'net_profit': net, 'from_date': from_date, 'to_date': to_date}
+        except Exception as e:
+            _dberr(f"[FINANCE] P&L: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Balance Sheet ─────────────────────────────────────────────────
+    def finance_balance_sheet(self, as_of_date=''):
+        self.ensure_finance_tables()
+        try:
+            with self._get_connection() as conn:
+                where = ""
+                params = []
+                if as_of_date:
+                    where = " AND v.date <= ?"
+                    params.append(as_of_date)
+                rows = conn.execute(f"""
+                    SELECT a.code, a.name, a.type, a.acc_group, a.balance_type,
+                           a.opening_balance,
+                           COALESCE(SUM(l.dr),0) as total_dr,
+                           COALESCE(SUM(l.cr),0) as total_cr
+                    FROM chart_accounts a
+                    LEFT JOIN cash_voucher_lines l ON l.account_code = a.code
+                    LEFT JOIN cash_vouchers v ON v.vch_no = l.vch_no
+                    WHERE a.type IN ('ASSET','LIABILITY','EQUITY') {where}
+                    GROUP BY a.code
+                    ORDER BY a.type, a.acc_group, a.name
+                """, params).fetchall()
+                assets = []
+                liabilities = []
+                equity = []
+                total_a = 0
+                total_l = 0
+                total_e = 0
+                for r in rows:
+                    sign = -1 if str(r[4] or '').startswith('Cr') else 1
+                    bal = round((float(r[5] or 0) * sign) + float(r[6] or 0) - float(r[7] or 0), 2)
+                    entry = {'code': r[0], 'name': r[1], 'group': r[3], 'balance': abs(bal)}
+                    if r[2] == 'ASSET':
+                        assets.append(entry)
+                        total_a += abs(bal) if bal >= 0 else -abs(bal)
+                    elif r[2] == 'LIABILITY':
+                        liabilities.append(entry)
+                        total_l += abs(bal)
+                    else:
+                        equity.append(entry)
+                        total_e += abs(bal)
+                # Add net profit to equity
+                pl = self.finance_profit_loss('', as_of_date)
+                net_profit = pl.get('net_profit', 0) if pl.get('status') == 'success' else 0
+                if abs(net_profit) > 0.005:
+                    equity.append({'code': 'NET-PROFIT', 'name': 'Net Profit (Current Period)',
+                                   'group': 'Computed', 'balance': round(net_profit, 2)})
+                    total_e += net_profit
+            return {'status': 'success', 'assets': assets, 'liabilities': liabilities,
+                    'equity': equity, 'total_assets': round(total_a, 2),
+                    'total_liabilities': round(total_l, 2), 'total_equity': round(total_e, 2),
+                    'total_liabilities_equity': round(total_l + total_e, 2),
+                    'as_of_date': as_of_date}
+        except Exception as e:
+            _dberr(f"[FINANCE] BS: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── GST Returns Summary ───────────────────────────────────────────
+    def finance_gst_summary(self, from_date='', to_date=''):
+        try:
+            with self._get_connection() as conn:
+                where = "WHERE 1=1"
+                params = []
+                if from_date:
+                    where += " AND date >= ?"
+                    params.append(from_date)
+                if to_date:
+                    where += " AND date <= ?"
+                    params.append(to_date)
+                rows = conn.execute(f"""
+                    SELECT COALESCE(cgst_rate,0) as rate,
+                           COUNT(*) as bills,
+                           COALESCE(SUM(total_amount),0) as taxable,
+                           COALESCE(SUM(cgst),0) as cgst,
+                           COALESCE(SUM(sgst),0) as sgst,
+                           COALESCE(SUM(gst_amount),0) as gst
+                    FROM sales_history {where}
+                    GROUP BY COALESCE(cgst_rate,0)
+                    ORDER BY rate
+                """, params).fetchall()
+                slabs = []
+                total_taxable = 0
+                total_cgst = 0
+                total_sgst = 0
+                total_gst = 0
+                total_bills = 0
+                for r in rows:
+                    rate = float(r[0] or 0)
+                    slab_rate = rate * 2
+                    s = {'gst_rate': slab_rate, 'cgst_rate': rate, 'sgst_rate': rate,
+                         'bills': int(r[1] or 0), 'taxable': round(float(r[2] or 0), 2),
+                         'cgst': round(float(r[3] or 0), 2), 'sgst': round(float(r[4] or 0), 2),
+                         'total_gst': round(float(r[5] or 0), 2)}
+                    slabs.append(s)
+                    total_bills += s['bills']
+                    total_taxable += s['taxable']
+                    total_cgst += s['cgst']
+                    total_sgst += s['sgst']
+                    total_gst += s['total_gst']
+                # Input GST from purchase vouchers
+                input_cgst = 0
+                input_sgst = 0
+                self.ensure_finance_tables()
+                try:
+                    irows = conn.execute(f"""
+                        SELECT l.account_code, COALESCE(SUM(l.dr),0)
+                        FROM cash_voucher_lines l
+                        JOIN cash_vouchers v ON v.vch_no = l.vch_no
+                        WHERE l.account_code IN ('INPUT-CGST','INPUT-SGST')
+                        {'AND v.date >= ?' if from_date else ''}
+                        {'AND v.date <= ?' if to_date else ''}
+                        GROUP BY l.account_code
+                    """, [p for p in [from_date, to_date] if p]).fetchall()
+                    for ir in irows:
+                        if ir[0] == 'INPUT-CGST':
+                            input_cgst = round(float(ir[1] or 0), 2)
+                        elif ir[0] == 'INPUT-SGST':
+                            input_sgst = round(float(ir[1] or 0), 2)
+                except Exception:
+                    pass
+            return {'status': 'success', 'slabs': slabs,
+                    'total_bills': total_bills, 'total_taxable': round(total_taxable, 2),
+                    'total_cgst': round(total_cgst, 2), 'total_sgst': round(total_sgst, 2),
+                    'total_gst': round(total_gst, 2),
+                    'input_cgst': input_cgst, 'input_sgst': input_sgst,
+                    'net_gst_payable': round(total_cgst + total_sgst - input_cgst - input_sgst, 2),
+                    'from_date': from_date, 'to_date': to_date}
+        except Exception as e:
+            _dberr(f"[FINANCE] GST: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Bank Reconciliation ───────────────────────────────────────────
+    def finance_unreconciled(self, bank_account='BANK'):
+        self.ensure_finance_tables()
+        try:
+            with self._get_connection() as conn:
+                try:
+                    conn.execute("ALTER TABLE cash_voucher_lines ADD COLUMN reconciled INTEGER DEFAULT 0")
+                    conn.execute("ALTER TABLE cash_voucher_lines ADD COLUMN reconciled_date TEXT DEFAULT ''")
+                except Exception:
+                    pass
+                rows = conn.execute("""
+                    SELECT l.id, l.vch_no, v.date, v.narration, l.dr, l.cr, l.reconciled
+                    FROM cash_voucher_lines l
+                    JOIN cash_vouchers v ON v.vch_no = l.vch_no
+                    WHERE l.account_code = ? AND l.reconciled = 0
+                    ORDER BY v.date DESC
+                """, (bank_account,)).fetchall()
+            entries = []
+            for r in rows:
+                entries.append({'id': r[0], 'vch_no': r[1], 'date': r[2], 'narration': r[3],
+                                'dr': round(float(r[4] or 0), 2), 'cr': round(float(r[5] or 0), 2)})
+            return {'status': 'success', 'entries': entries, 'count': len(entries)}
+        except Exception as e:
+            _dberr(f"[FINANCE] recon: {e}")
+            return {'status': 'error', 'message': str(e)}
+
+    def finance_reconcile(self, line_ids):
+        self.ensure_finance_tables()
+        try:
+            from datetime import date
+            today = date.today().isoformat()
+            with self._get_connection() as conn:
+                for lid in (line_ids or []):
+                    conn.execute(
+                        "UPDATE cash_voucher_lines SET reconciled=1, reconciled_date=? WHERE id=?",
+                        (today, int(lid)))
+                conn.commit()
+            return {'status': 'success', 'reconciled': len(line_ids or [])}
+        except Exception as e:
+            _dberr(f"[FINANCE] reconcile: {e}")
             return {'status': 'error', 'message': str(e)}

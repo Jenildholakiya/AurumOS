@@ -21,6 +21,7 @@ var NAV_ADMIN = [
     { id:'coa',       label:'Chart of Accounts', icon:'list',  page:'chart_of_accounts.html', section:'Finance' },
     { id:'ledger',    label:'Ledger',       icon:'book',      page:'ledger.html',          section:'Finance' },
     { id:'party',     label:'Party',        icon:'users',     page:'party.html',           section:'Finance' },
+    { id:'gstreturns',label:'GST Returns',  icon:'file-text', page:'gst_returns.html',     section:'Finance' },
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Finance' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'Finance' },
     { id:'network',   label:'Network',      icon:'wifi',      page:'network_manager.html', section:'System'  },
