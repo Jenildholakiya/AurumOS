@@ -1343,6 +1343,27 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    def get_metal_mode(self):
+        """Return the shop's metal mode: gold, silver, or both."""
+        try:
+            mode = self.db.get_config('metal_mode', 'gold').strip().lower()
+            if mode not in ('gold', 'silver', 'both'):
+                mode = 'gold'
+            return {'status': 'success', 'mode': mode}
+        except Exception as e:
+            return {'status': 'error', 'mode': 'gold', 'message': str(e)}
+
+    def set_metal_mode(self, mode):
+        """Set the shop's metal mode: gold, silver, or both."""
+        try:
+            mode = str(mode or 'gold').strip().lower()
+            if mode not in ('gold', 'silver', 'both'):
+                return {'status': 'error', 'message': 'Invalid mode. Use gold, silver, or both.'}
+            self.db.set_config('metal_mode', mode)
+            return {'status': 'success', 'mode': mode}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
     # -- NOTIFICATION CENTER -------------------------------------------------
     # Owner inbox: staff-bill alerts (local) + AurumOS admin messages (remote).
 

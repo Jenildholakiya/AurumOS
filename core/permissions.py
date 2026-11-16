@@ -68,7 +68,7 @@ OWNER_ONLY = frozenset([
     'admin_lockout_reset', 'verify_unlock_key', 'verify_web_unlock_key',
     'bastion_unlock', 'generate_protected_pdf', 'get_machine_id',
     # Configuration
-    'save_setup', 'update_settings', 'get_alert_settings',
+    'save_setup', 'update_settings', 'set_metal_mode', 'get_alert_settings',
     'save_alert_settings', 'send_test_alert_email',
     'set_metal_rates', 'set_default_printer',
     'save_network_config', 'change_db_location', 'reset_db_location',
@@ -123,6 +123,7 @@ ALWAYS = frozenset([
     'dpdp_sync_all_consents',
     'subscription_get_state', 'subscription_check_feature',
     'get_lockout_status', 'cluster',
+    'get_metal_mode',
 ])
 
 

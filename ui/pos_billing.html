@@ -465,6 +465,13 @@ window.aurumConfirm=function(msg,opts){
               <button class="apply-loyalty-btn" onclick="applyLoyaltyRedeem()">Apply</button>
             </div>
           </div>
+          <div class="field-group hide-uchak" id="metal-toggle-wrap" style="display:none;min-width:70px;max-width:80px;">
+            <label>Metal</label>
+            <select id="it-metal" style="padding:7px 6px;border-radius:6px;border:1px solid var(--rule);font-size:0.78rem;font-weight:600;cursor:pointer;background:var(--white);color:var(--ink);" onchange="onMetalChange()">
+              <option value="gold">🥇 Gold</option>
+              <option value="silver">🥈 Silver</option>
+            </select>
+          </div>
           <div class="field-group it-code-wrapper">
             <label id="lbl-it-code">IT Code / Tag ID</label>
             <input type="text" id="it-code" placeholder="Scan or type IT code / tag ID…" autocomplete="off" oninput="onITCodeInput(this.value)" onkeydown="onEntryKey(event)" data-next="it-weight" />
@@ -519,6 +526,7 @@ window.aurumConfirm=function(msg,opts){
         <thead>
           <tr>
             <th>#</th>
+            <th id="th-metal" style="display:none;">Metal</th>
             <th>IT Code</th>
             <th>Tag ID</th>
             <th>Tag Details</th>
@@ -653,6 +661,35 @@ var _loyalty = { points:0, redeem:0, redeemValue:0 };
 var _heldBills = [];
 var _editingIdx = -1;
 var _billMeta = null;
+var _metalMode = 'gold';
+try { _metalMode = localStorage.getItem('aurum_metal_mode') || 'gold'; } catch(e){}
+
+function _initMetalMode(){
+    var wrap = document.getElementById('metal-toggle-wrap');
+    var thMetal = document.getElementById('th-metal');
+    if(_metalMode === 'both'){
+        if(wrap) wrap.style.display = '';
+        if(thMetal) thMetal.style.display = '';
+    } else {
+        if(wrap) wrap.style.display = 'none';
+        if(thMetal) thMetal.style.display = 'none';
+        var sel = document.getElementById('it-metal');
+        if(sel) sel.value = (_metalMode === 'silver') ? 'silver' : 'gold';
+    }
+    _updateRateLabel();
+}
+function _getItemMetal(){
+    if(_metalMode === 'gold') return 'gold';
+    if(_metalMode === 'silver') return 'silver';
+    return (document.getElementById('it-metal') || {}).value || 'gold';
+}
+function onMetalChange(){ _updateRateLabel(); }
+function _updateRateLabel(){
+    var m = _getItemMetal();
+    var lbl = document.getElementById('lbl-it-rate');
+    if(lbl) lbl.textContent = m === 'silver' ? 'Rate /10g (Silver)' : 'Rate /10g (Gold)';
+}
+setTimeout(_initMetalMode, 100);
 
 initSidebar('billing');
 // Scale popup: the Connect button above needs the widget ready. Guarded
@@ -1397,6 +1434,7 @@ function addItemToBill(){
     var amount=parseFloat((baseAmount+making+wastageAmt+stone+labour).toFixed(2));
     var item={code:code,weight:wt,touch:touch,rate:rate,qty:qty,fine:fine,making:making,makingRaw:makingRaw,
               wastage:wastage,wastageAmt:wastageAmt,stone:stone,labour:labour,
+              metal_type:_getItemMetal(),
               amount:amount,
               huid:_lastPicked?_lastPicked.huid:'', tag_id:_lastPicked?_lastPicked.tag_id:'',
               name:_lastPicked?_lastPicked.name:''
@@ -1529,8 +1567,10 @@ function renderItems(){
                 +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
                 +'</tr>';
             }
+            var metalCell = _metalMode==='both' ? '<td style="font-size:0.7rem;font-weight:600;">'+(it.metal_type==='silver'?'🥈':'🥇')+'</td>' : '';
             return '<tr>'
                 +'<td style="color:var(--muted2);">'+(i+1)+'</td>'
+                +metalCell
                 +'<td><div class="it-name-cell">'+esc(it.code)+'</div></td>'
                 +'<td>'+(it.tag_id?'<div class="it-name-cell">'+esc(it.tag_id)+'</div>':'—')+'</td>'
                 +'<td>'+(it.name||it.huid?'<div class="it-huid">'+esc(it.name||'')+(it.name&&it.huid?' · ':'')+(it.huid?'HUID: '+esc(it.huid):'')+'</div>':'—')+'</td>'
@@ -2206,6 +2246,7 @@ function buildInvoice(kind){
         return {code:it.code, weight:parseFloat(it.weight.toFixed(3)), touch:parseFloat(it.touch.toFixed(2)),
                 rate:it.rate, qty:it.qty, fine:it.fine, making:it.making, makingRaw:it.makingRaw||'',
                 wastage:it.wastage||0, wastageAmt:it.wastageAmt||0, stone:it.stone||0, labour:it.labour||0,
+                metal_type:it.metal_type||'gold',
                 amount:parseFloat(it.amount.toFixed(2)), huid:it.huid||'', tag_id:it.tag_id||''};
     });
     return {

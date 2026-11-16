@@ -402,7 +402,7 @@ td:not(:first-child){text-align:right;}
 
     <div class="kpi-row">
         <div class="kpi kpi-gold"><div class="kpi-lbl">Today's Sales</div><div class="kpi-val gold" id="k-sales">Rs. 0.00</div><div class="kpi-sub" id="k-sales-sub">0 bills</div></div>
-        <div class="kpi kpi-teal"><div class="kpi-lbl">Gold Rate (Live)</div><div class="kpi-val teal" id="k-goldg">—</div><div class="kpi-sub" id="k-gold10">from latest billing &middot; /g</div></div>
+        <div class="kpi kpi-teal"><div class="kpi-lbl" id="k-rate-lbl">Gold Rate (Live)</div><div class="kpi-val teal" id="k-goldg">—</div><div class="kpi-sub" id="k-gold10">from latest billing &middot; /g</div></div>
         <div class="kpi kpi-blue"><div class="kpi-lbl">Cash in Hand (Today)</div><div class="kpi-val" id="k-cash">Rs. 0.00</div><div class="kpi-sub" id="k-cash-sub">Cash 0 &middot; UPI 0 &middot; Card 0</div></div>
         <div class="kpi kpi-green"><div class="kpi-lbl">Outstanding Dues</div><div class="kpi-val" style="color:var(--red);" id="k-dues">Rs. 0.00</div><div class="kpi-sub" id="k-dues-sub">customer credit</div></div>
         <div class="kpi kpi-ink"><div class="kpi-lbl">Stock Value (approx)</div><div class="kpi-val" style="font-size:1.2rem;" id="k-stockval">Rs. 0</div><div class="kpi-sub" id="k-stockval-sub">— g fine at live rate</div></div>
@@ -1136,6 +1136,16 @@ document.addEventListener('click',function(e){
 // ── LIVE GOLD RATE: billing pages publish the moment the rate is typed;
 // dashboard prefers that over the last saved bill, and repaints often.
 var _dashRate10=0;
+var _dashMetalMode='gold';
+try{_dashMetalMode=localStorage.getItem('aurum_metal_mode')||'gold';}catch(e){}
+(function(){
+    var lbl=document.getElementById('k-rate-lbl');
+    if(lbl){
+        if(_dashMetalMode==='silver') lbl.textContent='Silver Rate (Live)';
+        else if(_dashMetalMode==='both') lbl.textContent='Metal Rate (Live)';
+        else lbl.textContent='Gold Rate (Live)';
+    }
+})();
 function paintGoldRate(){
     var live=null;
     try{live=(window.AurumOS&&window.AurumOS.getLiveRate())||null;}catch(e){}
@@ -1143,6 +1153,7 @@ function paintGoldRate(){
     var isLive=!!(live&&live.v>0);
     var gE=document.getElementById('k-goldg'),tE=document.getElementById('k-gold10');
     if(!gE||!tE) return;
+    var metalName=_dashMetalMode==='silver'?'Silver':_dashMetalMode==='both'?'Gold':'Gold';
     gE.innerText=g10?('Rs.'+Math.round(g10/10).toLocaleString('en-IN')+' /g'):'—';
     tE.innerText=g10?('Rs.'+Math.round(g10).toLocaleString('en-IN')+' /10g · '+(isLive?'live from billing':'from latest billing')):'from latest billing';
 }

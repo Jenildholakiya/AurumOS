@@ -464,6 +464,14 @@ body.sidebar-collapsed #sidebar-container{width:66px!important;}
     </div>
 
     <div class="table-section">
+        <div id="inv-metal-filter" style="display:none;padding:8px 12px;border-bottom:1px solid var(--rule);">
+          <label style="font-size:0.72rem;font-weight:600;margin-right:8px;">Metal:</label>
+          <select id="inv-metal-sel" onchange="filterByMetal()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--rule);font-size:0.75rem;">
+            <option value="all">All</option>
+            <option value="gold">🥇 Gold</option>
+            <option value="silver">🥈 Silver</option>
+          </select>
+        </div>
         <table>
             <thead><tr><th>SKU Tag</th><th>Description</th><th id="col-touch">Touch</th><th id="col-category">Category</th><th>Gross Wt</th><th>Net Wt</th><th id="col-making">Making</th><th>HUID</th><th>Status</th></tr></thead>
             <tbody id="master-stock-body"></tbody>
@@ -897,6 +905,25 @@ function _makingLabel(item) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
     else apply();
 })();
+// ── Metal mode filter ──
+(function(){
+    var mm='gold';
+    try{mm=localStorage.getItem('aurum_metal_mode')||'gold';}catch(e){}
+    if(mm==='both'){
+        var f=document.getElementById('inv-metal-filter');
+        if(f) f.style.display='';
+    }
+})();
+function filterByMetal(){
+    var v=(document.getElementById('inv-metal-sel')||{}).value||'all';
+    var rows=document.querySelectorAll('#master-stock-body tr');
+    rows.forEach(function(tr){
+        if(v==='all'){tr.style.display='';return;}
+        var cat=(tr.querySelector('td:nth-child(4)')||{}).textContent||'';
+        var isMatch=v==='silver'?cat.toLowerCase().indexOf('silver')>=0:cat.toLowerCase().indexOf('silver')<0;
+        tr.style.display=isMatch?'':'none';
+    });
+}
 </script>
 </body>
 </html>
