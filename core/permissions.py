@@ -69,8 +69,12 @@ OWNER_ONLY = frozenset([
     'bastion_unlock', 'generate_protected_pdf', 'get_machine_id',
     # Configuration
     'save_setup', 'update_settings', 'set_metal_mode', 'get_alert_settings',
+    'save_supplier', 'create_purchase_order', 'update_po_status',
+    'create_stock_transfer', 'update_transfer_status', 'update_repair_status',
     'seed_default_accounts', 'get_profit_loss', 'get_balance_sheet',
     'get_gst_summary', 'get_unreconciled', 'reconcile_entries',
+    'get_suppliers', 'get_purchase_orders', 'get_stock_transfers',
+    'get_repairs', 'create_repair',
     'save_alert_settings', 'send_test_alert_email',
     'set_metal_rates', 'set_default_printer',
     'save_network_config', 'change_db_location', 'reset_db_location',

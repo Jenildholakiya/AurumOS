@@ -13,6 +13,7 @@ var NAV_ADMIN = [
     { id:'karigar',   label:'Karigar',      icon:'orders',    page:'karigar.html',         section:'Main'    },
     { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  page:'hallmark.html',        section:'Main'    },
     { id:'deadstock', label:'Dead Stock',   icon:'deadstock', page:'dead_stock.html',      section:'Main'    },
+    { id:'repairs',   label:'Repairs',      icon:'tool',      page:'repairs.html',         section:'Main'    },
     { id:'billing',   label:'Create Bill',  icon:'file-text', page:'billing.html',         section:'Main'    },
     { id:'history',   label:'History',      icon:'clock',     page:'history.html',         section:'Main'    },
     { id:'vouchers',  label:'Voucher History', icon:'receipt', page:'voucher_history.html', section:'Main'    },
@@ -20,10 +21,13 @@ var NAV_ADMIN = [
     { id:'cashbank',  label:'Cash & Bank',  icon:'wallet',    page:'cash_bank.html',       section:'Finance' },
     { id:'coa',       label:'Chart of Accounts', icon:'list',  page:'chart_of_accounts.html', section:'Finance' },
     { id:'ledger',    label:'Ledger',       icon:'book',      page:'ledger.html',          section:'Finance' },
+    { id:'purchaseorder',label:'Purchase Orders', icon:'receipt', page:'purchase_order.html',  section:'Finance' },
     { id:'party',     label:'Party',        icon:'users',     page:'party.html',           section:'Finance' },
     { id:'gstreturns',label:'GST Returns',  icon:'file-text', page:'gst_returns.html',     section:'Finance' },
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Finance' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'Finance' },
+    { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'  },
+    { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'  },
     { id:'network',   label:'Network',      icon:'wifi',      page:'network_manager.html', section:'System'  },
 ];
 
@@ -33,12 +37,15 @@ var NAV_RETAIL = [
     { id:'inventory', label:'Inventory',    icon:'box',       page:'inventory.html',       section:'Main'     },
     { id:'hallmark',  label:'Hallmarking',  icon:'hallmark',  page:'hallmark.html',        section:'Main'     },
     { id:'deadstock', label:'Dead Stock',   icon:'deadstock', page:'dead_stock.html',      section:'Main'     },
+    { id:'repairs',   label:'Repairs',      icon:'tool',      page:'repairs.html',         section:'Main'     },
     { id:'karigar',   label:'Karigar',      icon:'orders',    page:'karigar.html',         section:'Business' },
     { id:'customers', label:'Customers',    icon:'users',     page:'customer_account.html',section:'Business' },
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Business' },
     { id:'old-gold',  label:'Old Gold',     icon:'old-gold',  page:'old_gold.html',        section:'Business' },
     { id:'reports',   label:'Reports',      icon:'bar-chart', page:'reports.html',         section:'Business' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'System'   },
+    { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'   },
+    { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'   },
     { id:'network',   label:'Network',      icon:'wifi',      page:'network_manager.html', section:'System'   },
     { id:'settings',  label:'Settings',     icon:'settings',  page:'settings.html',        section:'System'   },
 ];
@@ -205,6 +212,8 @@ var _FEATURE_MAP = {
     'ledger.html':         'full_accounts',
     'cash_bank.html':      'full_accounts',
     'gst_returns.html':    'gst_returns',
+    'purchase_order.html': 'purchase_vouchers',
+    'stock_transfer.html': 'stock_transfer',
     'reports.html':        'stock_med_reports'
     // network_manager.html is deliberately absent. Connecting computers is
     // limited by seats, not by hiding the screen, and the seat limit is
@@ -224,6 +233,8 @@ var _FEATURE_PLANS = {
     'ledger.html':         'Pro',
     'cash_bank.html':      'Pro',
     'gst_returns.html':    'Pro',
+    'purchase_order.html': 'Pro',
+    'stock_transfer.html': 'Pro',
     'reports.html':        'Pro'
 };
 

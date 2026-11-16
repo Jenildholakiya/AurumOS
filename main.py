@@ -6271,6 +6271,41 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # -- OPERATIONS: Purchase Orders, Stock Transfer, Repairs -----------------
+    def get_suppliers(self):
+        try: return self.db.po_get_suppliers()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def save_supplier(self, data):
+        try: return self.db.po_save_supplier(data or {})
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_purchase_orders(self, status=''):
+        try: return self.db.po_list(status or '')
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def create_purchase_order(self, data):
+        try: return self.db.po_create(data or {})
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def update_po_status(self, po_no, status):
+        try: return self.db.po_update_status(po_no, status)
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_stock_transfers(self):
+        try: return self.db.transfer_list()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def create_stock_transfer(self, data):
+        try: return self.db.transfer_create(data or {})
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def update_transfer_status(self, transfer_no, status, by=''):
+        try: return self.db.transfer_update_status(transfer_no, status, by or '')
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_repairs(self, status=''):
+        try: return self.db.repair_list(status or '')
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def create_repair(self, data):
+        try: return self.db.repair_create(data or {})
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def update_repair_status(self, repair_no, status, actual_cost=None):
+        try: return self.db.repair_update_status(repair_no, status, actual_cost)
+        except Exception as e: return {"status": "error", "message": str(e)}
+
     # -- UCHAK INWARD ----------------------------------------------------------
     def get_next_uchak_inward_vch_id(self):         return self.db.get_last_uchak_inward_vch_id()
 

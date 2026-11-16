@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Purchase Orders</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#f8fafb;--cream2:#f1f5f9;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;--gold:#2563eb;--gold2:#3b82f6;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);--rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;--green:#16a34a;--green-bg:rgba(22,163,74,0.07);--red:#dc2626;--red-bg:rgba(220,38,38,0.06);--amber:#d97706;--amber-bg:rgba(217,119,6,0.07);--sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;--sh:0 1px 3px rgba(0,0,0,0.04);}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+.card-body{padding:16px 18px;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.btn{padding:7px 16px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:var(--sans);}
+.btn-primary{background:var(--gold);color:#fff;border-color:var(--gold);}
+.btn-sm{padding:4px 10px;font-size:0.68rem;}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:0.65rem;font-weight:600;}
+.pill-draft{background:var(--cream2);color:var(--muted);}
+.pill-confirmed{background:rgba(37,99,235,0.08);color:var(--gold);}
+.pill-received{background:var(--green-bg);color:var(--green);}
+.pill-closed{background:var(--cream2);color:var(--ink3);}
+.form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.form-row label{font-size:0.72rem;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px;}
+.form-row input,.form-row select,.form-row textarea{padding:7px 10px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;font-family:var(--sans);width:100%;}
+.form-group{flex:1;min-width:140px;}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+.tabs{display:flex;gap:6px;margin-bottom:16px;}
+.tab{padding:6px 14px;border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;border:1px solid var(--rule);background:var(--white);color:var(--muted);}
+.tab.active{background:var(--gold-bg);color:var(--gold);border-color:var(--gold-ln);}
+</style>
+</head>
+<body>
+<script>initSidebar('accounting');</script>
+<main>
+  <div class="topbar">
+    <h1>Purchase Orders</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('orders')">Orders</div>
+      <div class="tab" onclick="showTab('suppliers')">Suppliers</div>
+      <div class="tab" onclick="showTab('new-po')">+ New PO</div>
+      <div class="tab" onclick="showTab('new-supplier')">+ Add Supplier</div>
+    </div>
+
+    <div id="tab-orders">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Purchase Orders</span><span id="po-count" style="font-size:0.7rem;color:var(--muted);">0</span></div>
+        <table>
+          <thead><tr><th>PO No</th><th>Supplier</th><th>Date</th><th style="text-align:right;">Weight</th><th style="text-align:right;">Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="po-tbody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-suppliers" style="display:none;">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Suppliers</span></div>
+        <table>
+          <thead><tr><th>Name</th><th>Phone</th><th>GSTIN</th><th>City</th><th>Metal</th></tr></thead>
+          <tbody id="sup-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-new-po" style="display:none;">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Create Purchase Order</span></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label>Supplier</label><select id="po-supplier"></select></div>
+            <div class="form-group"><label>Date</label><input type="date" id="po-date" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Metal Type</label>
+              <select id="po-metal"><option value="gold">Gold</option><option value="silver">Silver</option></select>
+            </div>
+            <div class="form-group"><label>Weight (g)</label><input type="number" id="po-weight" step="0.001" /></div>
+            <div class="form-group"><label>Touch (%)</label><input type="number" id="po-touch" step="0.01" /></div>
+            <div class="form-group"><label>Rate /10g</label><input type="number" id="po-rate" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Amount</label><input type="number" id="po-amount" readonly style="background:var(--cream);" /></div>
+            <div class="form-group"><label>CGST</label><input type="number" id="po-cgst" value="0" /></div>
+            <div class="form-group"><label>SGST</label><input type="number" id="po-sgst" value="0" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex:3;"><label>Notes</label><textarea id="po-notes" rows="2"></textarea></div>
+          </div>
+          <button class="btn btn-primary" onclick="submitPO()">Create Purchase Order</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-new-supplier" style="display:none;">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Add Supplier</span></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label>Name</label><input type="text" id="sup-name" /></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="sup-phone" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>GSTIN</label><input type="text" id="sup-gstin" /></div>
+            <div class="form-group"><label>City</label><input type="text" id="sup-city" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Metal</label>
+              <select id="sup-metal"><option value="gold">Gold</option><option value="silver">Silver</option><option value="both">Both</option></select>
+            </div>
+            <div class="form-group"><label>Notes</label><input type="text" id="sup-notes" /></div>
+          </div>
+          <button class="btn btn-primary" onclick="submitSupplier()">Save Supplier</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+var _suppliers=[], _orders=[];
+function fmt(n){return 'Rs. '+parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2});}
+function showTab(id){
+  ['orders','suppliers','new-po','new-supplier'].forEach(function(t){
+    var el=document.getElementById('tab-'+t);
+    if(el) el.style.display=t===id?'':'none';
+  });
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('active',['orders','suppliers','new-po','new-supplier'][i]===id);
+  });
+}
+function statusPill(s){
+  var cls={'draft':'pill-draft','confirmed':'pill-confirmed','received':'pill-received','closed':'pill-closed'}[s]||'pill-draft';
+  return '<span class="pill '+cls+'">'+s.toUpperCase()+'</span>';
+}
+function calcAmount(){
+  var w=parseFloat(document.getElementById('po-weight').value)||0;
+  var r=parseFloat(document.getElementById('po-rate').value)||0;
+  document.getElementById('po-amount').value=(w/10*r).toFixed(2);
+}
+document.getElementById('po-weight').addEventListener('input',calcAmount);
+document.getElementById('po-rate').addEventListener('input',calcAmount);
+document.getElementById('po-date').value=new Date().toISOString().split('T')[0];
+
+async function loadSuppliers(){
+  var api=window.pywebview&&window.pywebview.api; if(!api) return;
+  var r=await api.get_suppliers();
+  _suppliers=(r&&r.suppliers)||[];
+  var sel=document.getElementById('po-supplier');
+  sel.innerHTML=_suppliers.map(function(s){return '<option value="'+s.id+'">'+s.name+'</option>';}).join('');
+  var tb=document.getElementById('sup-tbody');
+  if(!_suppliers.length){tb.innerHTML='<tr><td colspan="5" class="empty">No suppliers yet</td></tr>';return;}
+  tb.innerHTML=_suppliers.map(function(s){
+    return '<tr><td>'+s.name+'</td><td>'+s.phone+'</td><td>'+s.gstin+'</td><td>'+s.city+'</td><td>'+s.metal_type+'</td></tr>';
+  }).join('');
+}
+async function loadOrders(){
+  var api=window.pywebview&&window.pywebview.api; if(!api) return;
+  var r=await api.get_purchase_orders();
+  _orders=(r&&r.orders)||[];
+  var tb=document.getElementById('po-tbody');
+  document.getElementById('po-count').textContent=_orders.length+' orders';
+  if(!_orders.length){tb.innerHTML='<tr><td colspan="7" class="empty">No purchase orders yet</td></tr>';return;}
+  tb.innerHTML=_orders.map(function(o){
+    var actions='';
+    if(o.status==='draft') actions='<button class="btn btn-sm" onclick="updatePO(\''+o.po_no+'\',\'confirmed\')">Confirm</button>';
+    else if(o.status==='confirmed') actions='<button class="btn btn-sm" onclick="updatePO(\''+o.po_no+'\',\'received\')">Receive</button>';
+    else if(o.status==='received') actions='<button class="btn btn-sm" onclick="updatePO(\''+o.po_no+'\',\'closed\')">Close</button>';
+    return '<tr><td>'+o.po_no+'</td><td>'+(o.supplier_name||'')+'</td><td>'+o.date+'</td>'
+      +'<td style="text-align:right;">'+parseFloat(o.total_weight||0).toFixed(3)+' g</td>'
+      +'<td style="text-align:right;">'+fmt(o.total_amount)+'</td>'
+      +'<td>'+statusPill(o.status)+'</td><td>'+actions+'</td></tr>';
+  }).join('');
+}
+async function submitPO(){
+  var api=window.pywebview&&window.pywebview.api; if(!api) return;
+  var wt=parseFloat(document.getElementById('po-weight').value)||0;
+  var r=await api.create_purchase_order({
+    supplier_id:document.getElementById('po-supplier').value,
+    date:document.getElementById('po-date').value,
+    items:[{metal_type:document.getElementById('po-metal').value,weight:wt,touch:parseFloat(document.getElementById('po-touch').value)||0,rate:parseFloat(document.getElementById('po-rate').value)||0}],
+    total_weight:wt, total_amount:parseFloat(document.getElementById('po-amount').value)||0,
+    cgst:parseFloat(document.getElementById('po-cgst').value)||0, sgst:parseFloat(document.getElementById('po-sgst').value)||0,
+    notes:document.getElementById('po-notes').value
+  });
+  if(r&&r.status==='success'){showTab('orders');loadOrders();}
+}
+async function updatePO(no,st){
+  var api=window.pywebview&&window.pywebview.api; if(!api) return;
+  await api.update_po_status(no,st); loadOrders();
+}
+async function submitSupplier(){
+  var api=window.pywebview&&window.pywebview.api; if(!api) return;
+  await api.save_supplier({name:document.getElementById('sup-name').value,phone:document.getElementById('sup-phone').value,
+    gstin:document.getElementById('sup-gstin').value,city:document.getElementById('sup-city').value,
+    metal_type:document.getElementById('sup-metal').value,notes:document.getElementById('sup-notes').value});
+  showTab('suppliers');loadSuppliers();
+}
+function updateClock(){var n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();}
+setInterval(updateClock,1000);updateClock();
+window.addEventListener('load',function(){
+  var t=setInterval(function(){if(!window.pywebview||!window.pywebview.api)return;clearInterval(t);loadSuppliers();loadOrders();},100);
+});
+</script>
+</body>
+</html>

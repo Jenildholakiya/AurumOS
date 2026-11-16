@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Tag Printing</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#f8fafb;--cream2:#f1f5f9;--white:#fff;--ink:#0e0c09;--ink3:#5c5a52;--gold:#2563eb;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);--rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;--green:#16a34a;--green-bg:rgba(22,163,74,0.07);--sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;--sh:0 1px 3px rgba(0,0,0,0.04);}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.toolbar input{padding:7px 12px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;font-family:var(--sans);min-width:220px;}
+.btn{padding:7px 16px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:var(--sans);}
+.btn-primary{background:var(--gold);color:#fff;border-color:var(--gold);}
+.btn-sm{padding:4px 10px;font-size:0.68rem;}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+.select-bar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--gold-bg);border-bottom:1px solid var(--gold-ln);font-size:0.78rem;color:var(--gold);font-weight:600;}
+tr.selected{background:rgba(37,99,235,0.04);}
+input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--gold);}
+.tag-preview{display:inline-block;border:1px dashed var(--rule);border-radius:6px;padding:10px 14px;margin:4px;font-size:0.7rem;line-height:1.5;min-width:180px;background:var(--white);}
+.tag-preview strong{font-size:0.75rem;}
+</style>
+</head>
+<body>
+<script>initSidebar('inventory');</script>
+<main>
+  <div class="topbar">
+    <h1>Batch Tag Printing</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search by IT code, name, tag ID..." oninput="filterItems()" />
+      <button class="btn" onclick="selectAll(true)">Select All</button>
+      <button class="btn" onclick="selectAll(false)">Deselect All</button>
+      <span style="margin-left:auto;font-size:0.78rem;font-weight:600;color:var(--gold);" id="sel-count">0 selected</span>
+      <button class="btn btn-green" onclick="printSelected()">Print Selected</button>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Stock Inventory</span><span id="stock-count" style="font-size:0.7rem;color:var(--muted);">0 items</span></div>
+      <table>
+        <thead><tr><th style="width:30px;"></th><th>IT Code</th><th>Name</th><th>Tag ID</th><th>Touch</th><th>Gross Wt</th><th>Net Wt</th><th>HUID</th></tr></thead>
+        <tbody id="stock-tbody"><tr><td colspan="8" class="empty">Loading inventory...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="preview-card" style="display:none;">
+      <div class="card-head"><span class="card-title">Tag Preview</span></div>
+      <div style="padding:16px 18px;" id="preview-area"></div>
+    </div>
+  </div>
+</main>
+<script>
+var _allStock=[], _selected=new Set();
+
+function filterItems(){
+  var q=(document.getElementById('search').value||'').toLowerCase();
+  var rows=document.querySelectorAll('#stock-tbody tr');
+  rows.forEach(function(tr){
+    if(!tr.dataset.code){tr.style.display='';return;}
+    var text=(tr.dataset.code+' '+tr.dataset.name+' '+tr.dataset.tag).toLowerCase();
+    tr.style.display=text.indexOf(q)>=0?'':'none';
+  });
+}
+function selectAll(on){
+  _selected.clear();
+  if(on) _allStock.forEach(function(s){_selected.add(s.tag_id||s.it_code);});
+  document.querySelectorAll('#stock-tbody input[type="checkbox"]').forEach(function(cb){cb.checked=on;});
+  document.querySelectorAll('#stock-tbody tr').forEach(function(tr){tr.classList.toggle('selected',on);});
+  updateCount();
+}
+function toggleItem(key,cb){
+  if(cb.checked) _selected.add(key); else _selected.delete(key);
+  cb.closest('tr').classList.toggle('selected',cb.checked);
+  updateCount();
+}
+function updateCount(){
+  document.getElementById('sel-count').textContent=_selected.size+' selected';
+  var preview=document.getElementById('preview-card');
+  var area=document.getElementById('preview-area');
+  if(_selected.size>0){
+    preview.style.display='';
+    area.innerHTML='';
+    _allStock.filter(function(s){return _selected.has(s.tag_id||s.it_code);}).forEach(function(s){
+      area.innerHTML+='<div class="tag-preview">'
+        +'<strong>'+((s.it_name||s.name||s.it_code)+'').substring(0,25)+'</strong><br>'
+        +'Touch: '+(parseFloat(s.touch||0)).toFixed(1)+'%<br>'
+        +'Gr.Wt: '+(parseFloat(s.gr_wt||0)).toFixed(3)+'g<br>'
+        +'Nt.Wt: '+(parseFloat(s.nt_wt||0)).toFixed(3)+'g<br>'
+        +(s.huid?'HUID: '+s.huid+'<br>':'')
+        +'Tag: '+(s.tag_id||'—')
+        +'</div>';
+    });
+  } else {
+    preview.style.display='none';
+  }
+}
+async function loadStock(){
+  var api=window.pywebview&&window.pywebview.api; if(!api||!api.get_all_stock) return;
+  var r=await api.get_all_stock();
+  _allStock=(r&&r.items)||(r&&r.stock)||[];
+  if(Array.isArray(r)&&!_allStock.length) _allStock=r;
+  document.getElementById('stock-count').textContent=_allStock.length+' items';
+  var tb=document.getElementById('stock-tbody');
+  if(!_allStock.length){tb.innerHTML='<tr><td colspan="8" class="empty">No stock items found</td></tr>';return;}
+  tb.innerHTML=_allStock.map(function(s){
+    var key=s.tag_id||s.it_code;
+    return '<tr data-code="'+(s.it_code||'')+'" data-name="'+(s.it_name||s.name||'')+'" data-tag="'+(s.tag_id||'')+'">'
+      +'<td><input type="checkbox" onchange="toggleItem(\''+key+'\',this)" /></td>'
+      +'<td>'+(s.it_code||'')+'</td><td>'+(s.it_name||s.name||'')+'</td><td>'+(s.tag_id||'—')+'</td>'
+      +'<td>'+(parseFloat(s.touch||0)).toFixed(1)+'%</td>'
+      +'<td>'+(parseFloat(s.gr_wt||0)).toFixed(3)+'</td>'
+      +'<td>'+(parseFloat(s.nt_wt||0)).toFixed(3)+'</td>'
+      +'<td>'+(s.huid||'—')+'</td></tr>';
+  }).join('');
+}
+async function printSelected(){
+  if(!_selected.size){alert('Select at least one item to print.');return;}
+  var api=window.pywebview&&window.pywebview.api;
+  if(!api) return;
+  if(api.tag_print_batch){
+    var r=await api.tag_print_batch(Array.from(_selected));
+    if(r&&r.status==='success') alert('Sent '+_selected.size+' tag(s) to printer.');
+    else alert('Print error: '+(r&&r.message||'Unknown'));
+  } else {
+    alert('Batch tag printing not available. TSC printer may not be connected.');
+  }
+}
+function updateClock(){var n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();}
+setInterval(updateClock,1000);updateClock();
+window.addEventListener('load',function(){
+  var t=setInterval(function(){if(!window.pywebview||!window.pywebview.api)return;clearInterval(t);loadStock();},100);
+});
+</script>
+</body>
+</html>

@@ -9546,3 +9546,178 @@ class DBManager:
         except Exception as e:
             _dberr(f"[FINANCE] reconcile: {e}")
             return {'status': 'error', 'message': str(e)}
+
+    # ══════════════════════════════════════════════════════════════════
+    # OPERATIONS: Suppliers + Purchase Orders
+    # ══════════════════════════════════════════════════════════════════
+
+    def _ensure_ops_tables(self):
+        try:
+            with self._get_connection() as conn:
+                conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT DEFAULT '', gstin TEXT DEFAULT '', city TEXT DEFAULT '', address TEXT DEFAULT '', metal_type TEXT DEFAULT 'gold', notes TEXT DEFAULT '', active INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE IF NOT EXISTS purchase_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, po_no TEXT UNIQUE, supplier_id INTEGER, date TEXT DEFAULT (date('now')), status TEXT DEFAULT 'draft', items TEXT DEFAULT '[]', total_weight REAL DEFAULT 0, total_fine REAL DEFAULT 0, total_amount REAL DEFAULT 0, cgst REAL DEFAULT 0, sgst REAL DEFAULT 0, notes TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE IF NOT EXISTS stock_transfers (id INTEGER PRIMARY KEY AUTOINCREMENT, transfer_no TEXT UNIQUE, from_location TEXT DEFAULT '', to_location TEXT DEFAULT '', date TEXT DEFAULT (date('now')), status TEXT DEFAULT 'pending', items TEXT DEFAULT '[]', total_weight REAL DEFAULT 0, total_pcs INTEGER DEFAULT 0, notes TEXT DEFAULT '', approved_by TEXT DEFAULT '', received_by TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE IF NOT EXISTS repairs (id INTEGER PRIMARY KEY AUTOINCREMENT, repair_no TEXT UNIQUE, customer TEXT DEFAULT '', phone TEXT DEFAULT '', item_desc TEXT DEFAULT '', metal_type TEXT DEFAULT 'gold', weight REAL DEFAULT 0, repair_type TEXT DEFAULT 'repair', estimated_cost REAL DEFAULT 0, actual_cost REAL DEFAULT 0, advance REAL DEFAULT 0, status TEXT DEFAULT 'received', received_date TEXT DEFAULT (date('now')), promised_date TEXT DEFAULT '', completed_date TEXT DEFAULT '', delivered_date TEXT DEFAULT '', notes TEXT DEFAULT '', karigar_id INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+                """)
+        except Exception as e:
+            _dberr(f"[OPS] ensure tables: {e}")
+
+    def po_get_suppliers(self):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("SELECT * FROM suppliers WHERE active=1 ORDER BY name").fetchall()
+            return {'status': 'success', 'suppliers': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def po_save_supplier(self, data):
+        self._ensure_ops_tables()
+        try:
+            d = data or {}
+            with self._get_connection() as conn:
+                if d.get('id'):
+                    conn.execute("UPDATE suppliers SET name=?,phone=?,gstin=?,city=?,address=?,metal_type=?,notes=? WHERE id=?",
+                        (d.get('name',''), d.get('phone',''), d.get('gstin',''), d.get('city',''), d.get('address',''), d.get('metal_type','gold'), d.get('notes',''), int(d['id'])))
+                else:
+                    conn.execute("INSERT INTO suppliers(name,phone,gstin,city,address,metal_type,notes) VALUES(?,?,?,?,?,?,?)",
+                        (d.get('name',''), d.get('phone',''), d.get('gstin',''), d.get('city',''), d.get('address',''), d.get('metal_type','gold'), d.get('notes','')))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def po_list(self, status=''):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                q = "SELECT p.*, s.name as supplier_name FROM purchase_orders p LEFT JOIN suppliers s ON s.id=p.supplier_id"
+                if status:
+                    q += f" WHERE p.status='{status}'"
+                q += " ORDER BY p.id DESC"
+                rows = conn.execute(q).fetchall()
+            return {'status': 'success', 'orders': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def po_create(self, data):
+        self._ensure_ops_tables()
+        try:
+            import json as _j
+            d = data or {}
+            po_no = f"PO-{int(__import__('time').time())}"
+            items_json = _j.dumps(d.get('items', []))
+            with self._get_connection() as conn:
+                conn.execute("INSERT INTO purchase_orders(po_no,supplier_id,date,status,items,total_weight,total_fine,total_amount,cgst,sgst,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (po_no, int(d.get('supplier_id',0)), d.get('date',''), 'draft', items_json,
+                     float(d.get('total_weight',0)), float(d.get('total_fine',0)), float(d.get('total_amount',0)),
+                     float(d.get('cgst',0)), float(d.get('sgst',0)), d.get('notes','')))
+                conn.commit()
+            return {'status': 'success', 'po_no': po_no}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def po_update_status(self, po_no, new_status):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE purchase_orders SET status=? WHERE po_no=?", (new_status, po_no))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Stock Transfer ────────────────────────────────────────────────
+
+    def transfer_list(self):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("SELECT * FROM stock_transfers ORDER BY id DESC").fetchall()
+            return {'status': 'success', 'transfers': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def transfer_create(self, data):
+        self._ensure_ops_tables()
+        try:
+            import json as _j
+            d = data or {}
+            tno = f"TRF-{int(__import__('time').time())}"
+            with self._get_connection() as conn:
+                conn.execute("INSERT INTO stock_transfers(transfer_no,from_location,to_location,date,items,total_weight,total_pcs,notes) VALUES(?,?,?,?,?,?,?,?)",
+                    (tno, d.get('from',''), d.get('to',''), d.get('date',''),
+                     _j.dumps(d.get('items',[])), float(d.get('total_weight',0)),
+                     int(d.get('total_pcs',0)), d.get('notes','')))
+                conn.commit()
+            return {'status': 'success', 'transfer_no': tno}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def transfer_update_status(self, transfer_no, new_status, by=''):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                if new_status == 'approved':
+                    conn.execute("UPDATE stock_transfers SET status=?,approved_by=? WHERE transfer_no=?", (new_status, by, transfer_no))
+                elif new_status == 'received':
+                    conn.execute("UPDATE stock_transfers SET status=?,received_by=? WHERE transfer_no=?", (new_status, by, transfer_no))
+                else:
+                    conn.execute("UPDATE stock_transfers SET status=? WHERE transfer_no=?", (new_status, transfer_no))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    # ── Repair Tracking ───────────────────────────────────────────────
+
+    def repair_list(self, status=''):
+        self._ensure_ops_tables()
+        try:
+            with self._get_connection() as conn:
+                q = "SELECT * FROM repairs"
+                if status:
+                    q += f" WHERE status='{status}'"
+                q += " ORDER BY id DESC"
+                rows = conn.execute(q).fetchall()
+            return {'status': 'success', 'repairs': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def repair_create(self, data):
+        self._ensure_ops_tables()
+        try:
+            d = data or {}
+            rno = f"RPR-{int(__import__('time').time())}"
+            with self._get_connection() as conn:
+                conn.execute("""INSERT INTO repairs(repair_no,customer,phone,item_desc,metal_type,weight,
+                    repair_type,estimated_cost,advance,promised_date,notes,karigar_id)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (rno, d.get('customer',''), d.get('phone',''), d.get('item_desc',''),
+                     d.get('metal_type','gold'), float(d.get('weight',0)), d.get('repair_type','repair'),
+                     float(d.get('estimated_cost',0)), float(d.get('advance',0)),
+                     d.get('promised_date',''), d.get('notes',''), int(d.get('karigar_id',0))))
+                conn.commit()
+            return {'status': 'success', 'repair_no': rno}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+
+    def repair_update_status(self, repair_no, new_status, actual_cost=None):
+        self._ensure_ops_tables()
+        try:
+            from datetime import date
+            today = date.today().isoformat()
+            with self._get_connection() as conn:
+                if new_status == 'completed':
+                    conn.execute("UPDATE repairs SET status=?,completed_date=?,actual_cost=COALESCE(?,actual_cost) WHERE repair_no=?",
+                        (new_status, today, actual_cost, repair_no))
+                elif new_status == 'delivered':
+                    conn.execute("UPDATE repairs SET status=?,delivered_date=? WHERE repair_no=?",
+                        (new_status, today, repair_no))
+                else:
+                    conn.execute("UPDATE repairs SET status=? WHERE repair_no=?", (new_status, repair_no))
+                conn.commit()
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
