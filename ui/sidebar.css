@@ -536,7 +536,9 @@ body.sidebar-collapsed .sb-collapse-top svg {
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Container ── */
-body.sidebar-collapsed #sidebar-container { width: 68px !important; overflow: visible; }
+body.sidebar-collapsed #sidebar-container { width: 68px !important; overflow: visible !important; }
+body.sidebar-collapsed .sb-nav { overflow: visible !important; }
+body.sidebar-collapsed .sb-item { overflow: visible !important; }
 
 /* ── Logo mark: blue ring ── */
 body.sidebar-collapsed .sb-logo {
