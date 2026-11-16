@@ -26,6 +26,7 @@ var NAV_ADMIN = [
     { id:'gstreturns',label:'GST Returns',  icon:'file-text', page:'gst_returns.html',     section:'Finance' },
     { id:'crm',       label:'CRM',          icon:'crm',       page:'crm.html',             section:'Finance' },
     { id:'analytics', label:'Analytics',    icon:'bar-chart', page:'analytics.html',       section:'Finance' },
+    { id:'integrations',label:'Integrations',icon:'plug',     page:'integrations.html',    section:'Finance' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'Finance' },
     { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'  },
     { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'  },
@@ -45,6 +46,7 @@ var NAV_RETAIL = [
     { id:'old-gold',  label:'Old Gold',     icon:'old-gold',  page:'old_gold.html',        section:'Business' },
     { id:'reports',   label:'Reports',      icon:'bar-chart', page:'reports.html',         section:'Business' },
     { id:'analytics', label:'Analytics',    icon:'bar-chart', page:'analytics.html',       section:'Business' },
+    { id:'integrations',label:'Integrations',icon:'plug',     page:'integrations.html',    section:'Business' },
     { id:'staff',     label:'Staff',        icon:'user',      page:'staff.html',           section:'System'   },
     { id:'transfer',  label:'Stock Transfer', icon:'switch',  page:'stock_transfer.html',  section:'System'   },
     { id:'tagprint',  label:'Tag Printing', icon:'printer',   page:'tag_print.html',       section:'System'   },
@@ -217,6 +219,7 @@ var _FEATURE_MAP = {
     'purchase_order.html': 'purchase_vouchers',
     'stock_transfer.html': 'stock_transfer',
     'analytics.html':     'analytics_dashboard',
+    'integrations.html':  'api_integration',
     'reports.html':        'stock_med_reports'
     // network_manager.html is deliberately absent. Connecting computers is
     // limited by seats, not by hiding the screen, and the seat limit is
@@ -239,6 +242,7 @@ var _FEATURE_PLANS = {
     'purchase_order.html': 'Pro',
     'stock_transfer.html': 'Pro',
     'analytics.html':     'Pro',
+    'integrations.html':  'Pro',
     'reports.html':        'Pro'
 };
 

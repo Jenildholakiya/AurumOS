@@ -6271,6 +6271,46 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # -- INTEGRATIONS -----------------------------------------------------------
+    def export_tally(self, from_date='', to_date=''):
+        try:
+            from core.tally_export import generate_tally_xml
+            path = generate_tally_xml(self.db, from_date or '', to_date or '')
+            return {"status": "success", "path": path}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def export_einvoice(self, vch_id):
+        try:
+            from core.einvoice import export_einvoice as _exp
+            bill = self.db.get_sale_by_vch(vch_id) if hasattr(self.db, 'get_sale_by_vch') else {}
+            shop = self._get_shop_info() if hasattr(self, '_get_shop_info') else {}
+            if not shop:
+                try:
+                    shop = {'gstin': self.db.get_config('shop_gstin', ''),
+                            'business_name': self.db.get_config('business_name', ''),
+                            'address': self.db.get_config('shop_address', ''),
+                            'city': self.db.get_config('shop_city', ''),
+                            'pin': self.db.get_config('shop_pin', ''),
+                            'hsn': '7113'}
+                except Exception:
+                    shop = {}
+            path = _exp(bill or {'vch_id': vch_id}, shop)
+            return {"status": "success", "path": path}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def generate_payment_qr(self, amount=0, bill_ref=''):
+        try:
+            from core.payment_qr import generate_payment_qr as _gen
+            upi_id = self.db.get_config('shop_upi_id', '')
+            shop_name = self.db.get_config('business_name', 'AurumOS Shop')
+            if not upi_id:
+                return {"status": "error", "message": "UPI ID not configured. Set it in Settings."}
+            return _gen(upi_id, shop_name, float(amount or 0), bill_ref or '')
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     # -- ANALYTICS --------------------------------------------------------------
     def get_sales_analytics(self, from_date='', to_date='', group_by='day'):
         try: return self.db.analytics_sales(from_date or '', to_date or '', group_by or 'day')

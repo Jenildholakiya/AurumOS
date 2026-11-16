@@ -56,6 +56,7 @@ PRO_FEATURES = LITE_FEATURES + [
     'profit_loss', 'balance_sheet', 'auto_posting', 'purchase_vouchers',
     'debit_credit_notes', 'gst_returns', 'bank_reconciliation',
     'stock_transfer', 'purchase_orders',
+    'tally_export', 'einvoice', 'payment_qr',
     # Pro connects one staff PC, Enterprise connects four. The plans differ by
     # how many seats they allow, not by whether the screen exists, so the page
     # has to open on both: a Pro shop that cannot reach it can never set up the

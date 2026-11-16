@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Integrations</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+.card-body{padding:16px 18px;}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.field label{font-size:0.72rem;font-weight:600;color:var(--ink3);}
+.field input,.field select{padding:8px 12px;border:1px solid var(--rule);border-radius:6px;font-family:var(--sans);font-size:0.82rem;}
+.btn{padding:8px 18px;border:1px solid var(--gold-ln);background:var(--gold-bg);color:var(--gold);border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:var(--sans);}
+.btn:hover{background:rgba(37,99,235,0.12);}
+.btn-primary{background:var(--gold);color:#fff;border:none;}
+.btn-primary:hover{background:var(--gold2);}
+.status{font-size:0.72rem;color:var(--muted);margin-top:8px;min-height:18px;}
+.status.ok{color:var(--green);}
+.status.err{color:var(--red);}
+.row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+.qr-preview{text-align:center;margin-top:12px;}
+.qr-preview img{max-width:200px;border:1px solid var(--rule);border-radius:8px;}
+.qr-link{font-size:0.68rem;color:var(--muted);word-break:break-all;margin-top:6px;}
+pre.json-preview{background:var(--cream);border:1px solid var(--rule);border-radius:6px;padding:10px;font-size:0.68rem;font-family:var(--mono);max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px;display:none;}
+</style>
+</head>
+<body>
+<script>initSidebar('accounting');</script>
+<main>
+  <div class="topbar">
+    <h1>Integrations</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Tally Export</span><span style="font-size:0.68rem;color:var(--muted);">Tally Prime XML format</span></div>
+      <div class="card-body">
+        <p style="font-size:0.75rem;color:var(--ink3);margin-bottom:12px;">Export your chart of accounts and vouchers as Tally-compatible XML for direct import into Tally Prime.</p>
+        <div class="row">
+          <div class="field"><label>From</label><input type="month" id="tally-from" /></div>
+          <div class="field"><label>To</label><input type="month" id="tally-to" /></div>
+          <button class="btn btn-primary" onclick="exportTally()">Export to Tally XML</button>
+        </div>
+        <div class="status" id="tally-status"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">E-Invoice / E-Way Bill</span><span style="font-size:0.68rem;color:var(--muted);">GST e-invoice schema v1.1</span></div>
+      <div class="card-body">
+        <p style="font-size:0.75rem;color:var(--ink3);margin-bottom:12px;">Generate e-invoice JSON for any GST bill. Upload the JSON to your ASP/GSP portal to get the IRN.</p>
+        <div class="row">
+          <div class="field"><label>Bill / voucher ID</label><input type="text" id="einv-vch" placeholder="e.g. R-1234567" /></div>
+          <button class="btn btn-primary" onclick="genEinvoice()">Generate E-Invoice JSON</button>
+        </div>
+        <div class="status" id="einv-status"></div>
+        <pre class="json-preview" id="einv-preview"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Payment QR (UPI)</span><span style="font-size:0.68rem;color:var(--muted);">Scan-to-pay for customers</span></div>
+      <div class="card-body">
+        <p style="font-size:0.75rem;color:var(--ink3);margin-bottom:12px;">Configure your shop's UPI ID to generate payment QR codes on bills and at the counter.</p>
+        <div class="row">
+          <div class="field"><label>Shop UPI ID</label><input type="text" id="upi-id" placeholder="yourshop@upi" /></div>
+          <button class="btn" onclick="saveUpi()">Save UPI ID</button>
+        </div>
+        <div class="status" id="upi-status"></div>
+        <hr style="border:none;border-top:1px solid var(--rule);margin:16px 0;">
+        <p style="font-size:0.72rem;font-weight:600;color:var(--ink3);margin-bottom:8px;">Test QR generation</p>
+        <div class="row">
+          <div class="field"><label>Amount (Rs.)</label><input type="number" id="qr-amount" placeholder="1000" /></div>
+          <button class="btn btn-primary" onclick="genQR()">Generate QR</button>
+        </div>
+        <div class="qr-preview" id="qr-preview" style="display:none;">
+          <img id="qr-img" src="" alt="UPI QR Code" />
+          <div class="qr-link" id="qr-link"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+<script>
+function updateClock(){
+  var n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString();
+}
+setInterval(updateClock,1000); updateClock();
+
+var now=new Date();
+var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
+document.getElementById('tally-from').value=ym;
+document.getElementById('tally-to').value=ym;
+
+function _api(){ return window.pywebview&&window.pywebview.api; }
+
+(function loadUpi(){
+  var t=setInterval(function(){
+    var api=_api(); if(!api) return;
+    clearInterval(t);
+    if(api.get_settings) api.get_settings().then(function(r){
+      if(r&&r.data&&r.data.shop_upi_id) document.getElementById('upi-id').value=r.data.shop_upi_id;
+    }).catch(function(){});
+  },200);
+})();
+
+async function exportTally(){
+  var st=document.getElementById('tally-status');
+  st.className='status'; st.textContent='Exporting...';
+  try{
+    var fm=document.getElementById('tally-from').value;
+    var tm=document.getElementById('tally-to').value;
+    var from=fm?fm+'-01':'';
+    var to=tm?(function(){var p=tm.split('-');return p[0]+'-'+p[1]+'-'+new Date(parseInt(p[0]),parseInt(p[1]),0).getDate();})():'';
+    var r=await _api().export_tally(from,to);
+    if(r&&r.status==='success'){st.className='status ok';st.textContent='Exported: '+r.path;}
+    else{st.className='status err';st.textContent=r.message||'Export failed';}
+  }catch(e){st.className='status err';st.textContent='Error: '+e;}
+}
+
+async function genEinvoice(){
+  var st=document.getElementById('einv-status');
+  var pre=document.getElementById('einv-preview');
+  st.className='status'; st.textContent='Generating...'; pre.style.display='none';
+  try{
+    var vch=document.getElementById('einv-vch').value.trim();
+    if(!vch){st.className='status err';st.textContent='Enter a voucher ID';return;}
+    var r=await _api().export_einvoice(vch);
+    if(r&&r.status==='success'){
+      st.className='status ok'; st.textContent='Saved: '+r.path;
+      if(r.payload){pre.textContent=JSON.stringify(r.payload,null,2);pre.style.display='block';}
+    } else {st.className='status err';st.textContent=r.message||'Generation failed';}
+  }catch(e){st.className='status err';st.textContent='Error: '+e;}
+}
+
+async function saveUpi(){
+  var st=document.getElementById('upi-status');
+  var id=document.getElementById('upi-id').value.trim();
+  if(!id){st.className='status err';st.textContent='Enter a UPI ID';return;}
+  try{
+    await _api().update_settings({shop_upi_id:id});
+    st.className='status ok'; st.textContent='UPI ID saved';
+  }catch(e){st.className='status err';st.textContent='Error: '+e;}
+}
+
+async function genQR(){
+  var amt=parseFloat(document.getElementById('qr-amount').value)||0;
+  if(amt<=0){document.getElementById('upi-status').className='status err';document.getElementById('upi-status').textContent='Enter an amount';return;}
+  try{
+    var r=await _api().generate_payment_qr(amt,'TEST');
+    if(r&&r.qr_base64){
+      document.getElementById('qr-img').src=r.qr_base64;
+      document.getElementById('qr-link').textContent=r.upi_link||'';
+      document.getElementById('qr-preview').style.display='';
+    }
+  }catch(e){console.error(e);}
+}
+</script>
+</body>
+</html>
