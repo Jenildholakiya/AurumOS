@@ -900,6 +900,11 @@ function buildRetailSlip(D, copyLabel) {
 
     var taxAmount = Math.max(0, subTotal - discount);
 
+    // ── Detect which extra charge columns are needed ─────────────────
+    var hasWastage = items.some(function(it){ return parseFloat(it.wastage||0) > 0; });
+    var hasStone = items.some(function(it){ return parseFloat(it.stone||0) > 0; });
+    var hasLabour = items.some(function(it){ return parseFloat(it.labour||0) > 0; });
+
     // ── Item rows ───────────────────────────────────────────────────
     var rows = '';
     for (var i = 0; i < items.length; i++) {
@@ -913,6 +918,11 @@ function buildRetailSlip(D, copyLabel) {
         var fine = parseFloat(it.fine || 0);
         var amount = parseFloat(it.amount || 0);
 
+        var wastage = parseFloat(it.wastage || 0);
+        var wastageAmt = parseFloat(it.wastageAmt || 0);
+        var stone = parseFloat(it.stone || 0);
+        var labour = parseFloat(it.labour || 0);
+
         rows += '<tr>'
             +'<td class="cb">'+(i+1)+'</td>'
             +'<td class="cb" style="text-align:left !important;padding-left:8px;">'+h(code)+'</td>'
@@ -922,6 +932,9 @@ function buildRetailSlip(D, copyLabel) {
             +'<td class="cb">'+(rate > 0 ? rate.toLocaleString('en-IN') : '')+'</td>'
             +'<td class="cb">'+qty+'</td>'
             +'<td class="cb">'+(making > 0 ? _money(making) : '')+'</td>'
+            +(hasWastage ? '<td class="cb">'+(wastage > 0 ? wastage.toFixed(2)+'%' : '')+'</td>' : '')
+            +(hasStone ? '<td class="cb">'+(stone > 0 ? _money(stone) : '')+'</td>' : '')
+            +(hasLabour ? '<td class="cb">'+(labour > 0 ? _money(labour) : '')+'</td>' : '')
             +'<td class="cb" style="font-weight:700;">'+_money(amount)+'</td>'
             +'</tr>';
     }
@@ -962,15 +975,34 @@ function buildRetailSlip(D, copyLabel) {
     sumRows += '<tr class="ft-total"><td>GRAND TOTAL</td><td>' + _money(grandTotal) + '</td></tr>';
     sumRows += '<tr class="ft-payment"><td>PAYMENT METHOD</td><td>' + h(String(paymentMode).toUpperCase()) + '</td></tr>';
 
-    // Table header
+    // Extra charge summary rows
+    var wastageTotal = parseFloat(D.wastage_total || 0);
+    var stoneTotal = parseFloat(D.stone_total || 0);
+    var labourTotal = parseFloat(D.labour_total || 0);
+    if (wastageTotal > 0) sumRows += '<tr class="ft-sub"><td>Wastage</td><td>' + _money(wastageTotal) + '</td></tr>';
+    if (stoneTotal > 0) sumRows += '<tr class="ft-sub"><td>Stone / Kundan</td><td>' + _money(stoneTotal) + '</td></tr>';
+    if (labourTotal > 0) sumRows += '<tr class="ft-sub"><td>Labour</td><td>' + _money(labourTotal) + '</td></tr>';
+
+    // Table header — dynamic columns
+    var extraCols = '';
+    var extraColgroup = '';
+    if (hasWastage) { extraCols += '<th>Wastage</th>'; extraColgroup += '<col style="width:55px;">'; }
+    if (hasStone) { extraCols += '<th>Stone</th>'; extraColgroup += '<col style="width:60px;">'; }
+    if (hasLabour) { extraCols += '<th>Labour</th>'; extraColgroup += '<col style="width:60px;">'; }
+    var totalCols = 9 + (hasWastage?1:0) + (hasStone?1:0) + (hasLabour?1:0);
+
     var tableHead = '<colgroup>'
-        +'<col style="width:28px;"><col style="width:140px;"><col style="width:60px;"><col style="width:55px;"><col style="width:45px;"><col style="width:60px;"><col style="width:32px;"><col style="width:70px;"><col style="width:85px;">'
+        +'<col style="width:28px;"><col style="width:140px;"><col style="width:60px;"><col style="width:55px;"><col style="width:45px;"><col style="width:60px;"><col style="width:32px;"><col style="width:70px;">'
+        +extraColgroup
+        +'<col style="width:85px;">'
         +'</colgroup>'
         +'<thead><tr>'
-        +'<th>#</th><th>Description</th><th>Weight (g)</th><th>Fine (g)</th><th>Touch</th><th>Rate/10g</th><th>Qty</th><th>Making</th><th>Amount</th>'
+        +'<th>#</th><th>Description</th><th>Weight (g)</th><th>Fine (g)</th><th>Touch</th><th>Rate/10g</th><th>Qty</th><th>Making</th>'
+        +extraCols
+        +'<th>Amount</th>'
         +'</tr></thead>';
     var blankCells = '';
-    for (var blankIndex = 0; blankIndex < 9; blankIndex++) {
+    for (var blankIndex = 0; blankIndex < totalCols; blankIndex++) {
         blankCells += '<td></td>';
     }
     var blankTable = '<div class="slip-spacer retail-column-space">'

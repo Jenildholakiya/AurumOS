@@ -492,6 +492,18 @@ window.aurumConfirm=function(msg,opts){
             <label>Making</label>
             <input type="text" id="it-making" inputmode="decimal" placeholder="e.g. 500" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
           </div>
+          <div class="field-group hide-uchak">
+            <label>Wastage %</label>
+            <input type="number" id="it-wastage" step="0.01" min="0" placeholder="e.g. 2.5" onkeydown="onEntryKey(event)" />
+          </div>
+          <div class="field-group hide-uchak">
+            <label>Stone ₹</label>
+            <input type="text" id="it-stone" inputmode="decimal" placeholder="0" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
+          </div>
+          <div class="field-group hide-uchak">
+            <label>Labour ₹</label>
+            <input type="text" id="it-labour" inputmode="decimal" placeholder="0" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
+          </div>
           <div class="entry-actions">
             <button class="btn-add" onclick="addItemToBill()" title="Add item">+</button>
           </div>
@@ -515,12 +527,15 @@ window.aurumConfirm=function(msg,opts){
             <th>Rate</th>
             <th>Qty</th>
             <th>Making</th>
+            <th>Wastage</th>
+            <th>Stone</th>
+            <th>Labour</th>
             <th>Amount</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="item-list">
-          <tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>
+          <tr class="pos-empty-row"><td colspan="14">No items added yet — scan or type an IT code / tag ID</td></tr>
         </tbody>
       </table>
     </div>
@@ -555,6 +570,9 @@ window.aurumConfirm=function(msg,opts){
         <div class="sum-row wt-fine hide-uchak"><span>Fine</span><span id="sum-fine">0.000 g</span></div>
         <div class="sum-row"><span id="sum-subtotal-label">Metal + Making</span><span id="sum-subtotal">Rs. 0.00</span></div>
         <div class="sum-row hide-uchak" style="color:var(--muted);font-size:0.7rem;margin-top:2px;"><span>&nbsp;&nbsp;↳ Making</span><span id="sum-making">Rs. 0.00</span></div>
+        <div class="sum-row hide-uchak" id="sum-wastage-row" style="color:var(--muted);font-size:0.7rem;display:none;"><span>&nbsp;&nbsp;↳ Wastage</span><span id="sum-wastage">Rs. 0.00</span></div>
+        <div class="sum-row hide-uchak" id="sum-stone-row" style="color:var(--muted);font-size:0.7rem;display:none;"><span>&nbsp;&nbsp;↳ Stone</span><span id="sum-stone">Rs. 0.00</span></div>
+        <div class="sum-row hide-uchak" id="sum-labour-row" style="color:var(--muted);font-size:0.7rem;display:none;"><span>&nbsp;&nbsp;↳ Labour</span><span id="sum-labour">Rs. 0.00</span></div>
         <div class="sum-row hide-uchak"><span>GST</span><span id="sum-gst">Rs. 0.00</span></div>
         <div class="sum-row hide-uchak" style="color:var(--muted);font-size:0.68rem;margin-top:2px;"><span>&nbsp;&nbsp;↳ CGST</span><span id="sum-cgst">Rs. 0.00</span></div>
         <div class="sum-row hide-uchak" style="color:var(--muted);font-size:0.68rem;"><span>&nbsp;&nbsp;↳ SGST</span><span id="sum-sgst">Rs. 0.00</span></div>
@@ -1372,8 +1390,14 @@ function addItemToBill(){
     var fine=parseFloat((wt*touch/100).toFixed(3));
     var baseAmount=parseFloat((wt/10*rate*qty).toFixed(2));
     var making=parseMaking(makingRaw, baseAmount, wt, qty, makingType());
-    var amount=parseFloat((baseAmount+making).toFixed(2));
-    var item={code:code,weight:wt,touch:touch,rate:rate,qty:qty,fine:fine,making:making,makingRaw:makingRaw,amount:amount,
+    var wastage=parseFloat(document.getElementById('it-wastage').value)||0;
+    var wastageAmt=parseFloat((wt*(wastage/100)*(rate/10)*qty).toFixed(2));
+    var stone=parseFloat((document.getElementById('it-stone').value||'').replace(/,/g,''))||0;
+    var labour=parseFloat((document.getElementById('it-labour').value||'').replace(/,/g,''))||0;
+    var amount=parseFloat((baseAmount+making+wastageAmt+stone+labour).toFixed(2));
+    var item={code:code,weight:wt,touch:touch,rate:rate,qty:qty,fine:fine,making:making,makingRaw:makingRaw,
+              wastage:wastage,wastageAmt:wastageAmt,stone:stone,labour:labour,
+              amount:amount,
               huid:_lastPicked?_lastPicked.huid:'', tag_id:_lastPicked?_lastPicked.tag_id:'',
               name:_lastPicked?_lastPicked.name:''
             };
@@ -1442,6 +1466,9 @@ function clearEntry(){
     // Rate + Making persist until changed (restored below if empty).
     if(!document.getElementById('it-rate').value) document.getElementById('it-rate').value=localStorage.getItem('aurum_pos_rate')||'';
     if(!document.getElementById('it-making').value) document.getElementById('it-making').value=localStorage.getItem('aurum_pos_making')||'';
+    document.getElementById('it-wastage').value='';
+    document.getElementById('it-stone').value='';
+    document.getElementById('it-labour').value='';
 }
 function persistRateMaking(){
     var r=document.getElementById('it-rate').value||'';
@@ -1468,6 +1495,9 @@ function editItem(idx){
     document.getElementById('it-qty').value=it.qty;
     var makingInput=it.makingRaw||'';
     document.getElementById('it-making').value=makingInput ? parseFloat(String(makingInput).replace(/,/g,'')) .toLocaleString('en-IN',{maximumFractionDigits:2}) : '';
+    document.getElementById('it-wastage').value=it.wastage||'';
+    document.getElementById('it-stone').value=it.stone?it.stone.toLocaleString('en-IN',{maximumFractionDigits:2}):'';
+    document.getElementById('it-labour').value=it.labour?it.labour.toLocaleString('en-IN',{maximumFractionDigits:2}):'';
     document.getElementById('it-code').focus();
 }
 function removeItem(idx){
@@ -1478,7 +1508,7 @@ function removeItem(idx){
 function renderItems(){
     var tbody=document.getElementById('item-list');
     if(!_billItems.length){
-        tbody.innerHTML='<tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>';
+        tbody.innerHTML='<tr class="pos-empty-row"><td colspan="14">No items added yet — scan or type an IT code / tag ID</td></tr>';
     } else {
         tbody.innerHTML=_billItems.map(function(it,i){
             // Fixed-price lines have no weight, touch or making: placeholders
@@ -1494,6 +1524,7 @@ function renderItems(){
                 +'<td class="it-rate">Rs.'+it.rate.toLocaleString('en-IN')+'</td>'
                 +'<td>'+it.qty+'</td>'
                 +'<td class="it-making">—</td>'
+                +'<td>—</td><td>—</td><td>—</td>'
                 +'<td class="it-amount">Rs.'+it.amount.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
                 +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
                 +'</tr>';
@@ -1508,6 +1539,9 @@ function renderItems(){
                 +'<td class="it-rate">Rs.'+it.rate.toLocaleString('en-IN')+'</td>'
                 +'<td>'+it.qty+'</td>'
                 +'<td class="it-making">'+(it.making>0?('Rs.'+it.making.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
+                +'<td>'+((it.wastage||0)>0?(it.wastage.toFixed(2)+'%'):'—')+'</td>'
+                +'<td>'+((it.stone||0)>0?('Rs.'+it.stone.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
+                +'<td>'+((it.labour||0)>0?('Rs.'+it.labour.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
                 +'<td class="it-amount">Rs.'+it.amount.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
                 +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
                 +'</tr>';
@@ -1565,6 +1599,9 @@ function recalcSummary(){
     var tw=sumField('weight'), tf=sumField('fine');
     var sub=sumField('amount');
     var making=sumField('making');
+    var wastageTotal=sumField('wastageAmt');
+    var stoneTotal=sumField('stone');
+    var labourTotal=sumField('labour');
 
     var discType=document.getElementById('disc-type').value;
     var discVal=parseFloat(document.getElementById('disc-val').value)||0;
@@ -1594,6 +1631,15 @@ function recalcSummary(){
     document.getElementById('sum-fine').innerText=tf.toFixed(3)+' g';
     document.getElementById('sum-subtotal').innerText=money(sub);
     document.getElementById('sum-making').innerText=money(making);
+    var wRow=document.getElementById('sum-wastage-row'),sRow=document.getElementById('sum-stone-row'),lRow=document.getElementById('sum-labour-row');
+    if(wRow){wRow.style.display=wastageTotal>0?'':'none';document.getElementById('sum-wastage').innerText=money(wastageTotal);}
+    if(sRow){sRow.style.display=stoneTotal>0?'':'none';document.getElementById('sum-stone').innerText=money(stoneTotal);}
+    if(lRow){lRow.style.display=labourTotal>0?'':'none';document.getElementById('sum-labour').innerText=money(labourTotal);}
+    var chargeLabel='Metal + Making';
+    if(wastageTotal>0) chargeLabel+=(' + Wastage');
+    if(stoneTotal>0) chargeLabel+=(' + Stone');
+    if(labourTotal>0) chargeLabel+=(' + Labour');
+    document.getElementById('sum-subtotal-label').innerText=chargeLabel;
     document.getElementById('sum-gst').innerText=money(gst);
     document.getElementById('sum-cgst').innerText=money(cgst);
     document.getElementById('sum-sgst').innerText=money(sgst);
@@ -1605,7 +1651,9 @@ function recalcSummary(){
     else{loyRow.style.display='none';}
     document.getElementById('sum-total').innerText=money(grand);
 
-    _billMeta={items:items,tw:tw,tf:tf,sub:sub,making:making,disc:disc,discType:discType,discVal:discVal,
+    _billMeta={items:items,tw:tw,tf:tf,sub:sub,making:making,
+               wastage:wastageTotal,stone:stoneTotal,labour:labourTotal,
+               disc:disc,discType:discType,discVal:discVal,
                gst:gst,cgst:cgst,sgst:sgst,grand:grand,earned:earned};
     recalcPayment();
 }
@@ -2157,6 +2205,7 @@ function buildInvoice(kind){
     var items = _billItems.map(function(it){
         return {code:it.code, weight:parseFloat(it.weight.toFixed(3)), touch:parseFloat(it.touch.toFixed(2)),
                 rate:it.rate, qty:it.qty, fine:it.fine, making:it.making, makingRaw:it.makingRaw||'',
+                wastage:it.wastage||0, wastageAmt:it.wastageAmt||0, stone:it.stone||0, labour:it.labour||0,
                 amount:parseFloat(it.amount.toFixed(2)), huid:it.huid||'', tag_id:it.tag_id||''};
     });
     return {
@@ -2167,6 +2216,9 @@ function buildInvoice(kind){
         status: (kind==='estimate') ? 'ESTIMATE' : 'PAID',
         items: items,
         making_total: _billMeta?_billMeta.making:0,
+        wastage_total: _billMeta?_billMeta.wastage:0,
+        stone_total: _billMeta?_billMeta.stone:0,
+        labour_total: _billMeta?_billMeta.labour:0,
         sub_total: _billMeta?_billMeta.sub:0,
         gst_total: _billMeta?_billMeta.gst:0,
         cgst: _billMeta?_billMeta.cgst:0,
