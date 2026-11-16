@@ -476,12 +476,17 @@ function _renderSidebar(activePage) {
 
     var h = '';
 
-    h += '<div class="sb-logo">'
+    h += '<div class="sb-logo" style="display:flex;align-items:center;justify-content:space-between;">'
+       + '<div style="display:flex;align-items:center;gap:10px;">'
        + '<div class="sb-logo-mark"><span>Au</span></div>'
        + '<div class="sb-logo-text">'
        + '<div class="sb-logo-name">Aurum<em>OS</em></div>'
        + '<div class="sb-logo-sub">' + (isRetail ? 'Retail POS' : 'Jewelry ERP') + '</div>'
-       + '</div></div>';
+       + '</div></div>'
+       + '<button class="sb-collapse-top" onclick="toggleSidebar()" title="Collapse sidebar">'
+       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>'
+       + '</button>'
+       + '</div>';
 
     h += '<div class="sb-terminal-label">Terminal Navigation</div>';
 
@@ -506,10 +511,6 @@ function _renderSidebar(activePage) {
        + '<span id="sb-ver-new" data-aurum-update hidden title="A newer version is downloading in the background" '
        + 'style="font-size:0.5rem;font-weight:700;color:#22c55e;letter-spacing:0.3px;">UPDATE READY</span>'
        + '</div>'
-       + '<button class="sb-collapse-btn" onclick="toggleSidebar()">'
-       + '<span class="sb-collapse-icon">&#8592;</span>'
-       + '<span class="sb-collapse-text">Collapse</span>'
-       + '</button>'
        + '</div>';
 
     container.innerHTML = h;
