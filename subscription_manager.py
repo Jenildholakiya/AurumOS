@@ -44,13 +44,16 @@ def _err(msg):
 LITE_FEATURES = [
     'local_mode', 'billing_retail', 'stock_entry', 'product_master',
     'client_ledger', 'staff_login_lockout', 'tag_printing_local',
-    'scale_weighing', 'sales_report_basic', 'bastion_core'
+    'scale_weighing', 'sales_report_basic', 'bastion_core',
+    'multi_metal', 'wastage_stone_labour', 'responsive_ui', 'dpdp_compliance',
 ]
 
 PRO_FEATURES = LITE_FEATURES + [
     'karigar_vouchers', 'touch_groups', 'full_accounts',
     'tag_audit', 'stock_med_reports', 'tsc_network_printing', 'multi_staff',
     'analytics_dashboard', 'year_close', 'bastion_enhanced',
+    'profit_loss', 'balance_sheet', 'auto_posting', 'purchase_vouchers',
+    'debit_credit_notes', 'gst_returns', 'bank_reconciliation',
     # Pro connects one staff PC, Enterprise connects four. The plans differ by
     # how many seats they allow, not by whether the screen exists, so the page
     # has to open on both: a Pro shop that cannot reach it can never set up the
@@ -62,7 +65,7 @@ PRO_FEATURES = LITE_FEATURES + [
 ENTERPRISE_FEATURES = PRO_FEATURES + [
     'cloud_sync', 'fleet_bastion', 'customer_loyalty', 'bastion_ai',
     'nexus_management', 'bridge_server', 'custom_db_location',
-    'priority_support', 'api_integration'
+    'priority_support', 'api_integration', 'dpdp_remote_sync',
 ]
 
 PLAN_FEATURES = {

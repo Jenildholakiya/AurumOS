@@ -203,6 +203,8 @@ var _FEATURE_MAP = {
     'chart_of_accounts.html': 'full_accounts',
     'accounting.html':     'full_accounts',
     'ledger.html':         'full_accounts',
+    'cash_bank.html':      'full_accounts',
+    'gst_returns.html':    'gst_returns',
     'reports.html':        'stock_med_reports'
     // network_manager.html is deliberately absent. Connecting computers is
     // limited by seats, not by hiding the screen, and the seat limit is
@@ -220,6 +222,8 @@ var _FEATURE_PLANS = {
     'chart_of_accounts.html': 'Pro',
     'accounting.html':     'Pro',
     'ledger.html':         'Pro',
+    'cash_bank.html':      'Pro',
+    'gst_returns.html':    'Pro',
     'reports.html':        'Pro'
 };
 
