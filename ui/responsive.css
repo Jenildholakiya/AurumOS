@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════════════
+   AurumOS — Shared Responsive Stylesheet
+   Included in every page. Provides breakpoints, utility classes,
+   and component overrides that make the app work from 4K to 360px.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Table scroll wrapper ─────────────────────────────────────────── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-responsive table { min-width: 600px; }
+
+/* ── Utility classes ──────────────────────────────────────────────── */
+.r-stack { display: flex; flex-direction: column !important; }
+.r-full-width { width: 100% !important; max-width: 100% !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREAKPOINT: ≤ 1280px — Large laptop / small desktop
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  /* Grids: 3-col → 2-col */
+  .stat-row, .stat-cards, .kpi-row, .bottom-row, .card-grid,
+  .grid-3, .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Reduce padding on main content */
+  .main, .content, .page-content, main, [class*="page-wrap"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREAKPOINT: ≤ 1024px — Tablet landscape / sidebar collapse
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  /* Sidebar: overlay mode */
+  #sidebar, .sidebar, [id="sb-wrap"] {
+    position: fixed !important;
+    left: -280px !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    z-index: 10000 !important;
+    transition: left 0.25s ease !important;
+    width: 260px !important;
+  }
+  #sidebar.open, .sidebar.open, [id="sb-wrap"].open {
+    left: 0 !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15) !important;
+  }
+  /* Main content: full width */
+  .main, .content, .page-content, main, [class*="page-wrap"] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  /* Grids: 2-col → 1-col for small grids */
+  .chart-row, .bottom-row {
+    grid-template-columns: 1fr !important;
+  }
+  /* Header: stack if multi-section */
+  .topbar, .header-bar, .page-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREAKPOINT: ≤ 768px — Tablet portrait / phone landscape
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* All grids → single column */
+  .stat-row, .stat-cards, .kpi-row, .bottom-row, .card-grid,
+  .grid-2, .grid-3, .grid-4, .chart-row,
+  [style*="grid-template-columns: repeat"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Cards: full width, reduce padding */
+  .card, .panel, .box, .section, [class*="card"] {
+    padding: 12px !important;
+    border-radius: 8px !important;
+  }
+  /* Forms: stack label + input */
+  .form-row, .form-group, .inp-row, .field-row {
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .form-row label, .form-group label, .inp-row label {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+  .form-row input, .form-row select, .form-row textarea,
+  .form-group input, .form-group select {
+    width: 100% !important;
+  }
+  /* Buttons: larger touch targets */
+  button, .btn, [class*="btn-"] {
+    min-height: 40px;
+    min-width: 40px;
+    font-size: 0.8rem !important;
+  }
+  /* Tables: smaller font, scroll */
+  table { font-size: 0.75rem !important; }
+  th, td { padding: 6px 8px !important; }
+  /* Modal / overlay: full-width */
+  .modal-content, .dialog, .popup, [class*="modal-body"] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 2.5vw auto !important;
+  }
+  /* Welcome / greeting section */
+  .welcome { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  /* Topbar: compact */
+  .topbar, .header-bar { padding: 8px 12px !important; }
+  .topbar .pills, .header-pills { display: none !important; }
+  /* Fixed banners: smaller text */
+  #sub-expiry-warning, #aurum-trial-banner, [id*="banner"] {
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
+  /* Hide non-essential sidebar footer items */
+  .sb-footer-meta { font-size: 0.6rem !important; }
+  /* Print pages */
+  .bill-actions, .print-actions { flex-wrap: wrap !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREAKPOINT: ≤ 480px — Phone portrait
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Typography: scale down */
+  h1, .w-greeting { font-size: 1.15rem !important; }
+  h2 { font-size: 1rem !important; }
+  h3 { font-size: 0.9rem !important; }
+  body { font-size: 13px !important; }
+  /* KPI cards: compact */
+  .stat-row .card, .kpi-row .card, .stat-cards .card {
+    padding: 10px !important;
+  }
+  .stat-row .card h2, .kpi-row .card h2 {
+    font-size: 1.1rem !important;
+  }
+  /* Full-screen modals */
+  .modal-content, .dialog, .popup {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 50vh !important;
+    border-radius: 12px 12px 0 0 !important;
+    margin: auto 0 0 !important;
+  }
+  /* Tab bars: scroll */
+  .tabs, .tab-bar, [class*="tab-row"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+  }
+  /* Split layouts (billing) */
+  .split, .billing-grid, .pos-grid, [class*="split-layout"] {
+    grid-template-columns: 1fr !important;
+    flex-direction: column !important;
+  }
+  /* Header user section */
+  .user-section, .user-info { display: none !important; }
+  /* Reduce padding globally */
+  .main, .content, .page-content, main {
+    padding: 8px !important;
+  }
+  /* Notification dropdown */
+  .notif-drop { width: calc(100vw - 16px) !important; right: 8px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Print: hide UI chrome
+   ═══════════════════════════════════════════════════════════════════ */
+@media print {
+  #sidebar, .sidebar, [id="sb-wrap"],
+  .topbar, .header-bar, #sub-expiry-warning,
+  #aurum-trial-banner, #sub-status-badge,
+  .notif-drop, .btn, button { display: none !important; }
+  .main, .content, main { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+}
