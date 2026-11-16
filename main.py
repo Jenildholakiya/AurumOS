@@ -6271,6 +6271,23 @@ class AurumAPI:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # -- ANALYTICS --------------------------------------------------------------
+    def get_sales_analytics(self, from_date='', to_date='', group_by='day'):
+        try: return self.db.analytics_sales(from_date or '', to_date or '', group_by or 'day')
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_top_items(self, from_date='', to_date=''):
+        try: return self.db.analytics_top_items(from_date or '', to_date or '')
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_stock_aging(self):
+        try: return self.db.analytics_stock_aging()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_customer_insights(self):
+        try: return self.db.analytics_customer_insights()
+        except Exception as e: return {"status": "error", "message": str(e)}
+    def get_payment_analytics(self, from_date='', to_date=''):
+        try: return self.db.analytics_payment_modes(from_date or '', to_date or '')
+        except Exception as e: return {"status": "error", "message": str(e)}
+
     # -- OPERATIONS: Purchase Orders, Stock Transfer, Repairs -----------------
     def get_suppliers(self):
         try: return self.db.po_get_suppliers()

@@ -9721,3 +9721,130 @@ class DBManager:
             return {'status': 'success'}
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
+
+    # ══════════════════════════════════════════════════════════════════
+    # ANALYTICS
+    # ══════════════════════════════════════════════════════════════════
+
+    def analytics_sales(self, from_date='', to_date='', group_by='day'):
+        try:
+            with self._get_connection() as conn:
+                where = "WHERE 1=1"
+                params = []
+                if from_date:
+                    where += " AND date >= ?"; params.append(from_date)
+                if to_date:
+                    where += " AND date <= ?"; params.append(to_date)
+                grp = "date" if group_by == 'day' else ("substr(date,1,7)" if group_by == 'month' else ("COALESCE(payment_mode,'cash')" if group_by == 'payment_mode' else "customer"))
+                rows = conn.execute(f"""
+                    SELECT {grp} as label, COUNT(*) as bills,
+                           COALESCE(SUM(total_amount),0) as revenue,
+                           COALESCE(AVG(total_amount),0) as avg_bill,
+                           COALESCE(SUM(ledger_fine),0) as fine
+                    FROM sales_history {where}
+                    GROUP BY {grp} ORDER BY {grp}
+                """, params).fetchall()
+                labels=[]; rev=[]; bills=[]; avg_b=[]; fine=[]
+                for r in rows:
+                    labels.append(str(r[0] or ''))
+                    bills.append(int(r[1] or 0))
+                    rev.append(round(float(r[2] or 0),2))
+                    avg_b.append(round(float(r[3] or 0),2))
+                    fine.append(round(float(r[4] or 0),3))
+                total_rev=sum(rev); total_bills=sum(bills)
+            return {'status':'success','labels':labels,'revenue':rev,'bill_count':bills,
+                    'avg_bill':avg_b,'fine':fine,'total_revenue':total_rev,
+                    'total_bills':total_bills,'avg_bill_value':round(total_rev/max(total_bills,1),2),
+                    'total_fine':round(sum(fine),3)}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def analytics_top_items(self, from_date='', to_date='', limit=20):
+        try:
+            import json as _j
+            with self._get_connection() as conn:
+                where="WHERE 1=1"; params=[]
+                if from_date: where+=" AND date >= ?"; params.append(from_date)
+                if to_date: where+=" AND date <= ?"; params.append(to_date)
+                rows=conn.execute(f"SELECT items FROM sales_history {where}",params).fetchall()
+                counts={}
+                for r in rows:
+                    try:
+                        for it in _j.loads(r[0] or '[]'):
+                            code=str(it.get('code') or it.get('it_code') or '').strip()
+                            if not code: continue
+                            if code not in counts:
+                                counts[code]={'code':code,'name':it.get('name',code),'qty':0,'revenue':0,'fine':0}
+                            counts[code]['qty']+=int(it.get('qty') or 1)
+                            counts[code]['revenue']+=float(it.get('amount') or 0)
+                            counts[code]['fine']+=float(it.get('fine') or 0)
+                    except Exception: pass
+                items=sorted(counts.values(),key=lambda x:x['revenue'],reverse=True)[:limit]
+                for it in items: it['revenue']=round(it['revenue'],2); it['fine']=round(it['fine'],3)
+            return {'status':'success','items':items}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def analytics_stock_aging(self):
+        try:
+            with self._get_connection() as conn:
+                rows=conn.execute("""
+                    SELECT CASE
+                        WHEN julianday('now')-julianday(COALESCE(entry_date,date('now')))<=30 THEN '0-30 days'
+                        WHEN julianday('now')-julianday(COALESCE(entry_date,date('now')))<=90 THEN '31-90 days'
+                        WHEN julianday('now')-julianday(COALESCE(entry_date,date('now')))<=180 THEN '91-180 days'
+                        WHEN julianday('now')-julianday(COALESCE(entry_date,date('now')))<=365 THEN '181-365 days'
+                        ELSE '365+ days' END as band,
+                    COUNT(*) as cnt, COALESCE(SUM(gr_wt),0) as weight
+                    FROM stock_inventory GROUP BY band
+                    ORDER BY MIN(julianday('now')-julianday(COALESCE(entry_date,date('now'))))
+                """).fetchall()
+                bands=[{'label':r[0],'count':int(r[1] or 0),'weight':round(float(r[2] or 0),3)} for r in rows]
+            return {'status':'success','bands':bands}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def analytics_customer_insights(self, limit=50):
+        try:
+            from datetime import date
+            today=date.today()
+            with self._get_connection() as conn:
+                rows=conn.execute("""
+                    SELECT customer, COUNT(*) as bills, COALESCE(SUM(total_amount),0) as ltv, MAX(date) as last_purchase
+                    FROM sales_history WHERE customer!='' AND customer!='Walk-in'
+                    GROUP BY customer ORDER BY ltv DESC LIMIT ?
+                """,(limit,)).fetchall()
+                customers=[]; seg_counts={}
+                for r in rows:
+                    name=r[0] or ''; bills=int(r[1] or 0); ltv=round(float(r[2] or 0),2); last=str(r[3] or '')
+                    days_since=999
+                    try: days_since=(today-date.fromisoformat(last)).days
+                    except: pass
+                    rs=5 if days_since<=30 else 4 if days_since<=90 else 3 if days_since<=180 else 2 if days_since<=365 else 1
+                    fs=5 if bills>=10 else 4 if bills>=5 else 3 if bills>=3 else 2 if bills>=2 else 1
+                    ms=5 if ltv>=500000 else 4 if ltv>=200000 else 3 if ltv>=100000 else 2 if ltv>=50000 else 1
+                    rfm=rs+fs+ms
+                    seg='Champions' if rfm>=13 else 'Loyal' if rfm>=10 else 'Potential' if rfm>=7 else 'At Risk' if rfm>=5 else 'Lost'
+                    customers.append({'name':name,'bills':bills,'ltv':ltv,'last_purchase':last,'days_since':days_since,'rfm':rfm,'segment':seg})
+                    seg_counts[seg]=seg_counts.get(seg,0)+1
+            return {'status':'success','customers':customers,'segments':seg_counts}
+        except Exception as e:
+            return {'status':'error','message':str(e)}
+
+    def analytics_payment_modes(self, from_date='', to_date=''):
+        try:
+            with self._get_connection() as conn:
+                where="WHERE 1=1"; params=[]
+                if from_date: where+=" AND date >= ?"; params.append(from_date)
+                if to_date: where+=" AND date <= ?"; params.append(to_date)
+                rows=conn.execute(f"""
+                    SELECT COALESCE(payment_mode,'cash') as mode, COUNT(*) as cnt,
+                           COALESCE(SUM(total_amount),0) as amount
+                    FROM sales_history {where} GROUP BY mode ORDER BY amount DESC
+                """,params).fetchall()
+                total=sum(float(r[2] or 0) for r in rows) or 1
+                modes=[{'mode':str(r[0] or 'cash').capitalize(),'count':int(r[1] or 0),
+                        'amount':round(float(r[2] or 0),2),'percent':round(float(r[2] or 0)/total*100,1)} for r in rows]
+            return {'status':'success','modes':modes}
+        except Exception as e:
+            return {'status':'error','message':str(e)}

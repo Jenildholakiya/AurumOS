@@ -75,6 +75,8 @@ OWNER_ONLY = frozenset([
     'get_gst_summary', 'get_unreconciled', 'reconcile_entries',
     'get_suppliers', 'get_purchase_orders', 'get_stock_transfers',
     'get_repairs', 'create_repair',
+    'get_sales_analytics', 'get_top_items', 'get_stock_aging',
+    'get_customer_insights', 'get_payment_analytics',
     'save_alert_settings', 'send_test_alert_email',
     'set_metal_rates', 'set_default_printer',
     'save_network_config', 'change_db_location', 'reset_db_location',

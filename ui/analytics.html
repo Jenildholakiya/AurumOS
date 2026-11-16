@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AurumOS | Analytics</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="responsive.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f8fafb;--cream2:#f1f5f9;--white:#fff;--ink:#0e0c09;--ink2:#2a2620;--ink3:#5c5a52;
+  --gold:#2563eb;--gold2:#3b82f6;--gold-bg:rgba(37,99,235,0.06);--gold-ln:rgba(37,99,235,0.22);
+  --rule:rgba(14,12,9,0.09);--muted:#64748b;--muted2:#94a3b8;
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.07);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --amber:#d97706;--orange:#ea580c;
+  --sans:'DM Sans',system-ui,sans-serif;--mono:Arial,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
+}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;width:100vw;height:100vh;background:var(--cream);font-family:var(--sans);}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--rule);background:var(--white);}
+.topbar h1{font-size:1.1rem;font-weight:700;color:var(--ink);}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.period-btn{padding:6px 14px;border:1px solid var(--rule);background:var(--white);border-radius:6px;font-size:0.72rem;font-weight:600;cursor:pointer;color:var(--ink3);transition:all 0.15s;font-family:var(--sans);}
+.period-btn.active{background:var(--gold);color:#fff;border-color:var(--gold);}
+.period-btn:hover:not(.active){background:var(--cream2);}
+.toolbar input[type="date"]{padding:5px 8px;border:1px solid var(--rule);border-radius:6px;font-size:0.72rem;font-family:var(--sans);}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;box-shadow:var(--sh);}
+.kpi-lbl{font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:4px;}
+.kpi-val{font-size:1.3rem;font-weight:700;color:var(--ink);}
+.kpi-sub{font-size:0.62rem;color:var(--muted2);margin-top:2px;}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:16px;box-shadow:var(--sh);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;}
+.card-title{font-size:0.88rem;font-weight:700;color:var(--ink);}
+.chart-wrap{padding:16px;position:relative;height:280px;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{padding:8px 12px;text-align:left;font-weight:600;color:var(--ink3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--rule);}
+td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.mono{font-family:var(--mono);}
+.seg-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.62rem;font-weight:600;}
+.seg-champions{background:rgba(22,163,74,0.1);color:#16a34a;}
+.seg-loyal{background:rgba(37,99,235,0.1);color:#2563eb;}
+.seg-potential{background:rgba(215,119,6,0.1);color:#d97706;}
+.seg-atrisk{background:rgba(234,88,12,0.1);color:#ea580c;}
+.seg-lost{background:rgba(220,38,38,0.1);color:#dc2626;}
+.empty{text-align:center;padding:24px;color:var(--muted2);font-size:0.8rem;}
+@media(max-width:1100px){.row-2{grid-template-columns:1fr;}}
+@media(max-width:768px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:480px){.kpi-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<script>initSidebar('reports');</script>
+<script src="chart.min.js"></script>
+<main>
+  <div class="topbar">
+    <h1>Analytics Dashboard</h1>
+    <span id="clock" style="font-size:0.7rem;color:var(--muted);font-family:var(--mono);"></span>
+  </div>
+  <div class="content">
+
+    <div class="toolbar">
+      <button class="period-btn" onclick="setPeriod(7)">7D</button>
+      <button class="period-btn active" onclick="setPeriod(30)">30D</button>
+      <button class="period-btn" onclick="setPeriod('mtd')">MTD</button>
+      <button class="period-btn" onclick="setPeriod('qtd')">QTD</button>
+      <button class="period-btn" onclick="setPeriod('ytd')">YTD</button>
+      <span style="color:var(--muted);font-size:0.7rem;margin:0 4px;">|</span>
+      <input type="date" id="date-from" onchange="setPeriod('custom')">
+      <span style="font-size:0.7rem;color:var(--muted);">to</span>
+      <input type="date" id="date-to" onchange="setPeriod('custom')">
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-lbl">Total revenue</div><div class="kpi-val" id="k-rev">Rs. 0.00</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total bills</div><div class="kpi-val" id="k-bills">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">Avg bill value</div><div class="kpi-val" id="k-avg">Rs. 0.00</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total fine (g)</div><div class="kpi-val" id="k-fine">0.000</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Sales Trend</span></div>
+      <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+    </div>
+
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Payment Mode Split</span></div>
+        <div class="chart-wrap" style="height:240px;"><canvas id="payChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Stock Aging</span></div>
+        <div class="chart-wrap" style="height:240px;"><canvas id="agingChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Top Selling Items</span></div>
+      <table>
+        <thead><tr><th>#</th><th>Item code</th><th>Name</th><th style="text-align:right;">Qty sold</th><th style="text-align:right;">Revenue</th><th style="text-align:right;">Fine (g)</th></tr></thead>
+        <tbody id="top-items"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Customer Segments (RFM)</span></div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="rfmChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Top Customers</span></div>
+        <table>
+          <thead><tr><th>Customer</th><th style="text-align:right;">Bills</th><th style="text-align:right;">Lifetime value</th><th>Last purchase</th><th>Segment</th></tr></thead>
+          <tbody id="top-cust"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+<script>
+function fmt(n){ return 'Rs. '+(parseFloat(n||0)).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function updateClock(){ var n=new Date(); document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' | '+n.toLocaleTimeString(); }
+setInterval(updateClock,1000); updateClock();
+
+var _from='', _to='';
+function _dateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function setPeriod(p){
+  var now=new Date();
+  document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('active');});
+  if(p==='custom'){
+    _from=document.getElementById('date-from').value||'';
+    _to=document.getElementById('date-to').value||'';
+  } else if(p==='mtd'){
+    _from=_dateStr(new Date(now.getFullYear(),now.getMonth(),1));
+    _to=_dateStr(now);
+  } else if(p==='qtd'){
+    var qm=Math.floor(now.getMonth()/3)*3;
+    _from=_dateStr(new Date(now.getFullYear(),qm,1));
+    _to=_dateStr(now);
+  } else if(p==='ytd'){
+    _from=now.getFullYear()+'-01-01';
+    _to=_dateStr(now);
+  } else {
+    var d=new Date(); d.setDate(d.getDate()-p);
+    _from=_dateStr(d); _to=_dateStr(now);
+  }
+  var ev=event; if(ev&&ev.target&&ev.target.classList) ev.target.classList.add('active');
+  loadAll();
+}
+
+function loadAll(){
+  if(!window.pywebview||!window.pywebview.api) return;
+  if(typeof Chart==='undefined'){setTimeout(loadAll,100);return;}
+  loadSales(); loadPayments(); loadAging(); loadTopItems(); loadCustomers();
+}
+
+function loadSales(){
+  var api=window.pywebview.api;
+  api.get_sales_analytics(_from,_to,'day').then(function(r){
+    if(!r||r.status!=='success') return;
+    document.getElementById('k-rev').textContent=fmt(r.total_revenue);
+    document.getElementById('k-bills').textContent=r.total_bills;
+    document.getElementById('k-avg').textContent=fmt(r.avg_bill_value);
+    document.getElementById('k-fine').textContent=(r.total_fine||0).toFixed(3)+' g';
+    var ctx=document.getElementById('salesChart').getContext('2d');
+    if(window._salesChart) window._salesChart.destroy();
+    window._salesChart=new Chart(ctx,{
+      type:'bar',
+      data:{labels:r.labels,datasets:[{label:'Revenue',data:r.revenue,backgroundColor:'rgba(37,99,235,0.7)',borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return 'Rs.'+v.toLocaleString('en-IN');}}},
+                x:{ticks:{maxRotation:45,font:{size:10}}}}}
+    });
+  }).catch(function(){});
+}
+
+function loadPayments(){
+  var api=window.pywebview.api;
+  api.get_payment_analytics(_from,_to).then(function(r){
+    if(!r||r.status!=='success'||!r.modes||!r.modes.length) return;
+    var ctx=document.getElementById('payChart').getContext('2d');
+    if(window._payChart) window._payChart.destroy();
+    var colors=['#2563eb','#16a34a','#d97706','#dc2626','#7c3aed','#0891b2'];
+    window._payChart=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels:r.modes.map(function(m){return m.mode;}),
+            datasets:[{data:r.modes.map(function(m){return m.amount;}),backgroundColor:colors.slice(0,r.modes.length)}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+    });
+  }).catch(function(){});
+}
+
+function loadAging(){
+  var api=window.pywebview.api;
+  api.get_stock_aging().then(function(r){
+    if(!r||r.status!=='success'||!r.bands||!r.bands.length) return;
+    var ctx=document.getElementById('agingChart').getContext('2d');
+    if(window._agingChart) window._agingChart.destroy();
+    var colors=['#16a34a','#2563eb','#d97706','#ea580c','#dc2626'];
+    window._agingChart=new Chart(ctx,{
+      type:'bar',
+      data:{labels:r.bands.map(function(b){return b.label;}),
+            datasets:[{label:'Items',data:r.bands.map(function(b){return b.count;}),backgroundColor:colors.slice(0,r.bands.length),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+        scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}
+    });
+  }).catch(function(){});
+}
+
+function loadTopItems(){
+  var api=window.pywebview.api;
+  api.get_top_items(_from,_to).then(function(r){
+    if(!r||r.status!=='success') return;
+    var tb=document.getElementById('top-items');
+    if(!r.items||!r.items.length){tb.innerHTML='<tr><td colspan="6" class="empty">No sales data for this period</td></tr>';return;}
+    tb.innerHTML=r.items.map(function(it,i){
+      return '<tr><td>'+(i+1)+'</td><td class="mono">'+it.code+'</td><td>'+it.name+'</td>'
+        +'<td style="text-align:right;">'+it.qty+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(it.revenue)+'</td>'
+        +'<td style="text-align:right;" class="mono">'+it.fine.toFixed(3)+'</td></tr>';
+    }).join('');
+  }).catch(function(){});
+}
+
+var _segColors={Champions:'seg-champions',Loyal:'seg-loyal',Potential:'seg-potential','At Risk':'seg-atrisk',Lost:'seg-lost'};
+function loadCustomers(){
+  var api=window.pywebview.api;
+  api.get_customer_insights().then(function(r){
+    if(!r||r.status!=='success') return;
+    var segs=r.segments||{};
+    var segLabels=['Champions','Loyal','Potential','At Risk','Lost'];
+    var segData=segLabels.map(function(s){return segs[s]||0;});
+    var ctx=document.getElementById('rfmChart').getContext('2d');
+    if(window._rfmChart) window._rfmChart.destroy();
+    window._rfmChart=new Chart(ctx,{
+      type:'bar',
+      data:{labels:segLabels,datasets:[{label:'Customers',data:segData,
+        backgroundColor:['#16a34a','#2563eb','#d97706','#ea580c','#dc2626'],borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+    });
+    var tb=document.getElementById('top-cust');
+    var top10=(r.customers||[]).slice(0,10);
+    if(!top10.length){tb.innerHTML='<tr><td colspan="5" class="empty">No customer data</td></tr>';return;}
+    tb.innerHTML=top10.map(function(c){
+      var cls=_segColors[c.segment]||'seg-lost';
+      return '<tr><td>'+c.name+'</td><td style="text-align:right;">'+c.bills+'</td>'
+        +'<td style="text-align:right;" class="mono">'+fmt(c.ltv)+'</td>'
+        +'<td>'+c.last_purchase+'</td>'
+        +'<td><span class="seg-badge '+cls+'">'+c.segment+'</span></td></tr>';
+    }).join('');
+  }).catch(function(){});
+}
+
+setPeriod(30);
+window.addEventListener('load',function(){
+  var t=setInterval(function(){
+    if(!window.pywebview||!window.pywebview.api) return;
+    clearInterval(t); loadAll();
+  },200);
+});
+</script>
+</body>
+</html>
