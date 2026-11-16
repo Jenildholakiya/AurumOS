@@ -476,15 +476,14 @@ function _renderSidebar(activePage) {
 
     var h = '';
 
-    h += '<div class="sb-logo" style="display:flex;align-items:center;justify-content:space-between;">'
-       + '<div style="display:flex;align-items:center;gap:10px;">'
+    h += '<div class="sb-logo" style="position:relative;">'
        + '<div class="sb-logo-mark"><span>Au</span></div>'
        + '<div class="sb-logo-text">'
        + '<div class="sb-logo-name">Aurum<em>OS</em></div>'
        + '<div class="sb-logo-sub">' + (isRetail ? 'Retail POS' : 'Jewelry ERP') + '</div>'
-       + '</div></div>'
-       + '<button class="sb-collapse-top" onclick="toggleSidebar()" title="Collapse sidebar">'
-       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>'
+       + '</div>'
+       + '<button class="sb-collapse-top" onclick="toggleSidebar()" title="Collapse sidebar" style="position:absolute;right:0;top:50%;transform:translateY(-50%);">'
+       + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>'
        + '</button>'
        + '</div>';
 
