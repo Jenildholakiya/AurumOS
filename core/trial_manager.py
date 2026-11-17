@@ -218,39 +218,33 @@ def _show_countdown_banner(days, plan):
         var bar = document.createElement('div');
         bar.id = 'aurum-trial-banner';
         bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99990;'
-            + 'display:flex;align-items:center;justify-content:center;'
-            + 'padding:8px 24px;font-family:system-ui,sans-serif;font-size:13px;'
-            + 'font-weight:500;gap:8px;'
-            + 'background:{bg};color:{fg};border-bottom:2px solid {border};';
-        var timerSpan = document.createElement('span');
-        timerSpan.id = 'aurum-trial-timer';
-        timerSpan.style.cssText = 'font-family:monospace;font-weight:700;font-size:14px;';
-        var label = document.createElement('span');
-        label.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px;';
-        label.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" '
+            + 'display:flex;align-items:center;'
+            + 'padding:6px 20px;font-family:system-ui,sans-serif;font-size:12px;'
+            + 'font-weight:500;gap:12px;'
+            + 'background:#1e293b;color:#e2e8f0;';
+        bar.innerHTML = '<span style="display:flex;align-items:center;gap:6px;opacity:0.7;">'
+            + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" '
             + 'stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/>'
             + '<polyline points="12 6 12 12 16 14"/></svg>'
-            + '{plan_label} Trial ';
-        label.appendChild(timerSpan);
-        var cta = document.createElement('button');
-        cta.textContent = 'Upgrade Now';
-        cta.onclick = function() {{ try {{ window.pywebview.api.navigate('login.html'); }} catch(e) {{}} }};
-        cta.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-weight:600;'
-            + 'font-size:12px;cursor:pointer;background:{fg};color:{bg};';
-        var close = document.createElement('button');
-        close.innerHTML = '&times;';
-        close.onclick = function() {{ bar.style.display='none';document.body.style.paddingTop='0'; }};
-        close.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;'
-            + 'font-size:18px;color:{fg};opacity:0.6;';
-        bar.appendChild(label);
-        bar.appendChild(cta);
-        bar.appendChild(close);
+            + '{plan_label} Trial</span>'
+            + '<span id="aurum-trial-timer" style="font-family:\'SF Mono\',Consolas,monospace;'
+            + 'font-weight:700;font-size:13px;letter-spacing:1px;color:#fff;"></span>'
+            + '<span style="flex:1;"></span>'
+            + '<button onclick="try{{window.pywebview.api.navigate(\'login.html\')}}catch(e){{}}"'
+            + ' style="padding:4px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.2);'
+            + 'background:rgba(255,255,255,0.1);color:#fff;font-size:11px;font-weight:600;'
+            + 'cursor:pointer;font-family:system-ui;">Upgrade</button>'
+            + '<button onclick="this.parentElement.style.display=\'none\';document.body.style.paddingTop=\'0\';"'
+            + ' style="background:none;border:none;cursor:pointer;padding:2px 6px;'
+            + 'font-size:14px;color:rgba(255,255,255,0.4);line-height:1;">&times;</button>';
         document.body.appendChild(bar);
-        document.body.style.paddingTop = '40px';
+        document.body.style.paddingTop = '32px';
+        var ts = document.getElementById('aurum-trial-timer');
         function tick() {{
             var diff = endMs - Date.now();
             if (diff <= 0) {{
-                timerSpan.textContent = 'EXPIRED';
+                ts.textContent = 'EXPIRED';
+                ts.style.color = '#f87171';
                 clearInterval(window._trialTimer);
                 try {{ window.pywebview.api.navigate('trial_portal.html'); }} catch(e) {{}}
                 return;
@@ -262,7 +256,9 @@ def _show_countdown_banner(days, plan):
             var txt = '';
             if (d > 0) txt += d + 'd ';
             txt += (h<10?'0':'') + h + ':' + (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
-            timerSpan.textContent = txt;
+            ts.textContent = txt;
+            if (diff < 3600000) ts.style.color = '#f87171';
+            else if (diff < 86400000) ts.style.color = '#fbbf24';
         }}
         tick();
         window._trialTimer = setInterval(tick, 1000);
