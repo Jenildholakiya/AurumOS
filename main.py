@@ -7474,26 +7474,24 @@ class AurumAPI:
                 return
 
             push_progress(88, f"Writing {len(results)} files...")
+            dirs_made = set()
+            write_count = 0
             for rel, (data, is_backend) in results.items():
-                if is_backend:
-                    dst = staging / rel
-                else:
-                    dst = app_root / rel
-
+                dst = (staging / rel) if is_backend else (app_root / rel)
                 try:
-                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    d = str(dst.parent)
+                    if d not in dirs_made:
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        dirs_made.add(d)
                     dst.write_bytes(data)
-                    LOG(f"[UPDATE]   Written: {dst}")
+                    write_count += 1
                 except Exception as e:
                     err = safe_str(str(e))
                     ERR(f"[UPDATE]   Write failed: {err}")
                     push_done(False, f"Write failed {rel}: {err}")
                     return
-
-                push_progress(
-                    int(5 + i / total * 85),
-                    f"[{i}/{total}] OK {rel}"
-                )
+            LOG(f"[UPDATE] Written {write_count} files")
+            push_progress(95, f"Written {write_count} files")
 
             # Migrations downloaded above apply immediately — they are plain
             # SQL the database runs idempotently, so no restart is needed.
