@@ -112,19 +112,62 @@ def _check_trial():
         req.add_header("User-Agent", "AurumOS-Desktop/1.0")
         resp = urllib.request.urlopen(req, timeout=10)
         data = json.loads(resp.read().decode("utf-8"))
-        _log(f"Check: is_trial={data.get('is_trial')} "
-             f"days={data.get('days_remaining')} plan={data.get('plan')}")
+
+        is_trial = data.get("is_trial", False) or data.get("trial", False)
+        trial_started = data.get("trial_started_at", "")
+        duration_days = int(data.get("duration_days", 0) or 0)
+        remaining_ms = int(data.get("remaining_ms", 0) or 0)
+        expired = data.get("expired", False)
+        sub_expires = data.get("subscription_expires_at", "")
+
+        # Compute end time from trial_started_at + duration_days
+        end_ms = 0
+        if trial_started and duration_days > 0:
+            try:
+                from datetime import datetime as _dt
+                ts = trial_started.replace("Z", "+00:00")
+                started_epoch = _dt.fromisoformat(ts).timestamp() * 1000
+                end_ms = int(started_epoch + duration_days * 86400000)
+            except Exception:
+                pass
+        if not end_ms and remaining_ms > 0:
+            end_ms = int(time.time() * 1000) + remaining_ms
+
+        # If subscription is paid, don't treat as trial
+        is_paid = False
+        if sub_expires:
+            try:
+                from datetime import datetime as _dt
+                exp_ts = sub_expires.replace("Z", "+00:00")
+                is_paid = _dt.fromisoformat(exp_ts).timestamp() > time.time()
+            except Exception:
+                pass
+
+        days_remaining = data.get("days_remaining", 0)
+        if not days_remaining and remaining_ms > 0:
+            days_remaining = max(0, int(remaining_ms / 86400000))
+
+        show_trial = is_trial and duration_days > 0 and not is_paid and not expired
+
+        _log(f"Check: trial={is_trial} started={trial_started} "
+             f"days={duration_days} remaining_ms={remaining_ms} "
+             f"paid={is_paid} expired={expired} show={show_trial}")
 
         with _lock:
             _trial_state = {
-                "is_trial": data.get("is_trial", False),
+                "is_trial": show_trial,
                 "plan": data.get("plan", "lite"),
-                "days_remaining": data.get("days_remaining", 0),
-                "trial_end_ms": data.get("trial_end_ms"),
+                "days_remaining": days_remaining,
+                "trial_end_ms": end_ms,
+                "trial_started_at": trial_started,
+                "duration_days": duration_days,
+                "remaining_ms": remaining_ms,
+                "expired": expired,
+                "is_paid": is_paid,
                 "features": data.get("features", []),
                 "machine_bound": data.get("machine_bound", True),
                 "bound_machine_id": data.get("machine_id", ""),
-                "status": "active" if data.get("days_remaining", 0) > 0 else "expired",
+                "status": "active" if show_trial and not expired else ("expired" if expired else "inactive"),
                 "last_check": time.time(),
                 "degraded": False,
                 "cache_stale": False,
@@ -157,57 +200,77 @@ def _show_countdown_banner(days, plan):
     plan_label = (plan or "Lite").capitalize()
 
     if days <= 0:
-        _lock_for_expiry(plan_label)
+        end_ms = _trial_state.get("trial_end_ms", 0)
+        if not end_ms or end_ms <= int(time.time() * 1000):
+            _lock_for_expiry(plan_label)
+            return
+
+    end_ms = _trial_state.get("trial_end_ms", 0)
+    if not end_ms:
         return
-
-    if days == 1:
-        msg = f"Last day of your {plan_label} trial — upgrade now to keep all features"
-    elif days <= 3:
-        msg = f"Only {days} days left in your {plan_label} trial"
-    elif days <= 7:
-        msg = f"{days} days remaining in your {plan_label} trial"
-    else:
-        msg = f"{days} days remaining in your {plan_label} trial"
-
-    cta_html = ""
-    if days <= 7:
-        cta_html = (
-            '<button onclick="window.pywebview && window.pywebview.api.navigate'
-            "('login.html')\" style=\"margin-left:16px;padding:6px 18px;"
-            "border-radius:6px;border:none;font-weight:600;font-size:13px;"
-            f"cursor:pointer;background:{fg};color:{bg}\">"
-            "Upgrade Now</button>"
-        )
 
     js = f"""
     (function() {{
         var old = document.getElementById('aurum-trial-banner');
         if (old) old.remove();
+        if (window._trialTimer) clearInterval(window._trialTimer);
+        var endMs = {end_ms};
         var bar = document.createElement('div');
         bar.id = 'aurum-trial-banner';
         bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99990;'
             + 'display:flex;align-items:center;justify-content:center;'
-            + 'padding:10px 24px;font-family:system-ui,sans-serif;font-size:14px;'
+            + 'padding:8px 24px;font-family:system-ui,sans-serif;font-size:13px;'
             + 'font-weight:500;gap:8px;'
             + 'background:{bg};color:{fg};border-bottom:2px solid {border};';
-        bar.innerHTML = '<span style="flex:1;text-align:center">'
-            + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" '
-            + 'stroke="currentColor" stroke-width="2" style="vertical-align:-3px;'
-            + 'margin-right:8px"><circle cx="12" cy="12" r="10"/>'
+        var timerSpan = document.createElement('span');
+        timerSpan.id = 'aurum-trial-timer';
+        timerSpan.style.cssText = 'font-family:monospace;font-weight:700;font-size:14px;';
+        var label = document.createElement('span');
+        label.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px;';
+        label.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" '
+            + 'stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/>'
             + '<polyline points="12 6 12 12 16 14"/></svg>'
-            + '{msg}'
-            + '</span>'
-            + '{cta_html}'
-            + '<button onclick="this.parentElement.style.display=\\'none\\'" '
-            + 'style="background:none;border:none;cursor:pointer;padding:4px 8px;'
-            + 'font-size:18px;color:{fg};opacity:0.6" title="Dismiss">&times;</button>';
+            + '{plan_label} Trial ';
+        label.appendChild(timerSpan);
+        var cta = document.createElement('button');
+        cta.textContent = 'Upgrade Now';
+        cta.onclick = function() {{ try {{ window.pywebview.api.navigate('login.html'); }} catch(e) {{}} }};
+        cta.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-weight:600;'
+            + 'font-size:12px;cursor:pointer;background:{fg};color:{bg};';
+        var close = document.createElement('button');
+        close.innerHTML = '&times;';
+        close.onclick = function() {{ bar.style.display='none';document.body.style.paddingTop='0'; }};
+        close.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;'
+            + 'font-size:18px;color:{fg};opacity:0.6;';
+        bar.appendChild(label);
+        bar.appendChild(cta);
+        bar.appendChild(close);
         document.body.appendChild(bar);
-        document.body.style.paddingTop = '44px';
+        document.body.style.paddingTop = '40px';
+        function tick() {{
+            var diff = endMs - Date.now();
+            if (diff <= 0) {{
+                timerSpan.textContent = 'EXPIRED';
+                clearInterval(window._trialTimer);
+                try {{ window.pywebview.api.navigate('trial_portal.html'); }} catch(e) {{}}
+                return;
+            }}
+            var d = Math.floor(diff/86400000);
+            var h = Math.floor((diff%86400000)/3600000);
+            var m = Math.floor((diff%3600000)/60000);
+            var s = Math.floor((diff%60000)/1000);
+            var txt = '';
+            if (d > 0) txt += d + 'd ';
+            txt += (h<10?'0':'') + h + ':' + (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+            timerSpan.textContent = txt;
+        }}
+        tick();
+        window._trialTimer = setInterval(tick, 1000);
     }})();
     """
     try:
         _api_ref._window.evaluate_js(js)
-        _log(f"Banner shown: {tier} tier, {days} days")
+        _log(f"Live timer shown: end_ms={end_ms}, {days} days, {tier} tier")
     except Exception as e:
         _err(f"Banner inject failed: {e}")
 
@@ -320,11 +383,15 @@ def dismiss_banner():
 # ── Sync loop ───────────────────────────────────────────────────────────
 
 def _sync_loop():
+    poll_interval = 60
     while True:
-        time.sleep(_SYNC_INTERVAL)
+        time.sleep(poll_interval)
         state = _check_trial()
-        if state.get("is_trial") and state.get("days_remaining") is not None:
-            _show_countdown_banner(state["days_remaining"], state.get("plan"))
+        if state.get("is_trial") and not state.get("expired"):
+            _show_countdown_banner(state.get("days_remaining", 0), state.get("plan"))
+        elif state.get("expired"):
+            _lock_for_expiry((state.get("plan") or "Lite").capitalize())
+            break
 
 
 # ── Public API ──────────────────────────────────────────────────────────
