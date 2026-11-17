@@ -7448,22 +7448,23 @@ class AurumAPI:
                 except Exception as e:
                     raise RuntimeError(f"{rel}: {e}")
 
-            push_progress(10, f"Downloading {total} files in parallel...")
+            push_progress(10, f"Downloading {total} files...")
             try:
-                with ThreadPoolExecutor(max_workers=8) as pool:
+                with ThreadPoolExecutor(max_workers=10) as pool:
                     futures = {pool.submit(_fetch, e): e for e in all_files}
                     done_count = 0
+                    last_pct = 10
                     for fut in as_completed(futures):
                         done_count += 1
                         try:
                             rel, data, is_backend = fut.result()
                             results[rel] = (data, is_backend)
-                            push_progress(int(10 + done_count / total * 75),
-                                          f"[{done_count}/{total}] {rel}")
-                            LOG(f"[UPDATE]   {len(data):,} bytes OK — {rel}")
+                            pct = int(10 + done_count / total * 75)
+                            if pct >= last_pct + 10 or done_count == total:
+                                push_progress(pct, f"[{done_count}/{total}] {rel}")
+                                last_pct = pct
                         except Exception as e:
                             err = safe_str(str(e))
-                            ERR(f"[UPDATE]   FAILED: {err}")
                             push_done(False, f"Download failed: {err}")
                             failed[0] = err
                             return
@@ -7473,7 +7474,7 @@ class AurumAPI:
             if failed[0]:
                 return
 
-            push_progress(88, f"Writing {len(results)} files...")
+            push_progress(90, f"Installing {len(results)} files...")
             dirs_made = set()
             write_count = 0
             for rel, (data, is_backend) in results.items():
