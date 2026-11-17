@@ -7433,39 +7433,48 @@ class AurumAPI:
             staging = app_root / '_update_staging'
             LOG(f"[UPDATE] _download_all: {len(ui_files)} UI + {len(backend_files)} backend, app_root={app_root}")
 
-            for i, entry in enumerate(all_files, 1):
-                rel  = entry.get('path', '').replace('\\', '/')
-                url  = entry.get('url', '')
-                size = entry.get('size', entry.get('size_bytes', 0))
-                is_backend = entry in backend_files
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            backend_set = set(id(e) for e in backend_files)
+            results = {}
+            failed = [None]
 
-                push_progress(
-                    int(5 + (i - 1) / total * 85),
-                    f"[{i}/{total}] {'⚙️ ' if is_backend else ''}{rel}"
-                )
-
-                LOG(f"[UPDATE] Downloading [{i}/{total}] {rel} from {url[:60]}")
-
-                # Simple direct download
+            def _fetch(entry):
+                rel = entry.get('path', '').replace('\\', '/')
+                url = entry.get('url', '')
                 try:
-                    req = _ur.Request(
-                        url,
-                        headers={
-                            'User-Agent': f'AurumOS/{CURRENT_VERSION}',
-                            'Accept': '*/*',
-                        }
-                    )
+                    req = _ur.Request(url, headers={'User-Agent': f'AurumOS/{CURRENT_VERSION}', 'Accept': '*/*'})
                     with _ur.urlopen(req, timeout=30) as resp:
-                        data = resp.read()
-                    LOG(f"[UPDATE]   {len(data):,} bytes OK")
+                        return (rel, resp.read(), id(entry) in backend_set)
                 except Exception as e:
-                    err = safe_str(str(e))
-                    ERR(f"[UPDATE]   FAILED: {err}")
-                    push_done(False, f"Download failed [{i}/{total}]: {err}")
-                    return
+                    raise RuntimeError(f"{rel}: {e}")
 
-                # UI files → write directly (live reload on next page load)
-                # Backend files → write to _update_staging/ (apply on restart)
+            push_progress(10, f"Downloading {total} files in parallel...")
+            try:
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    futures = {pool.submit(_fetch, e): e for e in all_files}
+                    done_count = 0
+                    for fut in as_completed(futures):
+                        done_count += 1
+                        try:
+                            rel, data, is_backend = fut.result()
+                            results[rel] = (data, is_backend)
+                            push_progress(int(10 + done_count / total * 75),
+                                          f"[{done_count}/{total}] {rel}")
+                            LOG(f"[UPDATE]   {len(data):,} bytes OK — {rel}")
+                        except Exception as e:
+                            err = safe_str(str(e))
+                            ERR(f"[UPDATE]   FAILED: {err}")
+                            push_done(False, f"Download failed: {err}")
+                            failed[0] = err
+                            return
+            except Exception as e:
+                push_done(False, f"Download error: {safe_str(str(e))}")
+                return
+            if failed[0]:
+                return
+
+            push_progress(88, f"Writing {len(results)} files...")
+            for rel, (data, is_backend) in results.items():
                 if is_backend:
                     dst = staging / rel
                 else:
