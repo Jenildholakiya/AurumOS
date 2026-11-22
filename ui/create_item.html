@@ -397,23 +397,20 @@ header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
                         </div>
                     </div>
 
+                    <div class="fg">
+                        <label>Metal Type</label>
+                        <select id="p-metal-type" class="inp" style="font-family:var(--sans);">
+                            <option value="gold">Gold</option>
+                            <option value="silver">Silver</option>
+                        </select>
+                    </div>
+
                     <!-- Retail only. Hidden here so wholesale never shows it; applyRetailWastagePolicy() reveals it. -->
                     <div id="product-retail-pricing" style="display:none;">
                         <div class="form-sec">Pricing</div>
 
-                        <div class="fg">
-                            <label>Making Charge</label>
-                            <div style="display:flex;gap:8px;">
-                                <input type="number" id="p-making-charge" class="inp" step="0.01" placeholder="0"
-                                       style="flex:1;min-width:0;"
-                                       onkeydown="navEnter(event,'p-sale-price')">
-                                <select id="p-making-type" class="inp" style="flex:0 0 160px;width:160px;font-family:var(--sans);">
-                                    <option value="percent">% of metal value</option>
-                                    <option value="per_gram">Rs per gram</option>
-                                    <option value="fixed">Flat Rs</option>
-                                </select>
-                            </div>
-                        </div>
+                        <input type="hidden" id="p-making-charge" value="0" />
+                        <input type="hidden" id="p-making-type" value="percent" />
 
                         <div class="fg">
                             <label>Sale Price / MRP</label>
@@ -951,8 +948,9 @@ async function saveProduct() {
     var makingType = retail ? (document.getElementById("p-making-type").value || "percent") : "percent";
     var salePrice = retail ? (parseFloat(document.getElementById("p-sale-price").value) || 0) : 0;
     var hsn = retail ? document.getElementById("p-hsn").value.trim() : "";
+    var metalType = (document.getElementById("p-metal-type") || {}).value || "gold";
     var res = await window.pywebview.api.add_product_master(code, name, cat, touch, wastage,
-                                                            makingCharge, makingType, salePrice, hsn);
+                                                            makingCharge, makingType, salePrice, hsn, metalType);
     if (res.status === "success") {
         showMsg("product-msg", "\u2713 Product saved.", "ok");
         document.getElementById("p-code").value = "";

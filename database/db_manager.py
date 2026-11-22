@@ -1588,6 +1588,18 @@ class DBManager:
              float(sale_price or 0), str(hsn or ''))
         )
 
+    def set_product_field(self, code, field, value):
+        allowed = ('metal_type', 'making_charge', 'making_type', 'sale_price', 'hsn', 'wastage')
+        if field not in allowed:
+            return False
+        try:
+            with self._get_connection() as conn:
+                conn.execute(f"UPDATE product_master SET {field}=? WHERE code=?", (value, code))
+                conn.commit()
+            return True
+        except Exception:
+            return False
+
     def get_all_products(self):
         try:
             with self._get_connection() as conn:

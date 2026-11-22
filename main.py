@@ -4450,11 +4450,16 @@ class AurumAPI:
         return self.db.get_all_touch_groups()
 
     def add_product_master(self, code, name, category, touch, wastage,
-                           making_charge=0, making_type='percent', sale_price=0, hsn=''):
+                           making_charge=0, making_type='percent', sale_price=0, hsn='', metal_type='gold'):
         """Save a product. The retail arguments are optional, so the wholesale
         screens that pass five arguments are unaffected."""
         ok = self.db.add_product_master(code, name, category, touch, wastage,
                                         making_charge, making_type, sale_price, hsn)
+        if ok and metal_type:
+            try:
+                self.db.set_product_field(code, 'metal_type', metal_type)
+            except Exception:
+                pass
         return {"status": "success"} if ok else {"status": "error"}
 
     # -- CRM ---------------------------------------------------------------
