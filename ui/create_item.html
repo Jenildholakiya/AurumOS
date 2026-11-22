@@ -678,7 +678,7 @@ function applyRetailWastagePolicy() {
     if (!isRetailMode()) return;
     ['product-wastage-field', 'touch-wastage-field'].forEach(function(id) {
         var el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        if (el) el.style.display = '';
     });
     ['product-preview-wastage-separator', 'product-preview-wastage'].forEach(function(id) {
         var el = document.getElementById(id);
