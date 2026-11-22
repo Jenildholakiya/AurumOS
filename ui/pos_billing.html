@@ -1065,10 +1065,13 @@ function pickStockRow(row, enteredValue){
     var huid=String(row.huid||'');
     var tagId=String(row.tag_id||'');
     var name=String(row.it_name||'');
-    _lastPicked={code:code,weight:wt,touch:touch,huid:huid,tag_id:tagId,name:name};
+    var wastage=parseFloat(row.wastage)||0;
+    _lastPicked={code:code,weight:wt,touch:touch,huid:huid,tag_id:tagId,name:name,wastage:wastage};
     document.getElementById('it-code').value=enteredValue || code;
     document.getElementById('it-weight').value=wt?wt.toFixed(3):'';
     document.getElementById('it-touch').value=touch?touch.toFixed(2):'';
+    var wEl=document.getElementById('it-wastage');
+    if(wEl && wastage>0) wEl.value=wastage;
     document.getElementById('it-dropdown').classList.remove('open');
     applyItemPricing(tagId);
     document.getElementById('it-weight').focus();
