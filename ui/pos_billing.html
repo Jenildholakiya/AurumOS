@@ -525,16 +525,13 @@ window.aurumConfirm=function(msg,opts){
             <th>Touch</th>
             <th>Rate</th>
             <th>Qty</th>
-            <th>Making</th>
             <th>Wastage</th>
-            <th>Stone</th>
-            <th>Labour</th>
             <th>Amount</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="item-list">
-          <tr class="pos-empty-row"><td colspan="14">No items added yet — scan or type an IT code / tag ID</td></tr>
+          <tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>
         </tbody>
       </table>
     </div>
@@ -1537,7 +1534,7 @@ function removeItem(idx){
 function renderItems(){
     var tbody=document.getElementById('item-list');
     if(!_billItems.length){
-        tbody.innerHTML='<tr class="pos-empty-row"><td colspan="14">No items added yet — scan or type an IT code / tag ID</td></tr>';
+        tbody.innerHTML='<tr class="pos-empty-row"><td colspan="11">No items added yet — scan or type an IT code / tag ID</td></tr>';
     } else {
         tbody.innerHTML=_billItems.map(function(it,i){
             // Fixed-price lines have no weight, touch or making: placeholders
@@ -1552,8 +1549,7 @@ function renderItems(){
                 +'<td class="it-touch">—</td>'
                 +'<td class="it-rate">Rs.'+it.rate.toLocaleString('en-IN')+'</td>'
                 +'<td>'+it.qty+'</td>'
-                +'<td class="it-making">—</td>'
-                +'<td>—</td><td>—</td><td>—</td>'
+                +'<td>—</td>'
                 +'<td class="it-amount">Rs.'+it.amount.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
                 +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
                 +'</tr>';
@@ -1569,10 +1565,7 @@ function renderItems(){
                 +'<td class="it-touch">'+it.touch.toFixed(2)+'%</td>'
                 +'<td class="it-rate">Rs.'+it.rate.toLocaleString('en-IN')+'</td>'
                 +'<td>'+it.qty+'</td>'
-                +'<td class="it-making">'+(it.making>0?('Rs.'+it.making.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
                 +'<td>'+((it.wastage||0)>0?(it.wastage.toFixed(2)+'%'):'—')+'</td>'
-                +'<td>'+((it.stone||0)>0?('Rs.'+it.stone.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
-                +'<td>'+((it.labour||0)>0?('Rs.'+it.labour.toLocaleString('en-IN',{minimumFractionDigits:2})):'—')+'</td>'
                 +'<td class="it-amount">Rs.'+it.amount.toLocaleString('en-IN',{minimumFractionDigits:2})+'</td>'
                 +'<td><button class="row-edit-btn" onclick="editItem('+i+')">&#9998;</button> <button class="remove-btn" onclick="removeItem('+i+')">&#10005;</button></td>'
                 +'</tr>';
