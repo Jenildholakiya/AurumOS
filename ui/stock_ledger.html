@@ -531,12 +531,13 @@ function scInsertToGrWt() {
             <div class="ep-result-card"><label id="ep-label">Fine Gold</label><input type="text" id="panel-entry-fine-wt" readonly placeholder="0.000"></div>
         </div>
 
-        <!-- ── Section 4: Pricing ── -->
+        <!-- ── Section 4: Metal + Pricing ── -->
         <div class="ep-section">
-            <div class="ep-section-head"><span>Pricing</span></div>
-            <div id="panel-making-charge-field"><label id="ep-label">Making Charge</label><input type="number" id="panel-entry-making-charge" class="panel-entry-input nav-target" step="0.01" placeholder="0"></div>
-            <div id="panel-making-type-field"><label id="ep-label">Making Type</label><select id="panel-entry-making-type"><option value="percent">% of metal value</option><option value="per_gram" selected>Rs per gram</option><option value="fixed">Flat Rs</option></select></div>
+            <div class="ep-section-head"><span>Metal &amp; Pricing</span></div>
+            <div><label id="ep-label">Metal Type</label><select id="panel-entry-metal-type" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.82rem;"><option value="gold">Gold</option><option value="silver">Silver</option></select></div>
             <div id="panel-sale-price-field"><label id="ep-label">Sale Price / MRP</label><input type="number" id="panel-entry-sale-price" class="panel-entry-input nav-target" step="0.01" placeholder="0 = use today's rate" title="Leave 0 to work the price out from today's rate"></div>
+            <input type="hidden" id="panel-entry-making-charge" value="0" />
+            <input type="hidden" id="panel-entry-making-type" value="percent" />
         </div>
 
         <!-- ── Footer: Photo + Save ── -->
@@ -703,8 +704,8 @@ function isRetailMode() {
 }
 // A retail counter never settles in metal, so the fine-gold side of the panel is
 // noise there; a wholesale desk never prices a piece, so the pricing side is noise here.
-var WHOLESALE_ONLY_FIELDS = ['panel-wastage-field', 'panel-ghat-field', 'panel-fine-wt-field'];
-var RETAIL_ONLY_FIELDS    = ['panel-making-charge-field', 'panel-making-type-field', 'panel-sale-price-field',
+var WHOLESALE_ONLY_FIELDS = ['panel-ghat-field', 'panel-fine-wt-field'];
+var RETAIL_ONLY_FIELDS    = ['panel-sale-price-field',
                              'panel-karat-field', 'panel-category-field', 'panel-stone-value-field'];
 
 function hidePanelFields(ids) {
