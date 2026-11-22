@@ -495,11 +495,11 @@
   window.addEventListener('aurum-auto-updated', function (e) {
     var v = _verClean(e && e.detail && e.detail.version);
     if (v) { V.installed = v; _verSave(); _verPaint(); }
-    setTimeout(function () { window.AurumOS.refreshVersion(true); }, 1500);
+    setTimeout(function () { window.AurumOS.refreshVersion(true); }, 500);
   });
   window.addEventListener('aurum-update-done', function (e) {
     if (e && e.detail && e.detail.success) {
-      setTimeout(function () { window.AurumOS.refreshVersion(true); }, 1500);
+      setTimeout(function () { window.AurumOS.refreshVersion(true); }, 500);
     }
   });
 
