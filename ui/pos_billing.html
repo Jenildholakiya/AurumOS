@@ -120,15 +120,12 @@ body.mode-uchak .hide-uchak{display:none !important;}
 .loyalty-redeem-row .apply-loyalty-btn:hover{background:var(--accent2);}
 .loyalty-redeem-row.open{display:flex;}
 
-.entry-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:12px 14px;align-items:end;}
+.entry-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px;align-items:end;}
 .entry-row .er-top,.entry-row .er-bottom{display:contents;}
 .entry-row .entry-actions{display:flex;align-items:end;padding-bottom:1px;}
 .entry-row .btn-add{width:38px;height:34px;font-size:1.1rem;}
-@media(max-width:900px){
-  .entry-row{grid-template-columns:repeat(4,1fr);}
-}
 @media(max-width:600px){
-  .entry-row{grid-template-columns:repeat(3,1fr);}
+  .entry-row{grid-template-columns:repeat(2,1fr);}
 }
 .field-group{display:flex;flex-direction:column;gap:4px;}
 .field-group.fg-grow{flex:1;}
@@ -499,21 +496,12 @@ window.aurumConfirm=function(msg,opts){
             <input type="number" id="it-qty" value="1" min="1" onkeydown="onEntryKey(event)" data-next="it-making" />
           </div>
           <div class="field-group hide-uchak">
-            <label>Making</label>
-            <input type="text" id="it-making" inputmode="decimal" placeholder="e.g. 500" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
-          </div>
-          <div class="field-group hide-uchak">
             <label>Wastage %</label>
             <input type="number" id="it-wastage" step="0.01" min="0" placeholder="e.g. 2.5" onkeydown="onEntryKey(event)" />
           </div>
-          <div class="field-group hide-uchak">
-            <label>Stone ₹</label>
-            <input type="text" id="it-stone" inputmode="decimal" placeholder="0" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
-          </div>
-          <div class="field-group hide-uchak">
-            <label>Labour ₹</label>
-            <input type="text" id="it-labour" inputmode="decimal" placeholder="0" oninput="formatPriceInput(this)" onkeydown="onEntryKey(event)" />
-          </div>
+          <input type="hidden" id="it-making" value="" />
+          <input type="hidden" id="it-stone" value="0" />
+          <input type="hidden" id="it-labour" value="0" />
           <div class="entry-actions">
             <button class="btn-add" onclick="addItemToBill()" title="Add item">+</button>
           </div>
