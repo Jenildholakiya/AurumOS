@@ -47,10 +47,10 @@ body {
     border-radius: 4px;
 }
 .copy-div {
-    background: #f1f5f9; text-align: center;
-    font-size: 0.62rem; font-weight: 600; color: #94a3b8;
+    background: #fff; text-align: center;
+    font-size: 0.62rem; font-weight: 600; color: #000;
     letter-spacing: 2px; text-transform: uppercase;
-    padding: 5px; border-top: 2px dashed #cbd5e1;
+    padding: 5px; border-top: 2px dashed #000;
 }
 .slip { padding: 0; background: #fff; }
 
@@ -68,17 +68,17 @@ body {
     width: 100%; border-collapse: collapse;
 }
 .ft-summary td {
-    padding: 3px 0; font-size: 9pt; color: #222;
+    padding: 3px 0; font-size: 9pt; color: #000;
 }
 .ft-summary td:first-child {
-    color: #555;
+    color: #000;
 }
 .ft-summary td:last-child {
     text-align: right; font-weight: 700;
     width: 130px;
 }
 .ft-summary .ft-sub td {
-    font-size: 8pt; color: #888; padding-left: 20px;
+    font-size: 8pt; color: #000; padding-left: 20px;
 }
 .ft-summary .ft-total td {
     font-size: 11pt; font-weight: 800; color: #000;
@@ -88,9 +88,9 @@ body {
 
 /* ── TERMS (inside footer block) ────────────────────────────────────── */
 .ft-terms {
-    border-top: 1px solid #ccc;
+    border-top: 1px solid #000;
     padding: 5px 0;
-    font-size: 7pt; color: #666;
+    font-size: 7pt; color: #000;
     line-height: 1.5;
 }
 .ft-terms .ft-terms-title {
@@ -99,17 +99,17 @@ body {
 }
 .ft-terms-list { list-style: none; padding: 0; }
 .ft-terms-list li { margin-bottom: 1px; }
-.ft-terms-list li::before { content: "\2022"; margin-right: 6px; color: #999; }
+.ft-terms-list li::before { content: "\2022"; margin-right: 6px; color: #000; }
 
 /* ── SIGNATURE (inside footer block) ────────────────────────────────── */
 .ft-signature {
     display: flex;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid #000;
 }
 .ft-sig-box {
     flex: 1; text-align: center; padding: 10px 0;
 }
-.ft-sig-box:first-child { border-right: 1px solid #ddd; }
+.ft-sig-box:first-child { border-right: 1px solid #000; }
 .ft-sig-line {
     border-top: 1px solid #000;
     margin-top: 28px;
@@ -124,33 +124,34 @@ body {
     text-align: center;
 }
 .ft-thanks-text {
-    font-size: 9pt; color: #222; font-weight: 500; margin-bottom: 3px;
+    font-size: 9pt; color: #000; font-weight: 600; margin-bottom: 3px;
 }
 .ft-thanks-powered {
-    font-size: 6.5pt; color: #888; letter-spacing: 0.5px;
+    font-size: 6.5pt; color: #000; letter-spacing: 0.5px;
 }
 .ft-thanks-powered strong { color: #000; font-weight: 700; }
 
 /* ── SHOP HEADER ───────────────────────────────────────────────────── */
 .shop-header {
     display: flex; align-items: center; gap: 16px;
-    padding: 20px 28px 14px;
-    border-bottom: 2.5px solid #000;
+    padding: 22px 28px 16px;
+    border-bottom: 2px solid #000;
 }
 .shop-logo {
-    width: 58px; height: 58px; object-fit: contain;
-    border-radius: 6px; flex-shrink: 0;
+    width: 54px; height: 54px; object-fit: contain;
+    flex-shrink: 0;
 }
 .shop-brand { flex: 1; display: flex; align-items: center; gap: 20px; }
 .shop-brand-left { flex: 1; }
 .shop-name {
-    font-size: 18pt; font-weight: 800; color: #000;
-    letter-spacing: 0.5px; line-height: 1.1;
+    font-size: 20pt; font-weight: 800; color: #000;
+    letter-spacing: 1px; line-height: 1.1;
+    text-transform: uppercase;
     font-family: Arial, 'Noto Sans Gujarati', sans-serif;
 }
 .shop-sub {
-    font-size: 8.5pt; color: #444; margin-top: 2px;
-    font-weight: 500; letter-spacing: 0.3px;
+    font-size: 8pt; color: #000; margin-top: 3px;
+    font-weight: 400; letter-spacing: 0.3px;
 }
 .aurumos-badge {
     display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -169,11 +170,12 @@ body {
 /* ── AURUMOS DETAILS BAR ────────────────────────────────────────────── */
 .aurumos-bar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 28px;
-    background: #000;
-    color: #fff;
-    font-size: 7.5pt;
+    padding: 5px 28px;
+    background: #fff;
+    color: #000;
+    font-size: 7pt;
     letter-spacing: 0.3px;
+    border-bottom: 1px solid #000;
 }
 .aurumos-bar .left { display: flex; align-items: center; gap: 16px; }
 .aurumos-bar .right { font-weight: 600; }
@@ -182,25 +184,25 @@ body {
 /* ── SHOP CONTACT BAR ──────────────────────────────────────────────── */
 .shop-contact {
     display: flex; align-items: center; gap: 20px;
-    padding: 6px 28px;
-    background: #fafafa;
-    border-bottom: 1px solid #ddd;
-    font-size: 8pt; color: #444;
+    padding: 5px 28px;
+    background: #fff;
+    border-bottom: 1px solid #000;
+    font-size: 7.5pt; color: #000;
 }
 .shop-contact span { white-space: nowrap; }
 .shop-contact .contact-icon {
-    display: inline-block; margin-right: 5px; color: #122238;
-    font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700;
+    display: inline-block; margin-right: 4px; color: #000;
+    font-family: Arial, sans-serif; font-size: 8pt; font-weight: 700;
 }
 
 /* ── TAX INVOICE BANNER ────────────────────────────────────────────── */
 .invoice-banner {
     text-align: center;
-    padding: 5px 28px;
-    font-size: 10pt; font-weight: 800; color: #000;
-    letter-spacing: 2px; text-transform: uppercase;
-    border-bottom: 1.5px solid #000;
-    background: #f5f5f5;
+    padding: 6px 28px;
+    font-size: 11pt; font-weight: 800; color: #000;
+    letter-spacing: 3px; text-transform: uppercase;
+    border-bottom: 2px solid #000;
+    background: #fff;
 }
 
 /* ── INVOICE META ──────────────────────────────────────────────────── */
@@ -231,15 +233,16 @@ body {
     border: 1.5px solid #000;
 }
 .bt thead th {
-    height: 30px; padding: 0 4px; font-size: 8pt; font-weight: 700; color: #000;
-    text-align: center !important; background: #f0f0f0; vertical-align: middle;
-    white-space: nowrap; border-bottom: 1.5px solid #000; border-right: 1px solid #ccc;
+    height: 28px; padding: 0 4px; font-size: 7.5pt; font-weight: 700; color: #000;
+    text-align: center !important; background: #fff; vertical-align: middle;
+    white-space: nowrap; border-bottom: 1.5px solid #000; border-right: 0.5px solid #000;
+    text-transform: uppercase; letter-spacing: 0.5px;
 }
 .bt thead th:last-child { border-right: none; }
 .bt td {
-    height: 22px; padding: 2px 4px; font-size: 9pt; font-weight: 500; color: #111;
+    height: 22px; padding: 2px 5px; font-size: 9pt; font-weight: 400; color: #000;
     text-align: center !important; vertical-align: middle;
-    border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;
+    border-bottom: 0.5px solid #000; border-right: 0.5px solid #000;
 }
 .bt td:last-child { border-right: none; }
 .bt tbody tr:last-child td { border-bottom: none; }
@@ -250,8 +253,8 @@ body {
 
 /* ── REFERENCE-STYLE RETAIL INVOICE ─────────────────────────────────── */
 .retail-slip {
-    background: #fbf8f2;
-    color: #20241f;
+    background: #fff;
+    color: #000;
     position: relative;
     padding-top: 6px;
 }
@@ -338,20 +341,22 @@ body {
 }
 .retail-slip .meta-left { font-weight: 500; }
 .retail-slip .inv-label { color: #5b5f58; }
-.retail-slip .meta-right div { color: #5b5f58; }
-.retail-slip .bt { margin: 24px 42px 0; width: calc(100% - 84px); border: none; }
+.retail-slip .meta-right div { color: #000; }
+.retail-slip .bt { margin: 20px 28px 0; width: calc(100% - 56px); border: 1px solid #000; }
 .retail-slip .bt thead th {
-    height: 32px; padding: 0 10px 10px;
-    background: transparent; color: #5b5f58;
-    border-bottom: 1.5px solid #122238;
-    border-right: none; text-transform: uppercase;
-    letter-spacing: .08em; font-size: 7.5pt;
+    height: 28px; padding: 0 6px;
+    background: #fff; color: #000;
+    border-bottom: 1.5px solid #000;
+    border-right: 0.5px solid #000; text-transform: uppercase;
+    letter-spacing: .06em; font-size: 7pt; font-weight: 700;
 }
+.retail-slip .bt thead th:last-child { border-right: none; }
 .retail-slip .bt td {
-    height: 42px; padding: 10px;
-    background: transparent; color: #20241f;
-    border-bottom: 1px solid #e1dacb;
-    border-right: 1px solid #e1dacb;
+    height: 32px; padding: 4px 6px;
+    background: #fff; color: #000;
+    border-bottom: 0.5px solid #000;
+    border-right: 0.5px solid #000;
+    font-size: 8.5pt;
 }
 .retail-slip .bt td:last-child { border-right: none; }
 .retail-slip .retail-column-space {
